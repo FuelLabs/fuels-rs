@@ -156,14 +156,19 @@ async fn test_multiple_read_calls() -> Result<()> {
     let contract_methods = contract_instance.methods();
     contract_methods.store(42).call().await?;
 
-    // Use "simulate" because the methods don't actually run a transaction, but just a dry-run
-    // We can notice here that, thanks to this, we don't generate a TransactionId collision,
-    // even if the transactions are theoretically the same.
-    let stored = contract_methods.read().simulate().await?;
+    // Use "simulate" because the methods don't actually
+    // run a transaction, but just a dry-run
+    let stored = contract_methods
+        .read()
+        .simulate(Execution::StateReadOnly)
+        .await?;
 
     assert_eq!(stored.value, 42);
 
-    let stored = contract_methods.read().simulate().await?;
+    let stored = contract_methods
+        .read()
+        .simulate(Execution::StateReadOnly)
+        .await?;
 
     assert_eq!(stored.value, 42);
     Ok(())
@@ -1637,7 +1642,7 @@ async fn test_arguments_with_gas_forwarded() -> Result<()> {
 }
 
 #[tokio::test]
-async fn contract_custom_call_build_without_signatures() -> Result<()> {
+async fn contract_custom_call_no_signatures_strategy() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
@@ -1663,12 +1668,15 @@ async fn contract_custom_call_build_without_signatures() -> Result<()> {
         .await?;
     tb.inputs_mut().extend(new_base_inputs);
 
-    // ANCHOR: tb_build_without_signatures
-    let mut tx = tb.build_without_signatures(provider).await?;
+    // ANCHOR: tb_no_signatures_strategy
+    let mut tx = tb
+        .with_build_strategy(ScriptBuildStrategy::NoSignatures)
+        .build(provider)
+        .await?;
     // ANCHOR: tx_sign_with
     tx.sign_with(&wallet, provider.chain_id()).await?;
     // ANCHOR_END: tx_sign_with
-    // ANCHOR_END: tb_build_without_signatures
+    // ANCHOR_END: tb_no_signatures_strategy
 
     let tx_id = provider.send_transaction(tx).await?;
     let tx_status = provider.tx_status(&tx_id).await?;
@@ -1728,7 +1736,7 @@ async fn contract_encoder_config_is_applied() -> Result<()> {
         let encoding_error = instance_with_encoder_config
             .methods()
             .get(0, 1)
-            .simulate()
+            .simulate(Execution::Realistic)
             .await
             .expect_err("should error");
 
@@ -1849,6 +1857,75 @@ async fn variable_output_estimation_is_optimized() -> Result<()> {
             panic!("Estimation took too long ({elapsed}). Limit is {limit}");
         }
     }
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn simulations_can_be_made_without_coins() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Contract(
+            name = "MyContract",
+            project = "e2e/sway/contracts/contract_test"
+        )),
+        Deploy(
+            name = "contract_instance",
+            contract = "MyContract",
+            wallet = "wallet"
+        )
+    );
+    let contract_id = contract_instance.contract_id();
+    let provider = wallet.provider().cloned();
+
+    let no_funds_wallet = WalletUnlocked::new_random(provider);
+
+    let response = MyContract::new(contract_id, no_funds_wallet.clone())
+        .methods()
+        .get(5, 6)
+        .simulate(Execution::StateReadOnly)
+        .await?;
+
+    assert_eq!(response.value, 11);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn simulations_can_be_made_without_coins_multicall() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Contract(
+            name = "MyContract",
+            project = "e2e/sway/contracts/contract_test"
+        )),
+        Deploy(
+            name = "contract_instance",
+            contract = "MyContract",
+            wallet = "wallet"
+        )
+    );
+    let contract_id = contract_instance.contract_id();
+    let provider = wallet.provider().cloned();
+
+    let no_funds_wallet = WalletUnlocked::new_random(provider);
+    let contract_instance = MyContract::new(contract_id, no_funds_wallet.clone());
+
+    let contract_methods = contract_instance.methods();
+
+    let call_handler_1 = contract_methods.get(1, 2);
+    let call_handler_2 = contract_methods.get(3, 4);
+
+    let mut multi_call_handler = CallHandler::new_multi_call(no_funds_wallet)
+        .add_call(call_handler_1)
+        .add_call(call_handler_2);
+
+    let value: (u64, u64) = multi_call_handler
+        .simulate(Execution::StateReadOnly)
+        .await?
+        .value;
+
+    assert_eq!(value, (3, 7));
 
     Ok(())
 }

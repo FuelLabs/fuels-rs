@@ -19,7 +19,7 @@ use fuel_tx::{
 pub use fuel_tx::{UpgradePurpose, UploadSubsection};
 use fuel_types::{bytes::padded_len_usize, Bytes32, Salt};
 use itertools::Itertools;
-use script_dry_runner::ScriptDryRunner;
+use script_tx_estimator::ScriptTxEstimator;
 
 use crate::{
     constants::{SIGNATURE_WITNESS_SIZE, WORD_SIZE},
@@ -40,7 +40,7 @@ use crate::{
     utils::{calculate_witnesses_size, sealed},
 };
 
-mod script_dry_runner;
+mod script_tx_estimator;
 
 #[derive(Debug, Clone, Default)]
 struct UnresolvedWitnessIndexes {
@@ -50,29 +50,53 @@ struct UnresolvedWitnessIndexes {
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait BuildableTransaction: sealed::Sealed {
     type TxType: Transaction;
+    type Strategy;
 
+    fn with_build_strategy(self, strategy: Self::Strategy) -> Self;
     async fn build(self, provider: impl DryRunner) -> Result<Self::TxType>;
-
-    /// Building without signatures will set the witness indexes of signed coins in the
-    /// order as they appear in the inputs. Multiple coins with the same owner will have
-    /// the same witness index. Make sure you sign the built transaction in the expected order.
-    async fn build_without_signatures(self, provider: impl DryRunner) -> Result<Self::TxType>;
 }
 
 impl sealed::Sealed for ScriptTransactionBuilder {}
 
+#[derive(Debug, Clone, Default)]
+pub enum ScriptBuildStrategy {
+    /// Transaction is estimated and signatures are automatically added.
+    #[default]
+    Complete,
+    /// Transaction is estimated but no signatures are added.
+    /// Building without signatures will set the witness indexes of signed coins in the
+    /// order as they appear in the inputs. Multiple coins with the same owner will have
+    /// the same witness index. Make sure you sign the built transaction in the expected order.
+    NoSignatures,
+    /// No estimation is done and no signatures are added. Fake coins are added if no spendable inputs
+    /// are present. Meant only for transactions that are to be dry-run with validations off.
+    /// Useful for reading state with unfunded accounts.
+    StateReadOnly,
+}
+
+#[derive(Debug, Clone, Default)]
+pub enum Strategy {
+    /// Transaction is estimated and signatures are automatically added.
+    #[default]
+    Complete,
+    /// Transaction is estimated but no signatures are added.
+    /// Building without signatures will set the witness indexes of signed coins in the
+    /// order as they appear in the inputs. Multiple coins with the same owner will have
+    /// the same witness index. Make sure you sign the built transaction in the expected order.
+    NoSignatures,
+}
+
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl BuildableTransaction for ScriptTransactionBuilder {
     type TxType = ScriptTransaction;
+    type Strategy = ScriptBuildStrategy;
 
-    async fn build(self, provider: impl DryRunner) -> Result<Self::TxType> {
-        self.build(provider).await
+    fn with_build_strategy(mut self, strategy: Self::Strategy) -> Self {
+        self.build_strategy = strategy;
+        self
     }
 
-    async fn build_without_signatures(mut self, provider: impl DryRunner) -> Result<Self::TxType> {
-        self.set_witness_indexes();
-        self.unresolved_signers = Default::default();
-
+    async fn build(self, provider: impl DryRunner) -> Result<Self::TxType> {
         self.build(provider).await
     }
 }
@@ -82,15 +106,14 @@ impl sealed::Sealed for CreateTransactionBuilder {}
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl BuildableTransaction for CreateTransactionBuilder {
     type TxType = CreateTransaction;
+    type Strategy = Strategy;
 
-    async fn build(self, provider: impl DryRunner) -> Result<Self::TxType> {
-        self.build(provider).await
+    fn with_build_strategy(mut self, strategy: Self::Strategy) -> Self {
+        self.build_strategy = strategy;
+        self
     }
 
-    async fn build_without_signatures(mut self, provider: impl DryRunner) -> Result<Self::TxType> {
-        self.set_witness_indexes();
-        self.unresolved_signers = Default::default();
-
+    async fn build(self, provider: impl DryRunner) -> Result<Self::TxType> {
         self.build(provider).await
     }
 }
@@ -100,15 +123,14 @@ impl sealed::Sealed for UploadTransactionBuilder {}
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl BuildableTransaction for UploadTransactionBuilder {
     type TxType = UploadTransaction;
+    type Strategy = Strategy;
 
-    async fn build(self, provider: impl DryRunner) -> Result<Self::TxType> {
-        self.build(provider).await
+    fn with_build_strategy(mut self, strategy: Self::Strategy) -> Self {
+        self.build_strategy = strategy;
+        self
     }
 
-    async fn build_without_signatures(mut self, provider: impl DryRunner) -> Result<Self::TxType> {
-        self.set_witness_indexes();
-        self.unresolved_signers = Default::default();
-
+    async fn build(self, provider: impl DryRunner) -> Result<Self::TxType> {
         self.build(provider).await
     }
 }
@@ -118,15 +140,14 @@ impl sealed::Sealed for UpgradeTransactionBuilder {}
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl BuildableTransaction for UpgradeTransactionBuilder {
     type TxType = UpgradeTransaction;
+    type Strategy = Strategy;
 
-    async fn build(self, provider: impl DryRunner) -> Result<Self::TxType> {
-        self.build(provider).await
+    fn with_build_strategy(mut self, strategy: Self::Strategy) -> Self {
+        self.build_strategy = strategy;
+        self
     }
 
-    async fn build_without_signatures(mut self, provider: impl DryRunner) -> Result<Self::TxType> {
-        self.set_witness_indexes();
-        self.unresolved_signers = Default::default();
-
+    async fn build(self, provider: impl DryRunner) -> Result<Self::TxType> {
         self.build(provider).await
     }
 }
@@ -183,7 +204,9 @@ macro_rules! impl_tx_trait {
                 &self,
                 provider: impl DryRunner,
             ) -> Result<Option<TransactionFee>> {
-                let mut fee_estimation_tb = self.clone_without_signers();
+                let mut fee_estimation_tb = self
+                    .clone_without_signers()
+                    .with_build_strategy(Self::Strategy::NoSignatures);
 
                 // Add a temporary witness for every `Signer` to include them in the fee
                 // estimation.
@@ -192,9 +215,7 @@ macro_rules! impl_tx_trait {
                     .witnesses_mut()
                     .extend(repeat(witness).take(self.unresolved_signers.len()));
 
-                let mut tx =
-                    BuildableTransaction::build_without_signatures(fee_estimation_tb, &provider)
-                        .await?;
+                let mut tx = BuildableTransaction::build(fee_estimation_tb, &provider).await?;
 
                 if tx.is_using_predicates() {
                     tx.estimate_predicates(&provider, None).await?;
@@ -385,7 +406,7 @@ impl Debug for dyn Signer + Send + Sync {
 ///
 /// It is advised to avoid relying on automatic estimation of variable outputs if the script
 /// contains logic that dynamically adjusts based on the number of outputs.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum VariableOutputPolicy {
     /// Perform a dry run of the transaction estimating the minimum number of variable outputs to
     /// add.
@@ -412,6 +433,7 @@ pub struct ScriptTransactionBuilder {
     pub max_fee_estimation_tolerance: f32,
     pub gas_price_estimation_block_horizon: u32,
     pub variable_output_policy: VariableOutputPolicy,
+    pub build_strategy: ScriptBuildStrategy,
     unresolved_witness_indexes: UnresolvedWitnessIndexes,
     unresolved_signers: Vec<Box<dyn Signer + Send + Sync>>,
 }
@@ -428,6 +450,7 @@ pub struct CreateTransactionBuilder {
     pub salt: Salt,
     pub gas_price_estimation_block_horizon: u32,
     pub max_fee_estimation_tolerance: f32,
+    pub build_strategy: Strategy,
     unresolved_witness_indexes: UnresolvedWitnessIndexes,
     unresolved_signers: Vec<Box<dyn Signer + Send + Sync>>,
 }
@@ -450,6 +473,7 @@ pub struct UploadTransactionBuilder {
     pub tx_policies: TxPolicies,
     pub gas_price_estimation_block_horizon: u32,
     pub max_fee_estimation_tolerance: f32,
+    pub build_strategy: Strategy,
     unresolved_witness_indexes: UnresolvedWitnessIndexes,
     unresolved_signers: Vec<Box<dyn Signer + Send + Sync>>,
 }
@@ -463,6 +487,7 @@ pub struct UpgradeTransactionBuilder {
     pub tx_policies: TxPolicies,
     pub gas_price_estimation_block_horizon: u32,
     pub max_fee_estimation_tolerance: f32,
+    pub build_strategy: Strategy,
     unresolved_witness_indexes: UnresolvedWitnessIndexes,
     unresolved_signers: Vec<Box<dyn Signer + Send + Sync>>,
 }
@@ -481,6 +506,7 @@ impl Default for UpgradeTransactionBuilder {
             unresolved_witness_indexes: Default::default(),
             unresolved_signers: Default::default(),
             max_fee_estimation_tolerance: Default::default(),
+            build_strategy: Default::default(),
         }
     }
 }
@@ -491,17 +517,31 @@ impl_tx_trait!(UploadTransactionBuilder, UploadTransaction);
 impl_tx_trait!(UpgradeTransactionBuilder, UpgradeTransaction);
 
 impl ScriptTransactionBuilder {
-    async fn build(self, provider: impl DryRunner) -> Result<ScriptTransaction> {
+    async fn build(mut self, provider: impl DryRunner) -> Result<ScriptTransaction> {
+        let is_using_predicates = self.is_using_predicates();
+
+        let tx = match self.build_strategy {
+            ScriptBuildStrategy::Complete => self.resolve_fuel_tx(&provider).await?,
+            ScriptBuildStrategy::NoSignatures => {
+                self.set_witness_indexes();
+                self.unresolved_signers = Default::default();
+
+                self.resolve_fuel_tx(&provider).await?
+            }
+            ScriptBuildStrategy::StateReadOnly => {
+                self.resolve_fuel_tx_for_state_reading(provider).await?
+            }
+        };
+
         Ok(ScriptTransaction {
-            is_using_predicates: self.is_using_predicates(),
-            tx: self.resolve_fuel_tx(&provider).await?,
+            is_using_predicates,
+            tx,
         })
     }
 
     async fn resolve_fuel_tx(self, dry_runner: impl DryRunner) -> Result<Script> {
-        let num_resolved_witnesses = self.num_witnesses()?;
         let predefined_witnesses = self.witnesses.clone();
-        let mut script_dry_runner = self.script_dry_runner(predefined_witnesses, &dry_runner);
+        let mut script_tx_estimator = self.script_tx_estimator(predefined_witnesses, &dry_runner);
 
         let mut tx = FuelTransaction::script(
             0, // default value - will be overwritten
@@ -510,18 +550,18 @@ impl ScriptTransactionBuilder {
             self.generate_fuel_policies()?,
             resolve_fuel_inputs(
                 self.inputs.clone(),
-                num_resolved_witnesses,
+                self.num_witnesses()?,
                 &self.unresolved_witness_indexes,
             )?,
             self.outputs.clone(),
             vec![],
         );
 
-        self.add_variable_outputs(&mut script_dry_runner, &mut tx)
+        self.add_variable_outputs(&mut script_tx_estimator, &mut tx)
             .await?;
 
         // should come after variable outputs because it can then reuse the dry run made for variable outputs
-        self.set_script_gas_limit(&mut script_dry_runner, &mut tx)
+        self.set_script_gas_limit(&mut script_tx_estimator, &mut tx)
             .await?;
 
         if let Some(max_fee) = self.tx_policies.max_fee() {
@@ -542,6 +582,50 @@ impl ScriptTransactionBuilder {
         Ok(tx)
     }
 
+    async fn resolve_fuel_tx_for_state_reading(self, dry_runner: impl DryRunner) -> Result<Script> {
+        let predefined_witnesses = self.witnesses.clone();
+        let mut script_tx_estimator = self.script_tx_estimator(predefined_witnesses, &dry_runner);
+
+        let mut tx = FuelTransaction::script(
+            0, // default value - will be overwritten
+            self.script.clone(),
+            self.script_data.clone(),
+            self.generate_fuel_policies()?,
+            resolve_fuel_inputs(
+                self.inputs.clone(),
+                self.num_witnesses()?,
+                &self.unresolved_witness_indexes,
+            )?,
+            self.outputs.clone(),
+            vec![],
+        );
+
+        let should_saturate_variable_outputs =
+            if let VariableOutputPolicy::Exactly(n) = self.variable_output_policy {
+                add_variable_outputs(&mut tx, n);
+                false
+            } else {
+                true
+            };
+
+        if let Some(max_fee) = self.tx_policies.max_fee() {
+            tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
+        } else {
+            Self::set_max_fee_policy(
+                &mut tx,
+                &dry_runner,
+                self.gas_price_estimation_block_horizon,
+                self.is_using_predicates(),
+                self.max_fee_estimation_tolerance,
+            )
+            .await?;
+        }
+
+        script_tx_estimator.prepare_for_estimation(&mut tx, should_saturate_variable_outputs);
+
+        Ok(tx)
+    }
+
     async fn set_witnesses(self, tx: &mut fuel_tx::Script, provider: impl DryRunner) -> Result<()> {
         let missing_witnesses = generate_missing_witnesses(
             tx.id(&provider.consensus_parameters().chain_id()),
@@ -554,7 +638,7 @@ impl ScriptTransactionBuilder {
 
     async fn set_script_gas_limit(
         &self,
-        dry_runner: &mut ScriptDryRunner<&impl DryRunner>,
+        dry_runner: &mut ScriptTxEstimator<&impl DryRunner>,
         tx: &mut fuel_tx::Script,
     ) -> Result<()> {
         let has_no_code = self.script.is_empty();
@@ -583,21 +667,21 @@ impl ScriptTransactionBuilder {
         Ok(())
     }
 
-    fn script_dry_runner<D>(
+    fn script_tx_estimator<D>(
         &self,
         predefined_witnesses: Vec<Witness>,
         dry_runner: D,
-    ) -> ScriptDryRunner<D>
+    ) -> ScriptTxEstimator<D>
     where
         D: DryRunner,
     {
         let num_unresolved_witnesses = self.unresolved_witness_indexes.owner_to_idx_offset.len();
-        ScriptDryRunner::new(dry_runner, predefined_witnesses, num_unresolved_witnesses)
+        ScriptTxEstimator::new(dry_runner, predefined_witnesses, num_unresolved_witnesses)
     }
 
     async fn add_variable_outputs(
         &self,
-        dry_runner: &mut ScriptDryRunner<&impl DryRunner>,
+        dry_runner: &mut ScriptTxEstimator<&impl DryRunner>,
         tx: &mut fuel_tx::Script,
     ) -> Result<()> {
         let variable_outputs = match self.variable_output_policy {
@@ -742,6 +826,7 @@ impl ScriptTransactionBuilder {
             gas_price_estimation_block_horizon: self.gas_price_estimation_block_horizon,
             variable_output_policy: self.variable_output_policy,
             max_fee_estimation_tolerance: self.max_fee_estimation_tolerance,
+            build_strategy: self.build_strategy.clone(),
         }
     }
 }
@@ -758,10 +843,21 @@ fn add_variable_outputs(tx: &mut fuel_tx::Script, variable_outputs: usize) {
 }
 
 impl CreateTransactionBuilder {
-    pub async fn build(self, provider: impl DryRunner) -> Result<CreateTransaction> {
+    pub async fn build(mut self, provider: impl DryRunner) -> Result<CreateTransaction> {
+        let is_using_predicates = self.is_using_predicates();
+
+        let tx = match self.build_strategy {
+            Strategy::Complete => self.resolve_fuel_tx(&provider).await?,
+            Strategy::NoSignatures => {
+                self.set_witness_indexes();
+                self.unresolved_signers = Default::default();
+                self.resolve_fuel_tx(&provider).await?
+            }
+        };
+
         Ok(CreateTransaction {
-            is_using_predicates: self.is_using_predicates(),
-            tx: self.resolve_fuel_tx(&provider).await?,
+            is_using_predicates,
+            tx,
         })
     }
 
@@ -864,15 +960,27 @@ impl CreateTransactionBuilder {
             unresolved_signers: Default::default(),
             gas_price_estimation_block_horizon: self.gas_price_estimation_block_horizon,
             max_fee_estimation_tolerance: self.max_fee_estimation_tolerance,
+            build_strategy: self.build_strategy.clone(),
         }
     }
 }
 
 impl UploadTransactionBuilder {
-    pub async fn build(self, provider: impl DryRunner) -> Result<UploadTransaction> {
+    pub async fn build(mut self, provider: impl DryRunner) -> Result<UploadTransaction> {
+        let is_using_predicates = self.is_using_predicates();
+
+        let tx = match self.build_strategy {
+            Strategy::Complete => self.resolve_fuel_tx(&provider).await?,
+            Strategy::NoSignatures => {
+                self.set_witness_indexes();
+                self.unresolved_signers = Default::default();
+                self.resolve_fuel_tx(&provider).await?
+            }
+        };
+
         Ok(UploadTransaction {
-            is_using_predicates: self.is_using_predicates(),
-            tx: self.resolve_fuel_tx(&provider).await?,
+            is_using_predicates,
+            tx,
         })
     }
 
@@ -987,15 +1095,25 @@ impl UploadTransactionBuilder {
             gas_price_estimation_block_horizon: self.gas_price_estimation_block_horizon,
             proof_set: vec![],
             max_fee_estimation_tolerance: self.max_fee_estimation_tolerance,
+            build_strategy: self.build_strategy.clone(),
         }
     }
 }
 
 impl UpgradeTransactionBuilder {
-    pub async fn build(self, provider: impl DryRunner) -> Result<UpgradeTransaction> {
+    pub async fn build(mut self, provider: impl DryRunner) -> Result<UpgradeTransaction> {
+        let is_using_predicates = self.is_using_predicates();
+        let tx = match self.build_strategy {
+            Strategy::Complete => self.resolve_fuel_tx(&provider).await?,
+            Strategy::NoSignatures => {
+                self.set_witness_indexes();
+                self.unresolved_signers = Default::default();
+                self.resolve_fuel_tx(&provider).await?
+            }
+        };
         Ok(UpgradeTransaction {
-            is_using_predicates: self.is_using_predicates(),
-            tx: self.resolve_fuel_tx(&provider).await?,
+            is_using_predicates,
+            tx,
         })
     }
 
@@ -1081,6 +1199,7 @@ impl UpgradeTransactionBuilder {
             unresolved_signers: Default::default(),
             gas_price_estimation_block_horizon: self.gas_price_estimation_block_horizon,
             max_fee_estimation_tolerance: self.max_fee_estimation_tolerance,
+            build_strategy: self.build_strategy.clone(),
         }
     }
 }
@@ -1400,7 +1519,8 @@ mod tests {
 
         // when
         let tx = tb
-            .build_without_signatures(&MockDryRunner::default())
+            .with_build_strategy(Strategy::NoSignatures)
+            .build(&MockDryRunner::default())
             .await?;
 
         // then
@@ -1435,7 +1555,8 @@ mod tests {
 
         // when
         let tx = tb
-            .build_without_signatures(&MockDryRunner::default())
+            .with_build_strategy(ScriptBuildStrategy::NoSignatures)
+            .build(&MockDryRunner::default())
             .await?;
 
         // then

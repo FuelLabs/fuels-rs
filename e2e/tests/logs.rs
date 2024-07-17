@@ -438,11 +438,21 @@ async fn test_require_log() -> Result<()> {
     );
 
     macro_rules! reverts_with_msg {
-        ($method:ident, $execution: ident, $msg:expr) => {
+        ($method:ident, call, $msg:expr) => {
             let error = contract_instance
                 .methods()
                 .$method()
-                .$execution()
+                .call()
+                .await
+                .expect_err("should return a revert error");
+
+            assert_revert_containing_msg($msg, error);
+        };
+        ($method:ident, simulate, $msg:expr) => {
+            let error = contract_instance
+                .methods()
+                .$method()
+                .simulate(Execution::Realistic)
                 .await
                 .expect_err("should return a revert error");
 
@@ -497,7 +507,7 @@ async fn test_multi_call_require_log_single_contract() -> Result<()> {
             .add_call(call_handler_2);
 
         let error = multi_call_handler
-            .simulate::<((), ())>()
+            .simulate::<((), ())>(Execution::Realistic)
             .await
             .expect_err("should return a revert error");
 
@@ -519,7 +529,7 @@ async fn test_multi_call_require_log_single_contract() -> Result<()> {
             .add_call(call_handler_2);
 
         let error = multi_call_handler
-            .simulate::<((), ())>()
+            .simulate::<((), ())>(Execution::Realistic)
             .await
             .expect_err("should return a revert error");
 
@@ -570,7 +580,7 @@ async fn test_multi_call_require_log_multi_contract() -> Result<()> {
             .add_call(call_handler_2);
 
         let error = multi_call_handler
-            .simulate::<((), ())>()
+            .simulate::<((), ())>(Execution::Realistic)
             .await
             .expect_err("should return a revert error");
 
@@ -592,7 +602,7 @@ async fn test_multi_call_require_log_multi_contract() -> Result<()> {
             .add_call(call_handler_2);
 
         let error = multi_call_handler
-            .simulate::<((), ())>()
+            .simulate::<((), ())>(Execution::Realistic)
             .await
             .expect_err("should return a revert error");
 
@@ -894,10 +904,18 @@ async fn test_script_require_log() -> Result<()> {
     );
 
     macro_rules! reverts_with_msg {
-        ($arg:expr, $execution:ident, $msg:expr) => {
+        ($arg:expr, call, $msg:expr) => {
             let error = script_instance
                 .main($arg)
-                .$execution()
+                .call()
+                .await
+                .expect_err("should return a revert error");
+            assert_revert_containing_msg($msg, error);
+        };
+        ($arg:expr, simulate, $msg:expr) => {
+            let error = script_instance
+                .main($arg)
+                .simulate(Execution::Realistic)
                 .await
                 .expect_err("should return a revert error");
             assert_revert_containing_msg($msg, error);
@@ -1089,11 +1107,20 @@ async fn test_contract_asserts_log() -> Result<()> {
     );
 
     macro_rules! reverts_with_msg {
-        (($($arg: expr,)*), $method:ident, $execution: ident, $msg:expr) => {
+        (($($arg: expr,)*), $method:ident, call, $msg:expr) => {
             let error = contract_instance
                 .methods()
                 .$method($($arg,)*)
-                .$execution()
+                .call()
+                .await
+                .expect_err("should return a revert error");
+            assert_revert_containing_msg($msg, error);
+        };
+        (($($arg: expr,)*), $method:ident, simulate, $msg:expr) => {
+            let error = contract_instance
+                .methods()
+                .$method($($arg,)*)
+                .simulate(Execution::Realistic)
                 .await
                 .expect_err("should return a revert error");
             assert_revert_containing_msg($msg, error);
@@ -1181,10 +1208,18 @@ async fn test_script_asserts_log() -> Result<()> {
         )
     );
     macro_rules! reverts_with_msg {
-        ($arg:expr, $execution:ident, $msg:expr) => {
+        ($arg:expr, call, $msg:expr) => {
             let error = script_instance
                 .main($arg)
-                .$execution()
+                .call()
+                .await
+                .expect_err("should return a revert error");
+            assert_revert_containing_msg($msg, error);
+        };
+        ($arg:expr, simulate, $msg:expr) => {
+            let error = script_instance
+                .main($arg)
+                .simulate(Execution::Realistic)
                 .await
                 .expect_err("should return a revert error");
             assert_revert_containing_msg($msg, error);
@@ -1192,10 +1227,18 @@ async fn test_script_asserts_log() -> Result<()> {
     }
 
     macro_rules! reverts_with_assert_eq_msg {
-        ($arg:expr, $execution:ident, $msg:expr) => {
+        ($arg:expr, call, $msg:expr) => {
             let error = script_instance
                 .main($arg)
-                .$execution()
+                .call()
+                .await
+                .expect_err("should return a revert error");
+            assert_revert_containing_msg($msg, error);
+        };
+        ($arg:expr, simulate, $msg:expr) => {
+            let error = script_instance
+                .main($arg)
+                .simulate(Execution::Realistic)
                 .await
                 .expect_err("should return a revert error");
             assert_revert_containing_msg($msg, error);
@@ -1288,7 +1331,7 @@ async fn contract_token_ops_error_messages() -> Result<()> {
 
         let error = contract_methods
             .transfer(1_000_000, asset_id, address.into())
-            .simulate()
+            .simulate(Execution::Realistic)
             .await
             .expect_err("should return a revert error");
         assert_revert_containing_msg("failed transfer to address", error);

@@ -11,7 +11,10 @@ use fuels_core::{
         input::Input,
         output::Output,
         transaction::{ScriptTransaction, Transaction, TxPolicies},
-        transaction_builders::{ScriptTransactionBuilder, VariableOutputPolicy},
+        transaction_builders::{
+            BuildableTransaction, ScriptBuildStrategy, ScriptTransactionBuilder,
+            VariableOutputPolicy,
+        },
         tx_status::TxStatus,
         Selector, Token,
     },
@@ -22,7 +25,7 @@ use crate::{
         receipt_parser::ReceiptParser,
         traits::{ContractDependencyConfigurator, ResponseParser, TransactionTuner},
         utils::find_id_of_missing_contract,
-        CallParameters, ContractCall, ScriptCall,
+        CallParameters, ContractCall, Execution, ScriptCall,
     },
     responses::{CallResponse, SubmitResponse},
 };
@@ -160,7 +163,16 @@ where
 
     /// Call a contract's method on the node, in a state-modifying manner.
     pub async fn call(mut self) -> Result<CallResponse<T>> {
-        self.call_or_simulate(false).await
+        let tx = self.build_tx().await?;
+        let provider = self.account.try_provider()?;
+
+        self.cached_tx_id = Some(tx.id(provider.chain_id()));
+
+        let tx_status = provider.send_transaction_and_await_commit(tx).await?;
+
+        let receipts = tx_status.take_receipts_checked(Some(&self.log_decoder))?;
+
+        self.get_response(receipts)
     }
 
     pub async fn submit(mut self) -> Result<SubmitResponse<A, C, T>> {
@@ -175,20 +187,21 @@ where
 
     /// Call a contract's method on the node, in a simulated manner, meaning the state of the
     /// blockchain is *not* modified but simulated.
-    pub async fn simulate(&mut self) -> Result<CallResponse<T>> {
-        self.call_or_simulate(true).await
-    }
-
-    async fn call_or_simulate(&mut self, simulate: bool) -> Result<CallResponse<T>> {
-        let tx = self.build_tx().await?;
+    pub async fn simulate(&mut self, execution: Execution) -> Result<CallResponse<T>> {
         let provider = self.account.try_provider()?;
 
-        self.cached_tx_id = Some(tx.id(provider.chain_id()));
+        let tx_status = if let Execution::StateReadOnly = execution {
+            let tx = self
+                .transaction_builder()
+                .await?
+                .with_build_strategy(ScriptBuildStrategy::StateReadOnly)
+                .build(provider)
+                .await?;
 
-        let tx_status = if simulate {
-            provider.dry_run(tx).await?
+            provider.dry_run_opt(tx, false, None).await?
         } else {
-            provider.send_transaction_and_await_commit(tx).await?
+            let tx = self.build_tx().await?;
+            provider.dry_run(tx).await?
         };
         let receipts = tx_status.take_receipts_checked(Some(&self.log_decoder))?;
 
@@ -220,7 +233,7 @@ where
         let attempts = max_attempts.unwrap_or(10);
 
         for _ in 0..attempts {
-            match self.simulate().await {
+            match self.simulate(Execution::Realistic).await {
                 Ok(_) => return Ok(self),
 
                 Err(Error::Transaction(Reason::Reverted { ref receipts, .. })) => {
@@ -233,7 +246,7 @@ where
             }
         }
 
-        self.simulate().await.map(|_| self)
+        self.simulate(Execution::Realistic).await.map(|_| self)
     }
 }
 
@@ -408,7 +421,16 @@ where
 
     /// Call contract methods on the node, in a state-modifying manner.
     pub async fn call<T: Tokenizable + Debug>(mut self) -> Result<CallResponse<T>> {
-        self.call_or_simulate(false).await
+        let tx = self.build_tx().await?;
+
+        let provider = self.account.try_provider()?;
+
+        self.cached_tx_id = Some(tx.id(provider.chain_id()));
+
+        let tx_status = provider.send_transaction_and_await_commit(tx).await?;
+
+        let receipts = tx_status.take_receipts_checked(Some(&self.log_decoder))?;
+        self.get_response(receipts)
     }
 
     pub async fn submit(mut self) -> Result<SubmitResponse<A, Vec<ContractCall>, ()>> {
@@ -426,25 +448,25 @@ where
     /// It is the same as the [call] method because the API is more user-friendly this way.
     ///
     /// [call]: Self::call
-    pub async fn simulate<T: Tokenizable + Debug>(&mut self) -> Result<CallResponse<T>> {
-        self.call_or_simulate(true).await
-    }
-
-    async fn call_or_simulate<T: Tokenizable + Debug>(
+    pub async fn simulate<T: Tokenizable + Debug>(
         &mut self,
-        simulate: bool,
+        execution: Execution,
     ) -> Result<CallResponse<T>> {
-        let tx = self.build_tx().await?;
         let provider = self.account.try_provider()?;
 
-        self.cached_tx_id = Some(tx.id(provider.chain_id()));
+        let tx_status = if let Execution::StateReadOnly = execution {
+            let tx = self
+                .transaction_builder()
+                .await?
+                .with_build_strategy(ScriptBuildStrategy::StateReadOnly)
+                .build(provider)
+                .await?;
 
-        let tx_status = if simulate {
-            provider.dry_run(tx).await?
+            provider.dry_run_opt(tx, false, None).await?
         } else {
-            provider.send_transaction_and_await_commit(tx).await?
+            let tx = self.build_tx().await?;
+            provider.dry_run(tx).await?
         };
-
         let receipts = tx_status.take_receipts_checked(Some(&self.log_decoder))?;
 
         self.get_response(receipts)
