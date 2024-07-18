@@ -1,3 +1,5 @@
+use std::fs;
+
 use fuels::{
     core::codec::{calldata, encode_fn_selector, DecoderConfig, EncoderConfig},
     prelude::*,
@@ -1084,7 +1086,7 @@ async fn test_add_custom_assets() -> Result<()> {
 async fn contract_load_error_messages() {
     {
         let binary_path = "sway/contracts/contract_test/out/release/no_file_on_path.bin";
-        let expected_error = format!("io: file \"{binary_path}\" does not exist");
+        let expected_error = format!("io: could not canonicalize path \"{binary_path}\". Reason: No such file or directory (os error 2)");
 
         let error = Contract::load_from(binary_path, LoadConfiguration::default())
             .expect_err("should have failed");
@@ -1092,8 +1094,13 @@ async fn contract_load_error_messages() {
         assert_eq!(error.to_string(), expected_error);
     }
     {
-        let binary_path = "sway/contracts/contract_test/out/release/contract_test-abi.json";
-        let expected_error = format!("expected \"{binary_path}\" to have '.bin' extension");
+        let binary_path =
+            fs::canonicalize("sway/contracts/contract_test/out/release/contract_test-abi.json")
+                .unwrap();
+        let expected_error = format!(
+            "expected \"{}\" to have '.bin' extension",
+            binary_path.display()
+        );
 
         let error = Contract::load_from(binary_path, LoadConfiguration::default())
             .expect_err("should have failed");
