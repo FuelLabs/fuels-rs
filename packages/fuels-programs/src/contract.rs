@@ -118,7 +118,7 @@ impl Contract {
         })?;
         validate_path_and_extension(&binary_filepath, "bin")?;
 
-        let mut binary = fs::read(binary_filepath).map_err(|e| {
+        let mut binary = fs::read(&binary_filepath).map_err(|e| {
             std::io::Error::new(
                 e.kind(),
                 format!("failed to read binary: {binary_filepath:?}: {e}"),
@@ -127,7 +127,7 @@ impl Contract {
 
         config.configurables.update_constants_in(&mut binary);
 
-        let storage_slots = Self::determine_storage_slots(config.storage, binary_filepath)?;
+        let storage_slots = Self::determine_storage_slots(config.storage, &binary_filepath)?;
 
         Ok(Self::new(binary, config.salt, storage_slots))
     }
