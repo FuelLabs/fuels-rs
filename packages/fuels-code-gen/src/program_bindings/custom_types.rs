@@ -122,7 +122,7 @@ fn is_type_unused(type_path: &TypePath) -> bool {
 mod tests {
     use std::collections::HashMap;
 
-    use fuel_abi_types::abi::program::{ProgramABI, TypeApplication, TypeDeclaration};
+    use fuel_abi_types::abi::program::{ProgramABI, TypeDeclaration, UnifiedTypeApplication};
     use pretty_assertions::assert_eq;
     use quote::quote;
 
@@ -134,12 +134,12 @@ mod tests {
             type_id: 0,
             type_field: String::from("enum MatchaTea"),
             components: Some(vec![
-                TypeApplication {
+                UnifiedTypeApplication {
                     name: String::from("LongIsland"),
                     type_id: 1,
                     ..Default::default()
                 },
-                TypeApplication {
+                UnifiedTypeApplication {
                     name: String::from("MoscowMule"),
                     type_id: 2,
                     ..Default::default()
@@ -210,14 +210,14 @@ mod tests {
 
     #[test]
     fn test_expand_struct_inside_enum() -> Result<()> {
-        let inner_struct = TypeApplication {
+        let inner_struct = UnifiedTypeApplication {
             name: String::from("Infrastructure"),
             type_id: 1,
             ..Default::default()
         };
         let enum_components = vec![
             inner_struct,
-            TypeApplication {
+            UnifiedTypeApplication {
                 name: "Service".to_string(),
                 type_id: 2,
                 ..Default::default()
@@ -278,7 +278,7 @@ mod tests {
 
     #[test]
     fn test_expand_array_inside_enum() -> Result<()> {
-        let enum_components = vec![TypeApplication {
+        let enum_components = vec![UnifiedTypeApplication {
             name: "SomeArr".to_string(),
             type_id: 1,
             ..Default::default()
@@ -296,7 +296,7 @@ mod tests {
                 TypeDeclaration {
                     type_id: 1,
                     type_field: "[u64; 7]".to_string(),
-                    components: Some(vec![TypeApplication {
+                    components: Some(vec![UnifiedTypeApplication {
                         type_id: 2,
                         ..Default::default()
                     }]),
@@ -342,7 +342,7 @@ mod tests {
         let p = TypeDeclaration {
             type_id: 3,
             type_field: String::from("enum EnumLevel3"),
-            components: Some(vec![TypeApplication {
+            components: Some(vec![UnifiedTypeApplication {
                 name: String::from("El2"),
                 type_id: 2,
                 ..Default::default()
@@ -356,7 +356,7 @@ mod tests {
                 TypeDeclaration {
                     type_id: 2,
                     type_field: String::from("enum EnumLevel2"),
-                    components: Some(vec![TypeApplication {
+                    components: Some(vec![UnifiedTypeApplication {
                         name: String::from("El1"),
                         type_id: 1,
                         ..Default::default()
@@ -369,7 +369,7 @@ mod tests {
                 TypeDeclaration {
                     type_id: 1,
                     type_field: String::from("enum EnumLevel1"),
-                    components: Some(vec![TypeApplication {
+                    components: Some(vec![UnifiedTypeApplication {
                         name: String::from("Num"),
                         type_id: 0,
                         ..Default::default()
@@ -416,17 +416,17 @@ mod tests {
         let p = TypeDeclaration {
             type_field: String::from("struct Cocktail"),
             components: Some(vec![
-                TypeApplication {
+                UnifiedTypeApplication {
                     name: String::from("long_island"),
                     type_id: 1,
                     ..Default::default()
                 },
-                TypeApplication {
+                UnifiedTypeApplication {
                     name: String::from("cosmopolitan"),
                     type_id: 2,
                     ..Default::default()
                 },
-                TypeApplication {
+                UnifiedTypeApplication {
                     name: String::from("mojito"),
                     type_id: 3,
                     ..Default::default()
@@ -545,12 +545,12 @@ mod tests {
             type_id: 0,
             type_field: String::from("struct Cocktail"),
             components: Some(vec![
-                TypeApplication {
+                UnifiedTypeApplication {
                     name: String::from("long_island"),
                     type_id: 1,
                     ..Default::default()
                 },
-                TypeApplication {
+                UnifiedTypeApplication {
                     name: String::from("mojito"),
                     type_id: 2,
                     ..Default::default()

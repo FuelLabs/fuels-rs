@@ -311,7 +311,7 @@ mod tests {
     use fuel_abi_types::{
         abi::{
             full_program::FullTypeDeclaration,
-            program::{TypeApplication, TypeDeclaration},
+            program::{TypeDeclaration, UnifiedTypeApplication},
         },
         utils::ident,
     };
@@ -357,7 +357,7 @@ mod tests {
             .iter()
             .map(|td| (td.type_id, td.clone()))
             .collect::<HashMap<_, _>>();
-        let type_application = TypeApplication {
+        let type_application = UnifiedTypeApplication {
             type_id: type_declarations[0].type_id,
             ..Default::default()
         };
@@ -428,7 +428,7 @@ mod tests {
                 TypeDeclaration {
                     type_id: 0,
                     type_field: "[u8; 3]".to_string(),
-                    components: Some(vec![TypeApplication {
+                    components: Some(vec![UnifiedTypeApplication {
                         type_id: 1,
                         ..Default::default()
                     }]),
@@ -452,15 +452,15 @@ mod tests {
                     type_id: 0,
                     type_field: "struct std::vec::Vec".to_string(),
                     components: Some(vec![
-                        TypeApplication {
+                        UnifiedTypeApplication {
                             name: "buf".to_string(),
                             type_id: 2,
-                            type_arguments: Some(vec![TypeApplication {
+                            type_arguments: Some(vec![UnifiedTypeApplication {
                                 type_id: 1,
                                 ..Default::default()
                             }]),
                         },
-                        TypeApplication {
+                        UnifiedTypeApplication {
                             name: "len".to_string(),
                             type_id: 3,
                             ..Default::default()
@@ -482,12 +482,12 @@ mod tests {
                     type_id: 3,
                     type_field: "struct std::vec::RawVec".to_string(),
                     components: Some(vec![
-                        TypeApplication {
+                        UnifiedTypeApplication {
                             name: "ptr".to_string(),
                             type_id: 2,
                             ..Default::default()
                         },
-                        TypeApplication {
+                        UnifiedTypeApplication {
                             name: "cap".to_string(),
                             type_id: 4,
                             ..Default::default()
@@ -517,7 +517,7 @@ mod tests {
                 TypeDeclaration {
                     type_id: 0,
                     type_field: "struct String".to_string(),
-                    components: Some(vec![TypeApplication {
+                    components: Some(vec![UnifiedTypeApplication {
                         name: "bytes".to_string(),
                         type_id: 1,
                         ..Default::default()
@@ -528,12 +528,12 @@ mod tests {
                     type_id: 0,
                     type_field: "struct std::bytes::Bytes".to_string(),
                     components: Some(vec![
-                        TypeApplication {
+                        UnifiedTypeApplication {
                             name: "buf".to_string(),
                             type_id: 1,
                             ..Default::default()
                         },
-                        TypeApplication {
+                        UnifiedTypeApplication {
                             name: "len".to_string(),
                             type_id: 3,
                             ..Default::default()
@@ -545,12 +545,12 @@ mod tests {
                     type_id: 1,
                     type_field: "struct std::bytes::RawBytes".to_string(),
                     components: Some(vec![
-                        TypeApplication {
+                        UnifiedTypeApplication {
                             name: "ptr".to_string(),
                             type_id: 2,
                             ..Default::default()
                         },
-                        TypeApplication {
+                        UnifiedTypeApplication {
                             name: "cap".to_string(),
                             type_id: 3,
                             ..Default::default()
@@ -580,7 +580,7 @@ mod tests {
                 TypeDeclaration {
                     type_id: 0,
                     type_field: "struct String".to_string(),
-                    components: Some(vec![TypeApplication {
+                    components: Some(vec![UnifiedTypeApplication {
                         name: "bytes".to_string(),
                         type_id: 1,
                         ..Default::default()
@@ -591,12 +591,12 @@ mod tests {
                     type_id: 1,
                     type_field: "struct std::bytes::Bytes".to_string(),
                     components: Some(vec![
-                        TypeApplication {
+                        UnifiedTypeApplication {
                             name: "buf".to_string(),
                             type_id: 2,
                             ..Default::default()
                         },
-                        TypeApplication {
+                        UnifiedTypeApplication {
                             name: "len".to_string(),
                             type_id: 4,
                             ..Default::default()
@@ -608,12 +608,12 @@ mod tests {
                     type_id: 2,
                     type_field: "struct std::bytes::RawBytes".to_string(),
                     components: Some(vec![
-                        TypeApplication {
+                        UnifiedTypeApplication {
                             name: "ptr".to_string(),
                             type_id: 3,
                             ..Default::default()
                         },
-                        TypeApplication {
+                        UnifiedTypeApplication {
                             name: "cap".to_string(),
                             type_id: 4,
                             ..Default::default()
@@ -649,12 +649,12 @@ mod tests {
                     type_id: 0,
                     type_field: "struct SomeStruct".to_string(),
                     components: Some(vec![
-                        TypeApplication {
+                        UnifiedTypeApplication {
                             name: "foo".to_string(),
                             type_id: 1,
                             ..Default::default()
                         },
-                        TypeApplication {
+                        UnifiedTypeApplication {
                             name: "bar".to_string(),
                             type_id: 2,
                             ..Default::default()
@@ -685,12 +685,12 @@ mod tests {
                     type_id: 0,
                     type_field: "enum SomeEnum".to_string(),
                     components: Some(vec![
-                        TypeApplication {
+                        UnifiedTypeApplication {
                             name: "foo".to_string(),
                             type_id: 1,
                             ..Default::default()
                         },
-                        TypeApplication {
+                        UnifiedTypeApplication {
                             name: "bar".to_string(),
                             type_id: 2,
                             ..Default::default()
@@ -721,19 +721,19 @@ mod tests {
                     type_id: 0,
                     type_field: "(u8, u16, bool, T)".to_string(),
                     components: Some(vec![
-                        TypeApplication {
+                        UnifiedTypeApplication {
                             type_id: 1,
                             ..Default::default()
                         },
-                        TypeApplication {
+                        UnifiedTypeApplication {
                             type_id: 2,
                             ..Default::default()
                         },
-                        TypeApplication {
+                        UnifiedTypeApplication {
                             type_id: 3,
                             ..Default::default()
                         },
-                        TypeApplication {
+                        UnifiedTypeApplication {
                             type_id: 4,
                             ..Default::default()
                         },

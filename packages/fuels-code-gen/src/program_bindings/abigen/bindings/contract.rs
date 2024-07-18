@@ -183,7 +183,7 @@ mod tests {
 
     use fuel_abi_types::abi::{
         full_program::FullABIFunction,
-        program::{ABIFunction, Attribute, ProgramABI, TypeApplication, TypeDeclaration},
+        program::{ABIFunction, Attribute, ProgramABI, UnifiedTypeApplication, TypeDeclaration},
     };
     use pretty_assertions::assert_eq;
     use quote::quote;
@@ -382,7 +382,7 @@ mod tests {
     #[test]
     fn expand_contract_method_simple() -> Result<()> {
         let the_function = ABIFunction {
-            inputs: vec![TypeApplication {
+            inputs: vec![UnifiedTypeApplication {
                 name: String::from("bimbam"),
                 type_id: 1,
                 ..Default::default()
@@ -440,13 +440,13 @@ mod tests {
     fn expand_contract_method_complex() -> Result<()> {
         // given
         let the_function = ABIFunction {
-            inputs: vec![TypeApplication {
+            inputs: vec![UnifiedTypeApplication {
                 name: String::from("the_only_allowed_input"),
                 type_id: 4,
                 ..Default::default()
             }],
             name: "hello_world".to_string(),
-            output: TypeApplication {
+            output: UnifiedTypeApplication {
                 name: String::from("stillnotused"),
                 type_id: 1,
                 ..Default::default()
@@ -469,12 +469,12 @@ mod tests {
                     type_id: 1,
                     type_field: String::from("enum EntropyCirclesEnum"),
                     components: Some(vec![
-                        TypeApplication {
+                        UnifiedTypeApplication {
                             name: String::from("Postcard"),
                             type_id: 2,
                             ..Default::default()
                         },
-                        TypeApplication {
+                        UnifiedTypeApplication {
                             name: String::from("Teacup"),
                             type_id: 3,
                             ..Default::default()
@@ -505,12 +505,12 @@ mod tests {
                     type_id: 4,
                     type_field: String::from("struct SomeWeirdFrenchCuisine"),
                     components: Some(vec![
-                        TypeApplication {
+                        UnifiedTypeApplication {
                             name: String::from("Beef"),
                             type_id: 2,
                             ..Default::default()
                         },
-                        TypeApplication {
+                        UnifiedTypeApplication {
                             name: String::from("BurgundyWine"),
                             type_id: 3,
                             ..Default::default()
