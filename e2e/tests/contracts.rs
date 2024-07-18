@@ -1084,7 +1084,7 @@ async fn test_add_custom_assets() -> Result<()> {
 async fn contract_load_error_messages() {
     {
         let binary_path = "sway/contracts/contract_test/out/release/no_file_on_path.bin";
-        let expected_error = format!("io: could not canonicalize \"{binary_path}\". Reason: No such file or directory (os error 2)");
+        let expected_error = format!("io: file \"{binary_path}\" does not exist");
 
         let error = Contract::load_from(binary_path, LoadConfiguration::default())
             .expect_err("should have failed");
