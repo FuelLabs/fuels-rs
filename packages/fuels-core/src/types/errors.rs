@@ -54,7 +54,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 /// Those are: `IO`, `Codec`, `Provider`, `Other`.
 #[macro_export]
 macro_rules! error {
-   ($err_variant:ident, $fmt_str: literal $(,$arg: expr)*) => {
+   ($err_variant:ident, $fmt_str: literal $(,$arg: expr)* $(,)?) => {
     $crate::types::errors::Error::$err_variant(format!($fmt_str,$($arg),*))
    }
 }
