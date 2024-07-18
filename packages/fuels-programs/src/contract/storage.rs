@@ -88,10 +88,17 @@ impl StorageSlots {
     }
 
     pub(crate) fn load_from_file(storage_path: impl AsRef<Path>) -> Result<Self> {
-        let storage_path = storage_path.as_ref();
-        validate_path_and_extension(storage_path, "json")?;
+        let storage_path = storage_path.as_ref().canonicalize().map_err(|e| {
+            error!(
+                IO,
+                "could not canonicalize path {:?}. Reason: {e}",
+                storage_path.as_ref(),
+            )
+        })?;
 
-        let storage_json_string = std::fs::read_to_string(storage_path).map_err(|e| {
+        validate_path_and_extension(&storage_path, "json")?;
+
+        let storage_json_string = std::fs::read_to_string(&storage_path).map_err(|e| {
             io::Error::new(
                 e.kind(),
                 format!("failed to read storage slots from: {storage_path:?}: {e}"),

@@ -40,10 +40,12 @@ impl Predicate {
     }
 
     pub fn load_from(file_path: &str) -> Result<Self> {
-        let code = fs::read(file_path).map_err(|e| {
+        let file_path = fs::canonicalize(file_path)
+            .map_err(|e| error!(IO, "could not canonicalize path {file_path:?}. Reason: {e}"))?;
+        let code = fs::read(&file_path).map_err(|e| {
             error!(
                 IO,
-                "could not read predicate binary {file_path:?}. Reason: {e}"
+                "could not read predicate binary {file_path:?}. Reason: {e}",
             )
         })?;
         Ok(Self::from_code(code))

@@ -109,8 +109,14 @@ impl Contract {
     }
 
     pub fn load_from(binary_filepath: impl AsRef<Path>, config: LoadConfiguration) -> Result<Self> {
-        let binary_filepath = binary_filepath.as_ref();
-        validate_path_and_extension(binary_filepath, "bin")?;
+        let binary_filepath = binary_filepath.as_ref().canonicalize().map_err(|e| {
+            error!(
+                IO,
+                "could not canonicalize path {:?}. Reason: {e}",
+                binary_filepath.as_ref(),
+            )
+        })?;
+        validate_path_and_extension(&binary_filepath, "bin")?;
 
         let mut binary = fs::read(binary_filepath).map_err(|e| {
             std::io::Error::new(
