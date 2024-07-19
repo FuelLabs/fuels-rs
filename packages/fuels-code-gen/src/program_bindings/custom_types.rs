@@ -122,7 +122,9 @@ fn is_type_unused(type_path: &TypePath) -> bool {
 mod tests {
     use std::collections::HashMap;
 
-    use fuel_abi_types::abi::program::{ProgramABI, TypeDeclaration, UnifiedTypeApplication};
+    use fuel_abi_types::abi::unified_program::{
+        UnifiedProgramABI, UnifiedTypeApplication, UnifiedTypeDeclaration,
+    };
     use pretty_assertions::assert_eq;
     use quote::quote;
 
@@ -130,7 +132,7 @@ mod tests {
 
     #[test]
     fn test_expand_custom_enum() -> Result<()> {
-        let p = TypeDeclaration {
+        let p = UnifiedTypeDeclaration {
             type_id: 0,
             type_field: String::from("enum MatchaTea"),
             components: Some(vec![
@@ -151,7 +153,7 @@ mod tests {
             (0, p.clone()),
             (
                 1,
-                TypeDeclaration {
+                UnifiedTypeDeclaration {
                     type_id: 1,
                     type_field: String::from("u64"),
                     ..Default::default()
@@ -159,7 +161,7 @@ mod tests {
             ),
             (
                 2,
-                TypeDeclaration {
+                UnifiedTypeDeclaration {
                     type_id: 2,
                     type_field: String::from("bool"),
                     ..Default::default()
@@ -194,7 +196,7 @@ mod tests {
 
     #[test]
     fn test_enum_with_no_variants_cannot_be_constructed() -> Result<()> {
-        let p = TypeDeclaration {
+        let p = UnifiedTypeDeclaration {
             type_id: 0,
             type_field: "enum SomeEmptyEnum".to_string(),
             components: Some(vec![]),
@@ -223,7 +225,7 @@ mod tests {
                 ..Default::default()
             },
         ];
-        let p = TypeDeclaration {
+        let p = UnifiedTypeDeclaration {
             type_id: 0,
             type_field: String::from("enum Amsterdam"),
             components: Some(enum_components),
@@ -234,7 +236,7 @@ mod tests {
             (0, p.clone()),
             (
                 1,
-                TypeDeclaration {
+                UnifiedTypeDeclaration {
                     type_id: 1,
                     type_field: String::from("struct Building"),
                     components: Some(vec![]),
@@ -243,7 +245,7 @@ mod tests {
             ),
             (
                 2,
-                TypeDeclaration {
+                UnifiedTypeDeclaration {
                     type_id: 2,
                     type_field: String::from("u32"),
                     ..Default::default()
@@ -283,7 +285,7 @@ mod tests {
             type_id: 1,
             ..Default::default()
         }];
-        let p = TypeDeclaration {
+        let p = UnifiedTypeDeclaration {
             type_id: 0,
             type_field: String::from("enum SomeEnum"),
             components: Some(enum_components),
@@ -293,7 +295,7 @@ mod tests {
             (0, p.clone()),
             (
                 1,
-                TypeDeclaration {
+                UnifiedTypeDeclaration {
                     type_id: 1,
                     type_field: "[u64; 7]".to_string(),
                     components: Some(vec![UnifiedTypeApplication {
@@ -305,7 +307,7 @@ mod tests {
             ),
             (
                 2,
-                TypeDeclaration {
+                UnifiedTypeDeclaration {
                     type_id: 2,
                     type_field: "u64".to_string(),
                     ..Default::default()
@@ -339,7 +341,7 @@ mod tests {
 
     #[test]
     fn test_expand_custom_enum_with_enum() -> Result<()> {
-        let p = TypeDeclaration {
+        let p = UnifiedTypeDeclaration {
             type_id: 3,
             type_field: String::from("enum EnumLevel3"),
             components: Some(vec![UnifiedTypeApplication {
@@ -353,7 +355,7 @@ mod tests {
             (3, p.clone()),
             (
                 2,
-                TypeDeclaration {
+                UnifiedTypeDeclaration {
                     type_id: 2,
                     type_field: String::from("enum EnumLevel2"),
                     components: Some(vec![UnifiedTypeApplication {
@@ -366,7 +368,7 @@ mod tests {
             ),
             (
                 1,
-                TypeDeclaration {
+                UnifiedTypeDeclaration {
                     type_id: 1,
                     type_field: String::from("enum EnumLevel1"),
                     components: Some(vec![UnifiedTypeApplication {
@@ -379,7 +381,7 @@ mod tests {
             ),
             (
                 0,
-                TypeDeclaration {
+                UnifiedTypeDeclaration {
                     type_id: 0,
                     type_field: String::from("u32"),
                     ..Default::default()
@@ -413,7 +415,7 @@ mod tests {
 
     #[test]
     fn test_expand_custom_struct() -> Result<()> {
-        let p = TypeDeclaration {
+        let p = UnifiedTypeDeclaration {
             type_field: String::from("struct Cocktail"),
             components: Some(vec![
                 UnifiedTypeApplication {
@@ -438,7 +440,7 @@ mod tests {
             (0, p.clone()),
             (
                 1,
-                TypeDeclaration {
+                UnifiedTypeDeclaration {
                     type_id: 1,
                     type_field: String::from("bool"),
                     ..Default::default()
@@ -446,7 +448,7 @@ mod tests {
             ),
             (
                 2,
-                TypeDeclaration {
+                UnifiedTypeDeclaration {
                     type_id: 2,
                     type_field: String::from("u64"),
                     ..Default::default()
@@ -454,7 +456,7 @@ mod tests {
             ),
             (
                 3,
-                TypeDeclaration {
+                UnifiedTypeDeclaration {
                     type_id: 3,
                     type_field: String::from("u32"),
                     ..Default::default()
@@ -504,7 +506,7 @@ mod tests {
 
     #[test]
     fn test_struct_with_no_fields_can_be_constructed() -> Result<()> {
-        let p = TypeDeclaration {
+        let p = UnifiedTypeDeclaration {
             type_id: 0,
             type_field: "struct SomeEmptyStruct".to_string(),
             components: Some(vec![]),
@@ -541,7 +543,7 @@ mod tests {
 
     #[test]
     fn test_expand_custom_struct_with_struct() -> Result<()> {
-        let p = TypeDeclaration {
+        let p = UnifiedTypeDeclaration {
             type_id: 0,
             type_field: String::from("struct Cocktail"),
             components: Some(vec![
@@ -562,7 +564,7 @@ mod tests {
             (0, p.clone()),
             (
                 1,
-                TypeDeclaration {
+                UnifiedTypeDeclaration {
                     type_id: 1,
                     type_field: String::from("struct Shaker"),
                     components: Some(vec![]),
@@ -571,7 +573,7 @@ mod tests {
             ),
             (
                 2,
-                TypeDeclaration {
+                UnifiedTypeDeclaration {
                     type_id: 2,
                     type_field: String::from("u32"),
                     ..Default::default()
@@ -683,12 +685,12 @@ mod tests {
                   }
                 ]
             }"#;
-        let parsed_abi: ProgramABI = serde_json::from_str(s)?;
+        let parsed_abi: UnifiedProgramABI = serde_json::from_str(s)?;
         let types = parsed_abi
             .types
             .into_iter()
             .map(|t| (t.type_id, t))
-            .collect::<HashMap<usize, TypeDeclaration>>();
+            .collect::<HashMap<usize, UnifiedTypeDeclaration>>();
 
         let s1 = types.get(&3).unwrap();
 

@@ -243,129 +243,129 @@ mod tests {
         abigen!(Contract(
             name = "MyContract",
             abi = r#" {
-  "types": [
-    {
-      "typeId": 0,
-      "type": "()",
-      "components": [],
-      "typeParameters": null
-    },
-    {
-      "typeId": 1,
-      "type": "enum MyEnum",
-      "components": [
-        {
-          "name": "One",
-          "type": 7,
-          "typeArguments": null
-        }
-      ],
-      "typeParameters": [
-        3,
-        2
-      ]
-    },
-    {
-      "typeId": 2,
-      "type": "generic K",
-      "components": null,
-      "typeParameters": null
-    },
-    {
-      "typeId": 3,
-      "type": "generic T",
-      "components": null,
-      "typeParameters": null
-    },
-    {
-      "typeId": 4,
-      "type": "struct MyStruct",
-      "components": [
-        {
-          "name": "field",
-          "type": 7,
-          "typeArguments": null
-        }
-      ],
-      "typeParameters": [
-        3,
-        2
-      ]
-    },
-    {
-      "typeId": 5,
-      "type": "u16",
-      "components": null,
-      "typeParameters": null
-    },
-    {
-      "typeId": 6,
-      "type": "u32",
-      "components": null,
-      "typeParameters": null
-    },
-    {
-      "typeId": 7,
-      "type": "u64",
-      "components": null,
-      "typeParameters": null
-    },
-    {
-      "typeId": 8,
-      "type": "u8",
-      "components": null,
-      "typeParameters": null
-    }
-  ],
-  "functions": [
-    {
-      "inputs": [
-        {
-          "name": "arg",
-          "type": 4,
-          "typeArguments": [
-            {
-              "name": "",
-              "type": 8,
-              "typeArguments": null
-            },
-            {
-              "name": "",
-              "type": 5,
-              "typeArguments": null
-            }
-          ]
-        },
-        {
-          "name": "arg_2",
-          "type": 1,
-          "typeArguments": [
-            {
-              "name": "",
-              "type": 6,
-              "typeArguments": null
-            },
-            {
-              "name": "",
-              "type": 7,
-              "typeArguments": null
-            }
-          ]
-        }
-      ],
-      "name": "test_function",
-      "output": {
-        "name": "",
-        "type": 0,
-        "typeArguments": null
-      },
-      "attributes": null
-    }
-  ],
-  "loggedTypes": [],
-  "messagesTypes": [],
-  "configurables": []
-}"#
+                  "types": [
+                    {
+                      "typeId": 0,
+                      "type": "()",
+                      "components": [],
+                      "typeParameters": null
+                    },
+                    {
+                      "typeId": 1,
+                      "type": "enum MyEnum",
+                      "components": [
+                        {
+                          "name": "One",
+                          "type": 7,
+                          "typeArguments": null
+                        }
+                      ],
+                      "typeParameters": [
+                        3,
+                        2
+                      ]
+                    },
+                    {
+                      "typeId": 2,
+                      "type": "generic K",
+                      "components": null,
+                      "typeParameters": null
+                    },
+                    {
+                      "typeId": 3,
+                      "type": "generic T",
+                      "components": null,
+                      "typeParameters": null
+                    },
+                    {
+                      "typeId": 4,
+                      "type": "struct MyStruct",
+                      "components": [
+                        {
+                          "name": "field",
+                          "type": 7,
+                          "typeArguments": null
+                        }
+                      ],
+                      "typeParameters": [
+                        3,
+                        2
+                      ]
+                    },
+                    {
+                      "typeId": 5,
+                      "type": "u16",
+                      "components": null,
+                      "typeParameters": null
+                    },
+                    {
+                      "typeId": 6,
+                      "type": "u32",
+                      "components": null,
+                      "typeParameters": null
+                    },
+                    {
+                      "typeId": 7,
+                      "type": "u64",
+                      "components": null,
+                      "typeParameters": null
+                    },
+                    {
+                      "typeId": 8,
+                      "type": "u8",
+                      "components": null,
+                      "typeParameters": null
+                    }
+                  ],
+                  "functions": [
+                    {
+                      "inputs": [
+                        {
+                          "name": "arg",
+                          "type": 4,
+                          "typeArguments": [
+                            {
+                              "name": "",
+                              "type": 8,
+                              "typeArguments": null
+                            },
+                            {
+                              "name": "",
+                              "type": 5,
+                              "typeArguments": null
+                            }
+                          ]
+                        },
+                        {
+                          "name": "arg_2",
+                          "type": 1,
+                          "typeArguments": [
+                            {
+                              "name": "",
+                              "type": 6,
+                              "typeArguments": null
+                            },
+                            {
+                              "name": "",
+                              "type": 7,
+                              "typeArguments": null
+                            }
+                          ]
+                        }
+                      ],
+                      "name": "test_function",
+                      "output": {
+                        "name": "",
+                        "type": 0,
+                        "typeArguments": null
+                      },
+                      "attributes": null
+                    }
+                  ],
+                  "loggedTypes": [],
+                  "messagesTypes": [],
+                  "configurables": []
+                }"#
         ));
 
         // ANCHOR: unused_generics_struct

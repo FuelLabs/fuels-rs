@@ -183,7 +183,10 @@ mod tests {
 
     use fuel_abi_types::abi::{
         full_program::FullABIFunction,
-        program::{ABIFunction, Attribute, ProgramABI, UnifiedTypeApplication, TypeDeclaration},
+        program::Attribute,
+        unified_program::{
+            UnifiedABIFunction, UnifiedProgramABI, UnifiedTypeApplication, UnifiedTypeDeclaration,
+        },
     };
     use pretty_assertions::assert_eq;
     use quote::quote;
@@ -339,12 +342,12 @@ mod tests {
                 ]
               }
     "#;
-        let parsed_abi: ProgramABI = serde_json::from_str(s)?;
+        let parsed_abi: UnifiedProgramABI = serde_json::from_str(s)?;
         let types = parsed_abi
             .types
             .into_iter()
             .map(|t| (t.type_id, t))
-            .collect::<HashMap<usize, TypeDeclaration>>();
+            .collect::<HashMap<usize, UnifiedTypeDeclaration>>();
 
         // Grabbing the one and only function in it.
         let result = expand_fn(&FullABIFunction::from_counterpart(
@@ -381,7 +384,7 @@ mod tests {
 
     #[test]
     fn expand_contract_method_simple() -> Result<()> {
-        let the_function = ABIFunction {
+        let the_function = UnifiedABIFunction {
             inputs: vec![UnifiedTypeApplication {
                 name: String::from("bimbam"),
                 type_id: 1,
@@ -397,7 +400,7 @@ mod tests {
         let types = [
             (
                 0,
-                TypeDeclaration {
+                UnifiedTypeDeclaration {
                     type_id: 0,
                     type_field: String::from("()"),
                     ..Default::default()
@@ -405,7 +408,7 @@ mod tests {
             ),
             (
                 1,
-                TypeDeclaration {
+                UnifiedTypeDeclaration {
                     type_id: 1,
                     type_field: String::from("bool"),
                     ..Default::default()
@@ -439,7 +442,7 @@ mod tests {
     #[test]
     fn expand_contract_method_complex() -> Result<()> {
         // given
-        let the_function = ABIFunction {
+        let the_function = UnifiedABIFunction {
             inputs: vec![UnifiedTypeApplication {
                 name: String::from("the_only_allowed_input"),
                 type_id: 4,
@@ -465,7 +468,7 @@ mod tests {
         let types = [
             (
                 1,
-                TypeDeclaration {
+                UnifiedTypeDeclaration {
                     type_id: 1,
                     type_field: String::from("enum EntropyCirclesEnum"),
                     components: Some(vec![
@@ -485,7 +488,7 @@ mod tests {
             ),
             (
                 2,
-                TypeDeclaration {
+                UnifiedTypeDeclaration {
                     type_id: 2,
                     type_field: String::from("bool"),
                     ..Default::default()
@@ -493,7 +496,7 @@ mod tests {
             ),
             (
                 3,
-                TypeDeclaration {
+                UnifiedTypeDeclaration {
                     type_id: 3,
                     type_field: String::from("u64"),
                     ..Default::default()
@@ -501,7 +504,7 @@ mod tests {
             ),
             (
                 4,
-                TypeDeclaration {
+                UnifiedTypeDeclaration {
                     type_id: 4,
                     type_field: String::from("struct SomeWeirdFrenchCuisine"),
                     components: Some(vec![
