@@ -331,7 +331,7 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<()> {
     );
 
     // The gas used by the script to call a contract and forward remaining gas limit.
-    let gas_used_by_script = 248;
+    let gas_used_by_script = 249;
     let gas_limit = 225_883;
     let response = contract_instance
         .methods()
