@@ -5,7 +5,7 @@ use fuels_core::types::{
     coin::Coin,
     coin_type::CoinType,
     coin_type_id::CoinTypeId,
-    errors::{error, error_transaction, Error, Result},
+    errors::{error, Error, Result},
     input::Input,
     transaction_builders::TransactionBuilder,
 };
@@ -23,15 +23,9 @@ pub async fn calculate_missing_base_amount(
     reserved_base_amount: u64,
     provider: &Provider,
 ) -> Result<u64> {
-    let transaction_fee = tb
-        .fee_checked_from_tx(provider)
-        .await?
-        .ok_or(error_transaction!(
-            Other,
-            "error calculating `TransactionFee`"
-        ))?;
+    let max_fee = tb.estimate_max_fee(provider).await?;
 
-    let total_used = transaction_fee.max_fee() + reserved_base_amount;
+    let total_used = max_fee + reserved_base_amount;
     let missing_amount = if total_used > available_base_amount {
         total_used - available_base_amount
     } else if !is_consuming_utxos(tb) {
