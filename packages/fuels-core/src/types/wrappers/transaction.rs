@@ -14,9 +14,9 @@ use fuel_tx::{
         },
     },
     policies::PolicyType,
-    Bytes32, Cacheable, Chargeable, ConsensusParameters, Create, FormatValidityChecks, Input, Mint,
-    Output, Salt as FuelSalt, Script, StorageSlot, Transaction as FuelTransaction, TransactionFee,
-    UniqueIdentifier, Upgrade, Upload, Witness,
+    Blob, Bytes32, Cacheable, Chargeable, ConsensusParameters, Create, FormatValidityChecks, Input,
+    Mint, Output, Salt as FuelSalt, Script, StorageSlot, Transaction as FuelTransaction,
+    TransactionFee, UniqueIdentifier, Upgrade, Upload, Witness,
 };
 use fuel_types::{bytes::padded_len_usize, AssetId, ChainId};
 use fuel_vm::checked_transaction::{
@@ -190,6 +190,7 @@ pub enum TransactionType {
     Mint(MintTransaction),
     Upload(UploadTransaction),
     Upgrade(UpgradeTransaction),
+    Blob(BlobTransaction),
 }
 
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
@@ -293,6 +294,7 @@ impl From<TransactionType> for FuelTransaction {
             TransactionType::Mint(tx) => tx.into(),
             TransactionType::Upload(tx) => tx.into(),
             TransactionType::Upgrade(tx) => tx.into(),
+            TransactionType::Blob(tx) => tx.into(),
         }
     }
 }
@@ -537,6 +539,7 @@ impl_tx_wrapper!(ScriptTransaction, Script);
 impl_tx_wrapper!(CreateTransaction, Create);
 impl_tx_wrapper!(UploadTransaction, Upload);
 impl_tx_wrapper!(UpgradeTransaction, Upgrade);
+impl_tx_wrapper!(BlobTransaction, Blob);
 
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
@@ -650,6 +653,30 @@ impl EstimablePredicates for ScriptTransaction {
     }
 }
 
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+impl EstimablePredicates for BlobTransaction {
+    async fn estimate_predicates(
+        &mut self,
+        provider: impl DryRunner,
+        latest_chain_executor_version: Option<u32>,
+    ) -> Result<()> {
+        if let Some(tx) = provider
+            .maybe_estimate_predicates(&self.tx.clone().into(), latest_chain_executor_version)
+            .await?
+        {
+            tx.as_blob().expect("is blob").clone_into(&mut self.tx);
+        } else {
+            self.tx.estimate_predicates(
+                &provider.consensus_parameters().into(),
+                MemoryInstance::new(),
+            )?;
+        }
+
+        Ok(())
+    }
+}
+
 impl GasValidation for CreateTransaction {
     fn validate_gas(&self, _gas_used: u64) -> Result<()> {
         Ok(())
@@ -663,6 +690,12 @@ impl GasValidation for UploadTransaction {
 }
 
 impl GasValidation for UpgradeTransaction {
+    fn validate_gas(&self, _gas_used: u64) -> Result<()> {
+        Ok(())
+    }
+}
+
+impl GasValidation for BlobTransaction {
     fn validate_gas(&self, _gas_used: u64) -> Result<()> {
         Ok(())
     }

@@ -1,3 +1,4 @@
+use fuel_tx::TxParameters;
 use fuels::{
     core::codec::{calldata, encode_fn_selector, DecoderConfig, EncoderConfig},
     prelude::*,
@@ -991,7 +992,9 @@ async fn test_contract_call_with_non_default_max_input() -> Result<()> {
 
     let provider = setup_test_provider(coins, vec![], None, Some(chain_config)).await?;
     wallet.set_provider(provider.clone());
-    assert_eq!(consensus_parameters, *provider.consensus_parameters());
+    // let val = serde_json::to_string_pretty(&consensus_parameters).unwrap();
+    // std::fs::write("/home/segfault_magnet/consensus.json", val).unwrap();
+    pretty_assertions::assert_eq!(consensus_parameters, *provider.consensus_parameters());
 
     setup_program_test!(
         Abigen(Contract(
@@ -2102,6 +2105,105 @@ async fn max_fee_estimation_respects_tolerance() -> Result<()> {
         more_base_asset_due_to_bigger_tolerance as f64 / normal_base_asset as f64,
         1.00 + 2.00
     );
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn blob_contract_deployment() -> Result<()> {
+    let mut wallet = WalletUnlocked::new_random(None);
+    let coins = setup_single_asset_coins(wallet.address(), AssetId::BASE, 10, 1_000_000);
+
+    let contract_binary = "sway/contracts/huge_contract/out/release/huge_contract.bin";
+    let contract_size = std::fs::metadata(contract_binary)
+        .expect("contract file not found")
+        .len();
+    assert!(
+        contract_size > 150_000,
+        "the testnet size limit was around 100kB, we want a contract bigger than that"
+    );
+
+    let chain_config = ChainConfig::local_testnet();
+
+    let max_tx_size = chain_config.consensus_parameters.tx_params().max_size();
+    assert!(
+        max_tx_size < contract_size,
+        "this contract if included in one piece would make the tx too big"
+    );
+
+    let contract_max_size = chain_config
+        .consensus_parameters
+        .contract_params()
+        .contract_max_size();
+    assert!(
+        contract_max_size < contract_size,
+        "the node won't allow a contract of this size to be created"
+    );
+
+    // {
+    //     // TODO: segfault imported from fuel_tx
+    //     let mut tx_params = *chain_config.consensus_parameters.tx_params();
+    //     let TxParameters::V1(params) = &mut tx_params;
+    //     params.max_size += contract_size;
+    //     chain_config.consensus_parameters.set_tx_params(tx_params);
+    //
+    //     let mut contract_params = *chain_config.consensus_parameters.contract_params();
+    //     // TODO: segfault imported from fuel_tx
+    //     let ContractParameters::V1(params) = &mut contract_params;
+    //     params.contract_max_size = contract_size;
+    //     chain_config
+    //         .consensus_parameters
+    //         .set_contract_params(contract_params);
+    // }
+
+    let provider = setup_test_provider(coins, vec![], None, Some(chain_config)).await?;
+    wallet.set_provider(provider.clone());
+
+    let mut blob_ids = vec![];
+
+    let code = std::fs::read(contract_binary)?;
+    for chunk in code.chunks(50_000) {
+        let mut tb = BlobTransactionBuilder::default();
+        let blob = Blob {
+            data: chunk.to_vec(),
+        };
+        let blob_id = blob.id();
+        tb.blob = blob;
+        wallet.adjust_for_fee(&mut tb, 0).await?;
+        tb.add_signer(wallet.clone())?;
+        let tx = tb.build(&provider).await?;
+        provider
+            .send_transaction_and_await_commit(tx)
+            .await?
+            .check(None)?;
+
+        blob_ids.push(blob_id);
+        eprintln!("blob id: {:X}", fuel_tx::Bytes32::from(blob_id));
+    }
+
+    // abigen!(Contract(
+    //     name = "MyContract",
+    //     abi = "e2e/sway/contracts/huge_contract/out/release/huge_contract-abi.json"
+    // ));
+    //
+    // let contract = Contract::load_from(contract_binary, LoadConfiguration::default())?;
+    //
+    // let contract_id = contract.deploy(&wallet, TxPolicies::default()).await?;
+    //
+    // let contract_instance = MyContract::new(contract_id, wallet.clone());
+    // contract_instance
+    //     .methods()
+    //     .chunk_1()
+    //     .call()
+    //     .await
+    //     .expect("contract call failed");
+    //
+    // contract_instance
+    //     .methods()
+    //     .chunk_2()
+    //     .call()
+    //     .await
+    //     .expect("contract call failed");
 
     Ok(())
 }

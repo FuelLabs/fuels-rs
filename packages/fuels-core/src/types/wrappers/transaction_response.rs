@@ -44,6 +44,8 @@ impl From<ClientTransactionResponse> for TransactionResponse {
             Transaction::Mint(tx) => TransactionType::Mint(tx.into()),
             Transaction::Upgrade(tx) => TransactionType::Upgrade(tx.into()),
             Transaction::Upload(tx) => TransactionType::Upload(tx.into()),
+            // TODO: segfault
+            Transaction::Blob(_) => todo!(""),
         };
 
         Self {

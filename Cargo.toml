@@ -79,6 +79,7 @@ trybuild = "1.0.85"
 uint = { version = "0.9.5", default-features = false }
 which = { version = "6.0.0", default-features = false }
 zeroize = "1.7.0"
+pretty_assertions = { version = "1.4", default-features = false }
 
 # Dependencies from the `fuel-core` repository:
 fuel-core = { version = "0.31.0", default-features = false }
@@ -106,3 +107,14 @@ fuels-macros = { version = "0.65.1", path = "./packages/fuels-macros", default-f
 fuels-programs = { version = "0.65.1", path = "./packages/fuels-programs", default-features = false }
 fuels-test-helpers = { version = "0.65.1", path = "./packages/fuels-test-helpers", default-features = false }
 versions-replacer = { version = "0.65.1", path = "./scripts/versions-replacer", default-features = false }
+
+[patch.crates-io]
+fuel-core = { default-features = false, path = "/home/segfault_magnet/fuel/fuel-core/crates/fuel-core" }
+fuel-core-chain-config = { default-features = false, path = "/home/segfault_magnet/fuel/fuel-core/crates/chain-config" }
+fuel-core-client = { default-features = false, path = "/home/segfault_magnet/fuel/fuel-core/crates/client" }
+fuel-core-poa = { default-features = false, path = "/home/segfault_magnet/fuel/fuel-core/crates/services/consensus_module/poa" }
+fuel-core-services = { default-features = false, path = "/home/segfault_magnet/fuel/fuel-core/crates/services" }
+fuel-core-types = { default-features = false, path = "/home/segfault_magnet/fuel/fuel-core/crates/types" }
+fuel-vm = { path = "/home/segfault_magnet/fuel/fuel-vm/fuel-vm" }
+fuel-types = { path = "/home/segfault_magnet/fuel/fuel-vm/fuel-types" }
+fuel-tx = { path = "/home/segfault_magnet/fuel/fuel-vm/fuel-tx" }
