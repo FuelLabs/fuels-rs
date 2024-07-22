@@ -55,7 +55,7 @@ use tokio::sync::Mutex;
 use crate::coin_cache::CoinsCache;
 use crate::provider::retryable_client::RetryableClient;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 // ANCHOR: transaction_cost
 pub struct TransactionCost {
     pub gas_price: u64,

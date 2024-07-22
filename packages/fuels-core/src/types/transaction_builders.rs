@@ -157,8 +157,7 @@ pub trait TransactionBuilder: BuildableTransaction + Send + sealed::Sealed {
     type TxType: Transaction;
 
     fn add_signer(&mut self, signer: impl Signer + Send + Sync) -> Result<&mut Self>;
-    async fn fee_checked_from_tx(&self, provider: impl DryRunner)
-        -> Result<Option<TransactionFee>>;
+    async fn estimate_max_fee(&self, provider: impl DryRunner) -> Result<u64>;
     fn with_tx_policies(self, tx_policies: TxPolicies) -> Self;
     fn with_inputs(self, inputs: Vec<Input>) -> Self;
     fn with_outputs(self, outputs: Vec<Output>) -> Self;
@@ -200,10 +199,7 @@ macro_rules! impl_tx_trait {
                 Ok(self)
             }
 
-            async fn fee_checked_from_tx(
-                &self,
-                provider: impl DryRunner,
-            ) -> Result<Option<TransactionFee>> {
+            async fn estimate_max_fee(&self, provider: impl DryRunner) -> Result<u64> {
                 let mut fee_estimation_tb = self
                     .clone_without_signers()
                     .with_build_strategy(Self::Strategy::NoSignatures);
@@ -223,14 +219,16 @@ macro_rules! impl_tx_trait {
 
                 let consensus_parameters = provider.consensus_parameters();
 
-                Ok(TransactionFee::checked_from_tx(
-                    &consensus_parameters.gas_costs(),
-                    &consensus_parameters.fee_params(),
-                    &tx.tx,
-                    provider
-                        .estimate_gas_price(self.gas_price_estimation_block_horizon)
-                        .await?,
-                ))
+                let gas_price = provider
+                    .estimate_gas_price(self.gas_price_estimation_block_horizon)
+                    .await?;
+
+                estimate_max_fee_w_tolerance(
+                    tx.tx,
+                    self.max_fee_estimation_tolerance,
+                    gas_price,
+                    consensus_parameters,
+                )
             }
 
             fn with_tx_policies(mut self, tx_policies: TxPolicies) -> Self {
@@ -361,28 +359,41 @@ macro_rules! impl_tx_trait {
                 let gas_price = provider.estimate_gas_price(block_horizon).await?;
                 let consensus_parameters = provider.consensus_parameters();
 
-                let tx_fee = TransactionFee::checked_from_tx(
-                    &consensus_parameters.gas_costs(),
-                    consensus_parameters.fee_params(),
-                    &wrapper_tx.tx,
+                let max_fee = estimate_max_fee_w_tolerance(
+                    wrapper_tx.tx,
+                    max_fee_estimation_tolerance,
                     gas_price,
-                )
-                .ok_or(error_transaction!(
-                    Other,
-                    "error calculating `TransactionFee` in `TransactionBuilder`"
-                ))?;
+                    consensus_parameters,
+                )?;
 
-                let calculated_max_fee = tx_fee.max_fee();
-                let max_fee_w_tolerance =
-                    calculated_max_fee as f64 * (1.0 + f64::from(max_fee_estimation_tolerance));
-
-                tx.policies_mut()
-                    .set(PolicyType::MaxFee, Some(max_fee_w_tolerance as u64));
+                tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
 
                 Ok(())
             }
         }
     };
+}
+
+fn estimate_max_fee_w_tolerance<T: Chargeable>(
+    tx: T,
+    tolerance: f32,
+    gas_price: u64,
+    consensus_parameters: &ConsensusParameters,
+) -> Result<u64> {
+    let gas_costs = &consensus_parameters.gas_costs();
+
+    let fee_params = consensus_parameters.fee_params();
+
+    let tx_fee = TransactionFee::checked_from_tx(gas_costs, fee_params, &tx, gas_price).ok_or(
+        error_transaction!(
+            Builder,
+            "error calculating `TransactionFee` in `TransactionBuilder`"
+        ),
+    )?;
+
+    let max_fee_w_tolerance = tx_fee.max_fee() as f64 * (1.0 + f64::from(tolerance));
+
+    Ok(max_fee_w_tolerance as u64)
 }
 
 impl Debug for dyn Signer + Send + Sync {
