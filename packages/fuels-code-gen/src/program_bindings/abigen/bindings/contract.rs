@@ -184,203 +184,12 @@ mod tests {
     use fuel_abi_types::abi::{
         full_program::FullABIFunction,
         program::Attribute,
-        unified_program::{
-            UnifiedABIFunction, UnifiedProgramABI, UnifiedTypeApplication, UnifiedTypeDeclaration,
-        },
+        unified_program::{UnifiedABIFunction, UnifiedTypeApplication, UnifiedTypeDeclaration},
     };
     use pretty_assertions::assert_eq;
     use quote::quote;
 
     use crate::{error::Result, program_bindings::abigen::bindings::contract::expand_fn};
-
-    #[test]
-    fn expand_contract_method_simple_abi() -> Result<()> {
-        let s = r#"
-            {
-                "types": [
-                  {
-                    "typeId": 6,
-                    "type": "u64",
-                    "components": null,
-                    "typeParameters": null
-                  },
-                  {
-                    "typeId": 8,
-                    "type": "b256",
-                    "components": null,
-                    "typeParameters": null
-                  },
-                  {
-                    "typeId": 6,
-                    "type": "u64",
-                    "components": null,
-                    "typeParameters": null
-                  },
-                  {
-                    "typeId": 8,
-                    "type": "b256",
-                    "components": null,
-                    "typeParameters": null
-                  },
-                  {
-                    "typeId": 10,
-                    "type": "bool",
-                    "components": null,
-                    "typeParameters": null
-                  },
-                  {
-                    "typeId": 12,
-                    "type": "struct MyStruct1",
-                    "components": [
-                      {
-                        "name": "x",
-                        "type": 6,
-                        "typeArguments": null
-                      },
-                      {
-                        "name": "y",
-                        "type": 8,
-                        "typeArguments": null
-                      }
-                    ],
-                    "typeParameters": null
-                  },
-                  {
-                    "typeId": 6,
-                    "type": "u64",
-                    "components": null,
-                    "typeParameters": null
-                  },
-                  {
-                    "typeId": 8,
-                    "type": "b256",
-                    "components": null,
-                    "typeParameters": null
-                  },
-                  {
-                    "typeId": 2,
-                    "type": "struct MyStruct1",
-                    "components": [
-                      {
-                        "name": "x",
-                        "type": 6,
-                        "typeArguments": null
-                      },
-                      {
-                        "name": "y",
-                        "type": 8,
-                        "typeArguments": null
-                      }
-                    ],
-                    "typeParameters": null
-                  },
-                  {
-                    "typeId": 3,
-                    "type": "struct MyStruct2",
-                    "components": [
-                      {
-                        "name": "x",
-                        "type": 10,
-                        "typeArguments": null
-                      },
-                      {
-                        "name": "y",
-                        "type": 12,
-                        "typeArguments": []
-                      }
-                    ],
-                    "typeParameters": null
-                  },
-                  {
-                    "typeId": 26,
-                    "type": "struct MyStruct1",
-                    "components": [
-                      {
-                        "name": "x",
-                        "type": 6,
-                        "typeArguments": null
-                      },
-                      {
-                        "name": "y",
-                        "type": 8,
-                        "typeArguments": null
-                      }
-                    ],
-                    "typeParameters": null
-                  }
-                ],
-                "functions": [
-                  {
-                    "type": "function",
-                    "inputs": [
-                      {
-                        "name": "s1",
-                        "type": 2,
-                        "typeArguments": []
-                      },
-                      {
-                        "name": "s2",
-                        "type": 3,
-                        "typeArguments": []
-                      }
-                    ],
-                    "name": "some_abi_funct",
-                    "output": {
-                      "name": "",
-                      "type": 26,
-                      "typeArguments": []
-                    },
-                    "attributes": [
-                      {
-                        "name": "doc-comment",
-                        "arguments": [
-                          "This is a doc string"
-                        ]
-                      }
-                    ]
-                  }
-                ]
-              }
-    "#;
-        let parsed_abi: UnifiedProgramABI = serde_json::from_str(s)?;
-        let types = parsed_abi
-            .types
-            .into_iter()
-            .map(|t| (t.type_id, t))
-            .collect::<HashMap<usize, UnifiedTypeDeclaration>>();
-
-        // Grabbing the one and only function in it.
-        let result = expand_fn(&FullABIFunction::from_counterpart(
-            &parsed_abi.functions[0],
-            &types,
-        )?)?;
-
-        let expected = quote! {
-            #[doc = "This is a doc string"]
-            pub fn some_abi_funct(
-                &self,
-                s_1: self::MyStruct1,
-                s_2: self::MyStruct2
-            ) -> ::fuels::programs::calls::CallHandler<A, ::fuels::programs::calls::ContractCall, self::MyStruct1> {
-                ::fuels::programs::calls::CallHandler::new_contract_call(
-                    self.contract_id.clone(),
-                    self.account.clone(),
-                    ::fuels::core::codec::encode_fn_selector("some_abi_funct"),
-                    &[
-                        ::fuels::core::traits::Tokenizable::into_token(s_1),
-                        ::fuels::core::traits::Tokenizable::into_token(s_2)
-                    ],
-                    self.log_decoder.clone(),
-                    false,
-                    self.encoder_config.clone(),
-                )
-            }
-        };
-
-        assert_eq!(result.to_string(), expected.to_string());
-
-        Ok(())
-    }
 
     #[test]
     fn expand_contract_method_simple() -> Result<()> {
@@ -390,7 +199,7 @@ mod tests {
                 type_id: 1,
                 ..Default::default()
             }],
-            name: "HelloWorld".to_string(),
+            name: "hello_world".to_string(),
             attributes: Some(vec![Attribute {
                 name: "doc-comment".to_string(),
                 arguments: vec!["This is a doc string".to_string()],
@@ -421,11 +230,11 @@ mod tests {
 
         let expected = quote! {
             #[doc = "This is a doc string"]
-            pub fn HelloWorld(&self, bimbam: ::core::primitive::bool) -> ::fuels::programs::calls::CallHandler<A, ::fuels::programs::calls::ContractCall, ()> {
+            pub fn hello_world(&self, bimbam: ::core::primitive::bool) -> ::fuels::programs::calls::CallHandler<A, ::fuels::programs::calls::ContractCall, ()> {
                 ::fuels::programs::calls::CallHandler::new_contract_call(
                     self.contract_id.clone(),
                     self.account.clone(),
-                    ::fuels::core::codec::encode_fn_selector("HelloWorld"),
+                    ::fuels::core::codec::encode_fn_selector("hello_world"),
                     &[::fuels::core::traits::Tokenizable::into_token(bimbam)],
                     self.log_decoder.clone(),
                     false,

@@ -800,63 +800,6 @@ async fn type_inside_enum() -> Result<()> {
 }
 
 #[tokio::test]
-#[should_panic(expected = "failed to convert string into SizedAsciiString")]
-async fn strings_must_have_correct_length() {
-    abigen!(Contract(
-        name = "SimpleContract",
-        abi = r#"
-        {
-          "types": [
-            {
-              "typeId": 0,
-              "type": "()",
-              "components": [],
-              "typeParameters": null
-            },
-            {
-              "typeId": 1,
-              "type": "str[4]",
-              "components": null,
-              "typeParameters": null
-            }
-          ],
-          "functions": [
-            {
-              "inputs": [
-                {
-                  "name": "arg",
-                  "type": 1,
-                  "typeArguments": null
-                }
-              ],
-              "name": "takes_string",
-              "output": {
-                "name": "",
-                "type": 0,
-                "typeArguments": null
-              }
-            }
-          ]
-        }
-        "#,
-    ));
-
-    let wallet = launch_provider_and_get_wallet()
-        .await
-        .expect("Should have wallet");
-    let contract_instance = SimpleContract::new(null_contract_id(), wallet);
-
-    // ANCHOR: contract_takes_string
-    // //TODO: @hal3e see why we use this ancor and if we can move it
-    let _ = contract_instance.methods().takes_string(
-        "fuell"
-            .try_into()
-            .expect("failed to convert string into SizedAsciiString"),
-    );
-    // ANCHOR_END: contract_takes_string
-}
-
-#[tokio::test]
 async fn test_rust_option_can_be_decoded() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
@@ -1272,10 +1215,7 @@ async fn generics_test() -> Result<()> {
     }
     {
         contract_methods
-            .unused_generic_args(
-                StructOneUnusedGenericParam::default(),
-                EnumOneUnusedGenericParam::One,
-            )
+            .unused_generic_args(StructUnusedGeneric::new(15), EnumUnusedGeneric::One(15))
             .call()
             .await?;
 

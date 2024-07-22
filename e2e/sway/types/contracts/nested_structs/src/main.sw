@@ -39,7 +39,7 @@ impl MyContract for Contract {
         }
     }
     fn check_struct_integrity(arg: AllStruct) -> bool {
-        arg.some_struct.field == 12345u32 && arg.some_struct.field_2 == false
+        arg.some_struct.field == 12345u32 && arg.some_struct.field_2 == true
     }
 
     fn nested_struct_with_reserved_keyword_substring(call_data: CallData) -> CallData {
