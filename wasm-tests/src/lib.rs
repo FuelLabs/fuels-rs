@@ -16,7 +16,7 @@ mod tests {
     fn decoding_and_encoding() -> Result<()> {
         wasm_abigen!(Contract(
             name = "no_name",
-            // abi generated with: "e2e/sway/examples/wasm_contract"
+            // abi generated with: "e2e/sway/abi/wasm_contract"
             abi = r#"
             {
               "programType": "contract",
@@ -128,7 +128,7 @@ mod tests {
     fn predicate_abigen() -> Result<()> {
         wasm_abigen!(Predicate(
             name = "MyPredicate",
-            // abi generated with: "e2e/sway/examples/wasm_predicate"
+            // abi generated with: "e2e/sway/abi/wasm_predicate"
             abi = r#"
             {
               "programType": "predicate",

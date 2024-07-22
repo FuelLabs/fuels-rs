@@ -2,21 +2,19 @@ contract;
 
 enum SomeEnum<T> {
     V1: (),
-    V2: T
+    V2: T,
 }
 
 #[allow(dead_code)]
 struct SomeStruct {
     a: u32,
-    b: bool
+    b: bool,
 }
-
 
 abi TestContract {
     fn test_function(arg: SomeEnum<SomeStruct>);
 }
 
 impl TestContract for Contract {
-    fn test_function(_arg: SomeEnum<SomeStruct>) {
- }
-} //TODO: @hal3e format this
+    fn test_function(_arg: SomeEnum<SomeStruct>) {}
+}
