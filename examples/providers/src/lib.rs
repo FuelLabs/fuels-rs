@@ -7,7 +7,6 @@ mod tests {
     #[tokio::test]
     // TODO: ignore until testnet is updated to `fuel-core` `0.31.0`
     // issue to track: https://github.com/FuelLabs/fuels-rs/issues/1455
-    #[ignore]
     async fn connect_to_fuel_node() -> Result<()> {
         // ANCHOR: connect_to_testnet
         use std::str::FromStr;
@@ -15,7 +14,7 @@ mod tests {
         use fuels::{crypto::SecretKey, prelude::*};
 
         // Create a provider pointing to the testnet.
-        let provider = Provider::connect("testnet.fuel.network").await.unwrap();
+        let provider = Provider::connect(TESTNET_NODE_URL).await.unwrap();
 
         // Setup a private key
         let secret = SecretKey::from_str(

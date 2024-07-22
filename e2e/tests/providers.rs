@@ -1,4 +1,4 @@
-use std::{ops::Add, path::Path};
+use std::{array, ops::Add, path::Path, str::FromStr};
 
 use chrono::{DateTime, Duration, TimeZone, Utc};
 use fuel_asm::RegId;
@@ -6,6 +6,7 @@ use fuel_tx::Witness;
 use fuels::{
     accounts::Account,
     client::{PageDirection, PaginationRequest},
+    crypto::SecretKey,
     prelude::*,
     tx::Receipt,
     types::{
@@ -18,6 +19,22 @@ use fuels::{
         Bits256,
     },
 };
+
+async fn connect_to_testnet_node_and_get_wallets() -> Result<[WalletUnlocked; TEST_WALLETS_COUNT]> {
+    let provider = Provider::connect(TESTNET_NODE_URL)
+        .await
+        .unwrap_or_else(|_| panic!("should be able to connect to {TESTNET_NODE_URL}"));
+    let wallets = array::from_fn(|i| i + 1).map(|wallet_counter| {
+        let private_key_var_name = format!("TEST_WALLET_SECRET_KEY_{wallet_counter}");
+        let private_key_string = std::env::var(&private_key_var_name).unwrap_or_else(|_| {
+            panic!("Should find private key in environment as {private_key_var_name}")
+        });
+        let private_key = SecretKey::from_str(private_key_string.as_str())
+            .expect("Should be able to transform into private key");
+        WalletUnlocked::new_from_private_key(private_key, Some(provider.clone()))
+    });
+    Ok(wallets)
+}
 
 #[tokio::test]
 async fn test_provider_launch_and_connect() -> Result<()> {

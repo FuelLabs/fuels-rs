@@ -14,3 +14,7 @@ pub const DEFAULT_GAS_ESTIMATION_BLOCK_HORIZON: u32 = 1;
 pub const WITNESS_STATIC_SIZE: usize = 8;
 const SIGNATURE_SIZE: usize = 64;
 pub const SIGNATURE_WITNESS_SIZE: usize = WITNESS_STATIC_SIZE + SIGNATURE_SIZE;
+
+// e2e/live testing related
+pub const TESTNET_NODE_URL: &str = "testnet.fuel.network";
+pub const TEST_WALLETS_COUNT: usize = 3;
