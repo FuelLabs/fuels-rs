@@ -17,4 +17,4 @@ pub const SIGNATURE_WITNESS_SIZE: usize = WITNESS_STATIC_SIZE + SIGNATURE_SIZE;
 
 // e2e/live testing related
 pub const TESTNET_NODE_URL: &str = "testnet.fuel.network";
-pub const TEST_WALLETS_COUNT: usize = 3;
+pub const TEST_WALLETS_COUNT: u64 = 3;
