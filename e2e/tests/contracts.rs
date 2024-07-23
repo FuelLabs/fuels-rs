@@ -1,8 +1,6 @@
-use fuel_tx::TxParameters;
 use fuels::{
     core::codec::{calldata, encode_fn_selector, DecoderConfig, EncoderConfig},
     prelude::*,
-    programs::loader_contract,
     tx::ContractParameters,
     types::{errors::transaction::Reason, input::Input, Bits256, Identity},
 };
@@ -2160,30 +2158,10 @@ async fn blob_contract_deployment() -> Result<()> {
     let provider = setup_test_provider(coins, vec![], None, Some(chain_config)).await?;
     wallet.set_provider(provider.clone());
 
-    let mut blob_ids = vec![];
-
-    let code = std::fs::read(contract_binary)?;
-    for chunk in code.chunks(20_000) {
-        let mut tb = BlobTransactionBuilder::default();
-        let blob = Blob::new(chunk.to_vec());
-        let blob_id = blob.id();
-        tb.blob = blob;
-        wallet.adjust_for_fee(&mut tb, 0).await?;
-        tb.add_signer(wallet.clone())?;
-        let tx = tb.build(&provider).await?;
-        provider
-            .send_transaction_and_await_commit(tx)
-            .await?
-            .check(None)?;
-
-        blob_ids.push(blob_id);
-        eprintln!("blob id: {:X}", fuel_tx::Bytes32::from(blob_id));
-    }
-    let contract = loader_contract(&blob_ids);
-
-    let contract_id = Contract::new(contract, Salt::zeroed(), vec![])
-        .deploy(&wallet, Default::default())
+    let contract_id = Contract::load_from(contract_binary, LoadConfiguration::default())?
+        .deploy_as_loader(&wallet, TxPolicies::default(), 20_000)
         .await?;
+
     eprintln!("The contract id is {contract_id}");
 
     abigen!(Contract(
@@ -2218,6 +2196,43 @@ async fn blob_contract_deployment() -> Result<()> {
         .map(|data| u64::from_be_bytes(data.as_slice().try_into().unwrap()))
         .unwrap();
     assert_eq!(data, 1001);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn mini_example() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Predicate(
+            name = "MyPredicate",
+            project = "e2e/sway/types/predicates/u64"
+        ),),
+    );
+
+    let provider: Provider = wallet.try_provider()?.clone();
+    let data = MyPredicateEncoder::default().encode_data(32768)?;
+    let predicate = Predicate::load_from("sway/types/predicates/u64/out/release/u64.bin")?
+        .with_data(data)
+        .with_provider(provider.clone());
+
+    wallet
+        .transfer(
+            predicate.address(),
+            10_000,
+            AssetId::zeroed(),
+            TxPolicies::default(),
+        )
+        .await?;
+
+    let blob_data = vec![1u8; 10];
+    let mut tb = BlobTransactionBuilder::default().with_blob(blob_data.into());
+    predicate.adjust_for_fee(&mut tb, 0).await?;
+    let tx = tb.build(provider.clone()).await?;
+    provider
+        .send_transaction_and_await_commit(tx)
+        .await?
+        .check(None)?;
 
     Ok(())
 }

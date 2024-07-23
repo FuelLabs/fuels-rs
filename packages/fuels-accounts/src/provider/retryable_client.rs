@@ -125,6 +125,8 @@ impl RetryableClient {
         &self,
         tx: &Transaction,
     ) -> RequestResult<TransactionStatus> {
+        eprintln!("submit_and_await_commit: {tx:#?}");
+
         self.wrap(|| self.client.submit_and_await_commit(tx)).await
     }
 

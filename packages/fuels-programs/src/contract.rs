@@ -7,13 +7,16 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use fuel_asm::{op, Instruction, RegId};
 use fuel_tx::{Bytes32, Contract as FuelContract, ContractId, Salt, StorageSlot};
 use fuels_accounts::Account;
 use fuels_core::types::{
     bech32::Bech32ContractId,
     errors::{error, Result},
     transaction::TxPolicies,
-    transaction_builders::CreateTransactionBuilder,
+    transaction_builders::{
+        Blob, BlobId, BlobTransactionBuilder, CreateTransactionBuilder, TransactionBuilder,
+    },
 };
 pub use load::*;
 pub use storage::*;
@@ -43,6 +46,125 @@ impl Contract {
             code_root,
             state_root,
         }
+    }
+
+    pub fn new_loader(blob_ids: &[[u8; 32]], salt: Salt, storage_slots: Vec<StorageSlot>) -> Self {
+        let code = Self::loader_contract(blob_ids);
+        Self::new(code, salt, storage_slots)
+    }
+
+    pub async fn deploy_as_loader(
+        self,
+        account: &impl Account,
+        tx_policies: TxPolicies,
+        max_blob_size: usize,
+    ) -> Result<Bech32ContractId> {
+        let provider = account.try_provider()?;
+
+        let blobs = self.generate_blobs(max_blob_size);
+        let blob_ids = blobs.iter().map(|blob| blob.id()).collect::<Vec<_>>();
+        for blob_id in &blob_ids {
+            eprintln!("blob_id: {}", hex::encode(blob_id));
+        }
+
+        for blob in blobs {
+            let mut tb = BlobTransactionBuilder::default()
+                .with_blob(blob)
+                .with_tx_policies(tx_policies)
+                .with_max_fee_estimation_tolerance(0.05);
+
+            account.adjust_for_fee(&mut tb, 0).await?;
+            account.add_witnesses(&mut tb)?;
+
+            let tx = tb.build(provider).await?;
+            eprintln!("sending blob tx");
+            provider
+                .send_transaction_and_await_commit(tx)
+                .await?
+                .check(None)?;
+            eprintln!("blob tx succeeded");
+        }
+
+        let contract = Self::new_loader(&blob_ids, self.salt, self.storage_slots);
+
+        contract._deploy(account, tx_policies).await
+    }
+
+    pub fn generate_blobs(&self, max_size: usize) -> Vec<Blob> {
+        self.binary
+            .chunks(max_size)
+            .map(|chunk| Blob::new(chunk.to_vec()))
+            .collect()
+    }
+
+    fn loader_contract(blob_ids: &[[u8; 32]]) -> Vec<u8> {
+        const BLOB_ID_SIZE: u16 = 32;
+        let get_instructions = |num_of_instructions, num_of_blobs| {
+            [
+                // 0x12 is going to hold the total size of the contract
+                op::move_(0x12, RegId::ZERO),
+                // find the start of the hardcoded blob ids, which are located after the code ends
+                op::move_(0x10, RegId::IS),
+                // 0x10 to hold the address of the current blob id
+                op::addi(0x10, 0x10, num_of_instructions * Instruction::SIZE as u16),
+                // loop counter
+                op::addi(0x13, RegId::ZERO, num_of_blobs),
+                // LOOP starts here
+                // 0x11 to hold the size of the current blob
+                op::bsiz(0x11, 0x10),
+                // update the total size of the contract
+                op::add(0x12, 0x12, 0x11),
+                // move on to the next blob
+                op::addi(0x10, 0x10, BLOB_ID_SIZE),
+                // decrement the loop counter
+                op::subi(0x13, 0x13, 1),
+                // Jump backwards 3 instructions if the counter has not reached 0
+                op::jneb(0x13, RegId::ZERO, RegId::ZERO, 3),
+                // move the stack pointer by the contract size since we need to write the contract on the stack
+                op::cfe(0x12),
+                // find the start of the hardcoded blob ids, which are located after the code ends
+                op::move_(0x10, RegId::IS),
+                // 0x10 to hold the address of the current blob id
+                op::addi(0x10, 0x10, num_of_instructions * Instruction::SIZE as u16),
+                // 0x12 is going to hold the total bytes loaded of the contract
+                op::move_(0x12, RegId::ZERO),
+                // loop counter
+                op::addi(0x13, RegId::ZERO, num_of_blobs),
+                // LOOP starts here
+                // 0x11 to hold the size of the current blob
+                op::bsiz(0x11, 0x10),
+                // the location where to load the current blob (start of stack)
+                op::move_(0x14, RegId::SSP),
+                // move to where this blob should be loaded by adding the total bytes loaded
+                op::add(0x14, 0x14, 0x12),
+                // load the current blob
+                op::bldd(0x14, 0x10, RegId::ZERO, 0x11),
+                // update the total bytes loaded
+                op::add(0x12, 0x12, 0x11),
+                // move on to the next blob
+                op::addi(0x10, 0x10, BLOB_ID_SIZE),
+                // decrement the loop counter
+                op::subi(0x13, 0x13, 1),
+                // Jump backwards 6 instructions if the counter has not reached 0
+                op::jneb(0x13, RegId::ZERO, RegId::ZERO, 6),
+                // what follows is called _jmp_mem by the sway compiler
+                op::move_(0x16, RegId::SSP),
+                op::sub(0x16, 0x16, RegId::IS),
+                op::divi(0x16, 0x16, 4),
+                op::jmp(0x16),
+            ]
+        };
+
+        let real_num_of_instructions = get_instructions(0, blob_ids.len() as u16).len() as u16;
+
+        let instruction_bytes: Vec<u8> =
+            get_instructions(real_num_of_instructions, blob_ids.len() as u16)
+                .into_iter()
+                .collect();
+
+        let blob_bytes: Vec<u8> = blob_ids.iter().flatten().copied().collect();
+
+        [instruction_bytes, blob_bytes].concat()
     }
 
     fn compute_contract_id_and_state_root(
@@ -75,10 +197,18 @@ impl Contract {
         self.code_root
     }
 
+    pub async fn deploy(
+        self,
+        account: &impl Account,
+        tx_policies: TxPolicies,
+    ) -> Result<Bech32ContractId> {
+        self.deploy_as_loader(account, tx_policies, 10_000).await
+    }
+
     /// Deploys a compiled contract to a running node
     /// To deploy a contract, you need an account with enough assets to pay for deployment.
     /// This account will also receive the change.
-    pub async fn deploy(
+    pub async fn _deploy(
         self,
         account: &impl Account,
         tx_policies: TxPolicies,
@@ -141,6 +271,14 @@ impl Contract {
         };
 
         Ok(slots)
+    }
+
+    pub fn salt(&self) -> Salt {
+        self.salt
+    }
+
+    pub fn storage_slots(&self) -> &[StorageSlot] {
+        &self.storage_slots
     }
 }
 

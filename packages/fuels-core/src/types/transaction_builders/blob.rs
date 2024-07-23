@@ -1,38 +1,23 @@
-use std::{
-    collections::HashMap,
-    fmt::{Debug, Formatter},
-    iter::repeat,
-};
+use std::{fmt::Debug, iter::repeat};
 
 use async_trait::async_trait;
-use fuel_asm::{op, GTFArgs, RegId};
-use fuel_crypto::{Hasher, Message as CryptoMessage, Signature};
+use fuel_crypto::Signature;
 use fuel_tx::{
-    field::{Outputs, Policies as PoliciesField, ScriptGasLimit, Witnesses},
+    field::{Policies as PoliciesField, Witnesses},
     policies::{Policies, PolicyType},
-    BlobId, BlobIdExt, Chargeable, ConsensusParameters, Create, Input as FuelInput, Output, Script,
-    StorageSlot, Transaction as FuelTransaction, TransactionFee, TxPointer, UniqueIdentifier,
-    Upgrade, Upload, UploadBody, Witness,
+    BlobIdExt, Chargeable, Output, Transaction as FuelTransaction, UniqueIdentifier, Witness,
 };
-pub use fuel_tx::{UpgradePurpose, UploadSubsection};
-use fuel_types::{bytes::padded_len_usize, Bytes32, Salt};
+use fuel_types::bytes::padded_len_usize;
 use itertools::Itertools;
 
 use crate::{
-    constants::{SIGNATURE_WITNESS_SIZE, WORD_SIZE},
+    constants::SIGNATURE_WITNESS_SIZE,
     traits::Signer,
     types::{
-        bech32::Bech32Address,
-        coin::Coin,
-        coin_type::CoinType,
         errors::{error, error_transaction, Result},
         input::Input,
-        message::Message,
-        transaction::{
-            BlobTransaction, CreateTransaction, EstimablePredicates, ScriptTransaction,
-            Transaction, TxPolicies, UpgradeTransaction, UploadTransaction,
-        },
-        Address, AssetId, ContractId, DryRunner,
+        transaction::{BlobTransaction, EstimablePredicates, Transaction, TxPolicies},
+        DryRunner,
     },
     utils::{calculate_witnesses_size, sealed},
 };
@@ -46,6 +31,8 @@ use super::{
 pub struct Blob {
     pub data: Vec<u8>,
 }
+
+pub type BlobId = [u8; 32];
 
 impl From<Vec<u8>> for Blob {
     fn from(data: Vec<u8>) -> Self {
@@ -64,8 +51,8 @@ impl Blob {
         Self { data }
     }
 
-    pub fn id(&self) -> [u8; 32] {
-        BlobId::compute(&self.data).into()
+    pub fn id(&self) -> BlobId {
+        fuel_tx::BlobId::compute(&self.data).into()
     }
 
     fn as_blob_body(&self, witness_index: u16) -> fuel_tx::BlobBody {
@@ -170,6 +157,16 @@ impl BlobTransactionBuilder {
         tx.witnesses_mut().extend(signatures);
 
         Ok(tx)
+    }
+
+    pub fn with_blob(mut self, blob: Blob) -> Self {
+        self.blob = blob;
+        self
+    }
+
+    pub fn with_max_fee_estimation_tolerance(mut self, max_fee_estimation_tolerance: f32) -> Self {
+        self.max_fee_estimation_tolerance = max_fee_estimation_tolerance;
+        self
     }
 }
 

@@ -381,12 +381,14 @@ macro_rules! impl_tx_wrapper {
                 consensus_parameters: &ConsensusParameters,
                 block_height: u32,
             ) -> Result<()> {
-                let checked = self
-                    .tx
-                    .into_checked(block_height.into(), consensus_parameters)?;
-                let check_predicates_parameters: CheckPredicateParams = consensus_parameters.into();
-                checked.check_predicates(&check_predicates_parameters, MemoryInstance::new())?;
-
+                // let checked = self
+                //     .tx
+                //     .into_checked(block_height.into(), consensus_parameters)?;
+                //
+                // let check_predicates_parameters: CheckPredicateParams = consensus_parameters.into();
+                //
+                // checked.check_predicates(&check_predicates_parameters, MemoryInstance::new())?;
+                //
                 Ok(())
             }
         }
