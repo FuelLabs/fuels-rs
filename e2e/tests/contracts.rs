@@ -2165,9 +2165,7 @@ async fn blob_contract_deployment() -> Result<()> {
     let code = std::fs::read(contract_binary)?;
     for chunk in code.chunks(20_000) {
         let mut tb = BlobTransactionBuilder::default();
-        let blob = Blob {
-            data: chunk.to_vec(),
-        };
+        let blob = Blob::new(chunk.to_vec());
         let blob_id = blob.id();
         tb.blob = blob;
         wallet.adjust_for_fee(&mut tb, 0).await?;
@@ -2210,13 +2208,16 @@ async fn blob_contract_deployment() -> Result<()> {
 
     let data = receipts
         .into_iter()
-        .find_map(|r| match r {
-            Receipt::Return { val, .. } => Some(val.to_be_bytes().to_vec()),
-            Receipt::ReturnData { data, .. } => Some(data.unwrap()),
-            _ => None,
+        .find_map(|r| {
+            if let Receipt::ReturnData { data, .. } = r {
+                Some(data.unwrap())
+            } else {
+                None
+            }
         })
+        .map(|data| u64::from_be_bytes(data.as_slice().try_into().unwrap()))
         .unwrap();
-    eprintln!("Contract returned: {}", hex::encode(data));
+    assert_eq!(data, 1001);
 
     Ok(())
 }
