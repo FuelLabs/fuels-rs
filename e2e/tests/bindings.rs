@@ -69,7 +69,7 @@ async fn compile_bindings_from_inline_contract() -> Result<()> {
               "concreteTypeId": "d7649d428b9ff33d188ecbf38a7e4d8fd167fa01b2e10fe9a8f9308e52f1d7cc"
             }
           ],
-          "typesMetadata": [],
+          "metadataTypes": [],
           "functions": [
             {
               "inputs": [

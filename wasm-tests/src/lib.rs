@@ -41,7 +41,7 @@ mod tests {
                   "metadataTypeId": 3
                 }
               ],
-              "typesMetadata": [
+              "metadataTypes": [
                 {
                   "type": "bool",
                   "metadataTypeId": 0
@@ -144,7 +144,7 @@ mod tests {
                   "concreteTypeId": "1506e6f44c1d6291cdf46395a8e573276a4fa79e8ace3fc891e092ef32d1b0a0"
                 }
               ],
-              "typesMetadata": [],
+              "metadataTypes": [],
               "functions": [
                 {
                   "inputs": [
