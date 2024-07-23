@@ -118,3 +118,4 @@ fuel-core-types = { default-features = false, path = "/home/segfault_magnet/fuel
 fuel-vm = { path = "/home/segfault_magnet/fuel/fuel-vm/fuel-vm" }
 fuel-types = { path = "/home/segfault_magnet/fuel/fuel-vm/fuel-types" }
 fuel-tx = { path = "/home/segfault_magnet/fuel/fuel-vm/fuel-tx" }
+fuel-asm = { path = "/home/segfault_magnet/fuel/fuel-vm/fuel-asm" }

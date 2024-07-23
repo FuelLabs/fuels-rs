@@ -26,6 +26,8 @@ tokio = { workspace = true, features = ["test-util"] }
 pretty_assertions = { workspace = true, features = ["std"] }
 #TODO: segfault remove
 serde_json = { workspace = true, default-features = true }
+#TODO: segfault remove
+hex = { workspace = true, default-features = true }
 
 [build-dependencies]
 anyhow = { workspace = true, features = ["std"] }

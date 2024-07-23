@@ -2,6 +2,7 @@ use fuel_tx::TxParameters;
 use fuels::{
     core::codec::{calldata, encode_fn_selector, DecoderConfig, EncoderConfig},
     prelude::*,
+    programs::loader_contract,
     tx::ContractParameters,
     types::{errors::transaction::Reason, input::Input, Bits256, Identity},
 };
@@ -2162,7 +2163,7 @@ async fn blob_contract_deployment() -> Result<()> {
     let mut blob_ids = vec![];
 
     let code = std::fs::read(contract_binary)?;
-    for chunk in code.chunks(50_000) {
+    for chunk in code.chunks(20_000) {
         let mut tb = BlobTransactionBuilder::default();
         let blob = Blob {
             data: chunk.to_vec(),
@@ -2180,30 +2181,42 @@ async fn blob_contract_deployment() -> Result<()> {
         blob_ids.push(blob_id);
         eprintln!("blob id: {:X}", fuel_tx::Bytes32::from(blob_id));
     }
+    let contract = loader_contract(&blob_ids);
 
-    // abigen!(Contract(
-    //     name = "MyContract",
-    //     abi = "e2e/sway/contracts/huge_contract/out/release/huge_contract-abi.json"
-    // ));
-    //
-    // let contract = Contract::load_from(contract_binary, LoadConfiguration::default())?;
-    //
-    // let contract_id = contract.deploy(&wallet, TxPolicies::default()).await?;
-    //
-    // let contract_instance = MyContract::new(contract_id, wallet.clone());
-    // contract_instance
-    //     .methods()
-    //     .chunk_1()
-    //     .call()
-    //     .await
-    //     .expect("contract call failed");
-    //
-    // contract_instance
-    //     .methods()
-    //     .chunk_2()
-    //     .call()
-    //     .await
-    //     .expect("contract call failed");
+    let contract_id = Contract::new(contract, Salt::zeroed(), vec![])
+        .deploy(&wallet, Default::default())
+        .await?;
+    eprintln!("The contract id is {contract_id}");
+
+    abigen!(Contract(
+        name = "MyContract",
+        abi = "e2e/sway/contracts/huge_contract/out/release/huge_contract-abi.json"
+    ));
+
+    let contract_instance = MyContract::new(contract_id, wallet.clone());
+
+    let tx = contract_instance
+        .methods()
+        .something()
+        .build_tx()
+        .await
+        .expect("building a tx failed");
+
+    let receipts = provider
+        .send_transaction_and_await_commit(tx)
+        .await?
+        .take_receipts();
+    eprintln!("{receipts:#?}");
+
+    let data = receipts
+        .into_iter()
+        .find_map(|r| match r {
+            Receipt::Return { val, .. } => Some(val.to_be_bytes().to_vec()),
+            Receipt::ReturnData { data, .. } => Some(data.unwrap()),
+            _ => None,
+        })
+        .unwrap();
+    eprintln!("Contract returned: {}", hex::encode(data));
 
     Ok(())
 }
