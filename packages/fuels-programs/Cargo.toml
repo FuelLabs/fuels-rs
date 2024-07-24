@@ -17,8 +17,6 @@ fuel-tx = { workspace = true }
 fuel-types = { workspace = true, features = ["default"] }
 fuels-accounts = { workspace = true }
 fuels-core = { workspace = true }
-# TODO: segfault remove this
-hex = { workspace = true, default-features = true }
 itertools = { workspace = true }
 rand = { workspace = true }
 serde_json = { workspace = true }

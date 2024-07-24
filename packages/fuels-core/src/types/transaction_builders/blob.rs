@@ -24,7 +24,7 @@ use crate::{
 
 use super::{
     generate_missing_witnesses, impl_tx_builder_trait, resolve_fuel_inputs, BuildableTransaction,
-    Strategy, UnresolvedWitnessIndexes,
+    Strategy, TransactionBuilder, UnresolvedWitnessIndexes,
 };
 
 #[derive(Default, Clone, Debug, PartialEq)]
@@ -85,9 +85,9 @@ pub struct BlobTransactionBuilder {
 impl_tx_builder_trait!(BlobTransactionBuilder, BlobTransaction);
 
 impl BlobTransactionBuilder {
-    /// TODO: segfault add note about how fee is not taken into account and any later changes to
-    /// the tx
-    pub async fn estimate_max_blob_size(&self, provider: &impl DryRunner) -> Result<u64> {
+    /// Calculates the maximum possible blob size by determining the remaining space available in the current transaction before it reaches the maximum allowed size.
+    /// Note: This calculation only considers the transaction size limit and does not account for the maximum gas per transaction.
+    pub async fn estimate_max_blob_size(&self, provider: &impl DryRunner) -> Result<usize> {
         let mut tb = self.clone_without_signers();
         tb.blob = Blob::new(vec![]);
 
@@ -96,8 +96,9 @@ impl BlobTransactionBuilder {
             .build(provider)
             .await?;
 
-        let current_tx_size = u64::try_from(tx.size()).unwrap_or(u64::MAX);
-        let max_tx_size = provider.consensus_parameters().tx_params().max_size();
+        let current_tx_size = tx.size();
+        let max_tx_size = usize::try_from(provider.consensus_parameters().tx_params().max_size())
+            .unwrap_or(usize::MAX);
 
         Ok(max_tx_size.saturating_sub(current_tx_size))
     }
@@ -138,11 +139,11 @@ impl BlobTransactionBuilder {
     async fn resolve_fuel_tx(mut self, provider: &impl DryRunner) -> Result<fuel_tx::Blob> {
         let chain_id = provider.consensus_parameters().chain_id();
 
-        // TODO: segfault
-        let blob_witness_index = self.witnesses.len() as u16;
-        let body = self.blob.as_blob_body(blob_witness_index);
+        let free_witness_index = self.num_witnesses()?;
+        let body = self.blob.as_blob_body(free_witness_index);
+
         let blob_witness = std::mem::take(&mut self.blob).into();
-        self.witnesses.push(blob_witness);
+        self.witnesses_mut().push(blob_witness);
 
         let num_witnesses = self.num_witnesses()?;
         let policies = self.generate_fuel_policies()?;
