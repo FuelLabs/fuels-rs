@@ -39,7 +39,7 @@ pub enum BlobSize {
 }
 
 impl BlobSize {
-    async fn max_size(&self, provider: &Provider) -> Result<usize> {
+    async fn resolve_size(&self, provider: &Provider) -> Result<usize> {
         let size = match self {
             BlobSize::AtMost { bytes } => *bytes,
             BlobSize::Estimate {
@@ -52,7 +52,12 @@ impl BlobSize {
                 (*percentage_of_teoretical_max * theoretical_max as f64) as usize
             }
         };
-        Ok(size)
+
+        if size == 0 {
+            Err(error!(Other, "blob size must be greater than 0"))
+        } else {
+            Ok(size)
+        }
     }
 }
 
@@ -88,13 +93,12 @@ impl Contract {
     ) -> Result<Bech32ContractId> {
         let provider = account.try_provider()?;
 
-        let blob_size = blob_size.max_size(provider).await?;
+        let blob_size = blob_size.resolve_size(provider).await?;
 
         let blobs = self.generate_blobs(blob_size);
         let blob_ids = blobs.iter().map(|blob| blob.id()).collect::<Vec<_>>();
 
         for blob in blobs {
-            let blob_id = hex::encode(blob.id());
             let mut tb = BlobTransactionBuilder::default()
                 .with_blob(blob)
                 .with_tx_policies(tx_policies)
@@ -108,12 +112,11 @@ impl Contract {
                 .send_transaction_and_await_commit(tx)
                 .await?
                 .check(None)?;
-            eprintln!("Uploaded blob: {}", blob_id);
         }
 
-        let contract = Self::new_loader(&blob_ids, self.salt, self.storage_slots)?;
-
-        contract._deploy(account, tx_policies).await
+        Self::new_loader(&blob_ids, self.salt, self.storage_slots)?
+            .deploy(account, tx_policies)
+            .await
     }
 
     pub fn generate_blobs(&self, max_size: usize) -> Vec<Blob> {
@@ -232,25 +235,10 @@ impl Contract {
         self.code_root
     }
 
-    pub async fn deploy(
-        self,
-        account: &impl Account,
-        tx_policies: TxPolicies,
-    ) -> Result<Bech32ContractId> {
-        self.deploy_as_loader(
-            account,
-            tx_policies,
-            BlobSize::Estimate {
-                percentage_of_teoretical_max: 0.95,
-            },
-        )
-        .await
-    }
-
     /// Deploys a compiled contract to a running node
     /// To deploy a contract, you need an account with enough assets to pay for deployment.
     /// This account will also receive the change.
-    pub async fn _deploy(
+    pub async fn deploy(
         self,
         account: &impl Account,
         tx_policies: TxPolicies,

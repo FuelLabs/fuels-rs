@@ -1,9 +1,12 @@
+use std::collections::HashMap;
+
 use fuel_tx::TxParameters;
 use fuels::{
+    client::{PageDirection, PaginationRequest},
     core::codec::{calldata, encode_fn_selector, DecoderConfig, EncoderConfig},
     prelude::*,
     tx::ContractParameters,
-    types::{errors::transaction::Reason, input::Input, Bits256, Identity},
+    types::{errors::transaction::Reason, input::Input, Bits256, DryRunner, Identity},
 };
 use tokio::time::Instant;
 
@@ -2109,8 +2112,10 @@ async fn max_fee_estimation_respects_tolerance() -> Result<()> {
 
 #[tokio::test]
 async fn blob_contract_deployment() -> Result<()> {
-    let mut wallet = WalletUnlocked::new_random(None);
-    let coins = setup_single_asset_coins(wallet.address(), AssetId::BASE, 10, 1_000_000);
+    abigen!(Contract(
+        name = "MyContract",
+        abi = "e2e/sway/contracts/huge_contract/out/release/huge_contract-abi.json"
+    ));
 
     let contract_binary = "sway/contracts/huge_contract/out/release/huge_contract.bin";
     let contract_size = std::fs::metadata(contract_binary)
@@ -2122,70 +2127,121 @@ async fn blob_contract_deployment() -> Result<()> {
         "the testnet size limit was around 100kB, we want a contract bigger than that to reflect prod"
     );
 
-    let mut chain_config = ChainConfig::local_testnet();
+    let wallets =
+        launch_custom_provider_and_get_wallets(WalletsConfig::new(Some(2), None, None), None, None)
+            .await?;
 
-    let max_tx_size = chain_config.consensus_parameters.tx_params().max_size();
-    assert!(
-        max_tx_size < contract_size,
-        "this contract if included in one piece would make the tx too big"
-    );
+    let provider = wallets[0].provider().unwrap().clone();
 
-    let contract_max_size = chain_config
-        .consensus_parameters
-        .contract_params()
-        .contract_max_size();
+    let consensus_parameters = provider.consensus_parameters();
+
+    let contract_max_size = consensus_parameters.contract_params().contract_max_size();
     assert!(
         contract_size > contract_max_size,
         "this test should ideally be run with a contract bigger than the max contract size so that we know deployment couldn't have happened without blobs"
     );
 
-    {
-        // TODO: segfault imported from fuel_tx
-        let mut tx_params = *chain_config.consensus_parameters.tx_params();
-        let TxParameters::V1(params) = &mut tx_params;
-        params.max_size = 10_000;
-        chain_config.consensus_parameters.set_tx_params(tx_params);
+    let contract = Contract::load_from(contract_binary, LoadConfiguration::default())?;
 
-        // let mut contract_params = *chain_config.consensus_parameters.contract_params();
-        // // TODO: segfault imported from fuel_tx
-        // let ContractParameters::V1(params) = &mut contract_params;
-        // params.contract_max_size = contract_size;
-        // chain_config
-        //     .consensus_parameters
-        //     .set_contract_params(contract_params);
+    let deployment_result = contract
+        .clone()
+        .deploy(&wallets[0], TxPolicies::default())
+        .await;
+
+    if let Err(Error::Transaction(Reason::Validation(msg))) = deployment_result {
+        assert_eq!(msg, "TransactionCreateBytecodeLen");
+    } else {
+        panic!("Expected contract deployment to fail due to the contract being too big");
     }
 
-    let provider = setup_test_provider(coins, vec![], None, Some(chain_config)).await?;
-    wallet.set_provider(provider.clone());
+    let deploy_and_test = |wallet: WalletUnlocked, blob_size: BlobSize| {
+        let contract = &contract;
+        async move {
+            let contract_id = contract
+                .clone()
+                .deploy_as_loader(&wallet, TxPolicies::default(), blob_size)
+                .await?;
 
-    let contract_id = Contract::load_from(contract_binary, LoadConfiguration::default())?
-        .deploy_as_loader(
-            &wallet,
-            TxPolicies::default(),
+            let contract_instance = MyContract::new(contract_id, wallet.clone());
+
+            let response = contract_instance.methods().something().call().await?.value;
+
+            assert_eq!(response, 1001);
+            Result::Ok(())
+        }
+    };
+
+    {
+        assert_wallet_made_no_trancsactions(&wallets[0]).await;
+        let percentage_of_teoretical_max = 0.95;
+        let max_blob_size = BlobTransactionBuilder::default()
+            .estimate_max_blob_size(&provider)
+            .await?;
+
+        let expected_blobs = (contract_size as f64
+            / (max_blob_size as f64 * percentage_of_teoretical_max))
+            .ceil() as usize;
+        deploy_and_test(
+            wallets[0].clone(),
             BlobSize::Estimate {
-                percentage_of_teoretical_max: 0.95,
+                percentage_of_teoretical_max,
             },
         )
         .await?;
+        assert_eq!(
+            txs_made_by(&wallets[0]).await,
+            [vec!["blob"; expected_blobs], vec!["create", "script"]].concat()
+        );
+    }
 
-    eprintln!("The contract id is {contract_id}");
-
-    abigen!(Contract(
-        name = "MyContract",
-        abi = "e2e/sway/contracts/huge_contract/out/release/huge_contract-abi.json"
-    ));
-
-    let contract_instance = MyContract::new(contract_id, wallet.clone());
-
-    let response = contract_instance
-        .methods()
-        .something()
-        .call()
-        .await
-        .expect("call failed")
-        .value;
-
-    assert_eq!(response, 1001);
+    {
+        let expected_blobs = 10;
+        assert_wallet_made_no_trancsactions(&wallets[1]).await;
+        deploy_and_test(
+            wallets[1].clone(),
+            BlobSize::AtMost {
+                bytes: (contract_size as usize).div_ceil(expected_blobs),
+            },
+        )
+        .await?;
+        assert_eq!(
+            txs_made_by(&wallets[1]).await,
+            [
+                vec!["blob".to_string(); expected_blobs],
+                vec!["create".to_string(), "script".to_string()]
+            ]
+            .concat()
+        );
+    }
 
     Ok(())
+}
+
+async fn txs_made_by(wallet: &WalletUnlocked) -> Vec<&'static str> {
+    wallet
+        .provider()
+        .unwrap()
+        .get_transactions_by_owner(
+            wallet.address(),
+            PaginationRequest {
+                cursor: None,
+                results: 100,
+                direction: PageDirection::Forward,
+            },
+        )
+        .await
+        .unwrap()
+        .results
+        .into_iter()
+        .map(|tx| match tx.transaction {
+            TransactionType::Blob(_) => "blob",
+            TransactionType::Create(_) => "create",
+            TransactionType::Script(_) => "script",
+            _ => "other",
+        })
+        .collect()
+}
+
+async fn assert_wallet_made_no_trancsactions(wallet: &WalletUnlocked) {
+    assert!(txs_made_by(wallet).await.is_empty());
 }
