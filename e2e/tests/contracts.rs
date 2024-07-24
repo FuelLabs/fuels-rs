@@ -2154,7 +2154,7 @@ async fn blob_contract_deployment() -> Result<()> {
         panic!("Expected contract deployment to fail due to the contract being too big");
     }
 
-    let deploy_and_test = |wallet: WalletUnlocked, blob_size: BlobSize| {
+    let deploy_and_test = |wallet: WalletUnlocked, blob_size: BlobSizePolicy| {
         let contract = &contract;
         async move {
             let contract_id = contract
@@ -2183,7 +2183,7 @@ async fn blob_contract_deployment() -> Result<()> {
             .ceil() as usize;
         deploy_and_test(
             wallets[0].clone(),
-            BlobSize::Estimate {
+            BlobSizePolicy::Estimate {
                 percentage_of_teoretical_max,
             },
         )
@@ -2199,7 +2199,7 @@ async fn blob_contract_deployment() -> Result<()> {
         assert_wallet_made_no_trancsactions(&wallets[1]).await;
         deploy_and_test(
             wallets[1].clone(),
-            BlobSize::AtMost {
+            BlobSizePolicy::AtMost {
                 bytes: (contract_size as usize).div_ceil(expected_blobs),
             },
         )

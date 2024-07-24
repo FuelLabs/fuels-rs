@@ -15,7 +15,7 @@ use fuels_core::types::{
     errors::{error, Result},
     transaction::TxPolicies,
     transaction_builders::{
-        Blob, BlobTransactionBuilder, CreateTransactionBuilder, TransactionBuilder,
+        Blob, BlobId, BlobTransactionBuilder, CreateTransactionBuilder, TransactionBuilder,
     },
 };
 pub use load::*;
@@ -33,16 +33,24 @@ pub struct Contract {
     state_root: Bytes32,
 }
 
-pub enum BlobSize {
+/// Used to control how the contract is going to get split up into blob tx.
+pub enum BlobSizePolicy {
+    /// Contract chunks can be at most `bytes` bytes.
     AtMost { bytes: usize },
+    /// Note: Use a value less than 1.0 (100%):
+    /// The theoretical maximum is calculated based on the number of bytes that can fit in a blob transaction
+    /// without exceeding the maximum allowed transaction size. This calculation does not account for additional
+    /// limiting factors such as:
+    /// * the possibility of the transaction exceeding the maximum gas limit
+    /// * the size impact of any inputs/witnesses added to the transaction to cover its fee
     Estimate { percentage_of_teoretical_max: f64 },
 }
 
-impl BlobSize {
+impl BlobSizePolicy {
     async fn resolve_size(&self, provider: &Provider) -> Result<usize> {
         let size = match self {
-            BlobSize::AtMost { bytes } => *bytes,
-            BlobSize::Estimate {
+            BlobSizePolicy::AtMost { bytes } => *bytes,
+            BlobSizePolicy::Estimate {
                 percentage_of_teoretical_max,
             } => {
                 let theoretical_max = BlobTransactionBuilder::default()
@@ -76,8 +84,10 @@ impl Contract {
         }
     }
 
+    /// The contract code has been uploaded in blobs with [`BlobId`]s specified in `blob_ids`. This will create a loader
+    /// contract that, when deployed and executed, will load all the specified blobs into memory and delegate the call to the code contained in the blobs.
     pub fn new_loader(
-        blob_ids: &[[u8; 32]],
+        blob_ids: &[BlobId],
         salt: Salt,
         storage_slots: Vec<StorageSlot>,
     ) -> Result<Self> {
@@ -85,17 +95,18 @@ impl Contract {
         Ok(Self::new(code, salt, storage_slots))
     }
 
+    /// Splits the contract into blobs, submits them, and awaits confirmation. Then, it deploys a loader contract.
+    /// This loader contract will load the blobs into memory and delegate the call to the code contained within the blobs.
+    /// This method is useful for deploying large contracts.
     pub async fn deploy_as_loader(
         self,
         account: &impl Account,
         tx_policies: TxPolicies,
-        blob_size: BlobSize,
+        blob_size_policy: BlobSizePolicy,
     ) -> Result<Bech32ContractId> {
         let provider = account.try_provider()?;
 
-        let blob_size = blob_size.resolve_size(provider).await?;
-
-        let blobs = self.generate_blobs(blob_size);
+        let blobs = self.generate_blobs(provider, blob_size_policy).await?;
         let blob_ids = blobs.iter().map(|blob| blob.id()).collect::<Vec<_>>();
 
         for blob in blobs {
@@ -119,11 +130,22 @@ impl Contract {
             .await
     }
 
-    pub fn generate_blobs(&self, max_size: usize) -> Vec<Blob> {
-        self.binary
-            .chunks(max_size)
+    /// Splits the contract binary into blobs based on the size specified by `blob_size_policy`.
+    /// This is useful if you prefer to manually deploy the blobs. Once uploaded, you can use [`Contract::new_loader`] to create a loader contract.
+    pub async fn generate_blobs(
+        &self,
+        provider: &Provider,
+        policy: BlobSizePolicy,
+    ) -> Result<Vec<Blob>> {
+        let blob_size = policy.resolve_size(provider).await?;
+
+        let blobs = self
+            .binary
+            .chunks(blob_size)
             .map(|chunk| Blob::new(chunk.to_vec()))
-            .collect()
+            .collect();
+
+        Ok(blobs)
     }
 
     fn loader_contract(blob_ids: &[[u8; 32]]) -> Result<Vec<u8>> {
