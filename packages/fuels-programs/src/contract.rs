@@ -148,9 +148,16 @@ impl Contract {
         Ok(blobs)
     }
 
+    // This function creates a contract that loads the specified blobs into memory and delegates the call to the code contained in the blobs.
     fn loader_contract(blob_ids: &[[u8; 32]]) -> Result<Vec<u8>> {
         const BLOB_ID_SIZE: u16 = 32;
         let get_instructions = |num_of_instructions, num_of_blobs| {
+            // There are main 3 steps:
+            // 1. Calculate the total size of the contract
+            // 2. Allocate and load the contract into memory
+            // 3. Jump into the memory where the contract is loaded
+            // After that the execution continues normally with the loaded contract reading our
+            // prepared fn selector and jumps to the selected contract method.
             [
                 // 0x12 is going to hold the total size of the contract
                 op::move_(0x12, RegId::ZERO),
@@ -171,7 +178,7 @@ impl Contract {
                 op::subi(0x13, 0x13, 1),
                 // Jump backwards 3 instructions if the counter has not reached 0
                 op::jneb(0x13, RegId::ZERO, RegId::ZERO, 3),
-                // move the stack pointer by the contract size since we need to write the contract on the stack
+                // move the stack pointer by the contract size since we need to write the contract on the stack since only that memory can be executed
                 op::cfe(0x12),
                 // find the start of the hardcoded blob ids, which are located after the code ends
                 op::move_(0x10, RegId::IS),
@@ -199,9 +206,13 @@ impl Contract {
                 // Jump backwards 6 instructions if the counter has not reached 0
                 op::jneb(0x13, RegId::ZERO, RegId::ZERO, 6),
                 // what follows is called _jmp_mem by the sway compiler
+                // move to the start of the stack (also the start of the contract we loaded)
                 op::move_(0x16, RegId::SSP),
+                // subtract the address contained in IS because jmp will add it back
                 op::sub(0x16, 0x16, RegId::IS),
+                // jmp will multiply by 4 so we need to divide to cancel that out
                 op::divi(0x16, 0x16, 4),
+                // jump to the start of the contract we loaded
                 op::jmp(0x16),
             ]
         };
