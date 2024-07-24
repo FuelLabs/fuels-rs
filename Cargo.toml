@@ -50,7 +50,7 @@ chrono = "0.4.31"
 elliptic-curve = { version = "0.13.8", default-features = false }
 eth-keystore = "0.5.0"
 flate2 = { version = "1.0", default-features = false }
-fuel-abi-types = "0.6.0"
+fuel-abi-types = "0.7.0"
 futures = "0.3.29"
 hex = { version = "0.4.3", default-features = false }
 itertools = "0.12.0"
@@ -106,7 +106,3 @@ fuels-macros = { version = "0.65.1", path = "./packages/fuels-macros", default-f
 fuels-programs = { version = "0.65.1", path = "./packages/fuels-programs", default-features = false }
 fuels-test-helpers = { version = "0.65.1", path = "./packages/fuels-test-helpers", default-features = false }
 versions-replacer = { version = "0.65.1", path = "./scripts/versions-replacer", default-features = false }
-
-[patch.crates-io]
-fuel-abi-types = { git = "https://github.com/FuelLabs/fuel-abi-types", branch = "esdrubal/abi_changes2" }
-
