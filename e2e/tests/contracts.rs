@@ -1,9 +1,11 @@
+use fuel_tx::TxParameters;
 use fuels::{
     core::codec::{calldata, encode_fn_selector, DecoderConfig, EncoderConfig},
     prelude::*,
     tx::ContractParameters,
     types::{errors::transaction::Reason, input::Input, Bits256, Identity},
 };
+use pretty_assertions::assert_eq;
 use tokio::time::Instant;
 
 #[tokio::test]
@@ -2122,13 +2124,18 @@ async fn blob_contract_deployment() -> Result<()> {
         "the testnet size limit was around 100kB, we want a contract bigger than that"
     );
 
-    let chain_config = ChainConfig::local_testnet();
+    let mut chain_config = ChainConfig::local_testnet();
 
     let max_tx_size = chain_config.consensus_parameters.tx_params().max_size();
     assert!(
         max_tx_size < contract_size,
         "this contract if included in one piece would make the tx too big"
     );
+
+    let max_tx_gas = chain_config
+        .consensus_parameters
+        .tx_params()
+        .max_gas_per_tx();
 
     let contract_max_size = chain_config
         .consensus_parameters
@@ -2139,27 +2146,33 @@ async fn blob_contract_deployment() -> Result<()> {
         "the node won't allow a contract of this size to be created"
     );
 
-    // {
-    //     // TODO: segfault imported from fuel_tx
-    //     let mut tx_params = *chain_config.consensus_parameters.tx_params();
-    //     let TxParameters::V1(params) = &mut tx_params;
-    //     params.max_size += contract_size;
-    //     chain_config.consensus_parameters.set_tx_params(tx_params);
-    //
-    //     let mut contract_params = *chain_config.consensus_parameters.contract_params();
-    //     // TODO: segfault imported from fuel_tx
-    //     let ContractParameters::V1(params) = &mut contract_params;
-    //     params.contract_max_size = contract_size;
-    //     chain_config
-    //         .consensus_parameters
-    //         .set_contract_params(contract_params);
-    // }
+    {
+        // TODO: segfault imported from fuel_tx
+        let mut tx_params = *chain_config.consensus_parameters.tx_params();
+        let TxParameters::V1(params) = &mut tx_params;
+        params.max_size = 10_000;
+        chain_config.consensus_parameters.set_tx_params(tx_params);
+
+        // let mut contract_params = *chain_config.consensus_parameters.contract_params();
+        // // TODO: segfault imported from fuel_tx
+        // let ContractParameters::V1(params) = &mut contract_params;
+        // params.contract_max_size = contract_size;
+        // chain_config
+        //     .consensus_parameters
+        //     .set_contract_params(contract_params);
+    }
 
     let provider = setup_test_provider(coins, vec![], None, Some(chain_config)).await?;
     wallet.set_provider(provider.clone());
 
     let contract_id = Contract::load_from(contract_binary, LoadConfiguration::default())?
-        .deploy_as_loader(&wallet, TxPolicies::default(), 20_000)
+        .deploy_as_loader(
+            &wallet,
+            TxPolicies::default(),
+            BlobSize::Estimate {
+                percentage_of_teoretical_max: 0.95,
+            },
+        )
         .await?;
 
     eprintln!("The contract id is {contract_id}");
@@ -2171,31 +2184,15 @@ async fn blob_contract_deployment() -> Result<()> {
 
     let contract_instance = MyContract::new(contract_id, wallet.clone());
 
-    let tx = contract_instance
+    let response = contract_instance
         .methods()
         .something()
-        .build_tx()
+        .call()
         .await
-        .expect("building a tx failed");
+        .expect("call failed")
+        .value;
 
-    let receipts = provider
-        .send_transaction_and_await_commit(tx)
-        .await?
-        .take_receipts();
-    eprintln!("{receipts:#?}");
-
-    let data = receipts
-        .into_iter()
-        .find_map(|r| {
-            if let Receipt::ReturnData { data, .. } = r {
-                Some(data.unwrap())
-            } else {
-                None
-            }
-        })
-        .map(|data| u64::from_be_bytes(data.as_slice().try_into().unwrap()))
-        .unwrap();
-    assert_eq!(data, 1001);
+    assert_eq!(response, 1001);
 
     Ok(())
 }

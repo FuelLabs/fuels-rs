@@ -125,7 +125,8 @@ impl RetryableClient {
         &self,
         tx: &Transaction,
     ) -> RequestResult<TransactionStatus> {
-        eprintln!("submit_and_await_commit: {tx:#?}");
+        use fuel_types::canonical::Serialize;
+        eprintln!("submit_and_await_commit: {}", tx.size());
 
         self.wrap(|| self.client.submit_and_await_commit(tx)).await
     }

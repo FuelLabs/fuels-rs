@@ -9,13 +9,13 @@ use std::{
 
 use fuel_asm::{op, Instruction, RegId};
 use fuel_tx::{Bytes32, Contract as FuelContract, ContractId, Salt, StorageSlot};
-use fuels_accounts::Account;
+use fuels_accounts::{provider::Provider, Account};
 use fuels_core::types::{
     bech32::Bech32ContractId,
     errors::{error, Result},
     transaction::TxPolicies,
     transaction_builders::{
-        Blob, BlobId, BlobTransactionBuilder, CreateTransactionBuilder, TransactionBuilder,
+        Blob, BlobTransactionBuilder, CreateTransactionBuilder, TransactionBuilder,
     },
 };
 pub use load::*;
@@ -33,6 +33,29 @@ pub struct Contract {
     state_root: Bytes32,
 }
 
+pub enum BlobSize {
+    AtMost { bytes: usize },
+    Estimate { percentage_of_teoretical_max: f64 },
+}
+
+impl BlobSize {
+    async fn max_size(&self, provider: &Provider) -> Result<usize> {
+        let size = match self {
+            BlobSize::AtMost { bytes } => *bytes,
+            BlobSize::Estimate {
+                percentage_of_teoretical_max,
+            } => {
+                let theoretical_max = BlobTransactionBuilder::default()
+                    .estimate_max_blob_size(provider)
+                    .await?;
+
+                (*percentage_of_teoretical_max * theoretical_max as f64) as usize
+            }
+        };
+        Ok(size)
+    }
+}
+
 impl Contract {
     pub fn new(binary: Vec<u8>, salt: Salt, storage_slots: Vec<StorageSlot>) -> Self {
         let (contract_id, code_root, state_root) =
@@ -48,26 +71,30 @@ impl Contract {
         }
     }
 
-    pub fn new_loader(blob_ids: &[[u8; 32]], salt: Salt, storage_slots: Vec<StorageSlot>) -> Self {
-        let code = Self::loader_contract(blob_ids);
-        Self::new(code, salt, storage_slots)
+    pub fn new_loader(
+        blob_ids: &[[u8; 32]],
+        salt: Salt,
+        storage_slots: Vec<StorageSlot>,
+    ) -> Result<Self> {
+        let code = Self::loader_contract(blob_ids)?;
+        Ok(Self::new(code, salt, storage_slots))
     }
 
     pub async fn deploy_as_loader(
         self,
         account: &impl Account,
         tx_policies: TxPolicies,
-        max_blob_size: usize,
+        blob_size: BlobSize,
     ) -> Result<Bech32ContractId> {
         let provider = account.try_provider()?;
 
-        let blobs = self.generate_blobs(max_blob_size);
+        let blob_size = blob_size.max_size(provider).await?;
+
+        let blobs = self.generate_blobs(blob_size);
         let blob_ids = blobs.iter().map(|blob| blob.id()).collect::<Vec<_>>();
-        for blob_id in &blob_ids {
-            eprintln!("blob_id: {}", hex::encode(blob_id));
-        }
 
         for blob in blobs {
+            let blob_id = hex::encode(blob.id());
             let mut tb = BlobTransactionBuilder::default()
                 .with_blob(blob)
                 .with_tx_policies(tx_policies)
@@ -77,15 +104,14 @@ impl Contract {
             account.add_witnesses(&mut tb)?;
 
             let tx = tb.build(provider).await?;
-            eprintln!("sending blob tx");
             provider
                 .send_transaction_and_await_commit(tx)
                 .await?
                 .check(None)?;
-            eprintln!("blob tx succeeded");
+            eprintln!("Uploaded blob: {}", blob_id);
         }
 
-        let contract = Self::new_loader(&blob_ids, self.salt, self.storage_slots);
+        let contract = Self::new_loader(&blob_ids, self.salt, self.storage_slots)?;
 
         contract._deploy(account, tx_policies).await
     }
@@ -97,7 +123,7 @@ impl Contract {
             .collect()
     }
 
-    fn loader_contract(blob_ids: &[[u8; 32]]) -> Vec<u8> {
+    fn loader_contract(blob_ids: &[[u8; 32]]) -> Result<Vec<u8>> {
         const BLOB_ID_SIZE: u16 = 32;
         let get_instructions = |num_of_instructions, num_of_blobs| {
             [
@@ -155,16 +181,25 @@ impl Contract {
             ]
         };
 
-        let real_num_of_instructions = get_instructions(0, blob_ids.len() as u16).len() as u16;
+        let num_of_instructions = u16::try_from(get_instructions(0, 0).len())
+            .expect("to never have more than u16::MAX instructions");
 
-        let instruction_bytes: Vec<u8> =
-            get_instructions(real_num_of_instructions, blob_ids.len() as u16)
-                .into_iter()
-                .collect();
+        let num_of_blobs = u16::try_from(blob_ids.len()).map_err(|_| {
+            error!(
+                Other,
+                "the number of blobs ({}) exceeds the maximum number of blobs supported: {}",
+                blob_ids.len(),
+                u16::MAX
+            )
+        })?;
 
-        let blob_bytes: Vec<u8> = blob_ids.iter().flatten().copied().collect();
+        let instruction_bytes = get_instructions(num_of_instructions, num_of_blobs)
+            .into_iter()
+            .flat_map(|instruction| instruction.to_bytes());
 
-        [instruction_bytes, blob_bytes].concat()
+        let blob_bytes = blob_ids.iter().flatten().copied();
+
+        Ok(instruction_bytes.chain(blob_bytes).collect())
     }
 
     fn compute_contract_id_and_state_root(
@@ -202,7 +237,14 @@ impl Contract {
         account: &impl Account,
         tx_policies: TxPolicies,
     ) -> Result<Bech32ContractId> {
-        self.deploy_as_loader(account, tx_policies, 10_000).await
+        self.deploy_as_loader(
+            account,
+            tx_policies,
+            BlobSize::Estimate {
+                percentage_of_teoretical_max: 0.95,
+            },
+        )
+        .await
     }
 
     /// Deploys a compiled contract to a running node

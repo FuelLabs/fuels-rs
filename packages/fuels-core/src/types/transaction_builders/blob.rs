@@ -3,6 +3,7 @@ use std::{fmt::Debug, iter::repeat};
 use async_trait::async_trait;
 use fuel_crypto::Signature;
 use fuel_tx::{
+    consensus_parameters,
     field::{Policies as PoliciesField, Witnesses},
     policies::{Policies, PolicyType},
     BlobIdExt, Chargeable, Output, Transaction as FuelTransaction, UniqueIdentifier, Witness,
@@ -85,6 +86,23 @@ pub struct BlobTransactionBuilder {
 impl_tx_builder_trait!(BlobTransactionBuilder, BlobTransaction);
 
 impl BlobTransactionBuilder {
+    /// TODO: segfault add note about how fee is not taken into account and any later changes to
+    /// the tx
+    pub async fn estimate_max_blob_size(&self, provider: &impl DryRunner) -> Result<u64> {
+        let mut tb = self.clone_without_signers();
+        tb.blob = Blob::new(vec![]);
+
+        let tx = tb
+            .with_build_strategy(Strategy::NoSignatures)
+            .build(provider)
+            .await?;
+
+        let current_tx_size = u64::try_from(tx.size()).unwrap_or(u64::MAX);
+        let max_tx_size = provider.consensus_parameters().tx_params().max_size();
+
+        Ok(max_tx_size.saturating_sub(current_tx_size))
+    }
+
     pub async fn build(mut self, provider: impl DryRunner) -> Result<BlobTransaction> {
         let is_using_predicates = self.is_using_predicates();
 

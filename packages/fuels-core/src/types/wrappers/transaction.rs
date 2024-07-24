@@ -261,6 +261,8 @@ pub trait Transaction:
 
     fn max_fee(&self) -> Option<u64>;
 
+    fn size(&self) -> usize;
+
     fn witness_limit(&self) -> Option<u64>;
 
     fn tip(&self) -> Option<u64>;
@@ -465,6 +467,11 @@ macro_rules! impl_tx_wrapper {
 
             fn max_fee(&self) -> Option<u64> {
                 self.tx.policies().get(PolicyType::MaxFee)
+            }
+
+            fn size(&self) -> usize {
+                use fuel_types::canonical::Serialize;
+                self.tx.size()
             }
 
             fn witness_limit(&self) -> Option<u64> {
