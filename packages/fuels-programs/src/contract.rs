@@ -43,7 +43,7 @@ pub enum BlobSizePolicy {
     /// limiting factors such as:
     /// * the possibility of the transaction exceeding the maximum gas limit
     /// * the size impact of any inputs/witnesses added to the transaction to cover its fee
-    Estimate { percentage_of_teoretical_max: f64 },
+    Estimate { percentage_of_theoretical_max: f64 },
 }
 
 impl BlobSizePolicy {
@@ -51,13 +51,13 @@ impl BlobSizePolicy {
         let size = match self {
             BlobSizePolicy::AtMost { bytes } => *bytes,
             BlobSizePolicy::Estimate {
-                percentage_of_teoretical_max,
+                percentage_of_theoretical_max,
             } => {
                 let theoretical_max = BlobTransactionBuilder::default()
                     .estimate_max_blob_size(provider)
                     .await?;
 
-                (*percentage_of_teoretical_max * theoretical_max as f64) as usize
+                (*percentage_of_theoretical_max * theoretical_max as f64) as usize
             }
         };
 

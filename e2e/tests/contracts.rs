@@ -2170,18 +2170,18 @@ async fn blob_contract_deployment() -> Result<()> {
 
     {
         assert_wallet_made_no_trancsactions(&wallets[0]).await;
-        let percentage_of_teoretical_max = 0.95;
+        let percentage_of_theoretical_max = 0.95;
         let max_blob_size = BlobTransactionBuilder::default()
             .estimate_max_blob_size(&provider)
             .await?;
 
         let expected_blobs = (contract_size as f64
-            / (max_blob_size as f64 * percentage_of_teoretical_max))
+            / (max_blob_size as f64 * percentage_of_theoretical_max))
             .ceil() as usize;
         deploy_and_test(
             wallets[0].clone(),
             BlobSizePolicy::Estimate {
-                percentage_of_teoretical_max,
+                percentage_of_theoretical_max,
             },
         )
         .await?;
