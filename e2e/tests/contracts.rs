@@ -2119,9 +2119,10 @@ async fn blob_contract_deployment() -> Result<()> {
     let contract_size = std::fs::metadata(contract_binary)
         .expect("contract file not found")
         .len();
+
     assert!(
         contract_size > 150_000,
-        "the testnet size limit was around 100kB, we want a contract bigger than that"
+        "the testnet size limit was around 100kB, we want a contract bigger than that to reflect prod"
     );
 
     let mut chain_config = ChainConfig::local_testnet();
@@ -2132,18 +2133,13 @@ async fn blob_contract_deployment() -> Result<()> {
         "this contract if included in one piece would make the tx too big"
     );
 
-    let max_tx_gas = chain_config
-        .consensus_parameters
-        .tx_params()
-        .max_gas_per_tx();
-
     let contract_max_size = chain_config
         .consensus_parameters
         .contract_params()
         .contract_max_size();
     assert!(
-        contract_max_size < contract_size,
-        "the node won't allow a contract of this size to be created"
+        contract_size > contract_max_size,
+        "this test should ideally be run with a contract bigger than the max contract size so that we know deployment couldn't have happened without blobs"
     );
 
     {

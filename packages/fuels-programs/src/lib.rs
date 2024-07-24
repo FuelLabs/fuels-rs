@@ -1,4 +1,3 @@
-use fuel_asm::{op, Instruction, RegId};
 
 pub mod calls;
 pub mod contract;

@@ -3,7 +3,6 @@ use std::{fmt::Debug, iter::repeat};
 use async_trait::async_trait;
 use fuel_crypto::Signature;
 use fuel_tx::{
-    consensus_parameters,
     field::{Policies as PoliciesField, Witnesses},
     policies::{Policies, PolicyType},
     BlobIdExt, Chargeable, Output, Transaction as FuelTransaction, UniqueIdentifier, Witness,
