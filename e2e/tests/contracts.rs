@@ -1,12 +1,9 @@
-use std::collections::HashMap;
-
-use fuel_tx::TxParameters;
 use fuels::{
     client::{PageDirection, PaginationRequest},
     core::codec::{calldata, encode_fn_selector, DecoderConfig, EncoderConfig},
     prelude::*,
     tx::ContractParameters,
-    types::{errors::transaction::Reason, input::Input, Bits256, DryRunner, Identity},
+    types::{errors::transaction::Reason, input::Input, Bits256, Identity},
 };
 use tokio::time::Instant;
 
