@@ -166,7 +166,7 @@ impl Contract {
                 // 0x10 to hold the address of the current blob id
                 op::addi(0x10, 0x10, num_of_instructions * Instruction::SIZE as u16),
                 // loop counter
-                op::addi(0x13, RegId::ZERO, num_of_blobs),
+                op::movi(0x13, num_of_blobs),
                 // LOOP starts here
                 // 0x11 to hold the size of the current blob
                 op::bsiz(0x11, 0x10),
@@ -177,7 +177,7 @@ impl Contract {
                 // decrement the loop counter
                 op::subi(0x13, 0x13, 1),
                 // Jump backwards 3 instructions if the counter has not reached 0
-                op::jneb(0x13, RegId::ZERO, RegId::ZERO, 3),
+                op::jnzb(0x13, RegId::ZERO, 3),
                 // move the stack pointer by the contract size since we need to write the contract on the stack since only that memory can be executed
                 op::cfe(0x12),
                 // find the start of the hardcoded blob ids, which are located after the code ends
@@ -187,7 +187,7 @@ impl Contract {
                 // 0x12 is going to hold the total bytes loaded of the contract
                 op::move_(0x12, RegId::ZERO),
                 // loop counter
-                op::addi(0x13, RegId::ZERO, num_of_blobs),
+                op::movi(0x13, num_of_blobs),
                 // LOOP starts here
                 // 0x11 to hold the size of the current blob
                 op::bsiz(0x11, 0x10),
@@ -204,7 +204,7 @@ impl Contract {
                 // decrement the loop counter
                 op::subi(0x13, 0x13, 1),
                 // Jump backwards 6 instructions if the counter has not reached 0
-                op::jneb(0x13, RegId::ZERO, RegId::ZERO, 6),
+                op::jnzb(0x13, RegId::ZERO, 6),
                 // what follows is called _jmp_mem by the sway compiler
                 // move to the start of the stack (also the start of the contract we loaded)
                 op::move_(0x16, RegId::SSP),
