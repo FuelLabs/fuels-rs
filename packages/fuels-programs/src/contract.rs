@@ -220,12 +220,12 @@ impl Contract {
         let num_of_instructions = u16::try_from(get_instructions(0, 0).len())
             .expect("to never have more than u16::MAX instructions");
 
-        let num_of_blobs = u16::try_from(blob_ids.len()).map_err(|_| {
+        let num_of_blobs = u32::try_from(blob_ids.len()).map_err(|_| {
             error!(
                 Other,
                 "the number of blobs ({}) exceeds the maximum number of blobs supported: {}",
                 blob_ids.len(),
-                u16::MAX
+                u32::MAX
             )
         })?;
 
