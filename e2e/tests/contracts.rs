@@ -2239,6 +2239,6 @@ async fn txs_made_by(wallet: &WalletUnlocked) -> Vec<&'static str> {
         .collect()
 }
 
-async fn assert_wallet_made_no_trancsactions(wallet: &WalletUnlocked) {
+async fn assert_wallet_made_no_transactions(wallet: &WalletUnlocked) {
     assert!(txs_made_by(wallet).await.is_empty());
 }
