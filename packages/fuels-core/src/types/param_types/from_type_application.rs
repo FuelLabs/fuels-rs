@@ -1101,32 +1101,12 @@ mod tests {
     }
 
     #[test]
-    fn try_vector_is_type_path_backward_compatible() {
-        // TODO: To be removed once https://github.com/FuelLabs/fuels-rs/issues/881 is unblocked.
-        let the_type = given_generic_type_with_path("Vec");
-
-        let param_type = try_vector(&the_type).unwrap().unwrap();
-
-        assert_eq!(param_type, ParamType::Vector(Box::new(ParamType::U8)));
-    }
-
-    #[test]
     fn try_vector_correctly_resolves_param_type() {
         let the_type = given_generic_type_with_path("std::vec::Vec");
 
         let param_type = try_vector(&the_type).unwrap().unwrap();
 
         assert_eq!(param_type, ParamType::Vector(Box::new(ParamType::U8)));
-    }
-
-    #[test]
-    fn try_bytes_is_type_path_backward_compatible() {
-        // TODO: To be removed once https://github.com/FuelLabs/fuels-rs/issues/881 is unblocked.
-        let the_type = given_type_with_path("Bytes");
-
-        let param_type = try_bytes(&the_type).unwrap().unwrap();
-
-        assert_eq!(param_type, ParamType::Bytes);
     }
 
     #[test]
@@ -1155,16 +1135,6 @@ mod tests {
     #[test]
     fn try_std_string_correctly_resolves_param_type() {
         let the_type = given_type_with_path("std::string::String");
-
-        let param_type = try_std_string(&the_type).unwrap().unwrap();
-
-        assert_eq!(param_type, ParamType::String);
-    }
-
-    #[test]
-    fn try_std_string_is_type_path_backward_compatible() {
-        // TODO: To be removed once https://github.com/FuelLabs/fuels-rs/issues/881 is unblocked.
-        let the_type = given_type_with_path("String");
 
         let param_type = try_std_string(&the_type).unwrap().unwrap();
 
