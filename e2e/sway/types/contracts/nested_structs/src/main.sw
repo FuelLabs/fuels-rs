@@ -1,7 +1,8 @@
 contract;
 
 pub struct SomeStruct {
-    par1: u32,
+    field: u32,
+    field_2: bool,
 }
 
 pub struct AllStruct {
@@ -32,12 +33,13 @@ impl MyContract for Contract {
     fn get_struct() -> AllStruct {
         AllStruct {
             some_struct: SomeStruct {
-                par1: 12345u32,
+                field: 12345u32,
+                field_2: true,
             },
         }
     }
     fn check_struct_integrity(arg: AllStruct) -> bool {
-        arg.some_struct.par1 == 12345u32
+        arg.some_struct.field == 12345u32 && arg.some_struct.field_2 == true
     }
 
     fn nested_struct_with_reserved_keyword_substring(call_data: CallData) -> CallData {
