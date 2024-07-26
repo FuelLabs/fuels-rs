@@ -133,7 +133,8 @@ mod tests {
 
     use fuel_abi_types::abi::{
         full_program::FullABIFunction,
-        program::{ABIFunction, Attribute, TypeApplication, TypeDeclaration},
+        program::Attribute,
+        unified_program::{UnifiedABIFunction, UnifiedTypeApplication, UnifiedTypeDeclaration},
     };
     use pretty_assertions::assert_eq;
     use quote::quote;
@@ -142,8 +143,8 @@ mod tests {
 
     #[test]
     fn expand_script_main_function() -> Result<()> {
-        let the_function = ABIFunction {
-            inputs: vec![TypeApplication {
+        let the_function = UnifiedABIFunction {
+            inputs: vec![UnifiedTypeApplication {
                 name: String::from("bimbam"),
                 type_id: 1,
                 ..Default::default()
@@ -164,7 +165,7 @@ mod tests {
         let types = [
             (
                 0,
-                TypeDeclaration {
+                UnifiedTypeDeclaration {
                     type_id: 0,
                     type_field: String::from("()"),
                     ..Default::default()
@@ -172,7 +173,7 @@ mod tests {
             ),
             (
                 1,
-                TypeDeclaration {
+                UnifiedTypeDeclaration {
                     type_id: 1,
                     type_field: String::from("bool"),
                     ..Default::default()
