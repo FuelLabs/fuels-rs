@@ -2,11 +2,14 @@ contract;
 
 use std::hash::*;
 
-struct StructOneUnusedGenericParam<T> {}
+#[allow(dead_code)]
+struct StructUnusedGeneric<T, K> {
+    field: u64,
+}
 
 #[allow(dead_code)]
-enum EnumOneUnusedGenericParam<T> {
-    One: (),
+enum EnumUnusedGeneric<T, K> {
+    One: u64,
 }
 
 struct StructTwoUnusedGenericParams<T, K> {}
@@ -62,8 +65,8 @@ impl Hash for str[3] {
 
 abi MyContract {
     fn unused_generic_args(
-        arg_1: StructOneUnusedGenericParam<u64>,
-        arg_2: EnumOneUnusedGenericParam<u32>,
+        arg_1: StructUnusedGeneric<u64, u32>,
+        arg_2: EnumUnusedGeneric<u32, u32>,
     );
     fn two_unused_generic_args(
         arg_1: StructTwoUnusedGenericParams<u32, u64>,
@@ -85,8 +88,8 @@ abi MyContract {
 
 impl MyContract for Contract {
     fn unused_generic_args(
-        _arg_1: StructOneUnusedGenericParam<u64>,
-        _arg_2: EnumOneUnusedGenericParam<u32>,
+        _arg_1: StructUnusedGeneric<u64, u32>,
+        _arg_2: EnumUnusedGeneric<u32, u32>,
     ) {}
 
     fn two_unused_generic_args(

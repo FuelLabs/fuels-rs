@@ -21,7 +21,9 @@ pub(crate) fn extract_generic_parameters(type_decl: &FullTypeDeclaration) -> Vec
 
 #[cfg(test)]
 mod tests {
-    use fuel_abi_types::{abi::program::TypeDeclaration, utils::extract_custom_type_name};
+    use fuel_abi_types::{
+        abi::unified_program::UnifiedTypeDeclaration, utils::extract_custom_type_name,
+    };
     use pretty_assertions::assert_eq;
 
     use super::*;
@@ -30,20 +32,20 @@ mod tests {
     #[test]
     fn extracts_generic_types() -> Result<()> {
         // given
-        let declaration = TypeDeclaration {
+        let declaration = UnifiedTypeDeclaration {
             type_id: 0,
             type_field: "".to_string(),
             components: None,
             type_parameters: Some(vec![1, 2]),
         };
-        let generic_1 = TypeDeclaration {
+        let generic_1 = UnifiedTypeDeclaration {
             type_id: 1,
             type_field: "generic T".to_string(),
             components: None,
             type_parameters: None,
         };
 
-        let generic_2 = TypeDeclaration {
+        let generic_2 = UnifiedTypeDeclaration {
             type_id: 2,
             type_field: "generic K".to_string(),
             components: None,
@@ -74,7 +76,7 @@ mod tests {
 
     #[test]
     fn can_extract_struct_name() {
-        let declaration = TypeDeclaration {
+        let declaration = UnifiedTypeDeclaration {
             type_id: 0,
             type_field: "struct SomeName".to_string(),
             components: None,
@@ -88,7 +90,7 @@ mod tests {
 
     #[test]
     fn can_extract_enum_name() {
-        let declaration = TypeDeclaration {
+        let declaration = UnifiedTypeDeclaration {
             type_id: 0,
             type_field: "enum SomeEnumName".to_string(),
             components: None,
