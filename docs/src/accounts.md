@@ -45,5 +45,5 @@ The above example creates an `Address` from a string and converts it to a `Bech3
 To facilitate account impersonation, the Rust SDK provides the `ImpersonatedAccount` struct. Since it implements `Account`, we can use it to simulate ownership of assets held by an account with a given address. This also implies that we can impersonate contract calls from that address. `ImpersonatedAccount` will only succeed in unlocking assets if the network is set up with utxo_validation set to false.
 
 ```rust,ignore
-{{#include ../../examples/wallets/src/lib.rs:contract_call_impersonation}}
+{{#include ../../examples/contracts/src/lib.rs:contract_call_impersonation}}
 ```
