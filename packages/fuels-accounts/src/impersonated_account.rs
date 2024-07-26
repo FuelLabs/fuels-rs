@@ -10,7 +10,9 @@ use fuels_core::types::{coin_type_id::CoinTypeId, input::Input, AssetId};
 use crate::accounts_utils::try_provider_error;
 use crate::{provider::Provider, Account, ViewOnlyAccount};
 
-/// A `WalletUnlocked` is equivalent to a [`Wallet`] whose private key is known and stored
+/// A `ImpersonatedAccount` simulates ownership of assets held by an account with a given address.
+/// `ImpersonatedAccount` will only succeed in unlocking assets if the the network is setup with
+/// utxo_validation set to false.
 #[derive(Debug, Clone)]
 pub struct ImpersonatedAccount {
     address: Bech32Address,
@@ -40,9 +42,7 @@ impl ViewOnlyAccount for ImpersonatedAccount {
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 impl Account for ImpersonatedAccount {
     /// Returns a vector consisting of `Input::Coin`s and `Input::Message`s for the given
-    /// asset ID and amount. The `witness_index` is the position of the witness (signature)
-    /// in the transaction's list of witnesses. In the validation process, the node will
-    /// use the witness at this index to validate the coins returned by this method.
+    /// asset ID and amount.
     async fn get_asset_inputs_for_amount(
         &self,
         asset_id: AssetId,
