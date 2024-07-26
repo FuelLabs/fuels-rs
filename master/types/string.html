@@ -165,13 +165,7 @@
         assert_eq!(str, &quot;abc&quot;);
     }
 </code></pre>
-<p>If your contract's method takes and returns, for instance, a Sway's <code>str[23]</code>. When using the SDK, this method will take and return a <code>SizedAsciiString&lt;23&gt;</code>, and you can pass a string to it like this:</p>
-<pre><code class="language-rust ignore">    let _ = contract_instance.methods().takes_string(
-        &quot;fuell&quot;
-            .try_into()
-            .expect(&quot;failed to convert string into SizedAsciiString&quot;),
-    );
-</code></pre>
+<p>If your contract's method takes and returns, for instance, a Sway's <code>str[23]</code>. When using the SDK, this method will take and return a <code>SizedAsciiString&lt;23&gt;</code>.</p>
 
                     </main>
 

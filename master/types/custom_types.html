@@ -224,10 +224,10 @@ enum SomeEnum&lt;T, K&gt; {
   IgnoreMe(PhantomData&lt;T&gt;, PhantomData&lt;K&gt;)
 }
 </code></pre>
-<p>To lessen the impact to developer experience you may use <code>SomeStruct::new</code> to initialize the above structure without bothering with the <code>PhantomData</code>s:</p>
+<p>To lessen the impact to developer experience you may use the <code>new</code> method to initialize a structure without bothering with the <code>PhantomData</code>s.:</p>
 <pre><code class="language-rust ignore">        assert_eq!(
-            &lt;MyStruct&lt;u16, u32&gt;&gt;::new(15),
-            MyStruct {
+            &lt;StructUnusedGeneric&lt;u16, u32&gt;&gt;::new(15),
+            StructUnusedGeneric {
                 field: 15,
                 _unused_generic_0: std::marker::PhantomData,
                 _unused_generic_1: std::marker::PhantomData
@@ -236,8 +236,8 @@ enum SomeEnum&lt;T, K&gt; {
 </code></pre>
 <p>If your struct doesn't have any fields we'll also derive <code>Default</code>. As for enums all <code>PhantomData</code>s are placed inside a new variant called <code>IgnoreMe</code> which you'll need to ignore in your matches:</p>
 <pre><code class="language-rust ignore">        match my_enum {
-            MyEnum::One(_value) =&gt; {}
-            MyEnum::IgnoreMe(..) =&gt; panic!(&quot;Will never receive this variant&quot;),
+            EnumUnusedGeneric::One(_value) =&gt; {}
+            EnumUnusedGeneric::IgnoreMe(..) =&gt; panic!(&quot;Will never receive this variant&quot;),
         }
 </code></pre>
 

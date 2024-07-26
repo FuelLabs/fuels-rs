@@ -1078,12 +1078,13 @@ It is <strong>highly</strong> encouraged that you generate all your bindings in 
 <h2 id="using-the-bindings"><a class="header" href="#using-the-bindings">Using the bindings</a></h2>
 <p>Let's look at a contract with two methods: <code>initialize_counter(arg: u64) -&gt; u64</code> and <code>increment_counter(arg: u64) -&gt; u64</code>, with the following JSON ABI:</p>
 <pre><code class="language-json ignore">{
-  &quot;types&quot;: [
+  &quot;programType&quot;: &quot;contract&quot;,
+  &quot;specVersion&quot;: &quot;1&quot;,
+  &quot;encodingVersion&quot;: &quot;1&quot;,
+  &quot;concreteTypes&quot;: [
     {
-      &quot;typeId&quot;: 0,
-      &quot;type&quot;: &quot;u64&quot;,
-      &quot;components&quot;: null,
-      &quot;typeParameters&quot;: null
+      &quot;concreteTypeId&quot;: &quot;1506e6f44c1d6291cdf46395a8e573276a4fa79e8ace3fc891e092ef32d1b0a0&quot;,
+      &quot;type&quot;: &quot;u64&quot;
     }
   ],
   &quot;functions&quot;: [
@@ -1091,33 +1092,24 @@ It is <strong>highly</strong> encouraged that you generate all your bindings in 
       &quot;inputs&quot;: [
         {
           &quot;name&quot;: &quot;value&quot;,
-          &quot;type&quot;: 0,
-          &quot;typeArguments&quot;: null
+          &quot;concreteTypeId&quot;: &quot;1506e6f44c1d6291cdf46395a8e573276a4fa79e8ace3fc891e092ef32d1b0a0&quot;
         }
       ],
       &quot;name&quot;: &quot;initialize_counter&quot;,
-      &quot;output&quot;: {
-        &quot;name&quot;: &quot;&quot;,
-        &quot;type&quot;: 0,
-        &quot;typeArguments&quot;: null
-      }
+      &quot;output&quot;: &quot;1506e6f44c1d6291cdf46395a8e573276a4fa79e8ace3fc891e092ef32d1b0a0&quot;
     },
     {
       &quot;inputs&quot;: [
         {
           &quot;name&quot;: &quot;value&quot;,
-          &quot;type&quot;: 0,
-          &quot;typeArguments&quot;: null
+          &quot;concreteTypeId&quot;: &quot;1506e6f44c1d6291cdf46395a8e573276a4fa79e8ace3fc891e092ef32d1b0a0&quot;
         }
       ],
       &quot;name&quot;: &quot;increment_counter&quot;,
-      &quot;output&quot;: {
-        &quot;name&quot;: &quot;&quot;,
-        &quot;type&quot;: 0,
-        &quot;typeArguments&quot;: null
-      }
+      &quot;output&quot;: &quot;1506e6f44c1d6291cdf46395a8e573276a4fa79e8ace3fc891e092ef32d1b0a0&quot;
     }
-  ]
+  ],
+  &quot;metadataTypes&quot;: []
 }
 </code></pre>
 <p>By doing this:</p>
@@ -1134,47 +1126,39 @@ It is <strong>highly</strong> encouraged that you generate all your bindings in 
                 name = &quot;MyContract&quot;,
                 abi = r#&quot;
             {
-                &quot;types&quot;: [
-                  {
-                    &quot;typeId&quot;: 0,
-                    &quot;type&quot;: &quot;u64&quot;,
-                    &quot;components&quot;: null,
-                    &quot;typeParameters&quot;: null
-                  }
-                ],
-                &quot;functions&quot;: [
-                  {
-                    &quot;inputs&quot;: [
-                      {
-                        &quot;name&quot;: &quot;value&quot;,
-                        &quot;type&quot;: 0,
-                        &quot;typeArguments&quot;: null
-                      }
-                    ],
-                    &quot;name&quot;: &quot;initialize_counter&quot;,
-                    &quot;output&quot;: {
-                      &quot;name&quot;: &quot;&quot;,
-                      &quot;type&quot;: 0,
-                      &quot;typeArguments&quot;: null
+              &quot;programType&quot;: &quot;contract&quot;,
+              &quot;specVersion&quot;: &quot;1&quot;,
+              &quot;encodingVersion&quot;: &quot;1&quot;,
+              &quot;concreteTypes&quot;: [
+                {
+                  &quot;concreteTypeId&quot;: &quot;1506e6f44c1d6291cdf46395a8e573276a4fa79e8ace3fc891e092ef32d1b0a0&quot;,
+                  &quot;type&quot;: &quot;u64&quot;
+                }
+              ],
+              &quot;functions&quot;: [
+                {
+                  &quot;inputs&quot;: [
+                    {
+                      &quot;name&quot;: &quot;value&quot;,
+                      &quot;concreteTypeId&quot;: &quot;1506e6f44c1d6291cdf46395a8e573276a4fa79e8ace3fc891e092ef32d1b0a0&quot;
                     }
-                  },
-                  {
-                    &quot;inputs&quot;: [
-                      {
-                        &quot;name&quot;: &quot;value&quot;,
-                        &quot;type&quot;: 0,
-                        &quot;typeArguments&quot;: null
-                      }
-                    ],
-                    &quot;name&quot;: &quot;increment_counter&quot;,
-                    &quot;output&quot;: {
-                      &quot;name&quot;: &quot;&quot;,
-                      &quot;type&quot;: 0,
-                      &quot;typeArguments&quot;: null
+                  ],
+                  &quot;name&quot;: &quot;initialize_counter&quot;,
+                  &quot;output&quot;: &quot;1506e6f44c1d6291cdf46395a8e573276a4fa79e8ace3fc891e092ef32d1b0a0&quot;
+                },
+                {
+                  &quot;inputs&quot;: [
+                    {
+                      &quot;name&quot;: &quot;value&quot;,
+                      &quot;concreteTypeId&quot;: &quot;1506e6f44c1d6291cdf46395a8e573276a4fa79e8ace3fc891e092ef32d1b0a0&quot;
                     }
-                  }
-                ]
-              }
+                  ],
+                  &quot;name&quot;: &quot;increment_counter&quot;,
+                  &quot;output&quot;: &quot;1506e6f44c1d6291cdf46395a8e573276a4fa79e8ace3fc891e092ef32d1b0a0&quot;
+                }
+              ],
+              &quot;metadataTypes&quot;: []
+            }
             &quot;#
             ));
 </code></pre>
@@ -2897,10 +2881,10 @@ enum SomeEnum&lt;T, K&gt; {
   IgnoreMe(PhantomData&lt;T&gt;, PhantomData&lt;K&gt;)
 }
 </code></pre>
-<p>To lessen the impact to developer experience you may use <code>SomeStruct::new</code> to initialize the above structure without bothering with the <code>PhantomData</code>s:</p>
+<p>To lessen the impact to developer experience you may use the <code>new</code> method to initialize a structure without bothering with the <code>PhantomData</code>s.:</p>
 <pre><code class="language-rust ignore">        assert_eq!(
-            &lt;MyStruct&lt;u16, u32&gt;&gt;::new(15),
-            MyStruct {
+            &lt;StructUnusedGeneric&lt;u16, u32&gt;&gt;::new(15),
+            StructUnusedGeneric {
                 field: 15,
                 _unused_generic_0: std::marker::PhantomData,
                 _unused_generic_1: std::marker::PhantomData
@@ -2909,8 +2893,8 @@ enum SomeEnum&lt;T, K&gt; {
 </code></pre>
 <p>If your struct doesn't have any fields we'll also derive <code>Default</code>. As for enums all <code>PhantomData</code>s are placed inside a new variant called <code>IgnoreMe</code> which you'll need to ignore in your matches:</p>
 <pre><code class="language-rust ignore">        match my_enum {
-            MyEnum::One(_value) =&gt; {}
-            MyEnum::IgnoreMe(..) =&gt; panic!(&quot;Will never receive this variant&quot;),
+            EnumUnusedGeneric::One(_value) =&gt; {}
+            EnumUnusedGeneric::IgnoreMe(..) =&gt; panic!(&quot;Will never receive this variant&quot;),
         }
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="string"><a class="header" href="#string"><code>String</code></a></h1>
@@ -2941,13 +2925,7 @@ enum SomeEnum&lt;T, K&gt; {
         assert_eq!(str, &quot;abc&quot;);
     }
 </code></pre>
-<p>If your contract's method takes and returns, for instance, a Sway's <code>str[23]</code>. When using the SDK, this method will take and return a <code>SizedAsciiString&lt;23&gt;</code>, and you can pass a string to it like this:</p>
-<pre><code class="language-rust ignore">    let _ = contract_instance.methods().takes_string(
-        &quot;fuell&quot;
-            .try_into()
-            .expect(&quot;failed to convert string into SizedAsciiString&quot;),
-    );
-</code></pre>
+<p>If your contract's method takes and returns, for instance, a Sway's <code>str[23]</code>. When using the SDK, this method will take and return a <code>SizedAsciiString&lt;23&gt;</code>.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="bits256"><a class="header" href="#bits256"><code>Bits256</code></a></h1>
 <p>In Fuel, a type called <code>b256</code> represents hashes and holds a 256-bit value. The Rust SDK represents <code>b256</code> as <code>Bits256(value)</code> where <code>value</code> is a <code>[u8; 32]</code>. If your contract method takes a <code>b256</code> as input, you must pass a <code>Bits256([u8; 32])</code> when calling it from the SDK.</p>
 <p>Here's an example:</p>
