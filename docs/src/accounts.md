@@ -6,8 +6,8 @@ The `Account` trait, in addition to the above, also provides a common interface 
 
 The traits are implemented by the following types:
 
-- [Wallet](./wallets/index.md)
-- [Predicate](./predicates/index.md)
+- [`Wallet`](./wallets/index.md)
+- [`Predicate`](./predicates/index.md)
 - [`ImpersonatedAccount`](#account-impersonation)
 
 ## Transferring assets
