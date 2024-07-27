@@ -152,13 +152,14 @@ impl Contract {
     fn loader_contract(blob_ids: &[[u8; 32]]) -> Result<Vec<u8>> {
         const BLOB_ID_SIZE: u16 = 32;
         let get_instructions = |num_of_instructions, num_of_blobs| {
-            // There are main 3 steps:
+            // There are 3 main steps:
             // 1. Calculate the total size of the contract
             // 2. Allocate and load the contract into memory
             // 3. Jump into the memory where the contract is loaded
             // After that the execution continues normally with the loaded contract reading our
             // prepared fn selector and jumps to the selected contract method.
             [
+                // 1. Calculate the total size of the contract
                 // 0x12 is going to hold the total size of the contract
                 op::move_(0x12, RegId::ZERO),
                 // find the start of the hardcoded blob ids, which are located after the code ends
@@ -178,6 +179,7 @@ impl Contract {
                 op::subi(0x13, 0x13, 1),
                 // Jump backwards 3 instructions if the counter has not reached 0
                 op::jnzb(0x13, RegId::ZERO, 3),
+                // 2. Allocate and load the contract into memory
                 // move the stack pointer by the contract size since we need to write the contract on the stack since only that memory can be executed
                 op::cfe(0x12),
                 // find the start of the hardcoded blob ids, which are located after the code ends
@@ -205,6 +207,7 @@ impl Contract {
                 op::subi(0x13, 0x13, 1),
                 // Jump backwards 6 instructions if the counter has not reached 0
                 op::jnzb(0x13, RegId::ZERO, 6),
+                // 3. Jump into the memory where the contract is loaded
                 // what follows is called _jmp_mem by the sway compiler
                 // move to the start of the stack (also the start of the contract we loaded)
                 op::move_(0x16, RegId::SSP),
