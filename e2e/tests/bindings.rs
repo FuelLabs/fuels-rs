@@ -53,39 +53,39 @@ async fn compile_bindings_from_contract_file() {
 async fn compile_bindings_from_inline_contract() -> Result<()> {
     abigen!(Contract(
         name = "SimpleContract",
+        // abi generated with: "e2e/sway/abi/simple_contract"
         abi = r#"
         {
-            "types": [
+          "programType": "contract",
+          "specVersion": "1",
+          "encodingVersion": "1",
+          "concreteTypes": [
+            {
+              "type": "bool",
+              "concreteTypeId": "b760f44fa5965c2474a3b471467a22c43185152129295af588b022ae50b50903"
+            },
+            {
+              "type": "u32",
+              "concreteTypeId": "d7649d428b9ff33d188ecbf38a7e4d8fd167fa01b2e10fe9a8f9308e52f1d7cc"
+            }
+          ],
+          "metadataTypes": [],
+          "functions": [
+            {
+              "inputs": [
                 {
-                    "typeId": 0,
-                    "type": "bool",
-                    "components": null,
-                    "typeParameters": null
-                },
-                {
-                    "typeId": 1,
-                    "type": "u32",
-                    "components": null,
-                    "typeParameters": null
+                  "name": "_arg",
+                  "concreteTypeId": "d7649d428b9ff33d188ecbf38a7e4d8fd167fa01b2e10fe9a8f9308e52f1d7cc"
                 }
-            ],
-            "functions": [
-                {
-                    "inputs": [
-                        {
-                            "name": "only_argument",
-                            "type": 1,
-                            "typeArguments": null
-                        }
-                    ],
-                    "name": "takes_ints_returns_bool",
-                    "output": {
-                        "name": "",
-                        "type": 0,
-                        "typeArguments": null
-                    }
-                }
-            ]
+              ],
+              "name": "takes_u32_returns_bool",
+              "output": "b760f44fa5965c2474a3b471467a22c43185152129295af588b022ae50b50903",
+              "attributes": null
+            }
+          ],
+          "loggedTypes": [],
+          "messagesTypes": [],
+          "configurables": []
         }
         "#,
     ));
@@ -94,7 +94,7 @@ async fn compile_bindings_from_inline_contract() -> Result<()> {
 
     let contract_instance = SimpleContract::new(null_contract_id(), wallet);
 
-    let call_handler = contract_instance.methods().takes_ints_returns_bool(42_u32);
+    let call_handler = contract_instance.methods().takes_u32_returns_bool(42_u32);
     let encoded_args = call_handler.call.encoded_args.unwrap();
 
     assert_eq!(encoded_args, [0, 0, 0, 42]);

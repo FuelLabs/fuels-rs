@@ -16,98 +16,93 @@ mod tests {
     fn decoding_and_encoding() -> Result<()> {
         wasm_abigen!(Contract(
             name = "no_name",
+            // abi generated with: "e2e/sway/abi/wasm_contract"
             abi = r#"
+            {
+              "programType": "contract",
+              "specVersion": "1",
+              "encodingVersion": "1",
+              "concreteTypes": [
                 {
-                  "types": [
+                  "type": "()",
+                  "concreteTypeId": "2e38e77b22c314a449e91fafed92a43826ac6aa403ae6a8acb6cf58239fbaf5d"
+                },
+                {
+                  "type": "enum SomeEnum<struct SomeStruct>",
+                  "concreteTypeId": "744ffecb34b691a157f3f4b4657ea215fd23e3cc79fd7a3b7f15431751b46134",
+                  "metadataTypeId": 1,
+                  "typeArguments": [
+                    "c672b07b5808bcc04715d73ca6d42eaabd332266144c1017c20833ef05a4a484"
+                  ]
+                },
+                {
+                  "type": "struct SomeStruct",
+                  "concreteTypeId": "c672b07b5808bcc04715d73ca6d42eaabd332266144c1017c20833ef05a4a484",
+                  "metadataTypeId": 3
+                }
+              ],
+              "metadataTypes": [
+                {
+                  "type": "bool",
+                  "metadataTypeId": 0
+                },
+                {
+                  "type": "enum SomeEnum",
+                  "metadataTypeId": 1,
+                  "components": [
                     {
-                      "typeId": 0,
-                      "type": "()",
-                      "components": [],
-                      "typeParameters": null
+                      "name": "V1",
+                      "typeId": "2e38e77b22c314a449e91fafed92a43826ac6aa403ae6a8acb6cf58239fbaf5d"
                     },
                     {
-                      "typeId": 1,
-                      "type": "bool",
-                      "components": null,
-                      "typeParameters": null
-                    },
-                    {
-                      "typeId": 2,
-                      "type": "enum SomeEnum",
-                      "components": [
-                        {
-                          "name": "V1",
-                          "type": 0,
-                          "typeArguments": null
-                        },
-                        {
-                          "name": "V2",
-                          "type": 3,
-                          "typeArguments": null
-                        }
-                      ],
-                      "typeParameters": [
-                        3
-                      ]
-                    },
-                    {
-                      "typeId": 3,
-                      "type": "generic T",
-                      "components": null,
-                      "typeParameters": null
-                    },
-                    {
-                      "typeId": 4,
-                      "type": "struct SomeStruct",
-                      "components": [
-                        {
-                          "name": "a",
-                          "type": 5,
-                          "typeArguments": null
-                        },
-                        {
-                          "name": "b",
-                          "type": 1,
-                          "typeArguments": null
-                        }
-                      ],
-                      "typeParameters": null
-                    },
-                    {
-                      "typeId": 5,
-                      "type": "u32",
-                      "components": null,
-                      "typeParameters": null
+                      "name": "V2",
+                      "typeId": 2
                     }
                   ],
-                  "functions": [
+                  "typeParameters": [
+                    2
+                  ]
+                },
+                {
+                  "type": "generic T",
+                  "metadataTypeId": 2
+                },
+                {
+                  "type": "struct SomeStruct",
+                  "metadataTypeId": 3,
+                  "components": [
                     {
-                      "inputs": [
-                        {
-                          "name": "arg",
-                          "type": 2,
-                          "typeArguments": [
-                            {
-                              "name": "",
-                              "type": 4,
-                              "typeArguments": null
-                            }
-                          ]
-                        }
-                      ],
-                      "name": "test_function",
-                      "output": {
-                        "name": "",
-                        "type": 0,
-                        "typeArguments": null
-                      },
-                      "attributes": null
+                      "name": "a",
+                      "typeId": 4
+                    },
+                    {
+                      "name": "b",
+                      "typeId": 0
+                    }
+                  ]
+                },
+                {
+                  "type": "u32",
+                  "metadataTypeId": 4
+                }
+              ],
+              "functions": [
+                {
+                  "inputs": [
+                    {
+                      "name": "_arg",
+                      "concreteTypeId": "744ffecb34b691a157f3f4b4657ea215fd23e3cc79fd7a3b7f15431751b46134"
                     }
                   ],
-                  "loggedTypes": [],
-                  "messagesTypes": [],
-                  "configurables": []
-        }"#
+                  "name": "test_function",
+                  "output": "2e38e77b22c314a449e91fafed92a43826ac6aa403ae6a8acb6cf58239fbaf5d"
+                }
+              ],
+              "loggedTypes": [],
+              "messagesTypes": [],
+              "configurables": []
+         }
+        "#
         ));
 
         let original = SomeEnum::V2(SomeStruct { a: 123, b: false });
@@ -133,64 +128,69 @@ mod tests {
     fn predicate_abigen() -> Result<()> {
         wasm_abigen!(Predicate(
             name = "MyPredicate",
+            // abi generated with: "e2e/sway/abi/wasm_predicate"
             abi = r#"
+            {
+              "programType": "predicate",
+              "specVersion": "1",
+              "encodingVersion": "1",
+              "concreteTypes": [
+                {
+                  "type": "bool",
+                  "concreteTypeId": "b760f44fa5965c2474a3b471467a22c43185152129295af588b022ae50b50903"
+                },
+                {
+                  "type": "u64",
+                  "concreteTypeId": "1506e6f44c1d6291cdf46395a8e573276a4fa79e8ace3fc891e092ef32d1b0a0"
+                }
+              ],
+              "metadataTypes": [],
+              "functions": [
+                {
+                  "inputs": [
                     {
-                      "types": [
-                        {
-                          "typeId": 0,
-                          "type": "bool",
-                          "components": null,
-                          "typeParameters": null
-                        },
-                        {
-                          "typeId": 1,
-                          "type": "u64",
-                          "components": null,
-                          "typeParameters": null
-                        }
-                      ],
-                      "functions": [
-                        {
-                          "inputs": [
-                            {
-                              "name": "arg",
-                              "type": 1,
-                              "typeArguments": null
-                            }
-                          ],
-                          "name": "main",
-                          "output": {
-                            "name": "",
-                            "type": 0,
-                            "typeArguments": null
-                          },
-                          "attributes": null
-                        }
-                      ],
-                      "loggedTypes": [],
-                      "messagesTypes": [],
-                      "configurables": [
-                        {
-                          "name": "U64",
-                          "configurableType": {
-                            "name": "",
-                            "type": 1,
-                            "typeArguments": null
-                          },
-                          "offset": 100
-                        }
-                      ]
-                    }"#
+                      "name": "val",
+                      "concreteTypeId": "1506e6f44c1d6291cdf46395a8e573276a4fa79e8ace3fc891e092ef32d1b0a0"
+                    }
+                  ],
+                  "name": "main",
+                  "output": "b760f44fa5965c2474a3b471467a22c43185152129295af588b022ae50b50903",
+                  "attributes": null
+                }
+              ],
+              "loggedTypes": [],
+              "messagesTypes": [],
+              "configurables": [
+                {
+                  "name": "U64",
+                  "concreteTypeId": "1506e6f44c1d6291cdf46395a8e573276a4fa79e8ace3fc891e092ef32d1b0a0",
+                  "offset": 376
+                }
+              ]
+            }
+            "#
         ));
 
         let code = vec![
-            116, 0, 0, 3, 71, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 100, 93, 252, 192, 1, 16, 255, 243, 0,
-            26, 236, 80, 0, 145, 0, 0, 0, 113, 68, 0, 3, 97, 73, 17, 1, 118, 72, 0, 2, 97, 65, 17,
-            13, 116, 0, 0, 7, 114, 76, 0, 2, 19, 73, 36, 192, 90, 73, 32, 1, 118, 72, 0, 2, 97, 65,
-            17, 31, 116, 0, 0, 1, 36, 0, 0, 0, 93, 65, 0, 0, 93, 71, 240, 0, 19, 65, 4, 64, 36, 64,
-            0, 0, 71, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 42,
+            26, 24, 48, 0, 116, 0, 0, 2, 0, 0, 0, 0, 0, 0, 1, 12, 93, 255, 192, 1, 16, 255, 255, 0,
+            145, 0, 0, 8, 8, 235, 24, 0, 8, 228, 0, 8, 8, 224, 64, 0, 32, 248, 51, 0, 88, 251, 224,
+            2, 8, 251, 224, 4, 116, 0, 0, 28, 26, 236, 8, 0, 145, 0, 0, 16, 113, 64, 0, 3, 97, 69,
+            2, 0, 19, 73, 16, 0, 118, 72, 0, 6, 114, 72, 0, 2, 19, 69, 2, 128, 118, 68, 0, 1, 54,
+            0, 0, 0, 97, 65, 2, 74, 116, 0, 0, 1, 97, 65, 2, 12, 95, 237, 0, 1, 8, 67, 176, 8, 26,
+            233, 0, 0, 32, 248, 51, 0, 88, 251, 224, 2, 8, 251, 224, 4, 116, 0, 0, 32, 26, 67, 28,
+            0, 26, 233, 0, 0, 32, 248, 51, 0, 88, 251, 224, 2, 8, 251, 224, 4, 116, 0, 0, 42, 26,
+            67, 28, 0, 36, 64, 0, 0, 149, 0, 0, 15, 15, 8, 0, 0, 26, 236, 8, 0, 145, 0, 0, 16, 26,
+            67, 16, 0, 26, 71, 128, 0, 26, 75, 224, 0, 95, 237, 0, 0, 26, 235, 176, 0, 32, 248, 51,
+            0, 88, 251, 224, 2, 8, 251, 224, 4, 116, 0, 0, 11, 26, 67, 28, 0, 95, 237, 0, 1, 8, 67,
+            176, 8, 114, 76, 0, 8, 4, 69, 4, 192, 26, 244, 0, 0, 146, 0, 0, 16, 26, 249, 32, 0,
+            152, 8, 0, 0, 151, 0, 0, 15, 74, 248, 0, 0, 149, 0, 0, 31, 15, 8, 0, 0, 26, 236, 8, 0,
+            26, 83, 16, 0, 26, 67, 224, 0, 93, 69, 64, 0, 93, 69, 16, 0, 93, 73, 64, 0, 114, 76, 0,
+            8, 16, 73, 36, 192, 95, 81, 32, 0, 26, 245, 16, 0, 26, 249, 0, 0, 152, 8, 0, 0, 151, 0,
+            0, 31, 74, 248, 0, 0, 149, 0, 0, 7, 15, 8, 0, 0, 26, 236, 8, 0, 26, 67, 16, 0, 26, 71,
+            224, 0, 93, 72, 64, 0, 19, 65, 4, 128, 26, 245, 0, 0, 26, 249, 16, 0, 152, 8, 0, 0,
+            151, 0, 0, 7, 74, 248, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128,
         ];
-        let value = 128;
+        let value = 129;
 
         let predicate_data = MyPredicateEncoder::default().encode_data(value)?;
         let configurables = MyPredicateConfigurables::default().with_U64(value)?;
@@ -205,7 +205,7 @@ mod tests {
         assert_eq!(*predicate.code(), expected_code);
 
         let expected_address = Bech32Address::from_str(
-            "fuel14z2xsxcp47z9zfhj9atrmd66ujvwy8ujgn4j0xsh95fjh2px4mcq4f7k3w",
+            "fuel1c7rzx6ljxdz8egkcfjswffe7w8u06rm4nfvyu4lelyjua7qlcmdss9jkjm",
         )?;
 
         assert_eq!(*predicate.address(), expected_address);

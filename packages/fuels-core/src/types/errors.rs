@@ -1,14 +1,5 @@
-use std::{array::TryFromSliceError, str::Utf8Error};
-
-use fuel_tx::{Receipt, ValidityError};
-use fuel_vm::checked_transaction::CheckError;
-use hex::FromHexError;
-use thiserror::Error;
-
 pub mod transaction {
-    use super::*;
-
-    #[derive(Error, Debug, Clone)]
+    #[derive(thiserror::Error, Debug, Clone)]
     pub enum Reason {
         #[error("builder: {0}")]
         Builder(String),
@@ -20,22 +11,21 @@ pub mod transaction {
         Reverted {
             reason: String,
             revert_id: u64,
-            receipts: Vec<Receipt>,
+            receipts: Vec<fuel_tx::Receipt>,
         },
         #[error(": {0}")]
         Other(String),
     }
 }
-use transaction::Reason;
 
-#[derive(Error, Debug, Clone)]
+#[derive(thiserror::Error, Debug, Clone)]
 pub enum Error {
     #[error("io: {0}")]
     IO(String),
     #[error("codec: {0}")]
     Codec(String),
     #[error("transaction {0}")]
-    Transaction(Reason),
+    Transaction(transaction::Reason),
     #[error("provider: {0}")]
     Provider(String),
     #[error("{0}")]
@@ -71,14 +61,14 @@ macro_rules! error_transaction {
 }
 pub use error_transaction;
 
-impl From<CheckError> for Error {
-    fn from(err: CheckError) -> Error {
+impl From<fuel_vm::checked_transaction::CheckError> for Error {
+    fn from(err: fuel_vm::checked_transaction::CheckError) -> Error {
         error_transaction!(Validation, "{err:?}")
     }
 }
 
-impl From<ValidityError> for Error {
-    fn from(err: ValidityError) -> Error {
+impl From<fuel_tx::ValidityError> for Error {
+    fn from(err: fuel_tx::ValidityError) -> Error {
         error_transaction!(Validation, "{err:?}")
     }
 }
@@ -97,6 +87,7 @@ impl_error_from!(Other, &'static str);
 impl_error_from!(Other, bech32::Error);
 impl_error_from!(Other, fuel_crypto::Error);
 impl_error_from!(Other, serde_json::Error);
-impl_error_from!(Other, FromHexError);
-impl_error_from!(Other, TryFromSliceError);
-impl_error_from!(Other, Utf8Error);
+impl_error_from!(Other, hex::FromHexError);
+impl_error_from!(Other, std::array::TryFromSliceError);
+impl_error_from!(Other, std::str::Utf8Error);
+impl_error_from!(Other, fuel_abi_types::error::Error);
