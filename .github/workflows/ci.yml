@@ -18,9 +18,9 @@ env:
   RUSTFLAGS: "-D warnings"
   FUEL_CORE_VERSION: 0.31.0
   FUEL_CORE_PATCH_BRANCH:
-  RUST_VERSION: 1.76.0
-  FORC_VERSION: 0.61.2
-  FORC_PATCH_BRANCH: ""
+  RUST_VERSION: 1.79.0
+  FORC_VERSION: 0.62.0
+  FORC_PATCH_BRANCH: "esdrubal/abi_changes"
   FORC_PATCH_REVISION: ""
   NEXTEST_HIDE_PROGRESS_BAR: "true"
   NEXTEST_STATUS_LEVEL: "fail"
@@ -36,7 +36,7 @@ jobs:
           toolchain: ${{ env.RUST_VERSION }}
         # selecting a toolchain either by action or manual `rustup` calls should happen
         # before the cache plugin, as it uses the current rustc version as its cache key
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@v2.7.3
         with:
           prefix-key: "v1-rust"
 
@@ -73,7 +73,7 @@ jobs:
 
       # TODO: To be removed once https://github.com/FuelLabs/fuels-rs/issues/881 is unblocked.
       - name: Build Sway test projects w type paths
-        run: forc build --release --terse --error-on-warnings --json-abi-with-callpaths --path e2e
+        run: forc build --release --terse --error-on-warnings --path e2e
 
       - uses: actions/upload-artifact@v4
         with:
@@ -183,7 +183,7 @@ jobs:
 
         # selecting a toolchain either by action or manual `rustup` calls should happen
         # before the cache plugin, as it uses the current rustc version as its cache key
-      - uses: Swatinem/rust-cache@v2.0.1
+      - uses: Swatinem/rust-cache@v2.7.3
         continue-on-error: true
         with:
           key: "${{ matrix.cargo_command }} ${{ matrix.args }} ${{ matrix.package }}"

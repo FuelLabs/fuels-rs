@@ -90,7 +90,7 @@ enum SomeEnum<T, K> {
 }
 ```
 
-To lessen the impact to developer experience you may use `SomeStruct::new` to initialize the above structure without bothering with the `PhantomData`s:
+To lessen the impact to developer experience you may use the `new` method to initialize a structure without bothering with the `PhantomData`s.:
 
 ```rust,ignore
 {{#include ../../../examples/types/src/lib.rs:unused_generics_struct}}

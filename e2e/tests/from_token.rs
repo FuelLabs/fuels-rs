@@ -10,179 +10,36 @@ pub fn null_contract_id() -> Bech32ContractId {
 
 #[tokio::test]
 async fn create_struct_from_decoded_tokens() -> Result<()> {
-    // Generates the bindings from an ABI definition inline.
-    // The generated bindings can be accessed through `SimpleContract`.
     abigen!(Contract(
         name = "SimpleContract",
-        abi = r#"
-        {
-            "types": [
-              {
-                "typeId": 0,
-                "type": "()",
-                "components": [],
-                "typeParameters": null
-              },
-              {
-                "typeId": 1,
-                "type": "bool",
-                "components": null,
-                "typeParameters": null
-              },
-              {
-                "typeId": 2,
-                "type": "struct MyStruct",
-                "components": [
-                  {
-                    "name": "foo",
-                    "type": 3,
-                    "typeArguments": null
-                  },
-                  {
-                    "name": "bar",
-                    "type": 1,
-                    "typeArguments": null
-                  }
-                ],
-                "typeParameters": null
-              },
-              {
-                "typeId": 3,
-                "type": "u8",
-                "components": null,
-                "typeParameters": null
-              }
-            ],
-            "functions": [
-              {
-                "inputs": [
-                  {
-                    "name": "my_val",
-                    "type": 2,
-                    "typeArguments": null
-                  }
-                ],
-                "name": "takes_struct",
-                "output": {
-                  "name": "",
-                  "type": 0,
-                  "typeArguments": null
-                }
-              }
-            ]
-          }
-        "#,
+        abi = "e2e/sway/types/contracts/nested_structs/out/release/nested_structs-abi.json"
     ));
 
-    // Decoded tokens
-    let u8_token = Token::U8(10);
+    let u32_token = Token::U32(10);
     let bool_token = Token::Bool(true);
+    let struct_from_tokens = SomeStruct::from_token(Token::Struct(vec![u32_token, bool_token]))?;
 
-    // Create the struct using the decoded tokens.
-    // `struct_from_tokens` is of type `MyStruct`.
-    let struct_from_tokens = MyStruct::from_token(Token::Struct(vec![u8_token, bool_token]))?;
-
-    assert_eq!(10, struct_from_tokens.foo);
-    assert!(struct_from_tokens.bar);
+    assert_eq!(10, struct_from_tokens.field);
+    assert!(struct_from_tokens.field_2);
 
     Ok(())
 }
 
 #[tokio::test]
 async fn create_nested_struct_from_decoded_tokens() -> Result<()> {
-    // Generates the bindings from the an ABI definition inline.
-    // The generated bindings can be accessed through `SimpleContract`.
     abigen!(Contract(
         name = "SimpleContract",
-        abi = r#"
-        {
-            "types": [
-              {
-                "typeId": 0,
-                "type": "()",
-                "components": [],
-                "typeParameters": null
-              },
-              {
-                "typeId": 1,
-                "type": "bool",
-                "components": null,
-                "typeParameters": null
-              },
-              {
-                "typeId": 2,
-                "type": "struct InnerStruct",
-                "components": [
-                  {
-                    "name": "a",
-                    "type": 1,
-                    "typeArguments": null
-                  }
-                ],
-                "typeParameters": null
-              },
-              {
-                "typeId": 3,
-                "type": "struct MyNestedStruct",
-                "components": [
-                  {
-                    "name": "x",
-                    "type": 4,
-                    "typeArguments": null
-                  },
-                  {
-                    "name": "foo",
-                    "type": 2,
-                    "typeArguments": null
-                  }
-                ],
-                "typeParameters": null
-              },
-              {
-                "typeId": 4,
-                "type": "u16",
-                "components": null,
-                "typeParameters": null
-              }
-            ],
-            "functions": [
-              {
-                "inputs": [
-                  {
-                    "name": "top_value",
-                    "type": 3,
-                    "typeArguments": null
-                  }
-                ],
-                "name": "takes_nested_struct",
-                "output": {
-                  "name": "",
-                  "type": 0,
-                  "typeArguments": null
-                }
-              }
-            ]
-          }
-        "#,
+        abi = "e2e/sway/types/contracts/nested_structs/out/release/nested_structs-abi.json"
     ));
 
-    // Creating just the InnerStruct is possible
-    let a = Token::Bool(true);
-    let inner_struct_token = Token::Struct(vec![a.clone()]);
-    let inner_struct_from_tokens = InnerStruct::from_token(inner_struct_token.clone())?;
-    assert!(inner_struct_from_tokens.a);
+    let u32_token = Token::U32(10);
+    let bool_token = Token::Bool(true);
+    let inner_struct_token = Token::Struct(vec![u32_token, bool_token]);
 
-    // Creating the whole nested struct `MyNestedStruct`
-    // from tokens.
-    // `x` is the token for the field `x` in `MyNestedStruct`
-    // `a` is the token for the field `a` in `InnerStruct`
-    let x = Token::U16(10);
+    let nested_struct_from_tokens = AllStruct::from_token(Token::Struct(vec![inner_struct_token]))?;
 
-    let nested_struct_from_tokens =
-        MyNestedStruct::from_token(Token::Struct(vec![x, inner_struct_token]))?;
-
-    assert_eq!(10, nested_struct_from_tokens.x);
-    assert!(nested_struct_from_tokens.foo.a);
+    assert_eq!(10, nested_struct_from_tokens.some_struct.field);
+    assert!(nested_struct_from_tokens.some_struct.field_2);
 
     Ok(())
 }
