@@ -64,6 +64,7 @@ pub mod prelude {
     #[cfg(feature = "std")]
     pub use super::{
         accounts::{
+            impersonated_account::ImpersonatedAccount,
             predicate::Predicate,
             provider::*,
             wallet::{generate_mnemonic_phrase, WalletUnlocked},

@@ -2,6 +2,7 @@
 mod tests {
     use fuels::{
         core::codec::{encode_fn_selector, DecoderConfig, EncoderConfig},
+        crypto::SecretKey,
         prelude::{LoadConfiguration, NodeConfig, StorageConfiguration},
         test_helpers::{ChainConfig, StateConfig},
         types::{
@@ -920,6 +921,64 @@ mod tests {
             .call()
             .await?;
         // ANCHOR_END: contract_encoder_config
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn contract_call_impersonation() -> Result<()> {
+        use fuels::prelude::*;
+        use std::str::FromStr;
+
+        abigen!(Contract(
+            name = "MyContract",
+            abi = "e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
+        ));
+
+        let node_config = NodeConfig {
+            utxo_validation: false,
+            ..Default::default()
+        };
+        let mut wallet = WalletUnlocked::new_from_private_key(
+            SecretKey::from_str(
+                "0x4433d156e8c53bf5b50af07aa95a29436f29a94e0ccc5d58df8e57bdc8583c32",
+            )?,
+            None,
+        );
+        let coins = setup_single_asset_coins(
+            wallet.address(),
+            AssetId::zeroed(),
+            DEFAULT_NUM_COINS,
+            DEFAULT_COIN_AMOUNT,
+        );
+        let provider = setup_test_provider(coins, vec![], Some(node_config), None).await?;
+        wallet.set_provider(provider.clone());
+
+        let contract_id = Contract::load_from(
+            "../../e2e/sway/contracts/contract_test/out/release/contract_test.bin",
+            LoadConfiguration::default(),
+        )?
+        .deploy(&wallet, TxPolicies::default())
+        .await?;
+
+        // ANCHOR: contract_call_impersonation
+        // create impersonator for an address
+        let address =
+            Address::from_str("0x17f46f562778f4bb5fe368eeae4985197db51d80c83494ea7f84c530172dedd1")
+                .unwrap();
+        let address = Bech32Address::from(address);
+        let impersonator = ImpersonatedAccount::new(address, Some(provider.clone()));
+
+        let contract_instance = MyContract::new(contract_id, impersonator.clone());
+
+        let response = contract_instance
+            .methods()
+            .initialize_counter(42)
+            .call()
+            .await?;
+
+        assert_eq!(42, response.value);
+        // ANCHOR_END: contract_call_impersonation
 
         Ok(())
     }
