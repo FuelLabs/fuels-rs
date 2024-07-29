@@ -185,7 +185,6 @@ impl Provider {
             state_transition_bytecode_version: latest_chain_executor_version,
             ..
         } = chain_info.latest_block.header;
-        tx.check(latest_block_height, self.consensus_parameters())?;
 
         if tx.is_using_predicates() {
             tx.estimate_predicates(self, Some(latest_chain_executor_version))
