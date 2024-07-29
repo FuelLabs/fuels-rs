@@ -21,6 +21,7 @@ fuel-tx = { workspace = true }
 fuel-types = { workspace = true, features = ["random"] }
 fuels-core = { workspace = true, default-features = false }
 itertools = { workspace = true }
+path-clean = { workspace = true }
 rand = { workspace = true, default-features = false }
 semver = { workspace = true }
 tai64 = { workspace = true, features = ["serde"] }

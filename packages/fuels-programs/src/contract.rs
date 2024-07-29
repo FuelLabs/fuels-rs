@@ -4,7 +4,7 @@ mod storage;
 use std::{
     fmt::Debug,
     fs,
-    path::{Path, PathBuf},
+    path::{self, Path, PathBuf},
 };
 
 use fuel_tx::{Bytes32, Contract as FuelContract, ContractId, Salt, StorageSlot};
@@ -16,6 +16,7 @@ use fuels_core::types::{
     transaction_builders::CreateTransactionBuilder,
 };
 pub use load::*;
+use path_clean::PathClean;
 pub use storage::*;
 
 /// [`Contract`] is a struct to interface with a contract. That includes things such as
@@ -109,25 +110,26 @@ impl Contract {
     }
 
     pub fn load_from(binary_filepath: impl AsRef<Path>, config: LoadConfiguration) -> Result<Self> {
-        let binary_filepath = binary_filepath.as_ref().canonicalize().map_err(|e| {
-            error!(
-                IO,
-                "could not canonicalize path {:?}. Reason: {e}",
-                binary_filepath.as_ref(),
-            )
-        })?;
-        validate_path_and_extension(binary_filepath.as_ref(), "bin")?;
-
-        let mut binary = fs::read(&binary_filepath).map_err(|e| {
+        let clean_binary_filepath = binary_filepath.as_ref().clean();
+        let absolute_binary_filepath = path::absolute(&clean_binary_filepath).map_err(|e| {
             std::io::Error::new(
                 e.kind(),
-                format!("failed to read binary: {binary_filepath:?}: {e}"),
+                format!("failed to canonicalize path: {clean_binary_filepath:?}: {e}"),
+            )
+        })?;
+        validate_path_and_extension(absolute_binary_filepath.as_ref(), "bin")?;
+
+        let mut binary = fs::read(&absolute_binary_filepath).map_err(|e| {
+            std::io::Error::new(
+                e.kind(),
+                format!("failed to read binary: {absolute_binary_filepath:?}: {e}"),
             )
         })?;
 
         config.configurables.update_constants_in(&mut binary);
 
-        let storage_slots = Self::determine_storage_slots(config.storage, &binary_filepath)?;
+        let storage_slots =
+            Self::determine_storage_slots(config.storage, &absolute_binary_filepath)?;
 
         Ok(Self::new(binary, config.salt, storage_slots))
     }

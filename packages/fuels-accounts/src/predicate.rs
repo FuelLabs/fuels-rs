@@ -1,4 +1,4 @@
-use std::{fmt::Debug, fs};
+use std::{fmt::Debug, fs, path};
 
 #[cfg(feature = "std")]
 use fuels_core::types::{coin_type_id::CoinTypeId, input::Input, AssetId};
@@ -40,12 +40,17 @@ impl Predicate {
     }
 
     pub fn load_from(file_path: &str) -> Result<Self> {
-        let file_path = fs::canonicalize(file_path)
-            .map_err(|e| error!(IO, "could not canonicalize path {file_path:?}. Reason: {e}"))?;
-        let code = fs::read(&file_path).map_err(|e| {
+        let clean_file_path = path_clean::clean(file_path);
+        let absolute_file_path = path::absolute(&clean_file_path).map_err(|e| {
             error!(
                 IO,
-                "could not read predicate binary {file_path:?}. Reason: {e}",
+                "failed to canonicalize path: {clean_file_path:?}. Reason: {e}"
+            )
+        })?;
+        let code = fs::read(&absolute_file_path).map_err(|e| {
+            error!(
+                IO,
+                "could not read predicate binary {absolute_file_path:?}. Reason: {e}",
             )
         })?;
         Ok(Self::from_code(code))

@@ -1,7 +1,14 @@
-use std::{collections::HashMap, default::Default, fmt::Debug, io, path::Path};
+use std::{
+    collections::HashMap,
+    default::Default,
+    fmt::Debug,
+    io,
+    path::{self, Path},
+};
 
 use fuel_tx::{Bytes32, StorageSlot};
 use fuels_core::types::errors::{error, Result};
+use path_clean::PathClean;
 
 /// Configuration for contract storage
 #[derive(Debug, Clone)]
@@ -88,20 +95,20 @@ impl StorageSlots {
     }
 
     pub(crate) fn load_from_file(storage_path: impl AsRef<Path>) -> Result<Self> {
-        let storage_path = storage_path.as_ref().canonicalize().map_err(|e| {
-            error!(
-                IO,
-                "could not canonicalize path {:?}. Reason: {e}",
-                storage_path.as_ref(),
+        let clean_storage_path = storage_path.as_ref().clean();
+        let absolute_storage_path = path::absolute(&clean_storage_path).map_err(|e| {
+            io::Error::new(
+                e.kind(),
+                format!("failed to canonicalize path {clean_storage_path:?}. Reason: {e}"),
             )
         })?;
 
-        validate_path_and_extension(&storage_path, "json")?;
+        validate_path_and_extension(&absolute_storage_path, "json")?;
 
-        let storage_json_string = std::fs::read_to_string(&storage_path).map_err(|e| {
+        let storage_json_string = std::fs::read_to_string(&absolute_storage_path).map_err(|e| {
             io::Error::new(
                 e.kind(),
-                format!("failed to read storage slots from: {storage_path:?}: {e}"),
+                format!("failed to read storage slots from: {absolute_storage_path:?}: {e}"),
             )
         })?;
 

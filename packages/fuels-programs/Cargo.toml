@@ -18,6 +18,7 @@ fuel-types = { workspace = true, features = ["default"] }
 fuels-accounts = { workspace = true }
 fuels-core = { workspace = true }
 itertools = { workspace = true }
+path-clean = { workspace = true }
 rand = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true }
