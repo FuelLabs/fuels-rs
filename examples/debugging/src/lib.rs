@@ -2,7 +2,7 @@
 mod tests {
     use std::collections::HashMap;
 
-    use fuel_abi_types::abi::program::ProgramABI;
+    use fuel_abi_types::abi::unified_program::UnifiedProgramABI;
     use fuels::{
         core::codec::ABIDecoder,
         macros::abigen,
@@ -36,7 +36,7 @@ mod tests {
         let json_abi_file = "../../e2e/sway/types/contracts/generics/out/release/generics-abi.json";
         let abi_file_contents = std::fs::read_to_string(json_abi_file)?;
 
-        let parsed_abi: ProgramABI = serde_json::from_str(&abi_file_contents)?;
+        let parsed_abi = UnifiedProgramABI::from_json_abi(&abi_file_contents)?;
 
         let type_lookup = parsed_abi
             .types

@@ -1,7 +1,7 @@
 use std::{collections::HashMap, iter::zip};
 
 use fuel_abi_types::{
-    abi::program::{TypeApplication, TypeDeclaration},
+    abi::unified_program::{UnifiedTypeApplication, UnifiedTypeDeclaration},
     utils::{extract_array_len, extract_generic_name, extract_str_len, has_tuple_format},
 };
 
@@ -11,16 +11,16 @@ use crate::types::{
 };
 
 impl ParamType {
-    /// For when you need to convert a ABI JSON's TypeApplication into a ParamType.
+    /// For when you need to convert a ABI JSON's UnifiedTypeApplication into a ParamType.
     ///
     /// # Arguments
     ///
-    /// * `type_application`: The TypeApplication you wish to convert into a ParamType
-    /// * `type_lookup`: A HashMap of TypeDeclarations mentioned in the
-    ///                  TypeApplication where the type id is the key.
+    /// * `type_application`: The UnifiedTypeApplication you wish to convert into a ParamType
+    /// * `type_lookup`: A HashMap of UnifiedTypeDeclarations mentioned in the
+    ///                  UnifiedTypeApplication where the type id is the key.
     pub fn try_from_type_application(
-        type_application: &TypeApplication,
-        type_lookup: &HashMap<usize, TypeDeclaration>,
+        type_application: &UnifiedTypeApplication,
+        type_lookup: &HashMap<usize, UnifiedTypeDeclaration>,
     ) -> Result<Self> {
         Type::try_from(type_application, type_lookup)?.try_into()
     }
@@ -43,15 +43,15 @@ impl Type {
     /// * `type_application`: the type we wish to resolve
     /// * `types`: all types used in the function call
     pub fn try_from(
-        type_application: &TypeApplication,
-        type_lookup: &HashMap<usize, TypeDeclaration>,
+        type_application: &UnifiedTypeApplication,
+        type_lookup: &HashMap<usize, UnifiedTypeDeclaration>,
     ) -> Result<Self> {
         Self::resolve(type_application, type_lookup, &[])
     }
 
     fn resolve(
-        type_application: &TypeApplication,
-        type_lookup: &HashMap<usize, TypeDeclaration>,
+        type_application: &UnifiedTypeApplication,
+        type_lookup: &HashMap<usize, UnifiedTypeDeclaration>,
         parent_generic_params: &[(usize, Type)],
     ) -> Result<Self> {
         let type_declaration = type_lookup.get(&type_application.type_id).ok_or_else(|| {
@@ -120,9 +120,9 @@ impl Type {
     /// * `parent_generic_params`: The generic parameters as inherited from the
     ///                            enclosing type (a struct/enum/array etc.).
     fn determine_generics_for_type(
-        type_application: &TypeApplication,
-        type_lookup: &HashMap<usize, TypeDeclaration>,
-        type_declaration: &TypeDeclaration,
+        type_application: &UnifiedTypeApplication,
+        type_lookup: &HashMap<usize, UnifiedTypeDeclaration>,
+        type_declaration: &UnifiedTypeDeclaration,
         parent_generic_params: &[(usize, Type)],
     ) -> Result<Vec<(usize, Self)>> {
         match &type_declaration.type_parameters {
@@ -361,13 +361,13 @@ mod tests {
     #[test]
     fn handles_simple_types() -> Result<()> {
         let parse_param_type = |type_field: &str| {
-            let type_application = TypeApplication {
+            let type_application = UnifiedTypeApplication {
                 name: "".to_string(),
                 type_id: 0,
                 type_arguments: None,
             };
 
-            let declarations = [TypeDeclaration {
+            let declarations = [UnifiedTypeDeclaration {
                 type_id: 0,
                 type_field: type_field.to_string(),
                 components: None,
@@ -399,24 +399,24 @@ mod tests {
     #[test]
     fn handles_arrays() -> Result<()> {
         // given
-        let type_application = TypeApplication {
+        let type_application = UnifiedTypeApplication {
             name: "".to_string(),
             type_id: 0,
             type_arguments: None,
         };
 
         let declarations = [
-            TypeDeclaration {
+            UnifiedTypeDeclaration {
                 type_id: 0,
                 type_field: "[_; 10]".to_string(),
-                components: Some(vec![TypeApplication {
+                components: Some(vec![UnifiedTypeApplication {
                     name: "__array_element".to_string(),
                     type_id: 1,
                     type_arguments: None,
                 }]),
                 type_parameters: None,
             },
-            TypeDeclaration {
+            UnifiedTypeDeclaration {
                 type_id: 1,
                 type_field: "u8".to_string(),
                 components: None,
@@ -442,28 +442,28 @@ mod tests {
     fn handles_vectors() -> Result<()> {
         // given
         let declarations = [
-            TypeDeclaration {
+            UnifiedTypeDeclaration {
                 type_id: 1,
                 type_field: "generic T".to_string(),
                 components: None,
                 type_parameters: None,
             },
-            TypeDeclaration {
+            UnifiedTypeDeclaration {
                 type_id: 2,
                 type_field: "raw untyped ptr".to_string(),
                 components: None,
                 type_parameters: None,
             },
-            TypeDeclaration {
+            UnifiedTypeDeclaration {
                 type_id: 3,
                 type_field: "struct std::vec::RawVec".to_string(),
                 components: Some(vec![
-                    TypeApplication {
+                    UnifiedTypeApplication {
                         name: "ptr".to_string(),
                         type_id: 2,
                         type_arguments: None,
                     },
-                    TypeApplication {
+                    UnifiedTypeApplication {
                         name: "cap".to_string(),
                         type_id: 5,
                         type_arguments: None,
@@ -471,20 +471,20 @@ mod tests {
                 ]),
                 type_parameters: Some(vec![1]),
             },
-            TypeDeclaration {
+            UnifiedTypeDeclaration {
                 type_id: 4,
                 type_field: "struct std::vec::Vec".to_string(),
                 components: Some(vec![
-                    TypeApplication {
+                    UnifiedTypeApplication {
                         name: "buf".to_string(),
                         type_id: 3,
-                        type_arguments: Some(vec![TypeApplication {
+                        type_arguments: Some(vec![UnifiedTypeApplication {
                             name: "".to_string(),
                             type_id: 1,
                             type_arguments: None,
                         }]),
                     },
-                    TypeApplication {
+                    UnifiedTypeApplication {
                         name: "len".to_string(),
                         type_id: 5,
                         type_arguments: None,
@@ -492,13 +492,13 @@ mod tests {
                 ]),
                 type_parameters: Some(vec![1]),
             },
-            TypeDeclaration {
+            UnifiedTypeDeclaration {
                 type_id: 5,
                 type_field: "u64".to_string(),
                 components: None,
                 type_parameters: None,
             },
-            TypeDeclaration {
+            UnifiedTypeDeclaration {
                 type_id: 6,
                 type_field: "u8".to_string(),
                 components: None,
@@ -506,10 +506,10 @@ mod tests {
             },
         ];
 
-        let type_application = TypeApplication {
+        let type_application = UnifiedTypeApplication {
             name: "arg".to_string(),
             type_id: 4,
-            type_arguments: Some(vec![TypeApplication {
+            type_arguments: Some(vec![UnifiedTypeApplication {
                 name: "".to_string(),
                 type_id: 6,
                 type_arguments: None,
@@ -534,23 +534,23 @@ mod tests {
     fn handles_structs() -> Result<()> {
         // given
         let declarations = [
-            TypeDeclaration {
+            UnifiedTypeDeclaration {
                 type_id: 1,
                 type_field: "generic T".to_string(),
                 components: None,
                 type_parameters: None,
             },
-            TypeDeclaration {
+            UnifiedTypeDeclaration {
                 type_id: 2,
                 type_field: "struct SomeStruct".to_string(),
-                components: Some(vec![TypeApplication {
+                components: Some(vec![UnifiedTypeApplication {
                     name: "field".to_string(),
                     type_id: 1,
                     type_arguments: None,
                 }]),
                 type_parameters: Some(vec![1]),
             },
-            TypeDeclaration {
+            UnifiedTypeDeclaration {
                 type_id: 3,
                 type_field: "u8".to_string(),
                 components: None,
@@ -558,10 +558,10 @@ mod tests {
             },
         ];
 
-        let type_application = TypeApplication {
+        let type_application = UnifiedTypeApplication {
             name: "arg".to_string(),
             type_id: 2,
-            type_arguments: Some(vec![TypeApplication {
+            type_arguments: Some(vec![UnifiedTypeApplication {
                 name: "".to_string(),
                 type_id: 3,
                 type_arguments: None,
@@ -593,23 +593,23 @@ mod tests {
     fn handles_enums() -> Result<()> {
         // given
         let declarations = [
-            TypeDeclaration {
+            UnifiedTypeDeclaration {
                 type_id: 1,
                 type_field: "generic T".to_string(),
                 components: None,
                 type_parameters: None,
             },
-            TypeDeclaration {
+            UnifiedTypeDeclaration {
                 type_id: 2,
                 type_field: "enum SomeEnum".to_string(),
-                components: Some(vec![TypeApplication {
+                components: Some(vec![UnifiedTypeApplication {
                     name: "Variant".to_string(),
                     type_id: 1,
                     type_arguments: None,
                 }]),
                 type_parameters: Some(vec![1]),
             },
-            TypeDeclaration {
+            UnifiedTypeDeclaration {
                 type_id: 3,
                 type_field: "u8".to_string(),
                 components: None,
@@ -617,10 +617,10 @@ mod tests {
             },
         ];
 
-        let type_application = TypeApplication {
+        let type_application = UnifiedTypeApplication {
             name: "arg".to_string(),
             type_id: 2,
-            type_arguments: Some(vec![TypeApplication {
+            type_arguments: Some(vec![UnifiedTypeApplication {
                 name: "".to_string(),
                 type_id: 3,
                 type_arguments: None,
@@ -652,16 +652,16 @@ mod tests {
     fn handles_tuples() -> Result<()> {
         // given
         let declarations = [
-            TypeDeclaration {
+            UnifiedTypeDeclaration {
                 type_id: 1,
                 type_field: "(_, _)".to_string(),
                 components: Some(vec![
-                    TypeApplication {
+                    UnifiedTypeApplication {
                         name: "__tuple_element".to_string(),
                         type_id: 3,
                         type_arguments: None,
                     },
-                    TypeApplication {
+                    UnifiedTypeApplication {
                         name: "__tuple_element".to_string(),
                         type_id: 2,
                         type_arguments: None,
@@ -669,13 +669,13 @@ mod tests {
                 ]),
                 type_parameters: None,
             },
-            TypeDeclaration {
+            UnifiedTypeDeclaration {
                 type_id: 2,
                 type_field: "str[15]".to_string(),
                 components: None,
                 type_parameters: None,
             },
-            TypeDeclaration {
+            UnifiedTypeDeclaration {
                 type_id: 3,
                 type_field: "u8".to_string(),
                 components: None,
@@ -683,7 +683,7 @@ mod tests {
             },
         ];
 
-        let type_application = TypeApplication {
+        let type_application = UnifiedTypeApplication {
             name: "arg".to_string(),
             type_id: 1,
             type_arguments: None,
@@ -709,16 +709,16 @@ mod tests {
     fn ultimate_example() -> Result<()> {
         // given
         let declarations = [
-            TypeDeclaration {
+            UnifiedTypeDeclaration {
                 type_id: 1,
                 type_field: "(_, _)".to_string(),
                 components: Some(vec![
-                    TypeApplication {
+                    UnifiedTypeApplication {
                         name: "__tuple_element".to_string(),
                         type_id: 11,
                         type_arguments: None,
                     },
-                    TypeApplication {
+                    UnifiedTypeApplication {
                         name: "__tuple_element".to_string(),
                         type_id: 11,
                         type_arguments: None,
@@ -726,16 +726,16 @@ mod tests {
                 ]),
                 type_parameters: None,
             },
-            TypeDeclaration {
+            UnifiedTypeDeclaration {
                 type_id: 2,
                 type_field: "(_, _)".to_string(),
                 components: Some(vec![
-                    TypeApplication {
+                    UnifiedTypeApplication {
                         name: "__tuple_element".to_string(),
                         type_id: 4,
                         type_arguments: None,
                     },
-                    TypeApplication {
+                    UnifiedTypeApplication {
                         name: "__tuple_element".to_string(),
                         type_id: 24,
                         type_arguments: None,
@@ -743,16 +743,16 @@ mod tests {
                 ]),
                 type_parameters: None,
             },
-            TypeDeclaration {
+            UnifiedTypeDeclaration {
                 type_id: 3,
                 type_field: "(_, _)".to_string(),
                 components: Some(vec![
-                    TypeApplication {
+                    UnifiedTypeApplication {
                         name: "__tuple_element".to_string(),
                         type_id: 5,
                         type_arguments: None,
                     },
-                    TypeApplication {
+                    UnifiedTypeApplication {
                         name: "__tuple_element".to_string(),
                         type_id: 13,
                         type_arguments: None,
@@ -760,22 +760,22 @@ mod tests {
                 ]),
                 type_parameters: None,
             },
-            TypeDeclaration {
+            UnifiedTypeDeclaration {
                 type_id: 4,
                 type_field: "[_; 1]".to_string(),
-                components: Some(vec![TypeApplication {
+                components: Some(vec![UnifiedTypeApplication {
                     name: "__array_element".to_string(),
                     type_id: 8,
-                    type_arguments: Some(vec![TypeApplication {
+                    type_arguments: Some(vec![UnifiedTypeApplication {
                         name: "".to_string(),
                         type_id: 22,
-                        type_arguments: Some(vec![TypeApplication {
+                        type_arguments: Some(vec![UnifiedTypeApplication {
                             name: "".to_string(),
                             type_id: 21,
-                            type_arguments: Some(vec![TypeApplication {
+                            type_arguments: Some(vec![UnifiedTypeApplication {
                                 name: "".to_string(),
                                 type_id: 18,
-                                type_arguments: Some(vec![TypeApplication {
+                                type_arguments: Some(vec![UnifiedTypeApplication {
                                     name: "".to_string(),
                                     type_id: 13,
                                     type_arguments: None,
@@ -786,42 +786,42 @@ mod tests {
                 }]),
                 type_parameters: None,
             },
-            TypeDeclaration {
+            UnifiedTypeDeclaration {
                 type_id: 5,
                 type_field: "[_; 2]".to_string(),
-                components: Some(vec![TypeApplication {
+                components: Some(vec![UnifiedTypeApplication {
                     name: "__array_element".to_string(),
                     type_id: 14,
                     type_arguments: None,
                 }]),
                 type_parameters: None,
             },
-            TypeDeclaration {
+            UnifiedTypeDeclaration {
                 type_id: 6,
                 type_field: "[_; 2]".to_string(),
-                components: Some(vec![TypeApplication {
+                components: Some(vec![UnifiedTypeApplication {
                     name: "__array_element".to_string(),
                     type_id: 10,
                     type_arguments: None,
                 }]),
                 type_parameters: None,
             },
-            TypeDeclaration {
+            UnifiedTypeDeclaration {
                 type_id: 7,
                 type_field: "b256".to_string(),
                 components: None,
                 type_parameters: None,
             },
-            TypeDeclaration {
+            UnifiedTypeDeclaration {
                 type_id: 8,
                 type_field: "enum EnumWGeneric".to_string(),
                 components: Some(vec![
-                    TypeApplication {
+                    UnifiedTypeApplication {
                         name: "A".to_string(),
                         type_id: 25,
                         type_arguments: None,
                     },
-                    TypeApplication {
+                    UnifiedTypeApplication {
                         name: "B".to_string(),
                         type_id: 12,
                         type_arguments: None,
@@ -829,67 +829,67 @@ mod tests {
                 ]),
                 type_parameters: Some(vec![12]),
             },
-            TypeDeclaration {
+            UnifiedTypeDeclaration {
                 type_id: 9,
                 type_field: "generic K".to_string(),
                 components: None,
                 type_parameters: None,
             },
-            TypeDeclaration {
+            UnifiedTypeDeclaration {
                 type_id: 10,
                 type_field: "generic L".to_string(),
                 components: None,
                 type_parameters: None,
             },
-            TypeDeclaration {
+            UnifiedTypeDeclaration {
                 type_id: 11,
                 type_field: "generic M".to_string(),
                 components: None,
                 type_parameters: None,
             },
-            TypeDeclaration {
+            UnifiedTypeDeclaration {
                 type_id: 12,
                 type_field: "generic N".to_string(),
                 components: None,
                 type_parameters: None,
             },
-            TypeDeclaration {
+            UnifiedTypeDeclaration {
                 type_id: 13,
                 type_field: "generic T".to_string(),
                 components: None,
                 type_parameters: None,
             },
-            TypeDeclaration {
+            UnifiedTypeDeclaration {
                 type_id: 14,
                 type_field: "generic U".to_string(),
                 components: None,
                 type_parameters: None,
             },
-            TypeDeclaration {
+            UnifiedTypeDeclaration {
                 type_id: 15,
                 type_field: "raw untyped ptr".to_string(),
                 components: None,
                 type_parameters: None,
             },
-            TypeDeclaration {
+            UnifiedTypeDeclaration {
                 type_id: 16,
                 type_field: "str[2]".to_string(),
                 components: None,
                 type_parameters: None,
             },
-            TypeDeclaration {
+            UnifiedTypeDeclaration {
                 type_id: 17,
                 type_field: "struct MegaExample".to_string(),
                 components: Some(vec![
-                    TypeApplication {
+                    UnifiedTypeApplication {
                         name: "a".to_string(),
                         type_id: 3,
                         type_arguments: None,
                     },
-                    TypeApplication {
+                    UnifiedTypeApplication {
                         name: "b".to_string(),
                         type_id: 23,
-                        type_arguments: Some(vec![TypeApplication {
+                        type_arguments: Some(vec![UnifiedTypeApplication {
                             name: "".to_string(),
                             type_id: 2,
                             type_arguments: None,
@@ -898,13 +898,13 @@ mod tests {
                 ]),
                 type_parameters: Some(vec![13, 14]),
             },
-            TypeDeclaration {
+            UnifiedTypeDeclaration {
                 type_id: 18,
                 type_field: "struct PassTheGenericOn".to_string(),
-                components: Some(vec![TypeApplication {
+                components: Some(vec![UnifiedTypeApplication {
                     name: "one".to_string(),
                     type_id: 20,
-                    type_arguments: Some(vec![TypeApplication {
+                    type_arguments: Some(vec![UnifiedTypeApplication {
                         name: "".to_string(),
                         type_id: 9,
                         type_arguments: None,
@@ -912,16 +912,16 @@ mod tests {
                 }]),
                 type_parameters: Some(vec![9]),
             },
-            TypeDeclaration {
+            UnifiedTypeDeclaration {
                 type_id: 19,
                 type_field: "struct std::vec::RawVec".to_string(),
                 components: Some(vec![
-                    TypeApplication {
+                    UnifiedTypeApplication {
                         name: "ptr".to_string(),
                         type_id: 15,
                         type_arguments: None,
                     },
-                    TypeApplication {
+                    UnifiedTypeApplication {
                         name: "cap".to_string(),
                         type_id: 25,
                         type_arguments: None,
@@ -929,50 +929,50 @@ mod tests {
                 ]),
                 type_parameters: Some(vec![13]),
             },
-            TypeDeclaration {
+            UnifiedTypeDeclaration {
                 type_id: 20,
                 type_field: "struct SimpleGeneric".to_string(),
-                components: Some(vec![TypeApplication {
+                components: Some(vec![UnifiedTypeApplication {
                     name: "single_generic_param".to_string(),
                     type_id: 13,
                     type_arguments: None,
                 }]),
                 type_parameters: Some(vec![13]),
             },
-            TypeDeclaration {
+            UnifiedTypeDeclaration {
                 type_id: 21,
                 type_field: "struct StructWArrayGeneric".to_string(),
-                components: Some(vec![TypeApplication {
+                components: Some(vec![UnifiedTypeApplication {
                     name: "a".to_string(),
                     type_id: 6,
                     type_arguments: None,
                 }]),
                 type_parameters: Some(vec![10]),
             },
-            TypeDeclaration {
+            UnifiedTypeDeclaration {
                 type_id: 22,
                 type_field: "struct StructWTupleGeneric".to_string(),
-                components: Some(vec![TypeApplication {
+                components: Some(vec![UnifiedTypeApplication {
                     name: "a".to_string(),
                     type_id: 1,
                     type_arguments: None,
                 }]),
                 type_parameters: Some(vec![11]),
             },
-            TypeDeclaration {
+            UnifiedTypeDeclaration {
                 type_id: 23,
                 type_field: "struct std::vec::Vec".to_string(),
                 components: Some(vec![
-                    TypeApplication {
+                    UnifiedTypeApplication {
                         name: "buf".to_string(),
                         type_id: 19,
-                        type_arguments: Some(vec![TypeApplication {
+                        type_arguments: Some(vec![UnifiedTypeApplication {
                             name: "".to_string(),
                             type_id: 13,
                             type_arguments: None,
                         }]),
                     },
-                    TypeApplication {
+                    UnifiedTypeApplication {
                         name: "len".to_string(),
                         type_id: 25,
                         type_arguments: None,
@@ -980,13 +980,13 @@ mod tests {
                 ]),
                 type_parameters: Some(vec![13]),
             },
-            TypeDeclaration {
+            UnifiedTypeDeclaration {
                 type_id: 24,
                 type_field: "u32".to_string(),
                 components: None,
                 type_parameters: None,
             },
-            TypeDeclaration {
+            UnifiedTypeDeclaration {
                 type_id: 25,
                 type_field: "u64".to_string(),
                 components: None,
@@ -999,16 +999,16 @@ mod tests {
             .map(|decl| (decl.type_id, decl))
             .collect::<HashMap<_, _>>();
 
-        let type_application = TypeApplication {
+        let type_application = UnifiedTypeApplication {
             name: "arg1".to_string(),
             type_id: 17,
             type_arguments: Some(vec![
-                TypeApplication {
+                UnifiedTypeApplication {
                     name: "".to_string(),
                     type_id: 16,
                     type_arguments: None,
                 },
-                TypeApplication {
+                UnifiedTypeApplication {
                     name: "".to_string(),
                     type_id: 7,
                     type_arguments: None,
