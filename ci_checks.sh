@@ -17,4 +17,4 @@ cargo fmt --all -- --check &&
 	cargo test --all-targets --all-features --workspace &&
 	cargo test --all-targets --workspace &&
 	cargo run --bin check-docs &&
-	$(cargo doc |& grep -A 6 "warning: unresolved link to")
+	cargo doc |& grep -A 6 "warning: unresolved link to"
