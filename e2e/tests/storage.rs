@@ -87,8 +87,9 @@ async fn test_init_storage_automatically() -> Result<()> {
 #[tokio::test]
 async fn storage_load_error_messages() {
     {
-        let json_path = "sway/contracts/storage/out/release/no_file_on_path.json";
-        let expected_error = format!("io: file \"{json_path}\" does not exist");
+        let json_path = "sway/../sway/contracts/storage/out/release/no_file_on_path.json";
+        let manifest_dir = env!("CARGO_MANIFEST_DIR");
+        let expected_error = format!("io: file \"{manifest_dir}/sway/contracts/storage/out/release/no_file_on_path.json\" does not exist");
 
         let error = StorageConfiguration::default()
             .add_slot_overrides_from_file(json_path)
@@ -97,8 +98,9 @@ async fn storage_load_error_messages() {
         assert_eq!(error.to_string(), expected_error);
     }
     {
-        let json_path = "sway/contracts/storage/out/release/storage.bin";
-        let expected_error = format!("expected \"{json_path}\" to have '.json' extension");
+        let json_path = "sway/../sway/contracts/storage/out/release/storage.bin";
+        let manifest_dir = env!("CARGO_MANIFEST_DIR");
+        let expected_error = format!("expected \"{manifest_dir}/sway/contracts/storage/out/release/storage.bin\" to have '.json' extension");
 
         let error = StorageConfiguration::default()
             .add_slot_overrides_from_file(json_path)
