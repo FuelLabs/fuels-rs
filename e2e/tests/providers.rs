@@ -4,14 +4,13 @@ use chrono::{DateTime, Duration, TimeZone, Utc};
 use fuel_asm::RegId;
 use fuel_tx::Witness;
 use fuels::{
-    accounts::Account,
+    accounts::{impersonated_account::ImpersonatedAccount, Account},
     client::{PageDirection, PaginationRequest},
     prelude::*,
     tx::Receipt,
     types::{
         block::Block,
         coin_type::CoinType,
-        errors::transaction::Reason,
         message::Message,
         transaction_builders::{BuildableTransaction, ScriptTransactionBuilder},
         tx_status::TxStatus,
@@ -302,10 +301,10 @@ async fn contract_deployment_respects_maturity() -> Result<()> {
         "should not deploy contract since block height `0` is less than the requested maturity `1`",
     );
 
-    let Error::Transaction(Reason::Validation(s)) = err else {
+    let Error::Provider(s) = err else {
         panic!("expected `Validation`, got: `{err}`");
     };
-    assert_eq!(s, "TransactionMaturity");
+    assert!(s.contains("TransactionMaturity"));
 
     provider.produce_blocks(1, None).await?;
     deploy_w_maturity(1)?
@@ -1160,6 +1159,47 @@ async fn tx_with_witness_data() -> Result<()> {
         }
         _ => panic!("expected success status"),
     }
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn contract_call_with_impersonation() -> Result<()> {
+    let provider_config = NodeConfig {
+        utxo_validation: false,
+        ..NodeConfig::default()
+    };
+    let mut wallets = launch_custom_provider_and_get_wallets(
+        WalletsConfig::new(Some(1), Some(10), Some(1000)),
+        Some(provider_config),
+        None,
+    )
+    .await?;
+    let wallet = wallets.pop().unwrap();
+    let provider = wallet.try_provider()?;
+
+    let impersonator = ImpersonatedAccount::new(wallet.address().clone(), Some(provider.clone()));
+
+    abigen!(Contract(
+        name = "MyContract",
+        abi = "e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
+    ));
+
+    let contract_id = Contract::load_from(
+        "sway/contracts/contract_test/out/release/contract_test.bin",
+        LoadConfiguration::default(),
+    )?
+    .deploy(&wallet, TxPolicies::default())
+    .await?;
+
+    let contract_instance = MyContract::new(contract_id, impersonator.clone());
+
+    // The gas used by the script to call a contract and forward remaining gas limit.
+    contract_instance
+        .methods()
+        .initialize_counter(42)
+        .call()
+        .await?;
 
     Ok(())
 }
