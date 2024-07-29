@@ -437,10 +437,11 @@ pub enum Backoff {
 <div style="break-before: page; page-break-before: always;"></div><h1 id="accounts"><a class="header" href="#accounts">Accounts</a></h1>
 <p>The <code>ViewOnlyAccount</code> trait provides a common interface to query balances.</p>
 <p>The <code>Account</code> trait, in addition to the above, also provides a common interface to retrieve spendable resources or transfer assets. When performing actions in the SDK that lead to a transaction, you will typically need to provide an account that will be used to allocate resources required by the transaction, including transaction fees.</p>
-<p>Both traits are implemented by the following types:</p>
+<p>The traits are implemented by the following types:</p>
 <ul>
-<li><a href="./wallets/index.html">Wallet</a></li>
-<li><a href="./predicates/index.html">Predicate</a></li>
+<li><a href="./wallets/index.html"><code>Wallet</code></a></li>
+<li><a href="./predicates/index.html"><code>Predicate</code></a></li>
+<li><a href="accounts.html#account-impersonation"><code>ImpersonatedAccount</code></a></li>
 </ul>
 <h2 id="transferring-assets"><a class="header" href="#transferring-assets">Transferring assets</a></h2>
 <p>An account implements the following methods for transferring assets:</p>
@@ -545,6 +546,25 @@ pub enum Backoff {
         assert_eq!(proof.recipient, base_layer_address);
 </code></pre>
 <p>The above example creates an <code>Address</code> from a string and converts it to a <code>Bech32Address</code>. Next, it calls <code>wallet.withdraw_to_base_layer</code> by providing the address, the amount to be transferred, and the transaction policies. Lastly, to verify that the transfer succeeded, the relevant message proof is retrieved with <code>provider.get_message_proof,</code> and the amount and the recipient are verified.</p>
+<h2 id="account-impersonation"><a class="header" href="#account-impersonation">Account impersonation</a></h2>
+<p>To facilitate account impersonation, the Rust SDK provides the <code>ImpersonatedAccount</code> struct. Since it implements <code>Account</code>, we can use it to simulate ownership of assets held by an account with a given address. This also implies that we can impersonate contract calls from that address. <code>ImpersonatedAccount</code> will only succeed in unlocking assets if the network is set up with <code>utxo_validation = false</code>.</p>
+<pre><code class="language-rust ignore">        // create impersonator for an address
+        let address =
+            Address::from_str(&quot;0x17f46f562778f4bb5fe368eeae4985197db51d80c83494ea7f84c530172dedd1&quot;)
+                .unwrap();
+        let address = Bech32Address::from(address);
+        let impersonator = ImpersonatedAccount::new(address, Some(provider.clone()));
+
+        let contract_instance = MyContract::new(contract_id, impersonator.clone());
+
+        let response = contract_instance
+            .methods()
+            .initialize_counter(42)
+            .call()
+            .await?;
+
+        assert_eq!(42, response.value);
+</code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="managing-wallets"><a class="header" href="#managing-wallets">Managing wallets</a></h1>
 <!-- This section should explain in general how you can use a wallet in the SDK -->
 <!-- wallets:example:start -->
