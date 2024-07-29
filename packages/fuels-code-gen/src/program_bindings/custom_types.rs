@@ -101,12 +101,8 @@ fn is_type_sdk_provided(type_path: &TypePath) -> bool {
 fn is_type_unused(type_path: &TypePath) -> bool {
     let msg = "Known to be correct";
     [
-        // TODO: To be removed once https://github.com/FuelLabs/fuels-rs/issues/881 is unblocked.
-        TypePath::new("RawBytes").expect(msg),
         TypePath::new("std::vec::RawVec").expect(msg),
         TypePath::new("std::bytes::RawBytes").expect(msg),
-        // TODO: To be removed once https://github.com/FuelLabs/fuels-rs/issues/881 is unblocked.
-        TypePath::new("RawVec").expect(msg),
     ]
     .contains(type_path)
 }

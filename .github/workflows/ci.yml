@@ -71,17 +71,6 @@ jobs:
           path: |
             e2e/sway/**/out/*
 
-      # TODO: To be removed once https://github.com/FuelLabs/fuels-rs/issues/881 is unblocked.
-      - name: Build Sway test projects w type paths
-        run: forc build --release --terse --error-on-warnings --path e2e
-
-      - uses: actions/upload-artifact@v4
-        with:
-          retention-days: 2
-          name: sway-examples-w-type-paths
-          path: |
-            e2e/sway/**/out/*
-
   get-workspace-members:
     runs-on: ubuntu-latest
     outputs:
@@ -146,12 +135,9 @@ jobs:
           - cargo_command: clippy
             args: --all-targets
             download_sway_artifacts: sway-examples
-          - cargo_command: clippy
-            args: --all-targets --features "default fuel-core-lib test-type-paths"
-            download_sway_artifacts: sway-examples-w-type-paths
           - cargo_command: nextest
-            args: run --all-targets --features "default fuel-core-lib test-type-paths coin-cache" --workspace --cargo-quiet
-            download_sway_artifacts: sway-examples-w-type-paths
+            args: run --all-targets --features "default fuel-core-lib coin-cache" --workspace --cargo-quiet
+            download_sway_artifacts: sway-examples
             install_fuel_core: true
           - cargo_command: nextest
             args: run --all-targets --workspace --cargo-quiet
