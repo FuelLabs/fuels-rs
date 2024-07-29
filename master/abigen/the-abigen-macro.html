@@ -215,15 +215,6 @@ pub use shared_types::{/*..*/};
 <p><strong>Note:</strong>
 It is <strong>highly</strong> encouraged that you generate all your bindings in one <code>abigen!</code> call. Doing it in this manner will allow type sharing and avoid name collisions you'd normally get when calling <code>abigen!</code> multiple times inside the same namespace. If you choose to proceed otherwise, keep in mind the generated code overview presented above and appropriately separate the <code>abigen!</code> calls into different modules to resolve the collision.</p>
 </blockquote>
-<h3 id="type-paths"><a class="header" href="#type-paths">Type paths</a></h3>
-<p>Normally when using types from libraries in your contract, script or predicate, they'll be generated directly under the main <code>mod</code> of your program bindings, i.e. a type in a contract binding <code>MyContract</code> imported from a library <code>some_library</code> would be generated under <code>abigen_bindings::my_contract_mod::SomeLibraryType</code>.</p>
-<p>This can cause problems if you happen to have two types with the same name in different libraries of your program.</p>
-<p>This behavior can be changed to include the library path by compiling your Sway project with the following:</p>
-<pre><code class="language-shell">forc build --json-abi-with-callpaths
-</code></pre>
-<p>Now the type from the previous example will be generated under <code>abigen_bindings::my_contract_mod::some_library::SomeLibraryType</code>.</p>
-<p>This might only become relevant if your type isn't reexported. This can happen, as explained previously, if your type does not have a unique name across all bindings inside one <code>abigen!</code> call. You'll then need to fully qualify the access to it.</p>
-<p>Including type paths will eventually become the default and the flag will be removed.</p>
 <h2 id="using-the-bindings"><a class="header" href="#using-the-bindings">Using the bindings</a></h2>
 <p>Let's look at a contract with two methods: <code>initialize_counter(arg: u64) -&gt; u64</code> and <code>increment_counter(arg: u64) -&gt; u64</code>, with the following JSON ABI:</p>
 <pre><code class="language-json ignore">{
