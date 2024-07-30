@@ -982,4 +982,34 @@ mod tests {
 
         Ok(())
     }
+
+    async fn deploying_via_loader() -> Result<()> {
+        use fuels::prelude::*;
+        use std::str::FromStr;
+
+        setup_program_test!(
+            Abigen(Contract(
+                name = "MyContract",
+                project = "e2e/sway/contracts/huge_contract"
+            )),
+            Wallets("wallet")
+        );
+        let contract = Contract::load_from(
+            "e2e/sway/contracts/huge_contract/out/release/huge_contract.bin",
+            LoadConfiguration::default(),
+        )?;
+
+        let contract_id = contract
+            .deploy_as_loader(
+                &wallet,
+                TxPolicies::default(),
+                BlobSizePolicy::AtMost { words: 10_000 },
+            )
+            .await?;
+
+        let contract_instance = MyContract::new(contract_id, wallet);
+        todo!("remainder");
+
+        Ok(())
+    }
 }
