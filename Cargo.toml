@@ -90,13 +90,13 @@ fuel-core-services = { version = "0.31.0", default-features = false }
 fuel-core-types = { version = "0.31.0", default-features = false }
 
 # Dependencies from the `fuel-vm` repository:
-fuel-asm = { version = "0.55.0" }
-fuel-crypto = { version = "0.55.0" }
-fuel-merkle = { version = "0.55.0" }
-fuel-storage = { version = "0.55.0" }
-fuel-tx = { version = "0.55.0" }
-fuel-types = { version = "0.55.0" }
-fuel-vm = { version = "0.55.0" }
+fuel-asm = { version = "0.56.0" }
+fuel-crypto = { version = "0.56.0" }
+fuel-merkle = { version = "0.56.0" }
+fuel-storage = { version = "0.56.0" }
+fuel-tx = { version = "0.56.0" }
+fuel-types = { version = "0.56.0" }
+fuel-vm = { version = "0.56.0" }
 
 # Workspace projects
 fuels = { version = "0.65.1", path = "./packages/fuels", default-features = false }
@@ -109,13 +109,9 @@ fuels-test-helpers = { version = "0.65.1", path = "./packages/fuels-test-helpers
 versions-replacer = { version = "0.65.1", path = "./scripts/versions-replacer", default-features = false }
 
 [patch.crates-io]
-fuel-asm = { git = "https://github.com/FuelLabs/fuel-vm", branch = "dento/blob-tx", package = "fuel-asm" }
 fuel-core = { git = "https://github.com/FuelLabs/fuel-core", branch = "dento/blob-tx", package = "fuel-core" }
 fuel-core-chain-config = { git = "https://github.com/FuelLabs/fuel-core", branch = "dento/blob-tx", package = "fuel-core-chain-config" }
 fuel-core-client = { git = "https://github.com/FuelLabs/fuel-core", branch = "dento/blob-tx", package = "fuel-core-client" }
 fuel-core-poa = { git = "https://github.com/FuelLabs/fuel-core", branch = "dento/blob-tx", package = "fuel-core-poa" }
 fuel-core-services = { git = "https://github.com/FuelLabs/fuel-core", branch = "dento/blob-tx", package = "fuel-core-services" }
 fuel-core-types = { git = "https://github.com/FuelLabs/fuel-core", branch = "dento/blob-tx", package = "fuel-core-types" }
-fuel-tx = { git = "https://github.com/FuelLabs/fuel-vm", branch = "dento/blob-tx", package = "fuel-tx" }
-fuel-types = { git = "https://github.com/FuelLabs/fuel-vm", branch = "dento/blob-tx", package = "fuel-types" }
-fuel-vm = { git = "https://github.com/FuelLabs/fuel-vm", branch = "dento/blob-tx", package = "fuel-vm" }

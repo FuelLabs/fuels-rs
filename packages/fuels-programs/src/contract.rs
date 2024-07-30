@@ -2,6 +2,7 @@ mod load;
 mod storage;
 
 use std::{
+    collections::HashSet,
     fmt::Debug,
     fs,
     path::{Path, PathBuf},
@@ -9,6 +10,7 @@ use std::{
 
 use fuel_asm::{op, Instruction, RegId};
 use fuel_tx::{Bytes32, Contract as FuelContract, ContractId, Salt, StorageSlot};
+use fuel_types::bytes::WORD_SIZE;
 use fuels_accounts::{provider::Provider, Account};
 use fuels_core::types::{
     bech32::Bech32ContractId,
@@ -35,12 +37,13 @@ pub struct Contract {
 
 /// Used to control how the contract is going to get split up into blob tx.
 pub enum BlobSizePolicy {
-    /// Contract chunks can be at most `bytes` bytes.
-    AtMost { bytes: usize },
+    /// Contract chunks can be at most `words` * 8 bytes.
+    AtMost { words: usize },
     /// Note: Use a value less than 1.0 (100%):
     /// The theoretical maximum is calculated based on the number of bytes that can fit in a blob transaction
     /// without exceeding the maximum allowed transaction size. This calculation does not account for additional
     /// limiting factors such as:
+    /// * network limitations on payload size
     /// * the possibility of the transaction exceeding the maximum gas limit
     /// * the size impact of any inputs/witnesses added to the transaction to cover its fee
     Estimate { percentage_of_theoretical_max: f64 },
@@ -49,7 +52,7 @@ pub enum BlobSizePolicy {
 impl BlobSizePolicy {
     async fn resolve_size(&self, provider: &Provider) -> Result<usize> {
         let size = match self {
-            BlobSizePolicy::AtMost { bytes } => *bytes,
+            BlobSizePolicy::AtMost { words } => *words * WORD_SIZE,
             BlobSizePolicy::Estimate {
                 percentage_of_theoretical_max,
             } => {
@@ -57,7 +60,12 @@ impl BlobSizePolicy {
                     .estimate_max_blob_size(provider)
                     .await?;
 
-                (*percentage_of_theoretical_max * theoretical_max as f64) as usize
+                let percentage_of_theoretical_max =
+                    (*percentage_of_theoretical_max * theoretical_max as f64) as usize;
+
+                let rounded_to_word_boundary =
+                    (percentage_of_theoretical_max / WORD_SIZE) * WORD_SIZE;
+                rounded_to_word_boundary
             }
         };
 
@@ -107,9 +115,16 @@ impl Contract {
         let provider = account.try_provider()?;
 
         let blobs = self.generate_blobs(provider, blob_size_policy).await?;
-        let blob_ids = blobs.iter().map(|blob| blob.id()).collect::<Vec<_>>();
+        let all_blob_ids = blobs.iter().map(|blob| blob.id()).collect::<Vec<_>>();
+        let mut already_uploaded = HashSet::new();
 
         for blob in blobs {
+            let id = blob.id();
+
+            if already_uploaded.contains(&id) {
+                continue;
+            }
+
             let mut tb = BlobTransactionBuilder::default()
                 .with_blob(blob)
                 .with_tx_policies(tx_policies)
@@ -123,9 +138,11 @@ impl Contract {
                 .send_transaction_and_await_commit(tx)
                 .await?
                 .check(None)?;
+
+            already_uploaded.insert(id);
         }
 
-        Self::new_loader(&blob_ids, self.salt, self.storage_slots)?
+        Self::new_loader(&all_blob_ids, self.salt, self.storage_slots)?
             .deploy(account, tx_policies)
             .await
     }
@@ -149,68 +166,38 @@ impl Contract {
     }
 
     // This function creates a contract that loads the specified blobs into memory and delegates the call to the code contained in the blobs.
-    fn loader_contract(blob_ids: &[[u8; 32]]) -> Result<Vec<u8>> {
+    fn loader_contract(blob_ids: &[BlobId]) -> Result<Vec<u8>> {
         const BLOB_ID_SIZE: u16 = 32;
         let get_instructions = |num_of_instructions, num_of_blobs| {
-            // There are 3 main steps:
-            // 1. Calculate the total size of the contract
-            // 2. Allocate and load the contract into memory
-            // 3. Jump into the memory where the contract is loaded
+            // There are 2 main steps:
+            // 1. Load the blob contents into memory
+            // 2. Jump to the beginning of the memory where the blobs were loaded
             // After that the execution continues normally with the loaded contract reading our
             // prepared fn selector and jumps to the selected contract method.
             [
-                // 1. Calculate the total size of the contract
-                // 0x12 is going to hold the total size of the contract
-                op::move_(0x12, RegId::ZERO),
-                // find the start of the hardcoded blob ids, which are located after the code ends
+                // 1. load the blob contents into memory
+                // find the start of the hardcoded blob ids, which are located after the code ends,
                 op::move_(0x10, RegId::IS),
                 // 0x10 to hold the address of the current blob id
                 op::addi(0x10, 0x10, num_of_instructions * Instruction::SIZE as u16),
+                // The contract is going to be loaded from the current value of SP onwards, save
+                // the location into 0x16 so we can jump into it later on
+                op::move_(0x16, RegId::SP),
                 // loop counter
                 op::movi(0x13, num_of_blobs),
                 // LOOP starts here
                 // 0x11 to hold the size of the current blob
                 op::bsiz(0x11, 0x10),
-                // update the total size of the contract
-                op::add(0x12, 0x12, 0x11),
+                // push the blob contents onto the stack
+                op::ldc(0x10, 0, 0x11, 1),
                 // move on to the next blob
                 op::addi(0x10, 0x10, BLOB_ID_SIZE),
                 // decrement the loop counter
                 op::subi(0x13, 0x13, 1),
                 // Jump backwards 3 instructions if the counter has not reached 0
                 op::jnzb(0x13, RegId::ZERO, 3),
-                // 2. Allocate and load the contract into memory
-                // move the stack pointer by the contract size since we need to write the contract on the stack since only that memory can be executed
-                op::cfe(0x12),
-                // find the start of the hardcoded blob ids, which are located after the code ends
-                op::move_(0x10, RegId::IS),
-                // 0x10 to hold the address of the current blob id
-                op::addi(0x10, 0x10, num_of_instructions * Instruction::SIZE as u16),
-                // 0x12 is going to hold the total bytes loaded of the contract
-                op::move_(0x12, RegId::ZERO),
-                // loop counter
-                op::movi(0x13, num_of_blobs),
-                // LOOP starts here
-                // 0x11 to hold the size of the current blob
-                op::bsiz(0x11, 0x10),
-                // the location where to load the current blob (start of stack)
-                op::move_(0x14, RegId::SSP),
-                // move to where this blob should be loaded by adding the total bytes loaded
-                op::add(0x14, 0x14, 0x12),
-                // load the current blob
-                op::bldd(0x14, 0x10, RegId::ZERO, 0x11),
-                // update the total bytes loaded
-                op::add(0x12, 0x12, 0x11),
-                // move on to the next blob
-                op::addi(0x10, 0x10, BLOB_ID_SIZE),
-                // decrement the loop counter
-                op::subi(0x13, 0x13, 1),
-                // Jump backwards 6 instructions if the counter has not reached 0
-                op::jnzb(0x13, RegId::ZERO, 6),
                 // 3. Jump into the memory where the contract is loaded
                 // what follows is called _jmp_mem by the sway compiler
-                // move to the start of the stack (also the start of the contract we loaded)
-                op::move_(0x16, RegId::SSP),
                 // subtract the address contained in IS because jmp will add it back
                 op::sub(0x16, 0x16, RegId::IS),
                 // jmp will multiply by 4 so we need to divide to cancel that out

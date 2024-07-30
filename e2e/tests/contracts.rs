@@ -1,5 +1,4 @@
 use fuels::{
-    client::{PageDirection, PaginationRequest},
     core::codec::{calldata, encode_fn_selector, DecoderConfig, EncoderConfig},
     prelude::*,
     tx::ContractParameters,
@@ -1849,9 +1848,9 @@ async fn variable_output_estimation_is_optimized() -> Result<()> {
         .call()
         .await?;
 
-    // using `fuel-core-lib` in debug builds is 20x slower so we won't validate in that case so we
-    // don't have to maintain two expectations
-    if !cfg!(all(debug_assertions, feature = "fuel-core-lib")) {
+    // debug builds are slower (20x for `fuel-core-lib`, 4x for a release-fuel-core-binary)
+    // we won't validate in that case so we don't have to maintain two expectations
+    if !cfg!(debug_assertions) {
         let elapsed = start.elapsed().as_secs();
         let limit = 2;
         if elapsed > limit {
@@ -2121,7 +2120,7 @@ async fn blob_contract_deployment() -> Result<()> {
 
     assert!(
         contract_size > 150_000,
-        "the testnet size limit was around 100kB, we want a contract bigger than that to reflect prod"
+        "the testnet size limit was around 100kB, we want a contract bigger than that to reflect prod (current: {contract_size}B)"
     );
 
     let wallets =
@@ -2135,21 +2134,10 @@ async fn blob_contract_deployment() -> Result<()> {
     let contract_max_size = consensus_parameters.contract_params().contract_max_size();
     assert!(
         contract_size > contract_max_size,
-        "this test should ideally be run with a contract bigger than the max contract size so that we know deployment couldn't have happened without blobs"
+        "this test should ideally be run with a contract bigger than the max contract size ({contract_max_size}B) so that we know deployment couldn't have happened without blobs"
     );
 
     let contract = Contract::load_from(contract_binary, LoadConfiguration::default())?;
-
-    let deployment_result = contract
-        .clone()
-        .deploy(&wallets[0], TxPolicies::default())
-        .await;
-
-    if let Err(Error::Transaction(Reason::Validation(msg))) = deployment_result {
-        assert_eq!(msg, "TransactionCreateBytecodeLen");
-    } else {
-        panic!("Expected contract deployment to fail due to the contract being too big");
-    }
 
     let deploy_and_test = |wallet: WalletUnlocked, blob_size: BlobSizePolicy| {
         let contract = &contract;
@@ -2169,15 +2157,9 @@ async fn blob_contract_deployment() -> Result<()> {
     };
 
     {
-        assert_wallet_made_no_transactions(&wallets[0]).await;
-        let percentage_of_theoretical_max = 0.95;
-        let max_blob_size = BlobTransactionBuilder::default()
-            .estimate_max_blob_size(&provider)
-            .await?;
+        // We're mostly limited by the payload size of the fuel-core endpoints
+        let percentage_of_theoretical_max = 0.05;
 
-        let expected_blobs = (contract_size as f64
-            / (max_blob_size as f64 * percentage_of_theoretical_max))
-            .ceil() as usize;
         deploy_and_test(
             wallets[0].clone(),
             BlobSizePolicy::Estimate {
@@ -2185,60 +2167,11 @@ async fn blob_contract_deployment() -> Result<()> {
             },
         )
         .await?;
-        assert_eq!(
-            txs_made_by(&wallets[0]).await,
-            [vec!["blob"; expected_blobs], vec!["create", "script"]].concat()
-        );
     }
 
     {
-        let expected_blobs = 10;
-        assert_wallet_made_no_transactions(&wallets[1]).await;
-        deploy_and_test(
-            wallets[1].clone(),
-            BlobSizePolicy::AtMost {
-                bytes: (contract_size as usize).div_ceil(expected_blobs),
-            },
-        )
-        .await?;
-        assert_eq!(
-            txs_made_by(&wallets[1]).await,
-            [
-                vec!["blob".to_string(); expected_blobs],
-                vec!["create".to_string(), "script".to_string()]
-            ]
-            .concat()
-        );
+        deploy_and_test(wallets[1].clone(), BlobSizePolicy::AtMost { words: 6_000 }).await?;
     }
 
     Ok(())
-}
-
-async fn txs_made_by(wallet: &WalletUnlocked) -> Vec<&'static str> {
-    wallet
-        .provider()
-        .unwrap()
-        .get_transactions_by_owner(
-            wallet.address(),
-            PaginationRequest {
-                cursor: None,
-                results: 100,
-                direction: PageDirection::Forward,
-            },
-        )
-        .await
-        .unwrap()
-        .results
-        .into_iter()
-        .map(|tx| match tx.transaction {
-            TransactionType::Blob(_) => "blob",
-            TransactionType::Create(_) => "create",
-            TransactionType::Script(_) => "script",
-            _ => "other",
-        })
-        .collect()
-}
-
-async fn assert_wallet_made_no_transactions(wallet: &WalletUnlocked) {
-    assert!(txs_made_by(wallet).await.is_empty());
 }

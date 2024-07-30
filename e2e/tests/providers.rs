@@ -1078,7 +1078,7 @@ async fn tx_respects_policies() -> Result<()> {
 async fn can_setup_static_gas_price() -> Result<()> {
     let expected_gas_price = 474;
     let node_config = NodeConfig {
-        static_gas_price: expected_gas_price,
+        starting_gas_price: expected_gas_price,
         ..Default::default()
     };
     let provider = setup_test_provider(vec![], vec![], Some(node_config), None).await?;

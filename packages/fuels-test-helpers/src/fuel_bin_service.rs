@@ -85,8 +85,8 @@ impl ExtendedConfig {
         );
 
         args.push(format!(
-            "--min-gas-price={}",
-            self.node_config.static_gas_price
+            "--starting-gas-price={}",
+            self.node_config.starting_gas_price
         ));
 
         Ok(args)
