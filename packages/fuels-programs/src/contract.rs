@@ -194,7 +194,7 @@ impl Contract {
                 op::subi(0x13, 0x13, 1),
                 // Jump backwards 3 instructions if the counter has not reached 0
                 op::jnzb(0x13, RegId::ZERO, 3),
-                // 3. Jump into the memory where the contract is loaded
+                // 2. Jump into the memory where the contract is loaded
                 // what follows is called _jmp_mem by the sway compiler
                 // subtract the address contained in IS because jmp will add it back
                 op::sub(0x16, 0x16, RegId::IS),
