@@ -63,9 +63,7 @@ impl BlobSizePolicy {
                 let percentage_of_theoretical_max =
                     (*percentage_of_theoretical_max * theoretical_max as f64) as usize;
 
-                let rounded_to_word_boundary =
-                    (percentage_of_theoretical_max / WORD_SIZE) * WORD_SIZE;
-                rounded_to_word_boundary
+                (percentage_of_theoretical_max / WORD_SIZE) * WORD_SIZE
             }
         };
 
