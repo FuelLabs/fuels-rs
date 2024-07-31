@@ -97,6 +97,11 @@ impl Contract {
         salt: Salt,
         storage_slots: Vec<StorageSlot>,
     ) -> Result<Self> {
+        // Loader asm code relies on there being at least one blob
+        if blob_ids.is_empty() {
+            return Err(error!(Other, "must provide at least one blob"));
+        }
+
         let code = Self::loader_contract(blob_ids)?;
         Ok(Self::new(code, salt, storage_slots))
     }

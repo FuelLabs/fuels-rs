@@ -1,5 +1,7 @@
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
     use fuels::{
         core::codec::{encode_fn_selector, DecoderConfig, EncoderConfig},
         crypto::SecretKey,
@@ -983,32 +985,111 @@ mod tests {
         Ok(())
     }
 
+    #[tokio::test]
     async fn deploying_via_loader() -> Result<()> {
         use fuels::prelude::*;
-        use std::str::FromStr;
 
         setup_program_test!(
             Abigen(Contract(
                 name = "MyContract",
                 project = "e2e/sway/contracts/huge_contract"
             )),
-            Wallets("wallet")
+            Wallets("main_wallet")
         );
-        let contract = Contract::load_from(
-            "e2e/sway/contracts/huge_contract/out/release/huge_contract.bin",
-            LoadConfiguration::default(),
-        )?;
+        let contract_binary =
+            "../../e2e/sway/contracts/huge_contract/out/release/huge_contract.bin";
+        let contract = Contract::load_from(contract_binary, LoadConfiguration::default())?;
 
+        let contract_size = std::fs::metadata(contract_binary)?.len();
+
+        let provider: Provider = main_wallet.try_provider()?.clone();
+
+        // ANCHOR: show_contract_is_too_big
+        let max_allowed = provider
+            .consensus_parameters()
+            .contract_params()
+            .contract_max_size();
+
+        assert!(contract_size > max_allowed);
+        // ANCHOR_END: show_contract_is_too_big
+
+        let wallet = &main_wallet;
+        // ANCHOR: deploy_via_loader
         let contract_id = contract
             .deploy_as_loader(
-                &wallet,
+                wallet,
                 TxPolicies::default(),
+                // ANCHOR: blob_policy
                 BlobSizePolicy::AtMost { words: 10_000 },
+                // ANCHOR_END: blob_policy
             )
             .await?;
+        // ANCHOR_END: deploy_via_loader
 
+        let wallet = main_wallet.clone();
+        // ANCHOR: use_loader
         let contract_instance = MyContract::new(contract_id, wallet);
-        todo!("remainder");
+        let response = contract_instance.methods().something().call().await?.value;
+        assert_eq!(response, 1001);
+        // ANCHOR_END: use_loader
+
+        // ANCHOR: show_max_tx_size
+        provider.consensus_parameters().tx_params().max_size();
+        // ANCHOR_END: show_max_tx_size
+
+        // ANCHOR: show_max_tx_gas
+        provider.consensus_parameters().tx_params().max_gas_per_tx();
+        // ANCHOR_END: show_max_tx_gas
+
+        #[allow(unused_variables)]
+        // ANCHOR: estimate_chunk_size
+        let policy = BlobSizePolicy::Estimate {
+            percentage_of_theoretical_max: 0.95,
+        };
+        // ANCHOR_END: estimate_chunk_size
+
+        let wallet = main_wallet;
+        // ANCHOR: manual_contract_chunking
+        let code = std::fs::read(contract_binary)?;
+        let chunk_size = 100_000;
+        assert!(
+            chunk_size % 8 == 0,
+            "all chunks, except the last, must be word-aligned"
+        );
+
+        let mut all_blob_ids = vec![];
+        let mut already_uploaded_blobs = HashSet::new();
+        for chunk in code.chunks(chunk_size) {
+            let blob = Blob::new(chunk.to_vec());
+
+            let blob_id = blob.id();
+            all_blob_ids.push(blob_id);
+
+            // uploading the same blob twice is not allowed
+            if already_uploaded_blobs.contains(&blob_id) {
+                continue;
+            }
+
+            let mut tb = BlobTransactionBuilder::default().with_blob(blob);
+            wallet.adjust_for_fee(&mut tb, 0).await?;
+            wallet.add_witnesses(&mut tb)?;
+
+            let tx = tb.build(&provider).await?;
+            provider
+                .send_transaction_and_await_commit(tx)
+                .await?
+                .check(None)?;
+
+            already_uploaded_blobs.insert(blob_id);
+        }
+
+        let contract_id = Contract::new_loader(&all_blob_ids, Salt::default(), vec![])?
+            .deploy(&wallet, TxPolicies::default())
+            .await?;
+        let contract_instance = MyContract::new(contract_id, wallet);
+        let response = contract_instance.methods().something().call().await?.value;
+        assert_eq!(response, 1001);
+        // ANCHOR: manual_contract_chunking
 
         Ok(())
     }
