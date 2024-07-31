@@ -197,7 +197,7 @@ impl Contract {
                 op::addi(0x10, 0x10, BLOB_ID_SIZE),
                 // decrement the loop counter
                 op::subi(0x13, 0x13, 1),
-                // Jump backwards 3 instructions if the counter has not reached 0
+                // Jump backwards (3+1) instructions if the counter has not reached 0
                 op::jnzb(0x13, RegId::ZERO, 3),
                 // 2. Jump into the memory where the contract is loaded
                 // what follows is called _jmp_mem by the sway compiler
