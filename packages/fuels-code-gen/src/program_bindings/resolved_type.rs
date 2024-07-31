@@ -579,7 +579,7 @@ mod tests {
             &[
                 UnifiedTypeDeclaration {
                     type_id: 0,
-                    type_field: "struct String".to_string(),
+                    type_field: "struct std::string::String".to_string(),
                     components: Some(vec![UnifiedTypeApplication {
                         name: "bytes".to_string(),
                         type_id: 1,
