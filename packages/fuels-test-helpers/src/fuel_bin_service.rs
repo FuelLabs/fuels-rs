@@ -73,6 +73,9 @@ impl ExtendedConfig {
             }
         };
 
+        let body_limit = self.node_config.graphql_request_body_bytes_limit;
+        args.push(format!("--graphql-request-body-bytes-limit={body_limit}"));
+
         args.extend(
             [
                 (self.node_config.vm_backtrace, "--vm-backtrace"),

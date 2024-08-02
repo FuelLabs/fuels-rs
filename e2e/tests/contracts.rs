@@ -2158,7 +2158,7 @@ async fn blob_contract_deployment() -> Result<()> {
 
     {
         // We're mostly limited by the payload size of the fuel-core endpoints
-        let percentage_of_theoretical_max = 0.05;
+        let percentage_of_theoretical_max = 0.95;
 
         deploy_and_test(
             wallets[0].clone(),
