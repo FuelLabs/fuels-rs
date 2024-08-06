@@ -12,7 +12,7 @@ mod tests {
         use fuels::{crypto::SecretKey, prelude::*};
 
         // Create a provider pointing to the testnet.
-        let provider = Provider::connect("testnet.fuel.network").await.unwrap();
+        let provider = Provider::connect(TESTNET_NODE_URL).await.unwrap();
 
         // Setup a private key
         let secret = SecretKey::from_str(
