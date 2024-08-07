@@ -77,7 +77,7 @@ pub mod prelude {
         macros::setup_program_test,
         programs::{
             calls::{CallHandler, CallParameters, ContractDependency, Execution},
-            contract::{BlobSizePolicy, Contract, LoadConfiguration, StorageConfiguration},
+            contract::{Contract, LoadConfiguration, StorageConfiguration},
         },
         test_helpers::*,
         types::transaction_builders::*,
