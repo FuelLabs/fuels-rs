@@ -6,51 +6,51 @@ If your contract exceeds the size limit for a single deployment:
 {{#include ../../../examples/contracts/src/lib.rs:show_contract_is_too_big}}
 ```
 
-you can deploy it in parts using a segmented approach:
+you can deploy it in segments using a partitioned approach:
 
 ```rust,ignore
 {{#include ../../../examples/contracts/src/lib.rs:deploy_via_loader}}
 ```
 
-When you convert a regular contract into a loader contract the following happens:
+When you convert a standard contract into a loader contract, the following changes occur:
 
-* Your contract code is replaced with the code of the loader contract
-* the original contract code is separated into blobs that will be deployed via blob transactions to the chain prior to the deployment of the contract itself.
-* The new loader code will, upon invocation, load the blobs into memory and execute your original contract.
+* The original contract code is replaced with the loader contract code.
+* The original contract code is split into blobs, which will be deployed via blob transactions before deploying the contract itself.
+* The new loader code, when invoked, loads these blobs into memory and executes your original contract.
 
-After deploying the loader contract, you can interact with it just as you would with a traditionally deployed contract:
+After deploying the loader contract, you can interact with it just as you would with a standard contract:
 
 ```rust,ignore
 {{#include ../../../examples/contracts/src/lib.rs:use_loader}}
 ```
 
-There is also a helper that will deploy your contract normally, if its size is below the limit, and as a loader contract otherwise:
+A helper function is available to deploy your contract normally if it is within the size limit, or as a loader contract if it exceeds the limit:
 
 ```rust,ignore
 {{#include ../../../examples/contracts/src/lib.rs:auto_convert_to_loader}}
 ```
 
-You can also separate the blob upload from the deployment of the contract for more fine grained control:
+You also have the option to separate the blob upload from the contract deployment for more granular control:
 
 ```rust,ignore
 {{#include ../../../examples/contracts/src/lib.rs:upload_blobs_then_deploy}}
 ```
 
-Or split your contract code into blobs however you wish and then create a loader and deploy:
+Alternatively, you can manually split your contract code into blobs and then create and deploy a loader:
 
 ```rust,ignore
 {{#include ../../../examples/contracts/src/lib.rs:manual_blobs_then_deploy}}
 ```
 
-Or even upload the blobs yourself and just do the loader deployment:
+Or you can upload the blobs yourself and proceed with just the loader deployment:
 
 ```rust,ignore
 {{#include ../../../examples/contracts/src/lib.rs:manual_blob_upload_then_deploy}}
 ```
 
-## Blob size
+## Blob Size Considerations
 
-The size of a Blob transaction is limited by three things:
+The size of a Blob transaction is constrained by three factors:
 
 1. The maximum size of a single transaction:
 
@@ -58,33 +58,23 @@ The size of a Blob transaction is limited by three things:
 {{#include ../../../examples/contracts/src/lib.rs:show_max_tx_size}}
 ```
 
-2. Maximum gas usage for a single transaction:
+2. The maximum gas usage for a single transaction:
 
 ```rust,ignore
 {{#include ../../../examples/contracts/src/lib.rs:show_max_tx_gas}}
 ```
 
-3. The maximum HTTP body size the Fuel node will accept.
+3. The maximum HTTP body size accepted by the Fuel node.
 
-When deploying, you can use an estimating blob size policy:
-
-```rust,ignore
-{{#include ../../../examples/contracts/src/lib.rs:estimate_chunk_size}}
-```
-
-and the SDK will limit the blob sizes to the given percentage of the maximum.
-
-Note that this estimation has the following caveats:
-
-* It only accounts for the maximum transaction size (max gas usage and HTTP body limit not considered).
-* It doesn't account for any size increase that will happen after the transaction is funded.
-
-As such, you should use a percentage less than 100% to account for the caveats above.
-
-## Manually splitting up the contract
-
-If you wish, for any reason (such as resumability, retries, more control over the transactions, etc.), to manually split up and deploy the contract code, you can do so by following the example below:
+To estimate an appropriate size for your blobs, you can run:
 
 ```rust,ignore
-{{#include ../../../examples/contracts/src/lib.rs:manual_contract_chunking}}
+{{#include ../../../examples/contracts/src/lib.rs:estimate_max_blob_size}}
 ```
+
+However, keep in mind the following limitations:
+
+* The estimation only considers the maximum transaction size, not the max gas usage or HTTP body limit.
+* It does not account for any size increase that may occur after the transaction is funded.
+
+Therefore, it is advisable to make your blobs a few percent smaller than the estimated maximum size.

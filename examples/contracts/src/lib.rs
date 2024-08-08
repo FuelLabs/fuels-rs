@@ -1125,6 +1125,12 @@ mod tests {
             .await?;
         // ANCHOR_END: manual_blobs_then_deploy
 
+        // ANCHOR: estimate_max_blob_size
+        let max_blob_size = BlobTransactionBuilder::default()
+            .estimate_max_blob_size(&provider)
+            .await?;
+        // ANCHOR_END: estimate_max_blob_size
+
         Ok(())
     }
 }
