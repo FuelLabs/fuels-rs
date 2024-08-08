@@ -1,9 +1,7 @@
-use std::path::Path;
-use std::{default::Default, fmt::Debug};
+use std::{default::Default, fmt::Debug, path::Path};
 
 use fuel_tx::{Bytes32, ContractId, Salt, StorageSlot};
 use fuels_accounts::Account;
-use fuels_core::Configurables;
 use fuels_core::{
     constants::WORD_SIZE,
     error,
@@ -13,6 +11,7 @@ use fuels_core::{
         transaction::TxPolicies,
         transaction_builders::{Blob, CreateTransactionBuilder},
     },
+    Configurables,
 };
 
 use super::{

@@ -10,6 +10,10 @@ use fuel_tx::{
 use fuel_types::bytes::padded_len_usize;
 use itertools::Itertools;
 
+use super::{
+    generate_missing_witnesses, impl_tx_builder_trait, resolve_fuel_inputs, BuildableTransaction,
+    Strategy, TransactionBuilder, UnresolvedWitnessIndexes,
+};
 use crate::{
     constants::SIGNATURE_WITNESS_SIZE,
     traits::Signer,
@@ -20,11 +24,6 @@ use crate::{
         DryRunner,
     },
     utils::{calculate_witnesses_size, sealed},
-};
-
-use super::{
-    generate_missing_witnesses, impl_tx_builder_trait, resolve_fuel_inputs, BuildableTransaction,
-    Strategy, TransactionBuilder, UnresolvedWitnessIndexes,
 };
 
 #[derive(Default, Clone, Debug, PartialEq)]

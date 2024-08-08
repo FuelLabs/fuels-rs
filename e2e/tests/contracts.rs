@@ -2402,7 +2402,7 @@ fn unuploaded_loader_requires_at_least_one_blob() -> Result<()> {
     let loader = Contract::loader_for_blob_ids(no_blob_ids, Salt::default(), vec![])
         .expect_err("should have failed because there are no blobs");
 
-    //then
+    // then
     assert_eq!(
         loader.to_string(),
         "must provide at least one blob".to_string()

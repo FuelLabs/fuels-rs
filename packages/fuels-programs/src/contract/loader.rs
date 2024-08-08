@@ -3,15 +3,13 @@ use std::collections::HashSet;
 use fuel_asm::{op, Instruction, RegId};
 use fuel_tx::{Bytes32, ContractId, Salt, StorageSlot};
 use fuels_accounts::Account;
-use fuels_core::types::errors::Result;
-use fuels_core::types::transaction_builders::{Blob, BlobId};
 use fuels_core::{
     constants::WORD_SIZE,
     types::{
         bech32::Bech32ContractId,
-        errors::error,
+        errors::{error, Result},
         transaction::TxPolicies,
-        transaction_builders::{BlobTransactionBuilder, TransactionBuilder},
+        transaction_builders::{Blob, BlobId, BlobTransactionBuilder, TransactionBuilder},
     },
 };
 

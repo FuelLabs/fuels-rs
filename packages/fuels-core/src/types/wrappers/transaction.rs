@@ -105,7 +105,7 @@ impl MintTransaction {
 }
 
 #[derive(Default, Debug, Copy, Clone)]
-//ANCHOR: tx_policies_struct
+// ANCHOR: tx_policies_struct
 pub struct TxPolicies {
     tip: Option<u64>,
     witness_limit: Option<u64>,
@@ -113,7 +113,7 @@ pub struct TxPolicies {
     max_fee: Option<u64>,
     script_gas_limit: Option<u64>,
 }
-//ANCHOR_END: tx_policies_struct
+// ANCHOR_END: tx_policies_struct
 
 impl TxPolicies {
     pub fn new(

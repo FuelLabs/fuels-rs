@@ -1,6 +1,5 @@
 #[cfg(test)]
 mod tests {
-    use rand::Rng;
     use std::collections::HashSet;
 
     use fuels::{
@@ -13,6 +12,7 @@ mod tests {
             Bits256,
         },
     };
+    use rand::Rng;
 
     #[tokio::test]
     async fn instantiate_client() -> Result<()> {
@@ -930,8 +930,9 @@ mod tests {
 
     #[tokio::test]
     async fn contract_call_impersonation() -> Result<()> {
-        use fuels::prelude::*;
         use std::str::FromStr;
+
+        use fuels::prelude::*;
 
         abigen!(Contract(
             name = "MyContract",
