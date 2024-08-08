@@ -998,33 +998,43 @@ mod tests {
         );
         let contract_binary =
             "../../e2e/sway/contracts/huge_contract/out/release/huge_contract.bin";
-        let contract = Contract::load_from(contract_binary, LoadConfiguration::default())?;
-
-        let contract_size = std::fs::metadata(contract_binary)?.len();
 
         let provider: Provider = main_wallet.try_provider()?.clone();
 
         // ANCHOR: show_contract_is_too_big
+        let contract = Contract::load_from(contract_binary, LoadConfiguration::default())?;
         let max_allowed = provider
             .consensus_parameters()
             .contract_params()
             .contract_max_size();
 
-        assert!(contract_size > max_allowed);
+        assert!(contract.code().len() as u64 > max_allowed);
         // ANCHOR_END: show_contract_is_too_big
 
         let wallet = &main_wallet;
         // ANCHOR: deploy_via_loader
-        let contract_id = contract
-            .deploy_as_loader(
-                wallet,
-                TxPolicies::default(),
-                // ANCHOR: blob_policy
-                BlobSizePolicy::AtMost { words: 10_000 },
-                // ANCHOR_END: blob_policy
-            )
+        let max_words_per_blob = 10_000;
+        let contract_id = Contract::load_from(contract_binary, LoadConfiguration::default())?
+            .convert_to_loader(max_words_per_blob)?
+            .deploy(wallet, TxPolicies::default())
             .await?;
         // ANCHOR_END: deploy_via_loader
+
+        // ANCHOR: auto_convert_to_loader
+        let max_words_per_blob = 10_000;
+        let contract_id = Contract::load_from(contract_binary, LoadConfiguration::default())?
+            .smart_deploy(wallet, TxPolicies::default(), max_words_per_blob)
+            .await?;
+        // ANCHOR_END: auto_convert_to_loader
+
+        // ANCHOR: upload_blobs_then_deploy
+        let contract_id = Contract::load_from(contract_binary, LoadConfiguration::default())?
+            .convert_to_loader(max_words_per_blob)?
+            .upload_blobs(wallet, TxPolicies::default())
+            .await?
+            .deploy(wallet, TxPolicies::default())
+            .await?;
+        // ANCHOR_END: upload_blobs_then_deploy
 
         let wallet = main_wallet.clone();
         // ANCHOR: use_loader
@@ -1041,27 +1051,34 @@ mod tests {
         provider.consensus_parameters().tx_params().max_gas_per_tx();
         // ANCHOR_END: show_max_tx_gas
 
-        #[allow(unused_variables)]
-        // ANCHOR: estimate_chunk_size
-        let policy = BlobSizePolicy::Estimate {
-            percentage_of_theoretical_max: 0.95,
-        };
-        // ANCHOR_END: estimate_chunk_size
-
         let wallet = main_wallet;
-        // ANCHOR: manual_contract_chunking
-        let code = std::fs::read(contract_binary)?;
+        // ANCHOR: manual_blobs_then_deploy
         let chunk_size = 100_000;
         assert!(
             chunk_size % 8 == 0,
             "all chunks, except the last, must be word-aligned"
         );
+        let blobs = contract
+            .code()
+            .chunks(chunk_size)
+            .map(|chunk| Blob::new(chunk.to_vec()))
+            .collect();
+
+        let contract_id = Contract::loader_for_blobs(blobs, Salt::zeroed(), vec![])?
+            .deploy(&wallet, TxPolicies::default())
+            .await?;
+        // ANCHOR_END: manual_blobs_then_deploy
+
+        // ANCHOR: manual_blob_upload_then_deploy
+        let max_words_per_blob = 10_000;
+        let blobs = Contract::load_from(contract_binary, LoadConfiguration::default())?
+            .convert_to_loader(max_words_per_blob)?
+            .blobs()
+            .to_vec();
 
         let mut all_blob_ids = vec![];
         let mut already_uploaded_blobs = HashSet::new();
-        for chunk in code.chunks(chunk_size) {
-            let blob = Blob::new(chunk.to_vec());
-
+        for blob in blobs {
             let blob_id = blob.id();
             all_blob_ids.push(blob_id);
 
@@ -1083,13 +1100,10 @@ mod tests {
             already_uploaded_blobs.insert(blob_id);
         }
 
-        let contract_id = Contract::new_loader(&all_blob_ids, Salt::default(), vec![])?
+        let contract_id = Contract::loader_for_blob_ids(all_blob_ids, Salt::zeroed(), vec![])?
             .deploy(&wallet, TxPolicies::default())
             .await?;
-        let contract_instance = MyContract::new(contract_id, wallet);
-        let response = contract_instance.methods().something().call().await?.value;
-        assert_eq!(response, 1001);
-        // ANCHOR: manual_contract_chunking
+        // ANCHOR_END: manual_blob_upload_then_deploy
 
         Ok(())
     }

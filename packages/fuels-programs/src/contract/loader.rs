@@ -122,6 +122,11 @@ impl Contract<Loader<BlobsNotUploaded>> {
         compute_contract_id_and_state_root(&self.code(), &self.salt, &self.storage_slots)
     }
 
+    /// This creates a loader contract for the code found in `blobs`. Deploying this contract
+    /// happens in two stages:
+    /// 1. the blobs are uploaded
+    /// 2. the loader contract is deployed
+    /// The loader contract, when executed, will load all the given blobs into memory and delegate the call to the original contract code contained in the blobs.
     pub fn loader_for_blobs(
         blobs: Vec<Blob>,
         salt: Salt,
@@ -257,6 +262,8 @@ impl Contract<Loader<BlobsUploaded>> {
         compute_contract_id_and_state_root(&self.code(), &self.salt, &self.storage_slots)
     }
 
+    /// The contract code has been uploaded in blobs with [`BlobId`]s specified in `blob_ids`. This will create a loader
+    /// contract that, when deployed and executed, will load all the specified blobs into memory and delegate the call to the code contained in the blobs.
     pub fn loader_for_blob_ids(
         blob_ids: Vec<BlobId>,
         salt: Salt,

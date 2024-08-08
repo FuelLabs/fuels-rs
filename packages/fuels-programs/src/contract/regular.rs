@@ -4,6 +4,7 @@ use std::{default::Default, fmt::Debug};
 
 use fuel_tx::{Bytes32, ContractId, Salt, StorageSlot};
 use fuels_accounts::Account;
+use fuels_core::types::DryRunner;
 use fuels_core::Configurables;
 use fuels_core::{
     constants::WORD_SIZE,
@@ -24,19 +25,32 @@ use super::{
 #[derive(Debug, Clone, PartialEq)]
 pub struct Regular {
     code: Vec<u8>,
+    configurables: Configurables,
 }
 
 impl Contract<Regular> {
     pub fn with_code(self, code: Vec<u8>) -> Self {
         Self {
-            code: Regular { code },
+            code: Regular { code, ..self.code },
             salt: self.salt,
             storage_slots: self.storage_slots,
         }
     }
 
+    pub fn with_configurables(self, configurables: impl Into<Configurables>) -> Self {
+        Self {
+            code: Regular {
+                configurables: configurables.into(),
+                ..self.code
+            },
+            ..self
+        }
+    }
+
     pub fn code(&self) -> Cow<[u8]> {
-        self.code.code.as_slice().into()
+        let mut code = self.code.code.clone();
+        self.code.configurables.update_constants_in(&mut code);
+        code.into()
     }
 
     pub fn contract_id(&self) -> ContractId {
@@ -62,19 +76,20 @@ impl Contract<Regular> {
         let binary_filepath = binary_filepath.as_ref();
         validate_path_and_extension(binary_filepath, "bin")?;
 
-        let mut binary = std::fs::read(binary_filepath).map_err(|e| {
+        let binary = std::fs::read(binary_filepath).map_err(|e| {
             std::io::Error::new(
                 e.kind(),
                 format!("failed to read binary: {binary_filepath:?}: {e}"),
             )
         })?;
 
-        config.configurables.update_constants_in(&mut binary);
-
         let storage_slots = super::determine_storage_slots(config.storage, binary_filepath)?;
 
         Ok(Contract {
-            code: Regular { code: binary },
+            code: Regular {
+                code: binary,
+                configurables: config.configurables,
+            },
             salt: config.salt,
             storage_slots,
         })
@@ -86,7 +101,10 @@ impl Contract<Regular> {
         storage_slots: Vec<StorageSlot>,
     ) -> Contract<Regular> {
         Contract {
-            code: Regular { code },
+            code: Regular {
+                code,
+                configurables: Configurables::default(),
+            },
             salt,
             storage_slots,
         }
@@ -145,6 +163,27 @@ impl Contract<Regular> {
             .collect();
 
         Contract::loader_for_blobs(blobs, self.salt, self.storage_slots)
+    }
+
+    pub async fn smart_deploy(
+        self,
+        account: &impl Account,
+        tx_policies: TxPolicies,
+        max_words_per_blob: usize,
+    ) -> Result<Bech32ContractId> {
+        let provider = account.try_provider()?;
+        let max_contract_size = provider
+            .consensus_parameters()
+            .contract_params()
+            .contract_max_size() as usize;
+
+        if self.code.code.len() <= max_contract_size {
+            self.deploy(account, tx_policies).await
+        } else {
+            self.convert_to_loader(max_words_per_blob)?
+                .deploy(account, tx_policies)
+                .await
+        }
     }
 }
 

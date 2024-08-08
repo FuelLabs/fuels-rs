@@ -12,13 +12,11 @@ you can deploy it in parts using a segmented approach:
 {{#include ../../../examples/contracts/src/lib.rs:deploy_via_loader}}
 ```
 
-In this process, your contract code is automatically divided into chunks based on the specified policy:
+When you convert a regular contract into a loader contract the following happens:
 
-```rust,ignore
-{{#include ../../../examples/contracts/src/lib.rs:blob_policy}}
-```
-
-Each unique chunk is deployed as a separate blob transaction. Once all the blob transactions have been successfully committed, a loader contract is created. This loader, when invoked, will load the chunks into memory using the [LDC (Load Code from an External Contract)](https://docs.fuel.network/docs/specs/fuel-vm/instruction-set/#ldc-load-code-from-an-external-contract) instruction and execute your original contract.
+* Your contract code is replaced with the code of the loader contract
+* the original contract code is separated into blobs that will be deployed via blob transactions to the chain prior to the deployment of the contract itself.
+* The new loader code will, upon invocation, load the blobs into memory and execute your original contract.
 
 After deploying the loader contract, you can interact with it just as you would with a traditionally deployed contract:
 
@@ -26,7 +24,31 @@ After deploying the loader contract, you can interact with it just as you would 
 {{#include ../../../examples/contracts/src/lib.rs:use_loader}}
 ```
 
-## Chunk sizes
+There is also a helper that will deploy your contract normally, if its size is below the limit, and as a loader contract otherwise:
+
+```rust,ignore
+{{#include ../../../examples/contracts/src/lib.rs:auto_convert_to_loader}}
+```
+
+You can also separate the blob upload from the deployment of the contract for more fine grained control:
+
+```rust,ignore
+{{#include ../../../examples/contracts/src/lib.rs:upload_blobs_then_deploy}}
+```
+
+Or split your contract code into blobs however you wish and then create a loader and deploy:
+
+```rust,ignore
+{{#include ../../../examples/contracts/src/lib.rs:manual_blobs_then_deploy}}
+```
+
+Or even upload the blobs yourself and just do the loader deployment:
+
+```rust,ignore
+{{#include ../../../examples/contracts/src/lib.rs:manual_blob_upload_then_deploy}}
+```
+
+## Blob size
 
 The size of a Blob transaction is limited by three things:
 
