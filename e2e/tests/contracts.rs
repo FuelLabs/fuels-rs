@@ -1,6 +1,3 @@
-use std::collections::HashSet;
-
-use fuel_tx::Bytes32;
 use fuels::{
     core::codec::{calldata, encode_fn_selector, DecoderConfig, EncoderConfig},
     prelude::*,

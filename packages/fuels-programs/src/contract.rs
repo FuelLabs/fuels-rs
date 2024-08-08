@@ -56,7 +56,6 @@ fn compute_contract_id_and_state_root(
 mod tests {
     use std::path::Path;
 
-    use fuels_accounts::wallet::WalletUnlocked;
     use fuels_core::types::errors::Error;
     use tempfile::tempdir;
 

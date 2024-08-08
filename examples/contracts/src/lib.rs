@@ -987,8 +987,8 @@ mod tests {
     }
 
     #[tokio::test]
+    #[allow(unused_variables)]
     async fn deploying_via_loader() -> Result<()> {
-        #[allow(unused_variables)]
         use fuels::prelude::*;
 
         setup_program_test!(

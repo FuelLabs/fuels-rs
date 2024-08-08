@@ -1,10 +1,8 @@
-use std::{path::Path};
-
+use std::path::Path;
 use std::{default::Default, fmt::Debug};
 
 use fuel_tx::{Bytes32, ContractId, Salt, StorageSlot};
 use fuels_accounts::Account;
-use fuels_core::types::DryRunner;
 use fuels_core::Configurables;
 use fuels_core::{
     constants::WORD_SIZE,
