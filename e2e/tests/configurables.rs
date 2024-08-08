@@ -124,7 +124,7 @@ async fn contract_configurables() -> Result<()> {
 
     let contract_id = Contract::load_from(
         "sway/contracts/configurables/out/release/configurables.bin",
-        LoadConfiguration::default().with_configurables(configurables.clone()),
+        LoadConfiguration::default().with_configurables(configurables),
     )?
     .deploy(&wallet, TxPolicies::default())
     .await?;

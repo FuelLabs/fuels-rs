@@ -834,7 +834,7 @@ mod tests {
 
             let load_config =
                 LoadConfiguration::default().with_storage_configuration(storage_config);
-            let _: Result<Contract> = Contract::load_from("...", load_config);
+            let _: Result<_> = Contract::load_from("...", load_config);
             // ANCHOR_END: storage_slots_override
         }
 
@@ -845,7 +845,7 @@ mod tests {
 
             let load_config =
                 LoadConfiguration::default().with_storage_configuration(storage_config);
-            let _: Result<Contract> = Contract::load_from("...", load_config);
+            let _: Result<_> = Contract::load_from("...", load_config);
             // ANCHOR_END: storage_slots_disable_autoload
         }
 

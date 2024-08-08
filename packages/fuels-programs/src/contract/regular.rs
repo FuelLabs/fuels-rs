@@ -124,7 +124,7 @@ impl Contract<Regular> {
         let storage_slots = self.storage_slots;
 
         let mut tb = CreateTransactionBuilder::prepare_contract_deployment(
-            self.code.code.to_vec(),
+            self.code.code(),
             contract_id,
             state_root,
             salt,
