@@ -15,7 +15,7 @@ use fuels_core::{
 
 use super::{compute_contract_id_and_state_root, Contract, Regular};
 
-// create a contract that loads the specified blobs into memory and delegates the call to the code contained in the blobs.
+// Creates a contract that loads the specified blobs into memory and delegates the call to the code contained in the blobs.
 pub fn loader_contract_asm(blob_ids: &[BlobId]) -> Result<Vec<u8>> {
     const BLOB_ID_SIZE: u16 = 32;
     let get_instructions = |num_of_instructions, num_of_blobs| {
@@ -25,34 +25,34 @@ pub fn loader_contract_asm(blob_ids: &[BlobId]) -> Result<Vec<u8>> {
         // After that the execution continues normally with the loaded contract reading our
         // prepared fn selector and jumps to the selected contract method.
         [
-            // 1. load the blob contents into memory
-            // find the start of the hardcoded blob ids, which are located after the code ends,
+            // 1. Load the blob contents into memory
+            // Find the start of the hardcoded blob IDs, which are located after the code ends.
             op::move_(0x10, RegId::IS),
-            // 0x10 to hold the address of the current blob id
+            // 0x10 to hold the address of the current blob ID.
             op::addi(0x10, 0x10, num_of_instructions * Instruction::SIZE as u16),
             // The contract is going to be loaded from the current value of SP onwards, save
-            // the location into 0x16 so we can jump into it later on
+            // the location into 0x16 so we can jump into it later on.
             op::move_(0x16, RegId::SP),
-            // loop counter
+            // Loop counter.
             op::movi(0x13, num_of_blobs),
-            // LOOP starts here
-            // 0x11 to hold the size of the current blob
+            // LOOP starts here.
+            // 0x11 to hold the size of the current blob.
             op::bsiz(0x11, 0x10),
-            // push the blob contents onto the stack
+            // Push the blob contents onto the stack.
             op::ldc(0x10, 0, 0x11, 1),
-            // move on to the next blob
+            // Move on to the next blob.
             op::addi(0x10, 0x10, BLOB_ID_SIZE),
-            // decrement the loop counter
+            // Decrement the loop counter.
             op::subi(0x13, 0x13, 1),
-            // Jump backwards (3+1) instructions if the counter has not reached 0
+            // Jump backwards (3+1) instructions if the counter has not reached 0.
             op::jnzb(0x13, RegId::ZERO, 3),
-            // 2. Jump into the memory where the contract is loaded
-            // what follows is called _jmp_mem by the sway compiler
-            // subtract the address contained in IS because jmp will add it back
+            // 2. Jump into the memory where the contract is loaded.
+            // What follows is called _jmp_mem by the sway compiler.
+            // Subtract the address contained in IS because jmp will add it back.
             op::sub(0x16, 0x16, RegId::IS),
-            // jmp will multiply by 4 so we need to divide to cancel that out
+            // jmp will multiply by 4, so we need to divide to cancel that out.
             op::divi(0x16, 0x16, 4),
-            // jump to the start of the contract we loaded
+            // Jump to the start of the contract we loaded.
             op::jmp(0x16),
         ]
     };
@@ -116,10 +116,11 @@ impl Contract<Loader<BlobsNotUploaded>> {
         compute_contract_id_and_state_root(&self.code(), &self.salt, &self.storage_slots)
     }
 
-    /// This creates a loader contract for the code found in `blobs`. Deploying this contract
-    /// happens in two stages:
-    /// 1. the blobs are uploaded
-    /// 2. the loader contract is deployed
+    /// Creates a loader contract for the code found in `blobs`. Calling `deploy` on this contract
+    /// does two things:
+    /// 1. Uploads the code blobs.
+    /// 2. Deploys the loader contract.
+    ///
     /// The loader contract, when executed, will load all the given blobs into memory and delegate the call to the original contract code contained in the blobs.
     pub fn loader_for_blobs(
         blobs: Vec<Blob>,
@@ -147,7 +148,7 @@ impl Contract<Loader<BlobsNotUploaded>> {
 
         let ids = blobs.iter().map(|blob| blob.id()).collect::<Vec<_>>();
 
-        // validate that the loader contract can be created
+        // Validate that the loader contract can be created.
         loader_contract_asm(&ids)?;
 
         Ok(Self {
@@ -172,6 +173,8 @@ impl Contract<Loader<BlobsNotUploaded>> {
             .collect()
     }
 
+    /// Uploads the blobs associated with this contract. Calling `deploy` on the result will only
+    /// deploy the loader contract.
     pub async fn upload_blobs(
         self,
         account: &impl Account,
@@ -221,6 +224,7 @@ impl Contract<Loader<BlobsNotUploaded>> {
         Contract::loader_for_blob_ids(all_blob_ids, self.salt, self.storage_slots)
     }
 
+    /// Deploys the loader contract after uploading the code blobs.
     pub async fn deploy(
         self,
         account: &impl Account,
@@ -232,6 +236,7 @@ impl Contract<Loader<BlobsNotUploaded>> {
             .await
     }
 
+    /// Reverts the contract from a loader contract back to a regular contract.
     pub fn revert_to_regular(self) -> Contract<Regular> {
         let code = self
             .code
@@ -267,8 +272,10 @@ impl Contract<Loader<BlobsUploaded>> {
         compute_contract_id_and_state_root(&self.code(), &self.salt, &self.storage_slots)
     }
 
-    /// The contract code has been uploaded in blobs with [`BlobId`]s specified in `blob_ids`. This will create a loader
-    /// contract that, when deployed and executed, will load all the specified blobs into memory and delegate the call to the code contained in the blobs.
+    /// Creates a loader contract using previously uploaded blobs.
+    ///
+    /// The contract code has been uploaded in blobs with [`BlobId`]s specified in `blob_ids`.
+    /// This will create a loader contract that, when deployed and executed, will load all the specified blobs into memory and delegate the call to the code contained in the blobs.
     pub fn loader_for_blob_ids(
         blob_ids: Vec<BlobId>,
         salt: Salt,
@@ -278,7 +285,7 @@ impl Contract<Loader<BlobsUploaded>> {
             return Err(error!(Other, "must provide at least one blob"));
         }
 
-        // validate that the loader contract can be created
+        // Validate that the loader contract can be created.
         loader_contract_asm(&blob_ids)?;
 
         Ok(Self {
@@ -294,6 +301,7 @@ impl Contract<Loader<BlobsUploaded>> {
         &self.code.as_blobs.blob_ids
     }
 
+    /// Deploys the loader contract.
     pub async fn deploy(
         self,
         account: &impl Account,

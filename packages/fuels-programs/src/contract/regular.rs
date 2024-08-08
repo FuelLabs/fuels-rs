@@ -94,6 +94,7 @@ impl Contract<Regular> {
         compute_contract_id_and_state_root(&self.code(), &self.salt, &self.storage_slots)
     }
 
+    /// Loads a contract from a binary file. Salt and storage slots are loaded as well, depending on the configuration provided.
     pub fn load_from(
         binary_filepath: impl AsRef<Path>,
         config: LoadConfiguration,
@@ -117,6 +118,7 @@ impl Contract<Regular> {
         })
     }
 
+    /// Creates a regular contract with the given code, salt, and storage slots.
     pub fn regular(
         code: Vec<u8>,
         salt: Salt,
@@ -129,7 +131,7 @@ impl Contract<Regular> {
         }
     }
 
-    /// Deploys a compiled contract to a running node
+    /// Deploys a compiled contract to a running node.
     /// To deploy a contract, you need an account with enough assets to pay for deployment.
     /// This account will also receive the change.
     pub async fn deploy(
@@ -167,6 +169,7 @@ impl Contract<Regular> {
         Ok(contract_id.into())
     }
 
+    /// Converts a regular contract into a loader contract, splitting the code into blobs.
     pub fn convert_to_loader(
         self,
         max_words_per_blob: usize,
@@ -183,6 +186,7 @@ impl Contract<Regular> {
         Contract::loader_for_blobs(blobs, self.salt, self.storage_slots)
     }
 
+    /// Deploys the contract either as a regular contract or as a loader contract if it exceeds the size limit.
     pub async fn smart_deploy(
         self,
         account: &impl Account,
@@ -205,7 +209,7 @@ impl Contract<Regular> {
     }
 }
 
-/// Configuration for contract deployment
+/// Configuration for contract deployment.
 #[derive(Debug, Clone, Default)]
 pub struct LoadConfiguration {
     pub(crate) storage: StorageConfiguration,
