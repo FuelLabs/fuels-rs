@@ -52,6 +52,8 @@ Or you can upload the blobs yourself and proceed with just the loader deployment
 
 The size of a Blob transaction is constrained by three factors:
 
+<!--Needed to disable lints because the multiline ordered list is messing with the linter. It keeps suggesting that each item is a start of a new list.-->
+<!-- markdownlint-disable -->
 1. The maximum size of a single transaction:
 
 ```rust,ignore
@@ -65,12 +67,12 @@ The size of a Blob transaction is constrained by three factors:
 ```
 
 3. The maximum HTTP body size accepted by the Fuel node.
-
 To estimate an appropriate size for your blobs, you can run:
 
 ```rust,ignore
 {{#include ../../../examples/contracts/src/lib.rs:estimate_max_blob_size}}
 ```
+<!-- markdownlint-restore -->
 
 However, keep in mind the following limitations:
 
