@@ -1,9 +1,8 @@
-use std::borrow::Cow;
 use std::collections::HashSet;
 
 use fuel_asm::{op, Instruction, RegId};
-use fuel_tx::{Bytes32, Contract as FuelContract, ContractId, Salt, StorageSlot};
-use fuels_accounts::{provider::Provider, Account};
+use fuel_tx::{Bytes32, ContractId, Salt, StorageSlot};
+use fuels_accounts::{Account};
 use fuels_core::types::errors::Result;
 use fuels_core::types::transaction_builders::{Blob, BlobId};
 use fuels_core::{
@@ -13,7 +12,7 @@ use fuels_core::{
         errors::error,
         transaction::TxPolicies,
         transaction_builders::{
-            BlobTransactionBuilder, CreateTransactionBuilder, TransactionBuilder,
+            BlobTransactionBuilder, TransactionBuilder,
         },
     },
 };

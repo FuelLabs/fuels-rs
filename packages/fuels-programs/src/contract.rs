@@ -1,27 +1,8 @@
 mod storage;
 
-use std::{
-    borrow::Cow,
-    collections::HashSet,
-    fmt::Debug,
-    fs,
-    path::{Path, PathBuf},
-};
+use std::fmt::Debug;
 
-use fuel_asm::{op, Instruction, RegId};
 use fuel_tx::{Bytes32, Contract as FuelContract, ContractId, Salt, StorageSlot};
-use fuels_accounts::{provider::Provider, Account};
-use fuels_core::{
-    constants::WORD_SIZE,
-    types::{
-        bech32::Bech32ContractId,
-        errors::{error, Result},
-        transaction::TxPolicies,
-        transaction_builders::{
-            Blob, BlobId, BlobTransactionBuilder, CreateTransactionBuilder, TransactionBuilder,
-        },
-    },
-};
 pub use storage::*;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -73,6 +54,8 @@ fn compute_contract_id_and_state_root(
 
 #[cfg(test)]
 mod tests {
+    use std::path::Path;
+
     use fuels_accounts::wallet::WalletUnlocked;
     use fuels_core::types::errors::Error;
     use tempfile::tempdir;
