@@ -99,11 +99,10 @@ pub struct Loader<Blobs> {
 }
 
 impl Contract<Loader<BlobsNotUploaded>> {
-    pub fn code(&self) -> Cow<[u8]> {
+    pub fn code(&self) -> Vec<u8> {
         let ids: Vec<_> = self.blob_ids();
         loader_contract_asm(&ids)
             .expect("a contract to be creatable due to the check done in loader_for_blobs")
-            .into()
     }
 
     pub fn contract_id(&self) -> ContractId {
@@ -204,10 +203,22 @@ impl Contract<Loader<BlobsNotUploaded>> {
             account.add_witnesses(&mut tb)?;
 
             let tx = tb.build(provider).await?;
-            provider
-                .send_transaction_and_await_commit(tx)
-                .await?
-                .check(None)?;
+
+            let tx_status_response = provider.send_transaction_and_await_commit(tx).await;
+
+            match tx_status_response {
+                Ok(tx_status_response) => {
+                    tx_status_response.check(None)?;
+                }
+                Err(err) => {
+                    if !err
+                        .to_string()
+                        .contains("Execution error: BlobIdAlreadyUploaded")
+                    {
+                        return Err(err);
+                    }
+                }
+            }
 
             already_uploaded.insert(id);
         }
@@ -240,10 +251,9 @@ impl Contract<Loader<BlobsNotUploaded>> {
 }
 
 impl Contract<Loader<BlobsUploaded>> {
-    pub fn code(&self) -> Cow<[u8]> {
+    pub fn code(&self) -> Vec<u8> {
         loader_contract_asm(&self.code.as_blobs.blob_ids)
             .expect("a contract to be creatable due to the check done in loader_for_blobs")
-            .into()
     }
 
     pub fn contract_id(&self) -> ContractId {
@@ -294,7 +304,7 @@ impl Contract<Loader<BlobsUploaded>> {
         account: &impl Account,
         tx_policies: TxPolicies,
     ) -> Result<Bech32ContractId> {
-        Contract::regular(self.code().into_owned(), self.salt, self.storage_slots)
+        Contract::regular(self.code(), self.salt, self.storage_slots)
             .deploy(account, tx_policies)
             .await
     }

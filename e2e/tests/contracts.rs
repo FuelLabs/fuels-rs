@@ -2478,3 +2478,33 @@ async fn unuploaded_loader_can_upload_blobs_separately_then_deploy() -> Result<(
 
     Ok(())
 }
+
+#[tokio::test]
+async fn loader_blob_already_uploaded_not_an_issue() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Contract(
+            name = "MyContract",
+            project = "e2e/sway/contracts/huge_contract"
+        )),
+    );
+
+    let contract_binary = "sway/contracts/huge_contract/out/release/huge_contract.bin";
+    let contract = Contract::load_from(contract_binary, LoadConfiguration::default())?
+        .convert_to_loader(1024)?;
+
+    // this will upload blobs
+    contract
+        .clone()
+        .upload_blobs(&wallet, TxPolicies::default())
+        .await?;
+
+    // this will try to upload the blobs but skip upon encountering an error
+    let contract_id = contract.deploy(&wallet, TxPolicies::default()).await?;
+
+    let contract_instance = MyContract::new(contract_id, wallet);
+    let response = contract_instance.methods().something().call().await?.value;
+    assert_eq!(response, 1001);
+
+    Ok(())
+}

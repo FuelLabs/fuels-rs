@@ -22,16 +22,49 @@ use super::{
     Loader, StorageConfiguration,
 };
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct Regular {
-    code: Vec<u8>,
-    configurables: Configurables,
+// In a mod so that we eliminate the footgun of getting the private `code` field without applying
+// configurables
+mod code_types {
+    use fuels_core::Configurables;
+
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Regular {
+        code: Vec<u8>,
+        configurables: Configurables,
+    }
+
+    impl Regular {
+        pub(crate) fn new(code: Vec<u8>, configurables: Configurables) -> Self {
+            Self {
+                code,
+                configurables,
+            }
+        }
+
+        pub(crate) fn with_code(self, code: Vec<u8>) -> Self {
+            Self { code, ..self }
+        }
+
+        pub(crate) fn with_configurables(self, configurables: Configurables) -> Self {
+            Self {
+                configurables,
+                ..self
+            }
+        }
+
+        pub(crate) fn code(&self) -> Vec<u8> {
+            let mut code = self.code.clone();
+            self.configurables.update_constants_in(&mut code);
+            code
+        }
+    }
 }
+pub use code_types::*;
 
 impl Contract<Regular> {
     pub fn with_code(self, code: Vec<u8>) -> Self {
         Self {
-            code: Regular { code, ..self.code },
+            code: self.code.with_code(code),
             salt: self.salt,
             storage_slots: self.storage_slots,
         }
@@ -39,18 +72,13 @@ impl Contract<Regular> {
 
     pub fn with_configurables(self, configurables: impl Into<Configurables>) -> Self {
         Self {
-            code: Regular {
-                configurables: configurables.into(),
-                ..self.code
-            },
+            code: self.code.with_configurables(configurables.into()),
             ..self
         }
     }
 
-    pub fn code(&self) -> Cow<[u8]> {
-        let mut code = self.code.code.clone();
-        self.code.configurables.update_constants_in(&mut code);
-        code.into()
+    pub fn code(&self) -> Vec<u8> {
+        self.code.code()
     }
 
     pub fn contract_id(&self) -> ContractId {
@@ -66,7 +94,7 @@ impl Contract<Regular> {
     }
 
     fn compute_roots(&self) -> (ContractId, Bytes32, Bytes32) {
-        compute_contract_id_and_state_root(&self.code.code, &self.salt, &self.storage_slots)
+        compute_contract_id_and_state_root(&self.code(), &self.salt, &self.storage_slots)
     }
 
     pub fn load_from(
@@ -86,10 +114,7 @@ impl Contract<Regular> {
         let storage_slots = super::determine_storage_slots(config.storage, binary_filepath)?;
 
         Ok(Contract {
-            code: Regular {
-                code: binary,
-                configurables: config.configurables,
-            },
+            code: Regular::new(binary, config.configurables),
             salt: config.salt,
             storage_slots,
         })
@@ -101,10 +126,7 @@ impl Contract<Regular> {
         storage_slots: Vec<StorageSlot>,
     ) -> Contract<Regular> {
         Contract {
-            code: Regular {
-                code,
-                configurables: Configurables::default(),
-            },
+            code: Regular::new(code, Configurables::default()),
             salt,
             storage_slots,
         }
@@ -156,8 +178,7 @@ impl Contract<Regular> {
             return Err(error!(Other, "blob size must be greater than 0"));
         }
         let blobs = self
-            .code
-            .code
+            .code()
             .chunks(max_words_per_blob.saturating_mul(WORD_SIZE))
             .map(|chunk| Blob::new(chunk.to_vec()))
             .collect();
@@ -177,7 +198,7 @@ impl Contract<Regular> {
             .contract_params()
             .contract_max_size() as usize;
 
-        if self.code.code.len() <= max_contract_size {
+        if self.code().len() <= max_contract_size {
             self.deploy(account, tx_policies).await
         } else {
             self.convert_to_loader(max_words_per_blob)?
