@@ -5,7 +5,7 @@ mod utils;
 
 pub use utils::*;
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct Configurables {
     offsets_with_data: Vec<(u64, Vec<u8>)>,
 }

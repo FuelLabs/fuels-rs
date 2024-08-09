@@ -111,7 +111,7 @@ async fn setup_predicate_test(
     ));
 
     let node_config = NodeConfig {
-        static_gas_price: 0,
+        starting_gas_price: 0,
         ..Default::default()
     };
     let provider = setup_test_provider(coins, messages, Some(node_config), None).await?;

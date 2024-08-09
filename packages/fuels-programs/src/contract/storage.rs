@@ -1,4 +1,10 @@
-use std::{collections::HashMap, default::Default, fmt::Debug, io, path::Path};
+use std::{
+    collections::HashMap,
+    default::Default,
+    fmt::Debug,
+    io,
+    path::{Path, PathBuf},
+};
 
 use fuel_tx::{Bytes32, StorageSlot};
 use fuels_core::types::errors::{error, Result};
@@ -108,6 +114,39 @@ impl StorageSlots {
     }
 }
 
+pub(crate) fn determine_storage_slots(
+    storage_config: StorageConfiguration,
+    binary_filepath: &Path,
+) -> Result<Vec<StorageSlot>> {
+    let autoload_enabled = storage_config.autoload_enabled();
+    let user_overrides = storage_config.into_slots().collect::<Vec<_>>();
+    let slots = if autoload_enabled {
+        let mut slots = autoload_storage_slots(binary_filepath)?;
+        slots.add_overrides(user_overrides);
+        slots.into_iter().collect()
+    } else {
+        user_overrides
+    };
+
+    Ok(slots)
+}
+
+pub(crate) fn autoload_storage_slots(contract_binary: &Path) -> Result<StorageSlots> {
+    let storage_file = expected_storage_slots_filepath(contract_binary)
+        .ok_or_else(|| error!(Other, "could not determine storage slots file"))?;
+
+    StorageSlots::load_from_file(&storage_file)
+                .map_err(|_| error!(Other, "could not autoload storage slots from file: {storage_file:?}. \
+                                    Either provide the file or disable autoloading in `StorageConfiguration`"))
+}
+
+pub(crate) fn expected_storage_slots_filepath(contract_binary: &Path) -> Option<PathBuf> {
+    let dir = contract_binary.parent()?;
+
+    let binary_filename = contract_binary.file_stem()?.to_str()?;
+
+    Some(dir.join(format!("{binary_filename}-storage_slots.json")))
+}
 pub(crate) fn validate_path_and_extension(file_path: &Path, extension: &str) -> Result<()> {
     if !file_path.exists() {
         return Err(error!(IO, "file {file_path:?} does not exist"));

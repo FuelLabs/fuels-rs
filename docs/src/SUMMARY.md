@@ -26,6 +26,7 @@
   - [Storage slots](./deploying/storage-slots.md)
   - [Interacting with contracts](./deploying/interacting-with-contracts.md)
   - [The FuelVM Binary file](./deploying/the-fuelvm-binary-file.md)
+  - [Large contracts](./deploying/large_contracts.md)
 - [Calling contracts](./calling-contracts/index.md)
   - [Connecting wallets](./calling-contracts/calls-with-different-wallets.md)
   - [Transaction policies](./calling-contracts/tx-policies.md)

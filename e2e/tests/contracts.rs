@@ -390,12 +390,12 @@ async fn contract_method_call_respects_maturity() -> Result<()> {
 
     call_w_maturity(1).call().await.expect(
         "should have passed since we're calling with a maturity \
-        that is less or equal to the current block height",
+         that is less or equal to the current block height",
     );
 
     call_w_maturity(3).call().await.expect_err(
         "should have failed since we're calling with a maturity \
-        that is greater than the current block height",
+         that is greater than the current block height",
     );
 
     Ok(())
@@ -1412,8 +1412,8 @@ async fn can_configure_decoding_of_contract_return() -> Result<()> {
     {
         // Single call: Will not work if max_tokens not big enough
         methods.i_return_a_1k_el_array().with_decoder_config(DecoderConfig{max_tokens: 100, ..Default::default()}).call().await.expect_err(
-            "should have failed because there are more tokens than what is supported by default",
-        );
+             "should have failed because there are more tokens than what is supported by default",
+         );
     }
     {
         // Single call: Works when limit is bumped
@@ -1432,11 +1432,11 @@ async fn can_configure_decoding_of_contract_return() -> Result<()> {
     {
         // Multi call: Will not work if max_tokens not big enough
         CallHandler::new_multi_call(wallet.clone())
-        .add_call(methods.i_return_a_1k_el_array())
-        .with_decoder_config(DecoderConfig { max_tokens: 100, ..Default::default() })
-        .call::<([u8; 1000],)>().await.expect_err(
-            "should have failed because there are more tokens than what is supported by default",
-        );
+         .add_call(methods.i_return_a_1k_el_array())
+         .with_decoder_config(DecoderConfig { max_tokens: 100, ..Default::default() })
+         .call::<([u8; 1000],)>().await.expect_err(
+             "should have failed because there are more tokens than what is supported by default",
+         );
     }
     {
         // Multi call: Works when configured
@@ -1848,9 +1848,9 @@ async fn variable_output_estimation_is_optimized() -> Result<()> {
         .call()
         .await?;
 
-    // using `fuel-core-lib` in debug builds is 20x slower so we won't validate in that case so we
-    // don't have to maintain two expectations
-    if !cfg!(all(debug_assertions, feature = "fuel-core-lib")) {
+    // debug builds are slower (20x for `fuel-core-lib`, 4x for a release-fuel-core-binary)
+    // we won't validate in that case so we don't have to maintain two expectations
+    if !cfg!(debug_assertions) {
         let elapsed = start.elapsed().as_secs();
         let limit = 2;
         if elapsed > limit {
@@ -2102,6 +2102,179 @@ async fn max_fee_estimation_respects_tolerance() -> Result<()> {
         more_base_asset_due_to_bigger_tolerance as f64 / normal_base_asset as f64,
         1.00 + 2.00
     );
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn blob_contract_deployment() -> Result<()> {
+    abigen!(Contract(
+        name = "MyContract",
+        abi = "e2e/sway/contracts/huge_contract/out/release/huge_contract-abi.json"
+    ));
+
+    let contract_binary = "sway/contracts/huge_contract/out/release/huge_contract.bin";
+    let contract_size = std::fs::metadata(contract_binary)
+        .expect("contract file not found")
+        .len();
+
+    assert!(
+         contract_size > 150_000,
+         "the testnet size limit was around 100kB, we want a contract bigger than that to reflect prod (current: {contract_size}B)"
+     );
+
+    let wallets =
+        launch_custom_provider_and_get_wallets(WalletsConfig::new(Some(2), None, None), None, None)
+            .await?;
+
+    let provider = wallets[0].provider().unwrap().clone();
+
+    let consensus_parameters = provider.consensus_parameters();
+
+    let contract_max_size = consensus_parameters.contract_params().contract_max_size();
+    assert!(
+         contract_size > contract_max_size,
+         "this test should ideally be run with a contract bigger than the max contract size ({contract_max_size}B) so that we know deployment couldn't have happened without blobs"
+     );
+
+    let contract = Contract::load_from(contract_binary, LoadConfiguration::default())?;
+
+    let contract_id = contract
+        .convert_to_loader(100_000)?
+        .deploy(&wallets[0], TxPolicies::default())
+        .await?;
+
+    let contract_instance = MyContract::new(contract_id, wallets[0].clone());
+
+    let response = contract_instance.methods().something().call().await?.value;
+
+    assert_eq!(response, 1001);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn regular_contract_can_be_deployed() -> Result<()> {
+    // given
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Contract(
+            name = "MyContract",
+            project = "e2e/sway/contracts/contract_test"
+        )),
+    );
+
+    let contract_binary = "sway/contracts/contract_test/out/release/contract_test.bin";
+
+    // when
+    let contract_id = Contract::load_from(contract_binary, LoadConfiguration::default())?
+        .deploy(&wallet, TxPolicies::default())
+        .await?;
+
+    // then
+    let contract_instance = MyContract::new(contract_id, wallet);
+
+    let response = contract_instance
+        .methods()
+        .get_counter()
+        .call()
+        .await?
+        .value;
+
+    assert_eq!(response, 0);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn unuploaded_loader_can_be_deployed_directly() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Contract(
+            name = "MyContract",
+            project = "e2e/sway/contracts/huge_contract"
+        )),
+    );
+
+    let contract_binary = "sway/contracts/huge_contract/out/release/huge_contract.bin";
+
+    let contract_id = Contract::load_from(contract_binary, LoadConfiguration::default())?
+        .convert_to_loader(1024)?
+        .deploy(&wallet, TxPolicies::default())
+        .await?;
+
+    let contract_instance = MyContract::new(contract_id, wallet);
+
+    let response = contract_instance.methods().something().call().await?.value;
+
+    assert_eq!(response, 1001);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn unuploaded_loader_can_upload_blobs_separately_then_deploy() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Contract(
+            name = "MyContract",
+            project = "e2e/sway/contracts/huge_contract"
+        )),
+    );
+
+    let contract_binary = "sway/contracts/huge_contract/out/release/huge_contract.bin";
+
+    let contract = Contract::load_from(contract_binary, LoadConfiguration::default())?
+        .convert_to_loader(1024)?
+        .upload_blobs(&wallet, TxPolicies::default())
+        .await?;
+
+    let blob_ids = contract.blob_ids();
+
+    // if this were an example for the user we'd just call `deploy` on the contract above
+    // this way we are testing that the blobs were really deployed above, otherwise the following
+    // would fail
+    let contract_id = Contract::loader_from_blob_ids(
+        blob_ids.to_vec(),
+        contract.salt(),
+        contract.storage_slots().to_vec(),
+    )?
+    .deploy(&wallet, TxPolicies::default())
+    .await?;
+
+    let contract_instance = MyContract::new(contract_id, wallet);
+    let response = contract_instance.methods().something().call().await?.value;
+    assert_eq!(response, 1001);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn loader_blob_already_uploaded_not_an_issue() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Contract(
+            name = "MyContract",
+            project = "e2e/sway/contracts/huge_contract"
+        )),
+    );
+
+    let contract_binary = "sway/contracts/huge_contract/out/release/huge_contract.bin";
+    let contract = Contract::load_from(contract_binary, LoadConfiguration::default())?
+        .convert_to_loader(1024)?;
+
+    // this will upload blobs
+    contract
+        .clone()
+        .upload_blobs(&wallet, TxPolicies::default())
+        .await?;
+
+    // this will try to upload the blobs but skip upon encountering an error
+    let contract_id = contract.deploy(&wallet, TxPolicies::default()).await?;
+
+    let contract_instance = MyContract::new(contract_id, wallet);
+    let response = contract_instance.methods().something().call().await?.value;
+    assert_eq!(response, 1001);
 
     Ok(())
 }

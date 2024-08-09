@@ -1,5 +1,7 @@
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
     use fuels::{
         core::codec::{encode_fn_selector, DecoderConfig, EncoderConfig},
         crypto::SecretKey,
@@ -10,6 +12,7 @@ mod tests {
             Bits256,
         },
     };
+    use rand::Rng;
 
     #[tokio::test]
     async fn instantiate_client() -> Result<()> {
@@ -832,7 +835,7 @@ mod tests {
 
             let load_config =
                 LoadConfiguration::default().with_storage_configuration(storage_config);
-            let _: Result<Contract> = Contract::load_from("...", load_config);
+            let _: Result<_> = Contract::load_from("...", load_config);
             // ANCHOR_END: storage_slots_override
         }
 
@@ -843,7 +846,7 @@ mod tests {
 
             let load_config =
                 LoadConfiguration::default().with_storage_configuration(storage_config);
-            let _: Result<Contract> = Contract::load_from("...", load_config);
+            let _: Result<_> = Contract::load_from("...", load_config);
             // ANCHOR_END: storage_slots_disable_autoload
         }
 
@@ -927,8 +930,9 @@ mod tests {
 
     #[tokio::test]
     async fn contract_call_impersonation() -> Result<()> {
-        use fuels::prelude::*;
         use std::str::FromStr;
+
+        use fuels::prelude::*;
 
         abigen!(Contract(
             name = "MyContract",
@@ -979,6 +983,153 @@ mod tests {
 
         assert_eq!(42, response.value);
         // ANCHOR_END: contract_call_impersonation
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[allow(unused_variables)]
+    async fn deploying_via_loader() -> Result<()> {
+        use fuels::prelude::*;
+
+        setup_program_test!(
+            Abigen(Contract(
+                name = "MyContract",
+                project = "e2e/sway/contracts/huge_contract"
+            )),
+            Wallets("main_wallet")
+        );
+        let contract_binary =
+            "../../e2e/sway/contracts/huge_contract/out/release/huge_contract.bin";
+
+        let provider: Provider = main_wallet.try_provider()?.clone();
+
+        let random_salt = || Salt::new(rand::thread_rng().gen());
+        // ANCHOR: show_contract_is_too_big
+        let contract = Contract::load_from(
+            contract_binary,
+            LoadConfiguration::default().with_salt(random_salt()),
+        )?;
+        let max_allowed = provider
+            .consensus_parameters()
+            .contract_params()
+            .contract_max_size();
+
+        assert!(contract.code().len() as u64 > max_allowed);
+        // ANCHOR_END: show_contract_is_too_big
+
+        let wallet = main_wallet.clone();
+
+        // ANCHOR: manual_blob_upload_then_deploy
+        let max_words_per_blob = 10_000;
+        let blobs = Contract::load_from(
+            contract_binary,
+            LoadConfiguration::default().with_salt(random_salt()),
+        )?
+        .convert_to_loader(max_words_per_blob)?
+        .blobs()
+        .to_vec();
+
+        let mut all_blob_ids = vec![];
+        let mut already_uploaded_blobs = HashSet::new();
+        for blob in blobs {
+            let blob_id = blob.id();
+            all_blob_ids.push(blob_id);
+
+            // uploading the same blob twice is not allowed
+            if already_uploaded_blobs.contains(&blob_id) {
+                continue;
+            }
+
+            let mut tb = BlobTransactionBuilder::default().with_blob(blob);
+            wallet.adjust_for_fee(&mut tb, 0).await?;
+            wallet.add_witnesses(&mut tb)?;
+
+            let tx = tb.build(&provider).await?;
+            provider
+                .send_transaction_and_await_commit(tx)
+                .await?
+                .check(None)?;
+
+            already_uploaded_blobs.insert(blob_id);
+        }
+
+        let contract_id = Contract::loader_from_blob_ids(all_blob_ids, random_salt(), vec![])?
+            .deploy(&wallet, TxPolicies::default())
+            .await?;
+        // ANCHOR_END: manual_blob_upload_then_deploy
+
+        // ANCHOR: deploy_via_loader
+        let max_words_per_blob = 10_000;
+        let contract_id = Contract::load_from(
+            contract_binary,
+            LoadConfiguration::default().with_salt(random_salt()),
+        )?
+        .convert_to_loader(max_words_per_blob)?
+        .deploy(&wallet, TxPolicies::default())
+        .await?;
+        // ANCHOR_END: deploy_via_loader
+
+        // ANCHOR: auto_convert_to_loader
+        let max_words_per_blob = 10_000;
+        let contract_id = Contract::load_from(
+            contract_binary,
+            LoadConfiguration::default().with_salt(random_salt()),
+        )?
+        .smart_deploy(&wallet, TxPolicies::default(), max_words_per_blob)
+        .await?;
+        // ANCHOR_END: auto_convert_to_loader
+
+        // ANCHOR: upload_blobs_then_deploy
+        let contract_id = Contract::load_from(
+            contract_binary,
+            LoadConfiguration::default().with_salt(random_salt()),
+        )?
+        .convert_to_loader(max_words_per_blob)?
+        .upload_blobs(&wallet, TxPolicies::default())
+        .await?
+        .deploy(&wallet, TxPolicies::default())
+        .await?;
+        // ANCHOR_END: upload_blobs_then_deploy
+
+        let wallet = main_wallet.clone();
+        // ANCHOR: use_loader
+        let contract_instance = MyContract::new(contract_id, wallet);
+        let response = contract_instance.methods().something().call().await?.value;
+        assert_eq!(response, 1001);
+        // ANCHOR_END: use_loader
+
+        // ANCHOR: show_max_tx_size
+        provider.consensus_parameters().tx_params().max_size();
+        // ANCHOR_END: show_max_tx_size
+
+        // ANCHOR: show_max_tx_gas
+        provider.consensus_parameters().tx_params().max_gas_per_tx();
+        // ANCHOR_END: show_max_tx_gas
+
+        let wallet = main_wallet;
+        // ANCHOR: manual_blobs_then_deploy
+        let chunk_size = 100_000;
+        assert!(
+            chunk_size % 8 == 0,
+            "all chunks, except the last, must be word-aligned"
+        );
+        let blobs = contract
+            .code()
+            .chunks(chunk_size)
+            .map(|chunk| Blob::new(chunk.to_vec()))
+            .collect();
+
+        let contract_id = Contract::loader_from_blobs(blobs, random_salt(), vec![])?
+            .deploy(&wallet, TxPolicies::default())
+            .await?;
+        // ANCHOR_END: manual_blobs_then_deploy
+
+        // ANCHOR: estimate_max_blob_size
+        let max_blob_size = BlobTransactionBuilder::default()
+            .estimate_max_blob_size(&provider)
+            .await?;
+        // ANCHOR_END: estimate_max_blob_size
 
         Ok(())
     }

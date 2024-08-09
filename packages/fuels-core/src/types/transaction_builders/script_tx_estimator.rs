@@ -83,6 +83,7 @@ impl<R: DryRunner> ScriptTxEstimator<R> {
         let used_outputs = tx.outputs().len();
 
         let unused_outputs = max_outputs.saturating_sub(used_outputs);
+
         super::add_variable_outputs(tx, unused_outputs);
     }
 

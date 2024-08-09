@@ -6,6 +6,7 @@ members = [
   'sway/bindings/simple_contract',
   'sway/bindings/type_paths',
   'sway/contracts/asserts',
+  'sway/contracts/huge_contract',
   'sway/contracts/auth_testing_abi',
   'sway/contracts/auth_testing_contract',
   'sway/contracts/block_timestamp',
@@ -110,3 +111,5 @@ members = [
   'sway/types/scripts/script_u256',
   'sway/types/scripts/script_vectors',
 ]
+[patch.'https://github.com/fuellabs/sway']
+std = { git = "https://github.com/fuellabs/sway", branch = "esdrubal/abi_changes" }

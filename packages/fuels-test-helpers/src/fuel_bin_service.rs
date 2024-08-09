@@ -73,6 +73,9 @@ impl ExtendedConfig {
             }
         };
 
+        let body_limit = self.node_config.graphql_request_body_bytes_limit;
+        args.push(format!("--graphql-request-body-bytes-limit={body_limit}"));
+
         args.extend(
             [
                 (self.node_config.vm_backtrace, "--vm-backtrace"),
@@ -85,8 +88,8 @@ impl ExtendedConfig {
         );
 
         args.push(format!(
-            "--min-gas-price={}",
-            self.node_config.static_gas_price
+            "--starting-gas-price={}",
+            self.node_config.starting_gas_price
         ));
 
         Ok(args)
