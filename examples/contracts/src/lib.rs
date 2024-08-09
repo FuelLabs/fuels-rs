@@ -1054,7 +1054,7 @@ mod tests {
             already_uploaded_blobs.insert(blob_id);
         }
 
-        let contract_id = Contract::loader_for_blob_ids(all_blob_ids, random_salt(), vec![])?
+        let contract_id = Contract::loader_from_blob_ids(all_blob_ids, random_salt(), vec![])?
             .deploy(&wallet, TxPolicies::default())
             .await?;
         // ANCHOR_END: manual_blob_upload_then_deploy
@@ -1120,7 +1120,7 @@ mod tests {
             .map(|chunk| Blob::new(chunk.to_vec()))
             .collect();
 
-        let contract_id = Contract::loader_for_blobs(blobs, random_salt(), vec![])?
+        let contract_id = Contract::loader_from_blobs(blobs, random_salt(), vec![])?
             .deploy(&wallet, TxPolicies::default())
             .await?;
         // ANCHOR_END: manual_blobs_then_deploy

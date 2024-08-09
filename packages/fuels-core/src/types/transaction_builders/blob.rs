@@ -28,7 +28,7 @@ use crate::{
 
 #[derive(Default, Clone, Debug, PartialEq)]
 pub struct Blob {
-    pub data: Vec<u8>,
+    data: Vec<u8>,
 }
 
 pub type BlobId = [u8; 32];
@@ -50,8 +50,20 @@ impl Blob {
         Self { data }
     }
 
+    pub fn len(&self) -> usize {
+        self.data.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.data.is_empty()
+    }
+
     pub fn id(&self) -> BlobId {
         fuel_tx::BlobId::compute(&self.data).into()
+    }
+
+    pub fn bytes(&self) -> &[u8] {
+        self.data.as_slice()
     }
 
     fn as_blob_body(&self, witness_index: u16) -> fuel_tx::BlobBody {
@@ -59,6 +71,12 @@ impl Blob {
             id: self.id().into(),
             witness_index,
         }
+    }
+}
+
+impl From<Blob> for Vec<u8> {
+    fn from(value: Blob) -> Self {
+        value.data
     }
 }
 

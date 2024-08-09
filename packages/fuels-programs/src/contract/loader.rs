@@ -97,7 +97,7 @@ impl Contract<Loader<BlobsNotUploaded>> {
     pub fn code(&self) -> Vec<u8> {
         let ids: Vec<_> = self.blob_ids();
         loader_contract_asm(&ids)
-            .expect("a contract to be creatable due to the check done in loader_for_blobs")
+            .expect("a contract to be creatable due to the check done in loader_from_blobs")
     }
 
     pub fn contract_id(&self) -> ContractId {
@@ -122,7 +122,7 @@ impl Contract<Loader<BlobsNotUploaded>> {
     /// 2. Deploys the loader contract.
     ///
     /// The loader contract, when executed, will load all the given blobs into memory and delegate the call to the original contract code contained in the blobs.
-    pub fn loader_for_blobs(
+    pub fn loader_from_blobs(
         blobs: Vec<Blob>,
         salt: Salt,
         storage_slots: Vec<StorageSlot>,
@@ -133,7 +133,7 @@ impl Contract<Loader<BlobsNotUploaded>> {
 
         let idx_of_last_blob = blobs.len().saturating_sub(1);
         let idx_of_offender = blobs.iter().enumerate().find_map(|(idx, blob)| {
-            (blob.data.len() % WORD_SIZE != 0 && idx != idx_of_last_blob).then_some(idx)
+            (blob.len() % WORD_SIZE != 0 && idx != idx_of_last_blob).then_some(idx)
         });
 
         if let Some(idx) = idx_of_offender {
@@ -142,7 +142,7 @@ impl Contract<Loader<BlobsNotUploaded>> {
                 "blob {}/{} has a size of {} bytes, which is not a multiple of {WORD_SIZE}",
                 idx.saturating_add(1),
                 blobs.len(),
-                blobs[idx].data.len()
+                blobs[idx].len()
             ));
         }
 
@@ -221,7 +221,7 @@ impl Contract<Loader<BlobsNotUploaded>> {
             already_uploaded.insert(id);
         }
 
-        Contract::loader_for_blob_ids(all_blob_ids, self.salt, self.storage_slots)
+        Contract::loader_from_blob_ids(all_blob_ids, self.salt, self.storage_slots)
     }
 
     /// Deploys the loader contract after uploading the code blobs.
@@ -243,7 +243,7 @@ impl Contract<Loader<BlobsNotUploaded>> {
             .as_blobs
             .blobs
             .into_iter()
-            .flat_map(|blob| blob.data)
+            .flat_map(Vec::from)
             .collect();
 
         Contract::regular(code, self.salt, self.storage_slots)
@@ -276,7 +276,7 @@ impl Contract<Loader<BlobsUploaded>> {
     ///
     /// The contract code has been uploaded in blobs with [`BlobId`]s specified in `blob_ids`.
     /// This will create a loader contract that, when deployed and executed, will load all the specified blobs into memory and delegate the call to the code contained in the blobs.
-    pub fn loader_for_blob_ids(
+    pub fn loader_from_blob_ids(
         blob_ids: Vec<BlobId>,
         salt: Salt,
         storage_slots: Vec<StorageSlot>,

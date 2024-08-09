@@ -183,7 +183,7 @@ impl Contract<Regular> {
             .map(|chunk| Blob::new(chunk.to_vec()))
             .collect();
 
-        Contract::loader_for_blobs(blobs, self.salt, self.storage_slots)
+        Contract::loader_from_blobs(blobs, self.salt, self.storage_slots)
     }
 
     /// Deploys the contract either as a regular contract or as a loader contract if it exceeds the size limit.

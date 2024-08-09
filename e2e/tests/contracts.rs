@@ -2235,7 +2235,7 @@ async fn unuploaded_loader_can_upload_blobs_separately_then_deploy() -> Result<(
     // if this were an example for the user we'd just call `deploy` on the contract above
     // this way we are testing that the blobs were really deployed above, otherwise the following
     // would fail
-    let contract_id = Contract::loader_for_blob_ids(
+    let contract_id = Contract::loader_from_blob_ids(
         blob_ids.to_vec(),
         contract.salt(),
         contract.storage_slots().to_vec(),

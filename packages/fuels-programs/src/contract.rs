@@ -156,7 +156,7 @@ mod tests {
         let no_blobs = vec![];
 
         // when
-        let err = Contract::loader_for_blobs(no_blobs, Salt::default(), vec![])
+        let err = Contract::loader_from_blobs(no_blobs, Salt::default(), vec![])
             .expect_err("should have failed because there are no blobs");
 
         // then
@@ -172,7 +172,7 @@ mod tests {
         let blobs = [vec![0; 9], vec![0; 8]].map(Blob::new).to_vec();
 
         // when
-        let err = Contract::loader_for_blobs(blobs, Salt::default(), vec![])
+        let err = Contract::loader_from_blobs(blobs, Salt::default(), vec![])
             .expect_err("should have failed because the first blob is not word-sized");
 
         // then
@@ -188,7 +188,7 @@ mod tests {
         let blobs = [vec![0; 8], vec![0; 9]].map(Blob::new).to_vec();
 
         // when
-        let result = Contract::loader_for_blobs(blobs, Salt::default(), vec![]);
+        let result = Contract::loader_from_blobs(blobs, Salt::default(), vec![]);
 
         // then
         let _ = result.unwrap();
@@ -309,7 +309,7 @@ mod tests {
         let no_blob_ids = vec![];
 
         // when
-        let loader = Contract::loader_for_blob_ids(no_blob_ids, Salt::default(), vec![])
+        let loader = Contract::loader_from_blob_ids(no_blob_ids, Salt::default(), vec![])
             .expect_err("should have failed because there are no blobs");
 
         // then
@@ -331,7 +331,7 @@ mod tests {
             .blob_ids();
 
         // we pretend we uploaded the blobs
-        let loader = Contract::loader_for_blob_ids(blob_ids.clone(), Salt::default(), vec![])?;
+        let loader = Contract::loader_from_blob_ids(blob_ids.clone(), Salt::default(), vec![])?;
 
         let loader_asm = loader_contract_asm(&blob_ids).unwrap();
         let manual_loader = original_contract.with_code(loader_asm);
