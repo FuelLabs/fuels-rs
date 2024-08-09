@@ -67,6 +67,7 @@ The size of a Blob transaction is constrained by three factors:
 ```
 
 3. The maximum HTTP body size accepted by the Fuel node.
+
 To estimate an appropriate size for your blobs, you can run:
 
 ```rust,ignore
