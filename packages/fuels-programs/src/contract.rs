@@ -5,6 +5,11 @@ use std::fmt::Debug;
 use fuel_tx::{Bytes32, Contract as FuelContract, ContractId, Salt, StorageSlot};
 pub use storage::*;
 
+/// Represents a contract that can be deployed either directly ([`Contract::regular`]) or through a loader [`Contract::convert_to_loader`].
+/// Provides the ability to calculate the `ContractId` ([`Contract::contract_id`]) without needing to deploy the contract.
+/// This struct also manages contract code updates with `configurable`s
+/// ([`Contract::with_configurables`]) and can automatically
+/// load storage slots (via [`Contract::load_from`]).
 #[derive(Debug, Clone, PartialEq)]
 pub struct Contract<Code> {
     code: Code,
