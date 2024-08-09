@@ -2108,7 +2108,6 @@ async fn max_fee_estimation_respects_tolerance() -> Result<()> {
 
 #[tokio::test]
 async fn blob_contract_deployment() -> Result<()> {
-    // TODO: segfault record transactions again
     abigen!(Contract(
         name = "MyContract",
         abi = "e2e/sway/contracts/huge_contract/out/release/huge_contract-abi.json"
