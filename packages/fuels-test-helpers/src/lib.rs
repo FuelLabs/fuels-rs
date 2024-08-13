@@ -1,6 +1,4 @@
 //! Testing helpers/utilities for Fuel SDK.
-extern crate core;
-
 #[cfg(feature = "fuels-accounts")]
 pub use accounts::*;
 use fuel_tx::{Bytes32, ConsensusParameters, ContractParameters, TxParameters, UtxoId};
@@ -26,6 +24,8 @@ mod accounts;
 
 pub use service::*;
 mod service;
+
+mod new_node;
 
 mod utils;
 mod wallets_config;

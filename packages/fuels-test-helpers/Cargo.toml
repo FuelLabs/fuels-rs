@@ -32,5 +32,6 @@ which = { workspace = true, default-features = false }
 [features]
 default = ["fuels-accounts", "std"]
 std = ["fuels-accounts?/std", "fuels-core/std", "fuel-core-chain-config/std"]
+# TODO: segfault remove
 fuel-core-lib = ["dep:fuel-core"]
 rocksdb = ["fuel-core?/rocksdb"]
