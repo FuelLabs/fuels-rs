@@ -1,1 +1,1 @@
-pub const SUPPORTED_FUEL_CORE_VERSION: semver::Version = semver::Version::new(0, 32, 0);
+pub const SUPPORTED_FUEL_CORE_VERSION: semver::Version = semver::Version::new(0, 32, 1);
