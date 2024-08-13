@@ -12,7 +12,7 @@ use itertools::Itertools;
 
 use super::{
     generate_missing_witnesses, impl_tx_builder_trait, resolve_fuel_inputs, BuildableTransaction,
-    Strategy, TransactionBuilder, UnresolvedWitnessIndexes,
+    Strategy, TransactionBuilder, UnresolvedWitnessIndexes, GAS_ESTIMATION_BLOCK_HORIZON,
 };
 use crate::{
     constants::SIGNATURE_WITNESS_SIZE,
@@ -86,7 +86,6 @@ impl From<Blob> for fuel_tx::Witness {
     }
 }
 
-#[derive(Default)]
 pub struct BlobTransactionBuilder {
     pub inputs: Vec<Input>,
     pub outputs: Vec<Output>,
@@ -98,6 +97,23 @@ pub struct BlobTransactionBuilder {
     pub blob: Blob,
     unresolved_witness_indexes: UnresolvedWitnessIndexes,
     unresolved_signers: Vec<Box<dyn Signer + Send + Sync>>,
+}
+
+impl Default for BlobTransactionBuilder {
+    fn default() -> Self {
+        Self {
+            inputs: Default::default(),
+            outputs: Default::default(),
+            witnesses: Default::default(),
+            tx_policies: Default::default(),
+            gas_price_estimation_block_horizon: GAS_ESTIMATION_BLOCK_HORIZON,
+            max_fee_estimation_tolerance: Default::default(),
+            build_strategy: Default::default(),
+            blob: Default::default(),
+            unresolved_witness_indexes: Default::default(),
+            unresolved_signers: Default::default(),
+        }
+    }
 }
 impl_tx_builder_trait!(BlobTransactionBuilder, BlobTransaction);
 
