@@ -45,6 +45,8 @@ mod script_tx_estimator;
 
 pub use blob::*;
 
+const GAS_ESTIMATION_BLOCK_HORIZON: u32 = 1;
+
 #[derive(Debug, Clone, Default)]
 struct UnresolvedWitnessIndexes {
     owner_to_idx_offset: HashMap<Bech32Address, u64>,
@@ -444,7 +446,7 @@ impl Default for VariableOutputPolicy {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct ScriptTransactionBuilder {
     pub script: Vec<u8>,
     pub script_data: Vec<u8>,
@@ -461,7 +463,26 @@ pub struct ScriptTransactionBuilder {
     unresolved_signers: Vec<Box<dyn Signer + Send + Sync>>,
 }
 
-#[derive(Default)]
+impl Default for ScriptTransactionBuilder {
+    fn default() -> Self {
+        Self {
+            script: Default::default(),
+            script_data: Default::default(),
+            inputs: Default::default(),
+            outputs: Default::default(),
+            witnesses: Default::default(),
+            tx_policies: Default::default(),
+            gas_estimation_tolerance: Default::default(),
+            max_fee_estimation_tolerance: Default::default(),
+            gas_price_estimation_block_horizon: GAS_ESTIMATION_BLOCK_HORIZON,
+            variable_output_policy: Default::default(),
+            build_strategy: Default::default(),
+            unresolved_witness_indexes: Default::default(),
+            unresolved_signers: Default::default(),
+        }
+    }
+}
+
 pub struct CreateTransactionBuilder {
     pub bytecode_length: u64,
     pub bytecode_witness_index: u16,
@@ -478,7 +499,26 @@ pub struct CreateTransactionBuilder {
     unresolved_signers: Vec<Box<dyn Signer + Send + Sync>>,
 }
 
-#[derive(Default)]
+impl Default for CreateTransactionBuilder {
+    fn default() -> Self {
+        Self {
+            bytecode_length: Default::default(),
+            bytecode_witness_index: Default::default(),
+            storage_slots: Default::default(),
+            inputs: Default::default(),
+            outputs: Default::default(),
+            witnesses: Default::default(),
+            tx_policies: Default::default(),
+            salt: Default::default(),
+            gas_price_estimation_block_horizon: GAS_ESTIMATION_BLOCK_HORIZON,
+            max_fee_estimation_tolerance: Default::default(),
+            build_strategy: Default::default(),
+            unresolved_witness_indexes: Default::default(),
+            unresolved_signers: Default::default(),
+        }
+    }
+}
+
 pub struct UploadTransactionBuilder {
     /// The root of the Merkle tree is created over the bytecode.
     pub root: Bytes32,
@@ -499,6 +539,27 @@ pub struct UploadTransactionBuilder {
     pub build_strategy: Strategy,
     unresolved_witness_indexes: UnresolvedWitnessIndexes,
     unresolved_signers: Vec<Box<dyn Signer + Send + Sync>>,
+}
+
+impl Default for UploadTransactionBuilder {
+    fn default() -> Self {
+        Self {
+            root: Default::default(),
+            witness_index: Default::default(),
+            subsection_index: Default::default(),
+            subsections_number: Default::default(),
+            proof_set: Default::default(),
+            inputs: Default::default(),
+            outputs: Default::default(),
+            witnesses: Default::default(),
+            tx_policies: Default::default(),
+            gas_price_estimation_block_horizon: GAS_ESTIMATION_BLOCK_HORIZON,
+            max_fee_estimation_tolerance: Default::default(),
+            build_strategy: Default::default(),
+            unresolved_witness_indexes: Default::default(),
+            unresolved_signers: Default::default(),
+        }
+    }
 }
 
 pub struct UpgradeTransactionBuilder {
@@ -525,7 +586,7 @@ impl Default for UpgradeTransactionBuilder {
             outputs: Default::default(),
             witnesses: Default::default(),
             tx_policies: Default::default(),
-            gas_price_estimation_block_horizon: Default::default(),
+            gas_price_estimation_block_horizon: GAS_ESTIMATION_BLOCK_HORIZON,
             unresolved_witness_indexes: Default::default(),
             unresolved_signers: Default::default(),
             max_fee_estimation_tolerance: Default::default(),
