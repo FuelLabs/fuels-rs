@@ -2,11 +2,23 @@ use std::{net::IpAddr, path::PathBuf, time::Duration};
 
 use fuels_core::types::errors::Result;
 
-pub struct FuelNodeCommand {}
+#[derive(Debug, Clone, Default)]
+pub struct FuelNode {
+    binary_path: Option<PathBuf>,
+}
 
-impl FuelNodeCommand {
-    pub fn run() -> Run {
-        Run {}
+impl FuelNode {
+    pub fn for_binary(path: impl Into<PathBuf>) -> FuelNode {
+        FuelNode {
+            binary_path: Some(path.into()),
+        }
+    }
+
+    pub fn run(self) -> RunBuilder {
+        RunBuilder {
+            binary_path: self.binary_path,
+            ..Default::default()
+        }
     }
 }
 
@@ -28,7 +40,6 @@ pub struct DbConfig {
     /// The maximum database cache size in bytes
     pub cache_size: Option<u64>,
     pub db_type: DbType,
-    pub prune: bool,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -40,7 +51,9 @@ pub enum PoaConfig {
     Interval { period: Duration },
 }
 
-pub struct Run {
+#[derive(Debug, Clone, Default)]
+pub struct RunBuilder {
+    binary_path: Option<PathBuf>,
     service_name: Option<String>,
     db_config: Option<DbConfig>,
     snapshot: Option<PathBuf>,
@@ -96,6 +109,7 @@ pub struct TxPoolConfig {
     blacklist: Option<Blacklist>,
 }
 
+#[derive(Debug, Clone, Default)]
 pub struct GqlConfig {
     /// The max depth of GraphQL queries
     pub max_depth: Option<u64>,
@@ -147,21 +161,21 @@ pub struct PyroscopeConfig {
     pub pprof_sample_rate: Option<u64>,
 }
 
-impl Run {
+impl RunBuilder {
     pub async fn start(self) -> Result<FuelNodeInstance> {
         let cmd = vec!["fuel-core".to_string(), "run".to_string()];
         Ok(FuelNodeInstance { cmd })
     }
 
     /// Vanity name for node, used in telemetry
-    pub fn with_service_name(self, service_name: impl Into<String>) -> Run {
-        Run {
+    pub fn with_service_name(self, service_name: impl Into<String>) -> RunBuilder {
+        RunBuilder {
             service_name: Some(service_name.into()),
             ..self
         }
     }
 
-    pub fn with_db_config(self, config: DbConfig) -> Run {
+    pub fn with_db_config(self, config: DbConfig) -> RunBuilder {
         Self {
             db_config: Some(config),
             ..self
@@ -169,82 +183,85 @@ impl Run {
     }
 
     /// Snapshot from which to do (re)genesis. Defaults to local testnet configuration
-    pub fn with_snapshot(self, snapshot: impl Into<PathBuf>) -> Run {
-        Run {
+    pub fn with_snapshot(self, snapshot: impl Into<PathBuf>) -> RunBuilder {
+        RunBuilder {
             snapshot: Some(snapshot.into()),
             ..self
         }
     }
 
     /// The determines whether to continue the services on internal error or not
-    pub fn with_continue_services_on_error(self, continue_services_on_error: bool) -> Run {
-        Run {
+    pub fn with_continue_services_on_error(self, continue_services_on_error: bool) -> RunBuilder {
+        RunBuilder {
             continue_services_on_error: Some(continue_services_on_error),
             ..self
         }
     }
 
     /// Enables debug mode: - Allows GraphQL Endpoints to arbitrarily advance blocks. - Enables debugger GraphQL Endpoints. - Allows setting `utxo_validation` to `false`
-    pub fn with_debug(self, debug: bool) -> Run {
-        Run {
+    pub fn with_debug(self, debug: bool) -> RunBuilder {
+        RunBuilder {
             debug: Some(debug),
             ..self
         }
     }
 
     /// Enable logging of backtraces from vm errors
-    pub fn with_vm_backtrace(self, vm_backtrace: bool) -> Run {
-        Run {
+    pub fn with_vm_backtrace(self, vm_backtrace: bool) -> RunBuilder {
+        RunBuilder {
             vm_backtrace: Some(vm_backtrace),
             ..self
         }
     }
 
     /// Enable full utxo stateful validation disabled by default until downstream consumers stabilize
-    pub fn with_utxo_validation(self, utxo_validation: bool) -> Run {
-        Run {
+    pub fn with_utxo_validation(self, utxo_validation: bool) -> RunBuilder {
+        RunBuilder {
             utxo_validation: Some(utxo_validation),
             ..self
         }
     }
 
     /// Overrides the version of the native executor
-    pub fn with_native_executor_version(self, native_executor_version: impl Into<String>) -> Run {
-        Run {
+    pub fn with_native_executor_version(
+        self,
+        native_executor_version: impl Into<String>,
+    ) -> RunBuilder {
+        RunBuilder {
             native_executor_version: Some(native_executor_version.into()),
             ..self
         }
     }
 
     /// Gas price configuration
-    pub fn with_gas_price(self, gas_price: GasPrice) -> Run {
-        Run {
+    pub fn with_gas_price(self, gas_price: GasPrice) -> RunBuilder {
+        RunBuilder {
             gas_price: Some(gas_price),
             ..self
         }
     }
 
     /// The signing key used when producing blocks
-    pub fn with_consensus_key(self, consensus_key: impl Into<String>) -> Run {
-        Run {
+    pub fn with_consensus_key(self, consensus_key: impl Into<String>) -> RunBuilder {
+        RunBuilder {
             consensus_key: Some(consensus_key.into()),
             ..self
         }
     }
 
-    pub fn with_poa_config(self, poa_config: PoaConfig) -> Run {
+    pub fn with_poa_config(self, poa_config: PoaConfig) -> RunBuilder {
         Self { ..self }
     }
 
     /// The block's fee recipient public key
-    pub fn with_coinbase_recipient(self, coinbase_recipient: impl Into<String>) -> Run {
-        Run {
+    pub fn with_coinbase_recipient(self, coinbase_recipient: impl Into<String>) -> RunBuilder {
+        RunBuilder {
             coinbase_recipient: Some(coinbase_recipient.into()),
             ..self
         }
     }
 
-    pub fn with_tx_pool_config(self, tx_pool_config: TxPoolConfig) -> Run {
+    pub fn with_tx_pool_config(self, tx_pool_config: TxPoolConfig) -> RunBuilder {
         Self {
             tx_pool_config: Some(tx_pool_config),
             ..self
@@ -252,52 +269,52 @@ impl Run {
     }
 
     /// The IP address to bind the GraphQL service to
-    pub fn with_ip(self, ip: IpAddr) -> Run {
-        Run {
+    pub fn with_ip(self, ip: IpAddr) -> RunBuilder {
+        RunBuilder {
             ip: Some(ip),
             ..self
         }
     }
 
     /// The port to bind the GraphQL service to.
-    pub fn with_port(self, port: u16) -> Run {
-        Run {
+    pub fn with_port(self, port: u16) -> RunBuilder {
+        RunBuilder {
             port: Some(port),
             ..self
         }
     }
 
-    pub fn with_gql_config(self, gql_config: GqlConfig) -> Run {
-        Run {
+    pub fn with_gql_config(self, gql_config: GqlConfig) -> RunBuilder {
+        RunBuilder {
             gql_config: Some(gql_config),
             ..self
         }
     }
 
-    pub fn with_relayer_config(self, relayer_config: RelayerConfig) -> Run {
-        Run {
+    pub fn with_relayer_config(self, relayer_config: RelayerConfig) -> RunBuilder {
+        RunBuilder {
             relayer_config: Some(relayer_config),
             ..self
         }
     }
 
-    pub fn with_enable_metrics(self, enable_metrics: bool) -> Run {
-        Run {
+    pub fn with_enable_metrics(self, enable_metrics: bool) -> RunBuilder {
+        RunBuilder {
             enable_metrics: Some(enable_metrics),
             ..self
         }
     }
 
-    pub fn with_sync_config(self, sync_config: SyncConfig) -> Run {
-        Run {
+    pub fn with_sync_config(self, sync_config: SyncConfig) -> RunBuilder {
+        RunBuilder {
             sync_config: Some(sync_config),
             ..self
         }
     }
 
     /// The size of the memory pool in number of `MemoryInstance`s [env: MEMORY_POOL_SIZE=] [default: 32]
-    pub fn with_memory_pool_size(self, memory_pool_size: u64) -> Run {
-        Run {
+    pub fn with_memory_pool_size(self, memory_pool_size: u64) -> RunBuilder {
+        RunBuilder {
             memory_pool_size: Some(memory_pool_size),
             ..self
         }
@@ -306,4 +323,20 @@ impl Run {
 
 pub struct FuelNodeInstance {
     cmd: Vec<String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use fuels_accounts::wallet::WalletUnlocked;
+
+    use crate::NodeConfig;
+
+    use super::*;
+
+    #[tokio::test]
+    async fn test_name() -> Result<()> {
+        let instance = FuelNode::default().run();
+
+        Ok(())
+    }
 }
