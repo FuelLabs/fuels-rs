@@ -11,7 +11,7 @@ use fuels::{
     types::errors::Result,
 };
 
-pub async fn launch_custom_provider_and_get_wallets(
+pub async fn maybe_connect_to_testnet_and_get_wallets(
     wallet_config: WalletsConfig,
     node_config: Option<NodeConfig>,
     chain_config: Option<ChainConfig>,
@@ -21,7 +21,7 @@ pub async fn launch_custom_provider_and_get_wallets(
         if num_wallets > TEST_WALLETS_COUNT {
             error!(
                 Provider,
-                "Can't get more than {} wallets when running on testnet", TEST_WALLETS_COUNT
+                "Can't get more than {} wallets when E2E_TARGET_TESTNET is set", TEST_WALLETS_COUNT
             );
         }
 
@@ -39,7 +39,6 @@ pub async fn launch_custom_provider_and_get_wallets(
                     .expect("Should be able to transform into private key");
                 let wallet =
                     WalletUnlocked::new_from_private_key(private_key, Some(provider.clone()));
-                dbg!(wallet.address().to_string());
                 wallet
             })
             .collect::<Vec<_>>();

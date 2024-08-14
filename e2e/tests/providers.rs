@@ -1,6 +1,7 @@
 use std::{ops::Add, path::Path};
 
 use chrono::{DateTime, Duration, TimeZone, Utc};
+use e2e::helpers::maybe_connect_to_testnet_and_get_wallets;
 use fuel_asm::RegId;
 use fuel_tx::Witness;
 use fuels::{
@@ -17,8 +18,6 @@ use fuels::{
         Bits256,
     },
 };
-
-use e2e::helpers::launch_custom_provider_and_get_wallets;
 
 #[tokio::test]
 async fn test_provider_launch_and_connect() -> Result<()> {
