@@ -4,6 +4,8 @@ use fuels::{
     types::{Bits256, Bytes32},
 };
 
+use e2e::helpers::maybe_connect_to_testnet_and_get_wallet;
+
 #[tokio::test]
 async fn test_storage_initialization() -> Result<()> {
     abigen!(Contract(
@@ -11,7 +13,7 @@ async fn test_storage_initialization() -> Result<()> {
         abi = "e2e/sway/contracts/storage/out/release/storage-abi.json"
     ));
 
-    let wallet = launch_provider_and_get_wallet().await?;
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
 
     let key = Bytes32::from([1u8; 32]);
     let value = Bytes32::from([2u8; 32]);
@@ -46,7 +48,7 @@ async fn test_init_storage_automatically() -> Result<()> {
         abi = "e2e/sway/contracts/storage/out/release/storage-abi.json"
     ));
 
-    let wallet = launch_provider_and_get_wallet().await?;
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
 
     let contract_id = Contract::load_from(
         "sway/contracts/storage/out/release/storage.bin",
