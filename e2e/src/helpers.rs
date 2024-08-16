@@ -37,9 +37,7 @@ pub async fn maybe_connect_to_testnet_and_get_wallets(
                     });
                 let private_key = SecretKey::from_str(private_key_string.as_str())
                     .expect("Should be able to transform into private key");
-                let wallet =
-                    WalletUnlocked::new_from_private_key(private_key, Some(provider.clone()));
-                wallet
+                WalletUnlocked::new_from_private_key(private_key, Some(provider.clone()))
             })
             .collect::<Vec<_>>();
         Ok(wallets)
@@ -51,4 +49,14 @@ pub async fn maybe_connect_to_testnet_and_get_wallets(
         )
         .await
     }
+}
+
+pub async fn maybe_connect_to_testnet_and_get_wallet() -> Result<WalletUnlocked> {
+    let mut wallets = maybe_connect_to_testnet_and_get_wallets(
+        WalletsConfig::new(Some(1), None, None),
+        None,
+        None,
+    )
+    .await?;
+    Ok(wallets.pop().expect("should have one wallet"))
 }

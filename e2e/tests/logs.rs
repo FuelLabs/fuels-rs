@@ -4,6 +4,8 @@ use fuels::{
     types::{errors::transaction::Reason, AsciiString, Bits256, SizedAsciiString},
 };
 
+use e2e::helpers::maybe_connect_to_testnet_and_get_wallet;
+
 #[tokio::test]
 async fn test_parse_logged_variables() -> Result<()> {
     setup_program_test!(
@@ -628,7 +630,7 @@ async fn test_script_decode_logs() -> Result<()> {
         abi = "e2e/sway/logs/script_logs/out/release/script_logs-abi.json"
     ));
 
-    let wallet = launch_provider_and_get_wallet().await?;
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     let bin_path = "sway/logs/script_logs/out/release/script_logs.bin";
     let instance = log_script::new(wallet.clone(), bin_path);
 

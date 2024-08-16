@@ -205,7 +205,7 @@ async fn test_input_message_pays_fee() -> Result<()> {
 async fn can_increase_block_height() -> Result<()> {
     // ANCHOR: use_produce_blocks_to_increase_block_height
     let wallets =
-        launch_custom_provider_and_get_wallets(WalletsConfig::default(), None, None).await?;
+        maybe_connect_to_testnet_and_get_wallets(WalletsConfig::default(), None, None).await?;
     let wallet = &wallets[0];
     let provider = wallet.try_provider()?;
 
@@ -230,7 +230,7 @@ async fn can_set_custom_block_time() -> Result<()> {
         ..NodeConfig::default()
     };
     let wallets =
-        launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config), None)
+        maybe_connect_to_testnet_and_get_wallets(WalletsConfig::default(), Some(config), None)
             .await?;
     let wallet = &wallets[0];
     let provider = wallet.try_provider()?;
@@ -284,7 +284,7 @@ async fn contract_deployment_respects_maturity() -> Result<()> {
     abigen!(Contract(name="MyContract", abi="e2e/sway/contracts/transaction_block_height/out/release/transaction_block_height-abi.json"));
 
     let wallets =
-        launch_custom_provider_and_get_wallets(WalletsConfig::default(), None, None).await?;
+        maybe_connect_to_testnet_and_get_wallets(WalletsConfig::default(), None, None).await?;
     let wallet = &wallets[0];
     let provider = wallet.try_provider()?;
 
@@ -699,7 +699,7 @@ async fn test_sway_timestamp() -> Result<()> {
         },
         ..NodeConfig::default()
     };
-    let mut wallets = launch_custom_provider_and_get_wallets(
+    let mut wallets = maybe_connect_to_testnet_and_get_wallets(
         WalletsConfig::new(Some(1), Some(1), Some(100)),
         Some(provider_config),
         None,
@@ -772,7 +772,7 @@ async fn create_transfer(
 async fn test_caching() -> Result<()> {
     let amount = 1000;
     let num_coins = 10;
-    let mut wallets = launch_custom_provider_and_get_wallets(
+    let mut wallets = maybe_connect_to_testnet_and_get_wallets(
         WalletsConfig::new(Some(1), Some(num_coins), Some(amount)),
         Some(NodeConfig::default()),
         None,
@@ -839,7 +839,7 @@ async fn test_cache_invalidation_on_await() -> Result<()> {
 
     // create wallet with 1 coin so that the cache prevents further
     // spending unless the coin is invalidated from the cache
-    let mut wallets = launch_custom_provider_and_get_wallets(
+    let mut wallets = maybe_connect_to_testnet_and_get_wallets(
         WalletsConfig::new(Some(1), Some(1), Some(100)),
         Some(provider_config),
         None,
@@ -939,7 +939,7 @@ async fn can_produce_blocks_with_trig_never() -> Result<()> {
         ..NodeConfig::default()
     };
     let wallets =
-        launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config), None)
+        maybe_connect_to_testnet_and_get_wallets(WalletsConfig::default(), Some(config), None)
             .await?;
     let wallet = &wallets[0];
     let provider = wallet.try_provider()?;
@@ -1170,7 +1170,7 @@ async fn contract_call_with_impersonation() -> Result<()> {
         utxo_validation: false,
         ..NodeConfig::default()
     };
-    let mut wallets = launch_custom_provider_and_get_wallets(
+    let mut wallets = maybe_connect_to_testnet_and_get_wallets(
         WalletsConfig::new(Some(1), Some(10), Some(1000)),
         Some(provider_config),
         None,
