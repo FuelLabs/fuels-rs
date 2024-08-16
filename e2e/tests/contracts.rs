@@ -6,6 +6,8 @@ use fuels::{
 };
 use tokio::time::Instant;
 
+use e2e::helpers::maybe_connect_to_testnet_and_get_wallets;
+
 #[tokio::test]
 async fn test_multiple_args() -> Result<()> {
     setup_program_test!(
@@ -594,7 +596,7 @@ async fn test_connect_wallet() -> Result<()> {
     // ANCHOR: contract_setup_macro_manual_wallet
     let config = WalletsConfig::new(Some(2), Some(1), Some(DEFAULT_COIN_AMOUNT));
 
-    let mut wallets = launch_custom_provider_and_get_wallets(config, None, None).await?;
+    let mut wallets = maybe_connect_to_testnet_and_get_wallets(config, None, None).await?;
     let wallet = wallets.pop().unwrap();
     let wallet_2 = wallets.pop().unwrap();
 
@@ -652,7 +654,7 @@ async fn setup_output_variable_estimation_test() -> Result<(
     Bech32ContractId,
 )> {
     let wallet_config = WalletsConfig::new(Some(3), None, None);
-    let wallets = launch_custom_provider_and_get_wallets(wallet_config, None, None).await?;
+    let wallets = maybe_connect_to_testnet_and_get_wallets(wallet_config, None, None).await?;
 
     let contract_id = Contract::load_from(
         "sway/contracts/token_ops/out/release/token_ops.bin",
@@ -1039,7 +1041,7 @@ async fn test_add_custom_assets() -> Result<()> {
 
     let num_wallets = 2;
     let wallet_config = WalletsConfig::new_multiple_assets(num_wallets, assets);
-    let mut wallets = launch_custom_provider_and_get_wallets(wallet_config, None, None).await?;
+    let mut wallets = maybe_connect_to_testnet_and_get_wallets(wallet_config, None, None).await?;
     let wallet_1 = wallets.pop().unwrap();
     let wallet_2 = wallets.pop().unwrap();
 
@@ -1956,7 +1958,8 @@ async fn contract_call_with_non_zero_base_asset_id_and_tip() -> Result<()> {
     };
 
     let wallet_config = WalletsConfig::new_multiple_assets(1, vec![asset_base]);
-    let wallets = launch_custom_provider_and_get_wallets(wallet_config, None, Some(config)).await?;
+    let wallets =
+        maybe_connect_to_testnet_and_get_wallets(wallet_config, None, Some(config)).await?;
     let wallet = wallets.first().expect("has wallet");
 
     let contract_id = Contract::load_from(
