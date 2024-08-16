@@ -4,6 +4,8 @@ use fuels::{
     types::Identity,
 };
 
+use e2e::helpers::maybe_connect_to_testnet_and_get_wallet;
+
 #[tokio::test]
 async fn main_function_arguments() -> Result<()> {
     // ANCHOR: script_with_arguments
@@ -12,7 +14,7 @@ async fn main_function_arguments() -> Result<()> {
         name = "MyScript",
         abi = "e2e/sway/scripts/arguments/out/release/arguments-abi.json"
     ));
-    let wallet = launch_provider_and_get_wallet().await?;
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     let bin_path = "sway/scripts/arguments/out/release/arguments.bin";
     let script_instance = MyScript::new(wallet, bin_path);
 
@@ -327,7 +329,7 @@ async fn script_encoder_config_is_applied() {
         name = "MyScript",
         abi = "e2e/sway/scripts/basic_script/out/release/basic_script-abi.json"
     ));
-    let wallet = launch_provider_and_get_wallet().await.expect("");
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await.expect("");
     let bin_path = "sway/scripts/basic_script/out/release/basic_script.bin";
 
     let script_instance_without_encoder_config = MyScript::new(wallet.clone(), bin_path);
