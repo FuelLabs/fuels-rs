@@ -4,6 +4,8 @@ use fuels::{
     types::{Bits256, SizedAsciiString, U256},
 };
 
+use e2e::helpers::maybe_connect_to_testnet_and_get_wallet;
+
 #[tokio::test]
 async fn contract_default_configurables() -> Result<()> {
     abigen!(Contract(
@@ -11,7 +13,7 @@ async fn contract_default_configurables() -> Result<()> {
         abi = "e2e/sway/contracts/configurables/out/release/configurables-abi.json"
     ));
 
-    let wallet = launch_provider_and_get_wallet().await?;
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
 
     let contract_id = Contract::load_from(
         "sway/contracts/configurables/out/release/configurables.bin",
@@ -99,7 +101,7 @@ async fn contract_configurables() -> Result<()> {
         abi = "e2e/sway/contracts/configurables/out/release/configurables-abi.json"
     ));
 
-    let wallet = launch_provider_and_get_wallet().await?;
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
 
     let str_4: SizedAsciiString<4> = "FUEL".try_into()?;
     let new_struct = StructWithGeneric {
@@ -166,7 +168,7 @@ async fn script_configurables() -> Result<()> {
         abi = "e2e/sway/scripts/script_configurables/out/release/script_configurables-abi.json"
     ));
 
-    let wallet = launch_provider_and_get_wallet().await?;
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     let bin_path = "sway/scripts/script_configurables/out/release/script_configurables.bin";
     let instance = MyScript::new(wallet, bin_path);
 
