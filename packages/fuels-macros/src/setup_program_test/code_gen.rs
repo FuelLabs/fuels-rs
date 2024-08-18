@@ -10,7 +10,7 @@ use syn::LitStr;
 
 use crate::setup_program_test::parsing::{
     AbigenCommand, BuildProfile, DeployContractCommand, InitializeWalletCommand, LoadScriptCommand,
-    SetOptionsCommand, TestProgramCommands,
+    SetOptionsCommand, Target, TestProgramCommands,
 };
 
 pub(crate) fn generate_setup_program_test_code(
@@ -24,7 +24,7 @@ pub(crate) fn generate_setup_program_test_code(
         load_scripts,
     } = commands;
 
-    let SetOptionsCommand { profile } = set_options.unwrap_or_default();
+    let SetOptionsCommand { profile, target } = set_options.unwrap_or_default();
     let project_lookup = generate_project_lookup(&generate_bindings, profile)?;
     let abigen_code = abigen_code(&project_lookup)?;
     let wallet_code = wallet_initialization_code(initialize_wallets);

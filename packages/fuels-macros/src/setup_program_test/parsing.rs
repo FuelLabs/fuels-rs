@@ -1,6 +1,6 @@
 pub(crate) use commands::{
     AbigenCommand, BuildProfile, DeployContractCommand, InitializeWalletCommand, LoadScriptCommand,
-    SetOptionsCommand, TestProgramCommands,
+    SetOptionsCommand, Target, TestProgramCommands,
 };
 
 mod command_parser;
