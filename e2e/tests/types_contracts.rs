@@ -5,6 +5,8 @@ use fuels::{
     types::{Bits256, EvmAddress, Identity, SizedAsciiString, B512, U256},
 };
 
+use e2e::helpers::maybe_connect_to_testnet_and_get_wallet;
+
 pub fn null_contract_id() -> Bech32ContractId {
     // a bech32 contract address that decodes to [0u8;32]
     Bech32ContractId::from_str("fuel1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqsx2mt2")
@@ -72,7 +74,7 @@ async fn call_with_structs() -> Result<()> {
     };
     // ANCHOR_END: struct_generation
 
-    let wallet = launch_provider_and_get_wallet().await?;
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
 
     let contract_id = Contract::load_from(
         "sway/types/contracts/complex_types_contract/out/release/complex_types_contract.bin",

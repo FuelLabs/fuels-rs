@@ -7,6 +7,8 @@ use fuels::{
     types::{output::Output, Bytes32},
 };
 
+use e2e::helpers::maybe_connect_to_testnet_and_get_wallets;
+
 #[tokio::test]
 async fn test_wallet_balance_api_multi_asset() -> Result<()> {
     let mut wallet = WalletUnlocked::new_random(None);
@@ -131,7 +133,7 @@ fn base_asset_wallet_config(num_wallets: u64) -> WalletsConfig {
 #[tokio::test]
 async fn adjust_fee_empty_transaction() -> Result<()> {
     let wallet_config = base_asset_wallet_config(1);
-    let wallet = launch_custom_provider_and_get_wallets(wallet_config, None, None)
+    let wallet = maybe_connect_to_testnet_and_get_wallets(wallet_config, None, None)
         .await?
         .pop()
         .unwrap();
@@ -167,7 +169,7 @@ async fn adjust_fee_empty_transaction() -> Result<()> {
 #[tokio::test]
 async fn adjust_fee_resources_to_transfer_with_base_asset() -> Result<()> {
     let wallet_config = base_asset_wallet_config(1);
-    let wallet = launch_custom_provider_and_get_wallets(wallet_config, None, None)
+    let wallet = maybe_connect_to_testnet_and_get_wallets(wallet_config, None, None)
         .await?
         .pop()
         .unwrap();
@@ -436,7 +438,7 @@ async fn transfer_coins_of_non_base_asset() -> Result<()> {
 #[tokio::test]
 async fn test_transfer_with_multiple_signatures() -> Result<()> {
     let wallet_config = base_asset_wallet_config(5);
-    let wallets = launch_custom_provider_and_get_wallets(wallet_config, None, None).await?;
+    let wallets = maybe_connect_to_testnet_and_get_wallets(wallet_config, None, None).await?;
     let provider = wallets[0].try_provider()?;
 
     let mut receiver = WalletUnlocked::new_random(None);
