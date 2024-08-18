@@ -4,6 +4,7 @@ mod tests {
 
     use fuels::prelude::Result;
 
+    #[ignore = "testnet currently not compatible with the sdk"]
     #[tokio::test]
     async fn connect_to_fuel_node() -> Result<()> {
         // ANCHOR: connect_to_testnet

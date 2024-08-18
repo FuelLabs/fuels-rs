@@ -29,7 +29,7 @@ mod tests {
     use super::*;
     use crate::{
         constants::WORD_SIZE,
-        types::{Address, AssetId, ContractId},
+        types::{Address, AsciiString, AssetId, ContractId},
     };
 
     #[test]
@@ -79,5 +79,37 @@ mod tests {
         test_decode!(Address, ContractId, AssetId);
 
         Ok(())
+    }
+
+    #[test]
+    fn string_slice_is_read_in_total() {
+        // This was a bug where the decoder read more bytes than it reported, causing the next
+        // element to be read incorrectly.
+
+        // given
+        #[derive(
+            fuels_macros::Tokenizable, fuels_macros::Parameterize, Clone, PartialEq, Debug,
+        )]
+        #[FuelsCorePath = "crate"]
+        #[FuelsTypesPath = "crate::types"]
+        struct Test {
+            name: AsciiString,
+            age: u64,
+        }
+
+        let input = Test {
+            name: AsciiString::new("Alice".to_owned()).unwrap(),
+            age: 42,
+        };
+
+        let encoded = ABIEncoder::default()
+            .encode(&[input.clone().into_token()])
+            .unwrap();
+
+        // when
+        let decoded = try_from_bytes::<Test>(&encoded, DecoderConfig::default()).unwrap();
+
+        // then
+        assert_eq!(decoded, input);
     }
 }

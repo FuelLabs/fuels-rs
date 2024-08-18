@@ -14,9 +14,9 @@ use fuel_tx::{
         },
     },
     policies::PolicyType,
-    Bytes32, Cacheable, Chargeable, ConsensusParameters, Create, FormatValidityChecks, Input, Mint,
-    Output, Salt as FuelSalt, Script, StorageSlot, Transaction as FuelTransaction, TransactionFee,
-    UniqueIdentifier, Upgrade, Upload, Witness,
+    Blob, Bytes32, Cacheable, Chargeable, ConsensusParameters, Create, FormatValidityChecks, Input,
+    Mint, Output, Salt as FuelSalt, Script, StorageSlot, Transaction as FuelTransaction,
+    TransactionFee, UniqueIdentifier, Upgrade, Upload, Witness,
 };
 use fuel_types::{bytes::padded_len_usize, AssetId, ChainId};
 use fuel_vm::checked_transaction::{
@@ -105,7 +105,7 @@ impl MintTransaction {
 }
 
 #[derive(Default, Debug, Copy, Clone)]
-//ANCHOR: tx_policies_struct
+// ANCHOR: tx_policies_struct
 pub struct TxPolicies {
     tip: Option<u64>,
     witness_limit: Option<u64>,
@@ -113,7 +113,7 @@ pub struct TxPolicies {
     max_fee: Option<u64>,
     script_gas_limit: Option<u64>,
 }
-//ANCHOR_END: tx_policies_struct
+// ANCHOR_END: tx_policies_struct
 
 impl TxPolicies {
     pub fn new(
@@ -190,6 +190,7 @@ pub enum TransactionType {
     Mint(MintTransaction),
     Upload(UploadTransaction),
     Upgrade(UpgradeTransaction),
+    Blob(BlobTransaction),
 }
 
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
@@ -260,6 +261,8 @@ pub trait Transaction:
 
     fn max_fee(&self) -> Option<u64>;
 
+    fn size(&self) -> usize;
+
     fn witness_limit(&self) -> Option<u64>;
 
     fn tip(&self) -> Option<u64>;
@@ -293,6 +296,7 @@ impl From<TransactionType> for FuelTransaction {
             TransactionType::Mint(tx) => tx.into(),
             TransactionType::Upload(tx) => tx.into(),
             TransactionType::Upgrade(tx) => tx.into(),
+            TransactionType::Blob(tx) => tx.into(),
         }
     }
 }
@@ -382,7 +386,9 @@ macro_rules! impl_tx_wrapper {
                 let checked = self
                     .tx
                     .into_checked(block_height.into(), consensus_parameters)?;
+
                 let check_predicates_parameters: CheckPredicateParams = consensus_parameters.into();
+
                 checked.check_predicates(&check_predicates_parameters, MemoryInstance::new())?;
 
                 Ok(())
@@ -463,6 +469,11 @@ macro_rules! impl_tx_wrapper {
                 self.tx.policies().get(PolicyType::MaxFee)
             }
 
+            fn size(&self) -> usize {
+                use fuel_types::canonical::Serialize;
+                self.tx.size()
+            }
+
             fn witness_limit(&self) -> Option<u64> {
                 self.tx.policies().get(PolicyType::WitnessLimit)
             }
@@ -537,6 +548,7 @@ impl_tx_wrapper!(ScriptTransaction, Script);
 impl_tx_wrapper!(CreateTransaction, Create);
 impl_tx_wrapper!(UploadTransaction, Upload);
 impl_tx_wrapper!(UpgradeTransaction, Upgrade);
+impl_tx_wrapper!(BlobTransaction, Blob);
 
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
@@ -650,6 +662,30 @@ impl EstimablePredicates for ScriptTransaction {
     }
 }
 
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+impl EstimablePredicates for BlobTransaction {
+    async fn estimate_predicates(
+        &mut self,
+        provider: impl DryRunner,
+        latest_chain_executor_version: Option<u32>,
+    ) -> Result<()> {
+        if let Some(tx) = provider
+            .maybe_estimate_predicates(&self.tx.clone().into(), latest_chain_executor_version)
+            .await?
+        {
+            tx.as_blob().expect("is blob").clone_into(&mut self.tx);
+        } else {
+            self.tx.estimate_predicates(
+                &provider.consensus_parameters().into(),
+                MemoryInstance::new(),
+            )?;
+        }
+
+        Ok(())
+    }
+}
+
 impl GasValidation for CreateTransaction {
     fn validate_gas(&self, _gas_used: u64) -> Result<()> {
         Ok(())
@@ -663,6 +699,12 @@ impl GasValidation for UploadTransaction {
 }
 
 impl GasValidation for UpgradeTransaction {
+    fn validate_gas(&self, _gas_used: u64) -> Result<()> {
+        Ok(())
+    }
+}
+
+impl GasValidation for BlobTransaction {
     fn validate_gas(&self, _gas_used: u64) -> Result<()> {
         Ok(())
     }

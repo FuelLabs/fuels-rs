@@ -331,7 +331,7 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<()> {
     );
 
     // The gas used by the script to call a contract and forward remaining gas limit.
-    let gas_used_by_script = 249;
+    let gas_used_by_script = 256;
     let gas_limit = 225_883;
     let response = contract_instance
         .methods()
@@ -1079,7 +1079,7 @@ async fn tx_respects_policies() -> Result<()> {
 async fn can_setup_static_gas_price() -> Result<()> {
     let expected_gas_price = 474;
     let node_config = NodeConfig {
-        static_gas_price: expected_gas_price,
+        starting_gas_price: expected_gas_price,
         ..Default::default()
     };
     let provider = setup_test_provider(vec![], vec![], Some(node_config), None).await?;

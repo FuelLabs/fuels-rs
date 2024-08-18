@@ -40,7 +40,12 @@ use crate::{
     utils::{calculate_witnesses_size, sealed},
 };
 
+mod blob;
 mod script_tx_estimator;
+
+pub use blob::*;
+
+const GAS_ESTIMATION_BLOCK_HORIZON: u32 = 1;
 
 #[derive(Debug, Clone, Default)]
 struct UnresolvedWitnessIndexes {
@@ -171,10 +176,10 @@ pub trait TransactionBuilder: BuildableTransaction + Send + sealed::Sealed {
     fn with_estimation_horizon(self, block_horizon: u32) -> Self;
 }
 
-macro_rules! impl_tx_trait {
+macro_rules! impl_tx_builder_trait {
     ($ty: ty, $tx_ty: ident) => {
         #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
-        impl TransactionBuilder for $ty {
+        impl $crate::types::transaction_builders::TransactionBuilder for $ty {
             type TxType = $tx_ty;
 
             fn add_signer(&mut self, signer: impl Signer + Send + Sync) -> Result<&mut Self> {
@@ -211,7 +216,11 @@ macro_rules! impl_tx_trait {
                     .witnesses_mut()
                     .extend(repeat(witness).take(self.unresolved_signers.len()));
 
-                let mut tx = BuildableTransaction::build(fee_estimation_tb, &provider).await?;
+                let mut tx = $crate::types::transaction_builders::BuildableTransaction::build(
+                    fee_estimation_tb,
+                    &provider,
+                )
+                .await?;
 
                 if tx.is_using_predicates() {
                     tx.estimate_predicates(&provider, None).await?;
@@ -223,7 +232,7 @@ macro_rules! impl_tx_trait {
                     .estimate_gas_price(self.gas_price_estimation_block_horizon)
                     .await?;
 
-                estimate_max_fee_w_tolerance(
+                $crate::types::transaction_builders::estimate_max_fee_w_tolerance(
                     tx.tx,
                     self.max_fee_estimation_tolerance,
                     gas_price,
@@ -285,6 +294,7 @@ macro_rules! impl_tx_trait {
 
         impl $ty {
             fn set_witness_indexes(&mut self) {
+                use $crate::types::transaction_builders::TransactionBuilder;
                 self.unresolved_witness_indexes.owner_to_idx_offset = self
                     .inputs()
                     .iter()
@@ -315,12 +325,14 @@ macro_rules! impl_tx_trait {
             }
 
             fn is_using_predicates(&self) -> bool {
+                use $crate::types::transaction_builders::TransactionBuilder;
                 self.inputs()
                     .iter()
                     .any(|input| matches!(input, Input::ResourcePredicate { .. }))
             }
 
             fn num_witnesses(&self) -> Result<u16> {
+                use $crate::types::transaction_builders::TransactionBuilder;
                 let num_witnesses = self.witnesses().len();
 
                 if num_witnesses + self.unresolved_signers.len() > u16::MAX as usize {
@@ -359,7 +371,7 @@ macro_rules! impl_tx_trait {
                 let gas_price = provider.estimate_gas_price(block_horizon).await?;
                 let consensus_parameters = provider.consensus_parameters();
 
-                let max_fee = estimate_max_fee_w_tolerance(
+                let max_fee = $crate::types::transaction_builders::estimate_max_fee_w_tolerance(
                     wrapper_tx.tx,
                     max_fee_estimation_tolerance,
                     gas_price,
@@ -374,7 +386,9 @@ macro_rules! impl_tx_trait {
     };
 }
 
-fn estimate_max_fee_w_tolerance<T: Chargeable>(
+pub(crate) use impl_tx_builder_trait;
+
+pub(crate) fn estimate_max_fee_w_tolerance<T: Chargeable>(
     tx: T,
     tolerance: f32,
     gas_price: u64,
@@ -432,7 +446,7 @@ impl Default for VariableOutputPolicy {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct ScriptTransactionBuilder {
     pub script: Vec<u8>,
     pub script_data: Vec<u8>,
@@ -449,7 +463,26 @@ pub struct ScriptTransactionBuilder {
     unresolved_signers: Vec<Box<dyn Signer + Send + Sync>>,
 }
 
-#[derive(Default)]
+impl Default for ScriptTransactionBuilder {
+    fn default() -> Self {
+        Self {
+            script: Default::default(),
+            script_data: Default::default(),
+            inputs: Default::default(),
+            outputs: Default::default(),
+            witnesses: Default::default(),
+            tx_policies: Default::default(),
+            gas_estimation_tolerance: Default::default(),
+            max_fee_estimation_tolerance: Default::default(),
+            gas_price_estimation_block_horizon: GAS_ESTIMATION_BLOCK_HORIZON,
+            variable_output_policy: Default::default(),
+            build_strategy: Default::default(),
+            unresolved_witness_indexes: Default::default(),
+            unresolved_signers: Default::default(),
+        }
+    }
+}
+
 pub struct CreateTransactionBuilder {
     pub bytecode_length: u64,
     pub bytecode_witness_index: u16,
@@ -466,7 +499,26 @@ pub struct CreateTransactionBuilder {
     unresolved_signers: Vec<Box<dyn Signer + Send + Sync>>,
 }
 
-#[derive(Default)]
+impl Default for CreateTransactionBuilder {
+    fn default() -> Self {
+        Self {
+            bytecode_length: Default::default(),
+            bytecode_witness_index: Default::default(),
+            storage_slots: Default::default(),
+            inputs: Default::default(),
+            outputs: Default::default(),
+            witnesses: Default::default(),
+            tx_policies: Default::default(),
+            salt: Default::default(),
+            gas_price_estimation_block_horizon: GAS_ESTIMATION_BLOCK_HORIZON,
+            max_fee_estimation_tolerance: Default::default(),
+            build_strategy: Default::default(),
+            unresolved_witness_indexes: Default::default(),
+            unresolved_signers: Default::default(),
+        }
+    }
+}
+
 pub struct UploadTransactionBuilder {
     /// The root of the Merkle tree is created over the bytecode.
     pub root: Bytes32,
@@ -487,6 +539,27 @@ pub struct UploadTransactionBuilder {
     pub build_strategy: Strategy,
     unresolved_witness_indexes: UnresolvedWitnessIndexes,
     unresolved_signers: Vec<Box<dyn Signer + Send + Sync>>,
+}
+
+impl Default for UploadTransactionBuilder {
+    fn default() -> Self {
+        Self {
+            root: Default::default(),
+            witness_index: Default::default(),
+            subsection_index: Default::default(),
+            subsections_number: Default::default(),
+            proof_set: Default::default(),
+            inputs: Default::default(),
+            outputs: Default::default(),
+            witnesses: Default::default(),
+            tx_policies: Default::default(),
+            gas_price_estimation_block_horizon: GAS_ESTIMATION_BLOCK_HORIZON,
+            max_fee_estimation_tolerance: Default::default(),
+            build_strategy: Default::default(),
+            unresolved_witness_indexes: Default::default(),
+            unresolved_signers: Default::default(),
+        }
+    }
 }
 
 pub struct UpgradeTransactionBuilder {
@@ -513,7 +586,7 @@ impl Default for UpgradeTransactionBuilder {
             outputs: Default::default(),
             witnesses: Default::default(),
             tx_policies: Default::default(),
-            gas_price_estimation_block_horizon: Default::default(),
+            gas_price_estimation_block_horizon: GAS_ESTIMATION_BLOCK_HORIZON,
             unresolved_witness_indexes: Default::default(),
             unresolved_signers: Default::default(),
             max_fee_estimation_tolerance: Default::default(),
@@ -522,10 +595,10 @@ impl Default for UpgradeTransactionBuilder {
     }
 }
 
-impl_tx_trait!(ScriptTransactionBuilder, ScriptTransaction);
-impl_tx_trait!(CreateTransactionBuilder, CreateTransaction);
-impl_tx_trait!(UploadTransactionBuilder, UploadTransaction);
-impl_tx_trait!(UpgradeTransactionBuilder, UpgradeTransaction);
+impl_tx_builder_trait!(ScriptTransactionBuilder, ScriptTransaction);
+impl_tx_builder_trait!(CreateTransactionBuilder, CreateTransaction);
+impl_tx_builder_trait!(UploadTransactionBuilder, UploadTransaction);
+impl_tx_builder_trait!(UpgradeTransactionBuilder, UpgradeTransaction);
 
 impl ScriptTransactionBuilder {
     async fn build(mut self, provider: impl DryRunner) -> Result<ScriptTransaction> {
