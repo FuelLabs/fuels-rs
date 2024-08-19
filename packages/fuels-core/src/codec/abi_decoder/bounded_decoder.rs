@@ -210,12 +210,14 @@ impl BoundedDecoder {
 
     fn decode_string_slice(bytes: &[u8]) -> Result<Decoded> {
         let length = peek_length(bytes)?;
-        let bytes = peek(skip(bytes, LENGTH_BYTES_SIZE)?, length)?;
-        let decoded = str::from_utf8(bytes)?.to_string();
+        // skipping over the previously read length
+        let content_bytes = skip(bytes, LENGTH_BYTES_SIZE)?;
+        let string_bytes = peek(content_bytes, length)?;
+        let decoded = str::from_utf8(string_bytes)?.to_string();
 
         Ok(Decoded {
             token: Token::StringSlice(StaticStringToken::new(decoded, None)),
-            bytes_read: bytes.len(),
+            bytes_read: string_bytes.len() + LENGTH_BYTES_SIZE,
         })
     }
 
