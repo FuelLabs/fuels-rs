@@ -3,7 +3,6 @@ mod storage;
 use std::fmt::Debug;
 
 use fuel_tx::{Bytes32, Contract as FuelContract, ContractId, Salt, StorageSlot};
-use path_clean::PathClean;
 pub use storage::*;
 
 /// Represents a contract that can be deployed either directly ([`Contract::regular`]) or through a loader [`Contract::convert_to_loader`].

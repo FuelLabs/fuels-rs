@@ -1,4 +1,8 @@
-use std::{default::Default, fmt::Debug, path::Path};
+use std::{
+    default::Default,
+    fmt::Debug,
+    path::{self, Path},
+};
 
 use fuel_tx::{Bytes32, ContractId, Salt, StorageSlot};
 use fuels_accounts::Account;
@@ -13,6 +17,7 @@ use fuels_core::{
     },
     Configurables,
 };
+use path_clean::PathClean;
 
 use super::{
     compute_contract_id_and_state_root, validate_path_and_extension, BlobsNotUploaded, Contract,
@@ -99,17 +104,24 @@ impl Contract<Regular> {
         binary_filepath: impl AsRef<Path>,
         config: LoadConfiguration,
     ) -> Result<Contract<Regular>> {
-        let binary_filepath = binary_filepath.as_ref();
-        validate_path_and_extension(binary_filepath, "bin")?;
-
-        let binary = std::fs::read(binary_filepath).map_err(|e| {
+        let clean_binary_filepath = binary_filepath.as_ref().clean();
+        let absolute_binary_filepath = path::absolute(&clean_binary_filepath).map_err(|e| {
             std::io::Error::new(
                 e.kind(),
-                format!("failed to read binary: {binary_filepath:?}: {e}"),
+                format!("failed to make path absolute: {clean_binary_filepath:?}: {e}"),
+            )
+        })?;
+        validate_path_and_extension(&absolute_binary_filepath, "bin")?;
+
+        let binary = std::fs::read(&absolute_binary_filepath).map_err(|e| {
+            std::io::Error::new(
+                e.kind(),
+                format!("failed to read binary: {absolute_binary_filepath:?}: {e}"),
             )
         })?;
 
-        let storage_slots = super::determine_storage_slots(config.storage, binary_filepath)?;
+        let storage_slots =
+            super::determine_storage_slots(config.storage, &absolute_binary_filepath)?;
 
         Ok(Contract {
             code: Regular::new(binary, config.configurables),
