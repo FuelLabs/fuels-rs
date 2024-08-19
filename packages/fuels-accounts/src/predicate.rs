@@ -44,7 +44,7 @@ impl Predicate {
         let absolute_file_path = path::absolute(&clean_file_path).map_err(|e| {
             error!(
                 IO,
-                "failed to canonicalize path: {clean_file_path:?}. Reason: {e}"
+                "failed to make path absolute: {clean_file_path:?}. Reason: {e}"
             )
         })?;
         let code = fs::read(&absolute_file_path).map_err(|e| {

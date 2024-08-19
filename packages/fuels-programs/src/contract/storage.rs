@@ -99,7 +99,7 @@ impl StorageSlots {
         let absolute_storage_path = path::absolute(&clean_storage_path).map_err(|e| {
             io::Error::new(
                 e.kind(),
-                format!("failed to canonicalize path {clean_storage_path:?}. Reason: {e}"),
+                format!("failed to make path absolute: {clean_storage_path:?}. Reason: {e}"),
             )
         })?;
 
