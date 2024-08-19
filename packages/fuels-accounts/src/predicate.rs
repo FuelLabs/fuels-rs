@@ -46,7 +46,7 @@ impl Predicate {
                 "failed to make path absolute: {file_path:?}. Reason: {e}"
             )
         })?;
-        let clean_file_path = path_clean::clean(&absolute_file_path);
+        let clean_file_path = path_clean::clean(absolute_file_path);
         let code = fs::read(&clean_file_path).map_err(|e| {
             error!(
                 IO,
