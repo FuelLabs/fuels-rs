@@ -40,17 +40,17 @@ impl Predicate {
     }
 
     pub fn load_from(file_path: &str) -> Result<Self> {
-        let clean_file_path = path_clean::clean(file_path);
-        let absolute_file_path = path::absolute(&clean_file_path).map_err(|e| {
+        let absolute_file_path = path::absolute(file_path).map_err(|e| {
             error!(
                 IO,
-                "failed to make path absolute: {clean_file_path:?}. Reason: {e}"
+                "failed to make path absolute: {file_path:?}. Reason: {e}"
             )
         })?;
-        let code = fs::read(&absolute_file_path).map_err(|e| {
+        let clean_file_path = path_clean::clean(&absolute_file_path);
+        let code = fs::read(&clean_file_path).map_err(|e| {
             error!(
                 IO,
-                "could not read predicate binary {absolute_file_path:?}. Reason: {e}",
+                "could not read predicate binary {clean_file_path:?}. Reason: {e}",
             )
         })?;
         Ok(Self::from_code(code))

@@ -95,20 +95,23 @@ impl StorageSlots {
     }
 
     pub(crate) fn load_from_file(storage_path: impl AsRef<Path>) -> Result<Self> {
-        let clean_storage_path = storage_path.as_ref().clean();
-        let absolute_storage_path = path::absolute(&clean_storage_path).map_err(|e| {
+        let absolute_storage_path = path::absolute(storage_path.as_ref()).map_err(|e| {
             io::Error::new(
                 e.kind(),
-                format!("failed to make path absolute: {clean_storage_path:?}. Reason: {e}"),
+                format!(
+                    "failed to make path absolute: {:?}. Reason: {e}",
+                    storage_path.as_ref()
+                ),
             )
         })?;
+        let clean_storage_path = absolute_storage_path.clean();
 
-        validate_path_and_extension(&absolute_storage_path, "json")?;
+        validate_path_and_extension(&clean_storage_path, "json")?;
 
-        let storage_json_string = std::fs::read_to_string(&absolute_storage_path).map_err(|e| {
+        let storage_json_string = std::fs::read_to_string(&clean_storage_path).map_err(|e| {
             io::Error::new(
                 e.kind(),
-                format!("failed to read storage slots from: {absolute_storage_path:?}: {e}"),
+                format!("failed to read storage slots from: {clean_storage_path:?}: {e}"),
             )
         })?;
 

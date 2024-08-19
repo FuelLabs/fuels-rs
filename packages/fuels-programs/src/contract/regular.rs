@@ -104,24 +104,26 @@ impl Contract<Regular> {
         binary_filepath: impl AsRef<Path>,
         config: LoadConfiguration,
     ) -> Result<Contract<Regular>> {
-        let clean_binary_filepath = binary_filepath.as_ref().clean();
-        let absolute_binary_filepath = path::absolute(&clean_binary_filepath).map_err(|e| {
+        let absolute_binary_filepath = path::absolute(binary_filepath.as_ref()).map_err(|e| {
             std::io::Error::new(
                 e.kind(),
-                format!("failed to make path absolute: {clean_binary_filepath:?}: {e}"),
+                format!(
+                    "failed to make path absolute: {:?}: {e}",
+                    binary_filepath.as_ref()
+                ),
             )
         })?;
-        validate_path_and_extension(&absolute_binary_filepath, "bin")?;
+        let clean_binary_filepath = absolute_binary_filepath.clean();
+        validate_path_and_extension(&clean_binary_filepath, "bin")?;
 
-        let binary = std::fs::read(&absolute_binary_filepath).map_err(|e| {
+        let binary = std::fs::read(&clean_binary_filepath).map_err(|e| {
             std::io::Error::new(
                 e.kind(),
-                format!("failed to read binary: {absolute_binary_filepath:?}: {e}"),
+                format!("failed to read binary: {clean_binary_filepath:?}: {e}"),
             )
         })?;
 
-        let storage_slots =
-            super::determine_storage_slots(config.storage, &absolute_binary_filepath)?;
+        let storage_slots = super::determine_storage_slots(config.storage, &clean_binary_filepath)?;
 
         Ok(Contract {
             code: Regular::new(binary, config.configurables),
