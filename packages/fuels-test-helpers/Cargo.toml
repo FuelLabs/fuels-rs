@@ -12,6 +12,7 @@ description = "Fuel Rust SDK test helpers."
 [dependencies]
 fuel-core = { workspace = true, default-features = false, features = [
   "test-helpers",
+  "wasm-executor",
 ], optional = true }
 fuel-core-chain-config = { workspace = true, features = ["test-helpers"] }
 fuel-core-client = { workspace = true }
