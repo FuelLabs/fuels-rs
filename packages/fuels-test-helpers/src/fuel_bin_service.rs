@@ -7,6 +7,7 @@ use std::{
 use fuel_core_chain_config::{ChainConfig, SnapshotWriter, StateConfig};
 use fuel_core_client::client::FuelClient;
 use fuel_core_services::State;
+use fuel_core_types::blockchain::header::LATEST_STATE_TRANSITION_VERSION;
 use fuels_core::{error, types::errors::Result as FuelResult};
 use portpicker::{is_free, pick_unused_port};
 use tempfile::{tempdir, TempDir};
@@ -75,6 +76,16 @@ impl ExtendedConfig {
 
         let body_limit = self.node_config.graphql_request_body_bytes_limit;
         args.push(format!("--graphql-request-body-bytes-limit={body_limit}"));
+
+        // This ensures forward compatibility when running against a newer node with a different native executor version.
+        // If the node detects our older version in the chain configuration, it defaults to using the wasm executor.
+        // However, since we don't include a wasm executor, this would lead to code loading failure and a node crash.
+        // To prevent this, we force the node to use our version number to refer to its native executor.
+        let executor_version = self
+            .chain_config
+            .genesis_state_transition_version
+            .unwrap_or(LATEST_STATE_TRANSITION_VERSION);
+        args.push(format!("--native-executor-version={executor_version}"));
 
         args.extend(
             [
