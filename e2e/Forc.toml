@@ -111,5 +111,3 @@ members = [
   'sway/types/scripts/script_u256',
   'sway/types/scripts/script_vectors',
 ]
-[patch.'https://github.com/fuellabs/sway']
-std = { git = "https://github.com/fuellabs/sway", branch = "esdrubal/abi_changes" }
