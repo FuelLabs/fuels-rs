@@ -145,9 +145,9 @@ jobs:
             install_fuel_core: true
           - cargo_command: nextest
             args: run --all-targets --workspace --cargo-quiet
-            env: E2E_TARGET_TESTNET=1
             download_sway_artifacts: sway-examples
             install_fuel_core: true
+            target_testnet: true
           - cargo_command: test
             args: --doc --workspace
           - cargo_command: machete
@@ -209,7 +209,11 @@ jobs:
 
       - name: Cargo (workspace-level)
         if: ${{ matrix.cargo_command && !matrix.package }}
-        run: cargo ${{ matrix.cargo_command }} ${{ matrix.args }}
+        run: |
+          if [ -n "${{ matrix.target_testnet }}" ]; then
+            echo "E2E_TARGET_TESTNET=${{ matrix.target_testnet }}" >> $GITHUB_ENV
+          fi
+          cargo ${{ matrix.cargo_command }} ${{ matrix.args }}
 
       - name: Cargo (package-level)
         if: ${{ matrix.cargo_command && matrix.package }}
