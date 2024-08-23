@@ -198,7 +198,7 @@ where
                 .build(provider)
                 .await?;
 
-            provider.dry_run_opt(tx, false, None).await?
+            provider.dry_run_opt(tx, false, Some(0)).await?
         } else {
             let tx = self.build_tx().await?;
             provider.dry_run(tx).await?
@@ -462,7 +462,7 @@ where
                 .build(provider)
                 .await?;
 
-            provider.dry_run_opt(tx, false, None).await?
+            provider.dry_run_opt(tx, false, Some(0)).await?
         } else {
             let tx = self.build_tx().await?;
             provider.dry_run(tx).await?

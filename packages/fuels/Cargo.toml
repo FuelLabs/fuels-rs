@@ -14,7 +14,6 @@ description = "Fuel Rust SDK."
 ignored = ["fuel-core"]
 
 [dependencies]
-fuel-core = { workspace = true, default-features = false, optional = true }
 fuel-core-client = { workspace = true, optional = true }
 fuel-crypto = { workspace = true }
 fuel-tx = { workspace = true }
@@ -40,5 +39,5 @@ std = [
   "fuels-core/std",
   "fuels-test-helpers?/std",
 ]
-fuel-core-lib = ["fuels-test-helpers?/fuel-core-lib", "dep:fuel-core"]
-rocksdb = ["fuel-core?/rocksdb", "fuels-test-helpers?/rocksdb"]
+fuel-core-lib = ["fuels-test-helpers?/fuel-core-lib"]
+rocksdb = ["fuels-test-helpers?/rocksdb"]
