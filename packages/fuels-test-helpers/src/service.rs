@@ -3,8 +3,6 @@ use std::net::SocketAddr;
 #[cfg(feature = "fuel-core-lib")]
 use fuel_core::service::{Config as ServiceConfig, FuelService as CoreFuelService};
 use fuel_core_chain_config::{ChainConfig, StateConfig};
-#[cfg(feature = "fuel-core-lib")]
-use fuel_core_services::Service;
 use fuel_core_services::State;
 use fuels_core::types::errors::{error, Result};
 
@@ -47,7 +45,7 @@ impl FuelService {
 
     pub async fn stop(&self) -> Result<State> {
         #[cfg(feature = "fuel-core-lib")]
-        let result = self.service.stop_and_await().await;
+        let result = self.service.send_stop_signal_and_await_shutdown().await;
 
         #[cfg(not(feature = "fuel-core-lib"))]
         let result = self.service.stop();

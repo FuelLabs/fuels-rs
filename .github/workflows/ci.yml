@@ -16,7 +16,7 @@ env:
   CARGO_TERM_COLOR: always
   DASEL_VERSION: https://github.com/TomWright/dasel/releases/download/v2.3.6/dasel_linux_amd64
   RUSTFLAGS: "-D warnings"
-  FUEL_CORE_VERSION: 0.32.1
+  FUEL_CORE_VERSION: 0.33.0
   FUEL_CORE_PATCH_BRANCH:
   RUST_VERSION: 1.79.0
   FORC_VERSION: 0.63.1
@@ -166,6 +166,7 @@ jobs:
         with:
           toolchain: ${{ env.RUST_VERSION }}
           components: clippy,rustfmt
+          targets: wasm32-unknown-unknown
 
         # selecting a toolchain either by action or manual `rustup` calls should happen
         # before the cache plugin, as it uses the current rustc version as its cache key
@@ -219,7 +220,6 @@ jobs:
       - name: Test WASM
         if: ${{ matrix.command == 'test_wasm' }}
         run: |
-          rustup target add wasm32-unknown-unknown
           curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
           cd wasm-tests
           wasm-pack test --node
