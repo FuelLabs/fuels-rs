@@ -148,6 +148,9 @@ jobs:
             download_sway_artifacts: sway-examples
             install_fuel_core: true
             target_testnet: true
+            if: |
+              (github.event_name == 'push' && github.event.base_ref == 'master') ||
+              (github.event_name == 'pull_request' && contains(github.event.head_commit.message, '[testnet]'))
           - cargo_command: test
             args: --doc --workspace
           - cargo_command: machete
