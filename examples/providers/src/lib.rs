@@ -63,7 +63,11 @@ mod tests {
         // ANCHOR_END: setup_single_asset
 
         // ANCHOR: configure_retry
-        let retry_config = RetryConfig::new(3, Backoff::Fixed(Duration::from_secs(2)))?;
+        let retry_config = RetryConfig::new(
+            3,
+            Backoff::Fixed(Duration::from_secs(2)),
+            Duration::from_secs(5),
+        )?;
         let provider = setup_test_provider(coins.clone(), vec![], None, None)
             .await?
             .with_retry_config(retry_config);

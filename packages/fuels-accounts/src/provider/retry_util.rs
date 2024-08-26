@@ -77,17 +77,19 @@ impl Backoff {
 pub struct RetryConfig {
     max_attempts: NonZeroU32,
     interval: Backoff,
+    timeout: Duration,
 }
 // ANCHOR_END: retry_config
 
 impl RetryConfig {
-    pub fn new(max_attempts: u32, interval: Backoff) -> Result<Self> {
+    pub fn new(max_attempts: u32, interval: Backoff, timeout: Duration) -> Result<Self> {
         let max_attempts = NonZeroU32::new(max_attempts)
             .ok_or_else(|| error!(Other, "`max_attempts` must be greater than `0`"))?;
 
         Ok(RetryConfig {
             max_attempts,
             interval,
+            timeout,
         })
     }
 }
@@ -97,6 +99,7 @@ impl Default for RetryConfig {
         Self {
             max_attempts: NonZeroU32::new(1).expect("should not fail"),
             interval: Default::default(),
+            timeout: Duration::from_secs(5),
         }
     }
 }
@@ -134,12 +137,12 @@ where
     let mut last_result = None;
 
     for attempt in 0..retry_config.max_attempts.into() {
-        let result = action().await;
-
-        if should_retry(&result) {
-            last_result = Some(result)
-        } else {
-            return result;
+        if let Ok(result) = tokio::time::timeout(retry_config.timeout, action()).await {
+            if should_retry(&result) {
+                last_result = Some(result);
+            } else {
+                return result;
+            }
         }
 
         tokio::time::sleep(retry_config.interval.wait_duration(attempt)).await;
@@ -173,7 +176,11 @@ mod tests {
 
             let should_retry_fn = |_res: &_| -> bool { true };
 
-            let retry_options = RetryConfig::new(3, Backoff::Linear(Duration::from_millis(10)))?;
+            let retry_options = RetryConfig::new(
+                3,
+                Backoff::Linear(Duration::from_millis(10)),
+                RetryConfig::default().timeout,
+            )?;
 
             // when
             let response =
@@ -194,7 +201,11 @@ mod tests {
 
             let should_retry_fn = |res: &i32| *res != 2;
 
-            let retry_options = RetryConfig::new(3, Backoff::Linear(Duration::from_millis(10)))?;
+            let retry_options = RetryConfig::new(
+                3,
+                Backoff::Linear(Duration::from_millis(10)),
+                RetryConfig::default().timeout,
+            )?;
 
             // when
             let response =
@@ -218,7 +229,11 @@ mod tests {
 
             let should_retry_fn = |_res: &_| -> bool { true };
 
-            let retry_options = RetryConfig::new(3, Backoff::Fixed(Duration::from_millis(100)))?;
+            let retry_options = RetryConfig::new(
+                3,
+                Backoff::Fixed(Duration::from_millis(100)),
+                RetryConfig::default().timeout,
+            )?;
 
             // when
             let _ = retry_util::retry(
@@ -259,7 +274,11 @@ mod tests {
 
             let should_retry_fn = |_res: &_| -> bool { true };
 
-            let retry_options = RetryConfig::new(3, Backoff::Linear(Duration::from_millis(100)))?;
+            let retry_options = RetryConfig::new(
+                3,
+                Backoff::Linear(Duration::from_millis(100)),
+                RetryConfig::default().timeout,
+            )?;
 
             // when
             let _ = retry_util::retry(
@@ -301,8 +320,11 @@ mod tests {
 
             let should_retry_fn = |_res: &_| -> bool { true };
 
-            let retry_options =
-                RetryConfig::new(3, Backoff::Exponential(Duration::from_millis(100)))?;
+            let retry_options = RetryConfig::new(
+                3,
+                Backoff::Exponential(Duration::from_millis(100)),
+                RetryConfig::default().timeout,
+            )?;
 
             // when
             let _ = retry_util::retry(
