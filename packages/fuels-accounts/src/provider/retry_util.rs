@@ -69,8 +69,9 @@ impl Backoff {
 ///
 /// let max_attempts = 5;
 /// let interval_strategy = Backoff::Exponential(Duration::from_secs(1));
+/// let timeout = Duration::from_secs(5);
 ///
-/// let retry_config = RetryConfig::new(max_attempts, interval_strategy).unwrap();
+/// let retry_config = RetryConfig::new(max_attempts, interval_strategy, timeout).unwrap();
 /// ```
 // ANCHOR: retry_config
 #[derive(Clone, Debug)]
