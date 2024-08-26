@@ -1,3 +1,7 @@
+use fuel_tx::{
+    consensus_parameters::{ConsensusParametersV1, FeeParametersV1},
+    ConsensusParameters, FeeParameters,
+};
 use fuels::{
     core::codec::{calldata, encode_fn_selector, DecoderConfig, EncoderConfig},
     prelude::*,
@@ -1861,23 +1865,49 @@ async fn variable_output_estimation_is_optimized() -> Result<()> {
     Ok(())
 }
 
+async fn setup_node_with_high_price() -> Result<Vec<WalletUnlocked>> {
+    let wallet_config = WalletsConfig::new(None, None, None);
+    let fee_parameters = FeeParameters::V1(FeeParametersV1 {
+        gas_price_factor: 92000,
+        gas_per_byte: 63,
+    });
+    let consensus_parameters = ConsensusParameters::V1(ConsensusParametersV1 {
+        fee_params: fee_parameters,
+        ..Default::default()
+    });
+    let node_config = Some(NodeConfig {
+        starting_gas_price: 1100,
+        ..NodeConfig::default()
+    });
+    let chain_config = ChainConfig {
+        consensus_parameters,
+        ..ChainConfig::default()
+    };
+    let wallets =
+        launch_custom_provider_and_get_wallets(wallet_config, node_config, Some(chain_config))
+            .await?;
+
+    Ok(wallets)
+}
+
 #[tokio::test]
 async fn simulations_can_be_made_without_coins() -> Result<()> {
-    setup_program_test!(
-        Wallets("wallet"),
-        Abigen(Contract(
-            name = "MyContract",
-            project = "e2e/sway/contracts/contract_test"
-        )),
-        Deploy(
-            name = "contract_instance",
-            contract = "MyContract",
-            wallet = "wallet"
-        )
-    );
-    let contract_id = contract_instance.contract_id();
-    let provider = wallet.provider().cloned();
+    abigen!(Contract(
+        name = "MyContract",
+        abi = "e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
+    ));
 
+    let wallets = setup_node_with_high_price().await?;
+    let wallet = wallets.first().expect("has wallet");
+
+    let contract_id = Contract::load_from(
+        "sway/contracts/contract_test/out/release/contract_test.bin",
+        LoadConfiguration::default(),
+    )?
+    .deploy(wallet, TxPolicies::default())
+    .await?;
+
+    let provider = wallet.provider().cloned();
     let no_funds_wallet = WalletUnlocked::new_random(provider);
 
     let response = MyContract::new(contract_id, no_funds_wallet.clone())
@@ -1893,21 +1923,22 @@ async fn simulations_can_be_made_without_coins() -> Result<()> {
 
 #[tokio::test]
 async fn simulations_can_be_made_without_coins_multicall() -> Result<()> {
-    setup_program_test!(
-        Wallets("wallet"),
-        Abigen(Contract(
-            name = "MyContract",
-            project = "e2e/sway/contracts/contract_test"
-        )),
-        Deploy(
-            name = "contract_instance",
-            contract = "MyContract",
-            wallet = "wallet"
-        )
-    );
-    let contract_id = contract_instance.contract_id();
-    let provider = wallet.provider().cloned();
+    abigen!(Contract(
+        name = "MyContract",
+        abi = "e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
+    ));
 
+    let wallets = setup_node_with_high_price().await?;
+    let wallet = wallets.first().expect("has wallet");
+
+    let contract_id = Contract::load_from(
+        "sway/contracts/contract_test/out/release/contract_test.bin",
+        LoadConfiguration::default(),
+    )?
+    .deploy(wallet, TxPolicies::default())
+    .await?;
+
+    let provider = wallet.provider().cloned();
     let no_funds_wallet = WalletUnlocked::new_random(provider);
     let contract_instance = MyContract::new(contract_id, no_funds_wallet.clone());
 
