@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-regex = "1"
+regex = { workspace = true }
 dotenv = "0.15"
-tokio = { version = "1", features = ["full"] }
+tokio = { workspace = true, features = ["full"] }
 octocrab = "0.39"
