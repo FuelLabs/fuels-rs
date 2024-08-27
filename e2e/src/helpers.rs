@@ -16,7 +16,7 @@ pub async fn maybe_connect_to_testnet_and_get_wallets(
     node_config: Option<NodeConfig>,
     chain_config: Option<ChainConfig>,
 ) -> Result<Vec<WalletUnlocked>> {
-    if option_env!("E2E_TARGET_TESTNET").is_some() {
+    if option_env!("E2E_TARGET").unwrap_or_default() == "testnet" {
         let num_wallets = wallet_config.num_wallets();
         if num_wallets > TEST_WALLETS_COUNT {
             error!(
