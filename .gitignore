@@ -18,3 +18,7 @@ docs/book/
 # Don't add out/ files from test Sway projects.
 e2e/sway/**/out/
 e2e/sway/**/.gitignore
+
+.env
+
+output_changelog.md

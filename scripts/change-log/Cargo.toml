@@ -1,0 +1,10 @@
+[package]
+name = "change-log"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+regex = { workspace = true }
+dotenv = "0.15"
+tokio = { workspace = true, features = ["full"] }
+octocrab = "0.39"
