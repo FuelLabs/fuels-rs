@@ -37,4 +37,4 @@ tokio = { workspace = true, features = ["test-util", "macros"] }
 
 [features]
 default = ["std"]
-std = ["dep:fuel-core-client"]
+std = ["dep:fuel-core-client", "fuel-core-types/std"]
