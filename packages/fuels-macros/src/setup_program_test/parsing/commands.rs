@@ -3,7 +3,7 @@ pub(crate) use deploy_contract::DeployContractCommand;
 pub(crate) use initialize_wallet::InitializeWalletCommand;
 use itertools::Itertools;
 pub(crate) use load_script::LoadScriptCommand;
-pub(crate) use set_options::{BuildProfile, SetOptionsCommand, Target};
+pub(crate) use set_options::{BuildProfile, SetOptionsCommand};
 use syn::{
     parse::{Parse, ParseStream},
     Result,

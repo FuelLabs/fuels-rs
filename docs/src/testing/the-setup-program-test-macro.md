@@ -26,14 +26,13 @@ Available `COMMAND`s:
 
 ## Options
 
-Example: `Options(profile="debug", target="testnet")`
+Example: `Options(profile="debug")`
 
 Description: Sets options from `ARG`s to be used by other `COMMAND`s.
 
 Available options:
 
 - `profile`: sets the `cargo` build profile. Variants: `"release"` (default),  `"debug"`
-- `target`: specifies the target provider for tests. Variants: `"local"` (default),  `"testnet"`
 
 Cardinality: 0 or 1.
 

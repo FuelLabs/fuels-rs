@@ -10,7 +10,7 @@ use syn::LitStr;
 
 use crate::setup_program_test::parsing::{
     AbigenCommand, BuildProfile, DeployContractCommand, InitializeWalletCommand, LoadScriptCommand,
-    SetOptionsCommand, Target, TestProgramCommands,
+    SetOptionsCommand, TestProgramCommands,
 };
 
 pub(crate) fn generate_setup_program_test_code(
@@ -24,10 +24,10 @@ pub(crate) fn generate_setup_program_test_code(
         load_scripts,
     } = commands;
 
-    let SetOptionsCommand { profile, target } = set_options.unwrap_or_default();
+    let SetOptionsCommand { profile } = set_options.unwrap_or_default();
     let project_lookup = generate_project_lookup(&generate_bindings, profile)?;
     let abigen_code = abigen_code(&project_lookup)?;
-    let wallet_code = wallet_initialization_code(initialize_wallets, target);
+    let wallet_code = wallet_initialization_code(initialize_wallets);
     let deploy_code = contract_deploying_code(&deploy_contract, &project_lookup);
     let script_code = script_loading_code(&load_scripts, &project_lookup);
 
@@ -79,10 +79,7 @@ fn parse_abigen_targets(
         .collect()
 }
 
-fn wallet_initialization_code(
-    maybe_command: Option<InitializeWalletCommand>,
-    target: Target,
-) -> TokenStream {
+fn wallet_initialization_code(maybe_command: Option<InitializeWalletCommand>) -> TokenStream {
     let command = if let Some(command) = maybe_command {
         command
     } else {
@@ -96,13 +93,8 @@ fn wallet_initialization_code(
     }
 
     let num_wallets = wallet_names.len();
-    let connecting_function = match target {
-        Target::Local => quote! { ::fuels::test_helpers::launch_custom_provider_and_get_wallets },
-        Target::Testnet => quote! { ::e2e::helpers::maybe_connect_to_testnet_and_get_wallets },
-    };
-
     quote! {
-        let [#(#wallet_names),*]: [_; #num_wallets] = #connecting_function(
+        let [#(#wallet_names),*]: [_; #num_wallets] = ::fuels::test_helpers::launch_custom_provider_and_get_wallets(
             ::fuels::test_helpers::WalletsConfig::new(Some(#num_wallets as u64), None, None),
             None,
             None,

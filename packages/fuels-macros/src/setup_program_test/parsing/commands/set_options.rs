@@ -36,42 +36,9 @@ impl fmt::Display for BuildProfile {
     }
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub enum Target {
-    #[default]
-    Local,
-    Testnet,
-}
-
-impl FromStr for Target {
-    type Err = &'static str;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "local" => Ok(Self::Local),
-            "testnet" => Ok(Self::Testnet),
-            _ => Err(r#"invalid target option: must be "local" or "testnet""#),
-        }
-    }
-}
-
-impl fmt::Display for Target {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                Self::Local => "local",
-                Self::Testnet => "testnet",
-            }
-        )
-    }
-}
-
 #[derive(Debug, Clone, Default)]
 pub struct SetOptionsCommand {
     pub profile: BuildProfile,
-    pub target: Target,
 }
 
 impl TryFrom<Command> for SetOptionsCommand {
@@ -79,7 +46,7 @@ impl TryFrom<Command> for SetOptionsCommand {
 
     fn try_from(command: Command) -> Result<Self, Self::Error> {
         let name_values = UniqueNameValues::new(command.contents)?;
-        name_values.validate_has_no_other_names(&["profile", "target"])?;
+        name_values.validate_has_no_other_names(&["profile"])?;
 
         let profile = name_values.get_as_lit_str("profile")?;
         let profile = profile
@@ -88,13 +55,6 @@ impl TryFrom<Command> for SetOptionsCommand {
             .parse()
             .map_err(|msg| Error::new(profile.span(), msg))?;
 
-        let target = name_values.get_as_lit_str("target")?;
-        let target = target
-            .value()
-            .as_str()
-            .parse()
-            .map_err(|msg| Error::new(target.span(), msg))?;
-
-        Ok(Self { profile, target })
+        Ok(Self { profile })
     }
 }
