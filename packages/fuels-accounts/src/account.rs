@@ -93,6 +93,21 @@ pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync + Clone {
         self.try_provider()?.get_spendable_resources(filter).await
     }
 
+    /// Returns a vector containing the output coin and change output given an asset and amount
+    fn get_asset_outputs_for_amount(
+        &self,
+        to: &Bech32Address,
+        asset_id: AssetId,
+        amount: u64,
+    ) -> Vec<Output> {
+        vec![
+            Output::coin(to.into(), amount, asset_id),
+            // Note that the change will be computed by the node.
+            // Here we only have to tell the node who will own the change and its asset ID.
+            Output::change(self.address().into(), 0, asset_id),
+        ]
+    }
+
     /// Returns a vector consisting of `Input::Coin`s and `Input::Message`s for the given
     /// asset ID and amount. The `witness_index` is the position of the witness (signature)
     /// in the transaction's list of witnesses. In the validation process, the node will
@@ -141,21 +156,6 @@ pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync + Clone {
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait Account: ViewOnlyAccount {
-    /// Returns a vector containing the output coin and change output given an asset and amount
-    fn get_asset_outputs_for_amount(
-        &self,
-        to: &Bech32Address,
-        asset_id: AssetId,
-        amount: u64,
-    ) -> Vec<Output> {
-        vec![
-            Output::coin(to.into(), amount, asset_id),
-            // Note that the change will be computed by the node.
-            // Here we only have to tell the node who will own the change and its asset ID.
-            Output::change(self.address().into(), 0, asset_id),
-        ]
-    }
-
     // Add signatures to the builder if the underlying account is a wallet
     fn add_witnesses<Tb: TransactionBuilder>(&self, _tb: &mut Tb) -> Result<()> {
         Ok(())
