@@ -1,7 +1,6 @@
 use std::{ops::Add, path::Path};
 
 use chrono::{DateTime, Duration, TimeZone, Utc};
-use e2e::helpers::maybe_connect_to_testnet_and_get_wallets;
 use fuel_asm::RegId;
 use fuel_tx::Witness;
 use fuels::{
@@ -17,6 +16,10 @@ use fuels::{
         tx_status::TxStatus,
         Bits256,
     },
+};
+
+use e2e::helpers::{
+    maybe_connect_to_testnet_and_get_wallet, maybe_connect_to_testnet_and_get_wallets,
 };
 
 #[tokio::test]
@@ -317,8 +320,8 @@ async fn contract_deployment_respects_maturity() -> Result<()> {
 
 #[tokio::test]
 async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
             project = "e2e/sway/contracts/contract_test"
@@ -355,8 +358,8 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<()> {
 
 #[tokio::test]
 async fn test_amount_and_asset_forwarding() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TokenContract",
             project = "e2e/sway/contracts/token_ops"
@@ -518,8 +521,8 @@ async fn test_gas_errors() -> Result<()> {
 
 #[tokio::test]
 async fn test_call_param_gas_errors() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
             project = "e2e/sway/contracts/contract_test"
@@ -560,8 +563,8 @@ async fn test_call_param_gas_errors() -> Result<()> {
 
 #[tokio::test]
 async fn test_get_gas_used() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
             project = "e2e/sway/contracts/contract_test"
@@ -868,8 +871,8 @@ async fn test_cache_invalidation_on_await() -> Result<()> {
 
 #[tokio::test]
 async fn can_fetch_mint_transactions() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
             project = "e2e/sway/contracts/contract_test"
@@ -1018,8 +1021,8 @@ async fn can_upload_executor_and_trigger_upgrade() -> Result<()> {
 
 #[tokio::test]
 async fn tx_respects_policies() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
             project = "e2e/sway/contracts/contract_test"

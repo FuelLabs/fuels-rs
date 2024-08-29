@@ -1,3 +1,4 @@
+use e2e::helpers::maybe_connect_to_testnet_and_get_wallet;
 use fuels::prelude::*;
 
 pub fn null_contract_id() -> Bech32ContractId {
@@ -26,9 +27,9 @@ mod hygiene {
 }
 
 #[tokio::test]
-async fn compile_bindings_from_contract_file() {
+async fn compile_bindings_from_contract_file() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "SimpleContract",
             project = "e2e/sway/bindings/simple_contract"
@@ -47,6 +48,7 @@ async fn compile_bindings_from_contract_file() {
     let encoded_args = call_handler.call.encoded_args.unwrap();
 
     assert_eq!(encoded_args, [0, 0, 0, 42]);
+    Ok(())
 }
 
 #[tokio::test]
@@ -104,8 +106,8 @@ async fn compile_bindings_from_inline_contract() -> Result<()> {
 
 #[tokio::test]
 async fn shared_types() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(
             Contract(
                 name = "ContractA",
@@ -221,8 +223,8 @@ async fn shared_types() -> Result<()> {
 
 #[tokio::test]
 async fn type_paths_respected() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "ContractA",
             project = "e2e/sway/bindings/type_paths"

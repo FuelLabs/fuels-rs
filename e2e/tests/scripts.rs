@@ -34,8 +34,8 @@ async fn main_function_arguments() -> Result<()> {
 
 #[tokio::test]
 async fn script_call_has_same_estimated_and_used_gas() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
             project = "e2e/sway/scripts/basic_script"
@@ -67,8 +67,8 @@ async fn script_call_has_same_estimated_and_used_gas() -> Result<()> {
 
 #[tokio::test]
 async fn test_basic_script_with_tx_policies() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Script(
             name = "bimbam_script",
             project = "e2e/sway/scripts/basic_script"
@@ -100,8 +100,8 @@ async fn test_basic_script_with_tx_policies() -> Result<()> {
 
 #[tokio::test]
 async fn test_output_variable_estimation() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Script(
             name = "transfer_script",
             project = "e2e/sway/scripts/transfer_script"
@@ -141,8 +141,8 @@ async fn test_output_variable_estimation() -> Result<()> {
 
 #[tokio::test]
 async fn test_script_struct() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
             project = "e2e/sway/scripts/script_struct"
@@ -166,8 +166,8 @@ async fn test_script_struct() -> Result<()> {
 
 #[tokio::test]
 async fn test_script_enum() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
             project = "e2e/sway/scripts/script_enum"
@@ -188,8 +188,8 @@ async fn test_script_enum() -> Result<()> {
 
 #[tokio::test]
 async fn test_script_array() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
             project = "e2e/sway/scripts/script_array"
@@ -210,8 +210,8 @@ async fn test_script_array() -> Result<()> {
 
 #[tokio::test]
 async fn can_configure_decoder_on_script_call() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
             project = "e2e/sway/scripts/script_needs_custom_decoder"
@@ -257,8 +257,8 @@ async fn can_configure_decoder_on_script_call() -> Result<()> {
 
 #[tokio::test]
 async fn test_script_submit_and_response() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
             project = "e2e/sway/scripts/script_struct"
@@ -286,8 +286,8 @@ async fn test_script_submit_and_response() -> Result<()> {
 
 #[tokio::test]
 async fn test_script_transaction_builder() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
             project = "e2e/sway/scripts/basic_script"
@@ -372,8 +372,8 @@ async fn script_encoder_config_is_applied() {
 }
 #[tokio::test]
 async fn simulations_can_be_made_without_coins() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
             project = "e2e/sway/scripts/basic_script"

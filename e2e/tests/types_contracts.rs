@@ -15,8 +15,8 @@ pub fn null_contract_id() -> Bech32ContractId {
 
 #[tokio::test]
 async fn test_methods_typeless_argument() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TypesContract",
             project = "e2e/sway/types/contracts/empty_arguments"
@@ -41,8 +41,8 @@ async fn test_methods_typeless_argument() -> Result<()> {
 
 #[tokio::test]
 async fn call_with_empty_return() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
             project = "e2e/sway/types/contracts/call_empty_return"
@@ -101,8 +101,8 @@ async fn call_with_structs() -> Result<()> {
 
 #[tokio::test]
 async fn abigen_different_structs_same_arg_name() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TypesContract",
             project = "e2e/sway/types/contracts/two_structs"
@@ -130,8 +130,8 @@ async fn abigen_different_structs_same_arg_name() -> Result<()> {
 
 #[tokio::test]
 async fn nested_structs() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TypesContract",
             project = "e2e/sway/types/contracts/nested_structs"
@@ -190,8 +190,8 @@ async fn nested_structs() -> Result<()> {
 
 #[tokio::test]
 async fn calls_with_empty_struct() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TypesContract",
             project = "e2e/sway/types/contracts/complex_types_contract"
@@ -253,8 +253,8 @@ async fn can_use_try_into_to_construct_struct_from_bytes() -> Result<()> {
 
 #[tokio::test]
 async fn test_tuples() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TypesContract",
             project = "e2e/sway/types/contracts/tuples"
@@ -327,8 +327,8 @@ async fn test_tuples() -> Result<()> {
 
 #[tokio::test]
 async fn test_evm_address() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TypesContract",
             project = "e2e/sway/types/contracts/evm_address"
@@ -394,8 +394,8 @@ async fn test_evm_address() -> Result<()> {
 
 #[tokio::test]
 async fn test_array() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TypesContract",
             project = "e2e/sway/contracts/contract_test"
@@ -421,8 +421,8 @@ async fn test_array() -> Result<()> {
 
 #[tokio::test]
 async fn test_arrays_with_custom_types() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TypesContract",
             project = "e2e/sway/contracts/contract_test"
@@ -463,8 +463,8 @@ async fn test_arrays_with_custom_types() -> Result<()> {
 
 #[tokio::test]
 async fn str_in_array() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TypesContract",
             project = "e2e/sway/types/contracts/str_in_array"
@@ -503,8 +503,8 @@ async fn str_in_array() -> Result<()> {
 
 #[tokio::test]
 async fn test_enum_inside_struct() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TypesContract",
             project = "e2e/sway/types/contracts/enum_inside_struct"
@@ -545,8 +545,8 @@ async fn test_enum_inside_struct() -> Result<()> {
 
 #[tokio::test]
 async fn native_types_support() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TypesContract",
             project = "e2e/sway/types/contracts/native_types"
@@ -583,8 +583,8 @@ async fn native_types_support() -> Result<()> {
 
 #[tokio::test]
 async fn enum_coding_w_variable_width_variants() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TypesContract",
             project = "e2e/sway/types/contracts/enum_encoding"
@@ -624,8 +624,8 @@ async fn enum_coding_w_variable_width_variants() -> Result<()> {
 
 #[tokio::test]
 async fn enum_coding_w_unit_enums() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TypesContract",
             project = "e2e/sway/types/contracts/enum_encoding"
@@ -663,8 +663,8 @@ async fn enum_coding_w_unit_enums() -> Result<()> {
 
 #[tokio::test]
 async fn enum_as_input() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TypesContract",
             project = "e2e/sway/types/contracts/enum_as_input"
@@ -739,8 +739,8 @@ async fn can_use_try_into_to_construct_enum_from_bytes() -> Result<()> {
 
 #[tokio::test]
 async fn type_inside_enum() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TypesContract",
             project = "e2e/sway/types/contracts/type_inside_enum"
@@ -803,8 +803,8 @@ async fn type_inside_enum() -> Result<()> {
 
 #[tokio::test]
 async fn test_rust_option_can_be_decoded() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TypesContract",
             project = "e2e/sway/types/contracts/options"
@@ -855,8 +855,8 @@ async fn test_rust_option_can_be_decoded() -> Result<()> {
 
 #[tokio::test]
 async fn test_rust_option_can_be_encoded() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TypesContract",
             project = "e2e/sway/types/contracts/options"
@@ -909,8 +909,8 @@ async fn test_rust_option_can_be_encoded() -> Result<()> {
 
 #[tokio::test]
 async fn test_rust_result_can_be_decoded() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TypesContract",
             project = "e2e/sway/types/contracts/results"
@@ -961,8 +961,8 @@ async fn test_rust_result_can_be_decoded() -> Result<()> {
 
 #[tokio::test]
 async fn test_rust_result_can_be_encoded() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TypesContract",
             project = "e2e/sway/types/contracts/results"
@@ -996,8 +996,8 @@ async fn test_rust_result_can_be_encoded() -> Result<()> {
 
 #[tokio::test]
 async fn test_identity_can_be_decoded() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TypesContract",
             project = "e2e/sway/types/contracts/identity"
@@ -1041,8 +1041,8 @@ async fn test_identity_can_be_decoded() -> Result<()> {
 
 #[tokio::test]
 async fn test_identity_can_be_encoded() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TypesContract",
             project = "e2e/sway/types/contracts/identity"
@@ -1089,8 +1089,8 @@ async fn test_identity_can_be_encoded() -> Result<()> {
 
 #[tokio::test]
 async fn test_identity_with_two_contracts() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TypesContract",
             project = "e2e/sway/types/contracts/identity"
@@ -1134,8 +1134,8 @@ async fn test_identity_with_two_contracts() -> Result<()> {
 
 #[tokio::test]
 async fn generics_test() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TypesContract",
             project = "e2e/sway/types/contracts/generics"
@@ -1265,8 +1265,8 @@ async fn generics_test() -> Result<()> {
 
 #[tokio::test]
 async fn contract_vectors() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TypesContract",
             project = "e2e/sway/types/contracts/vectors"
@@ -1352,8 +1352,8 @@ async fn contract_vectors() -> Result<()> {
 
 #[tokio::test]
 async fn test_b256() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TypesContract",
             project = "e2e/sway/types/contracts/b256"
@@ -1390,8 +1390,8 @@ async fn test_b256() -> Result<()> {
 
 #[tokio::test]
 async fn test_b512() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TypesContract",
             project = "e2e/sway/types/contracts/b512"
@@ -1438,8 +1438,8 @@ fn u128_from(parts: (u64, u64)) -> u128 {
 
 #[tokio::test]
 async fn test_u128() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TypesContract",
             project = "e2e/sway/types/contracts/u128"
@@ -1490,8 +1490,8 @@ fn u256_from(parts: (u64, u64, u64, u64)) -> U256 {
 
 #[tokio::test]
 async fn test_u256() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TypesContract",
             project = "e2e/sway/types/contracts/u256"
@@ -1527,8 +1527,8 @@ async fn test_u256() -> Result<()> {
 
 #[tokio::test]
 async fn test_base_type_in_vec_output() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "VectorOutputContract",
             project = "e2e/sway/types/contracts/vector_output"
@@ -1566,8 +1566,8 @@ async fn test_base_type_in_vec_output() -> Result<()> {
 
 #[tokio::test]
 async fn test_composite_types_in_vec_output() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "VectorOutputContract",
             project = "e2e/sway/types/contracts/vector_output"
@@ -1635,8 +1635,8 @@ async fn test_composite_types_in_vec_output() -> Result<()> {
 
 #[tokio::test]
 async fn test_bytes_output() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "BytesOutputContract",
             project = "e2e/sway/types/contracts/bytes"
@@ -1658,8 +1658,8 @@ async fn test_bytes_output() -> Result<()> {
 
 #[tokio::test]
 async fn test_bytes_as_input() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "BytesInputContract",
             project = "e2e/sway/types/contracts/bytes"
@@ -1694,8 +1694,8 @@ async fn test_bytes_as_input() -> Result<()> {
 
 #[tokio::test]
 async fn contract_raw_slice() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "RawSliceContract",
             project = "e2e/sway/types/contracts/raw_slice"
@@ -1739,8 +1739,8 @@ async fn contract_raw_slice() -> Result<()> {
 
 #[tokio::test]
 async fn contract_string_slice() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "StringSliceContract",
             project = "e2e/sway/types/contracts/string_slice"
@@ -1765,8 +1765,8 @@ async fn contract_string_slice() -> Result<()> {
 
 #[tokio::test]
 async fn contract_std_lib_string() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "StdLibString",
             project = "e2e/sway/types/contracts/std_lib_string"
@@ -1803,8 +1803,8 @@ async fn contract_std_lib_string() -> Result<()> {
 
 #[tokio::test]
 async fn test_heap_type_in_enums() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "HeapTypeInEnum",
             project = "e2e/sway/types/contracts/heap_type_in_enums"
@@ -1915,8 +1915,8 @@ async fn test_heap_type_in_enums() -> Result<()> {
 
 #[tokio::test]
 async fn nested_heap_types() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "HeapTypeInEnum",
             project = "e2e/sway/types/contracts/heap_types"

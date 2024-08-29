@@ -3,10 +3,12 @@ use fuels::{
     types::{Bits256, U256},
 };
 
+use e2e::helpers::maybe_connect_to_testnet_and_get_wallet;
+
 #[tokio::test]
 async fn script_b256() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
             project = "e2e/sway/types/scripts/script_b256"
@@ -28,8 +30,8 @@ async fn script_b256() -> Result<()> {
 
 #[tokio::test]
 async fn main_function_generic_arguments() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
             project = "e2e/sway/types/scripts/script_generics"
@@ -70,8 +72,8 @@ async fn main_function_generic_arguments() -> Result<()> {
 
 #[tokio::test]
 async fn main_function_option_result() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
             project = "e2e/sway/types/scripts/options_results"
@@ -104,8 +106,8 @@ async fn main_function_option_result() -> Result<()> {
 
 #[tokio::test]
 async fn main_function_tuple_types() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
             project = "e2e/sway/types/scripts/script_tuples"
@@ -149,8 +151,8 @@ async fn main_function_tuple_types() -> Result<()> {
 
 #[tokio::test]
 async fn main_function_vector_arguments() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
             project = "e2e/sway/types/scripts/script_vectors"
@@ -208,8 +210,8 @@ async fn main_function_vector_arguments() -> Result<()> {
 
 #[tokio::test]
 async fn script_raw_slice() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Script(
             name = "BimBamScript",
             project = "e2e/sway/types/scripts/script_raw_slice",
@@ -235,8 +237,8 @@ async fn script_raw_slice() -> Result<()> {
 
 #[tokio::test]
 async fn main_function_bytes_arguments() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Script(
             name = "BimBamScript",
             project = "e2e/sway/types/scripts/script_bytes",
@@ -269,8 +271,8 @@ fn u128_from(parts: (u64, u64)) -> u128 {
 
 #[tokio::test]
 async fn script_handles_u128() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
             project = "e2e/sway/types/scripts/script_u128",
@@ -306,8 +308,8 @@ fn u256_from(parts: (u64, u64, u64, u64)) -> U256 {
 
 #[tokio::test]
 async fn script_handles_u256() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
             project = "e2e/sway/types/scripts/script_u256",
@@ -330,8 +332,8 @@ async fn script_handles_u256() -> Result<()> {
 
 #[tokio::test]
 async fn script_std_string() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
             project = "e2e/sway/types/scripts/script_std_lib_string",
@@ -354,8 +356,8 @@ async fn script_std_string() -> Result<()> {
 
 #[tokio::test]
 async fn script_string_slice() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
             project = "e2e/sway/types/scripts/script_string_slice",
@@ -378,8 +380,8 @@ async fn script_string_slice() -> Result<()> {
 
 #[tokio::test]
 async fn nested_heap_types() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
             project = "e2e/sway/types/scripts/script_heap_types",

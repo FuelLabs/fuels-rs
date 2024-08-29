@@ -55,8 +55,8 @@ async fn contract_default_configurables() -> Result<()> {
 
 #[tokio::test]
 async fn script_default_configurables() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
             project = "e2e/sway/scripts/script_configurables"
@@ -162,13 +162,11 @@ async fn contract_configurables() -> Result<()> {
 
 #[tokio::test]
 async fn contract_manual_configurables() -> Result<()> {
-    setup_program_test!(
-        Abigen(Contract(
-            name = "MyContract",
-            project = "e2e/sway/contracts/configurables"
-        )),
-        Wallets("wallet")
-    );
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
+    setup_program_test!(Abigen(Contract(
+        name = "MyContract",
+        project = "e2e/sway/contracts/configurables"
+    )));
 
     let str_4: SizedAsciiString<4> = "FUEL".try_into()?;
     let new_struct = StructWithGeneric {

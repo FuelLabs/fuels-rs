@@ -8,8 +8,8 @@ use e2e::helpers::maybe_connect_to_testnet_and_get_wallet;
 
 #[tokio::test]
 async fn test_parse_logged_variables() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "LogContract",
             project = "e2e/sway/logs/contract_logs"
@@ -46,8 +46,8 @@ async fn test_parse_logged_variables() -> Result<()> {
 
 #[tokio::test]
 async fn test_parse_logs_values() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "LogContract",
             project = "e2e/sway/logs/contract_logs"
@@ -80,8 +80,8 @@ async fn test_parse_logs_values() -> Result<()> {
 
 #[tokio::test]
 async fn test_parse_logs_custom_types() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "LogContract",
             project = "e2e/sway/logs/contract_logs"
@@ -120,8 +120,8 @@ async fn test_parse_logs_custom_types() -> Result<()> {
 
 #[tokio::test]
 async fn test_parse_logs_generic_types() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "LogContract",
             project = "e2e/sway/logs/contract_logs"
@@ -172,8 +172,8 @@ async fn test_parse_logs_generic_types() -> Result<()> {
 
 #[tokio::test]
 async fn test_decode_logs() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "LogContract",
             project = "e2e/sway/logs/contract_logs"
@@ -226,8 +226,8 @@ async fn test_decode_logs() -> Result<()> {
 
 #[tokio::test]
 async fn test_decode_logs_with_no_logs() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
             project = "e2e/sway/contracts/contract_test"
@@ -253,8 +253,8 @@ async fn test_decode_logs_with_no_logs() -> Result<()> {
 
 #[tokio::test]
 async fn test_multi_call_log_single_contract() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "LogContract",
             project = "e2e/sway/logs/contract_logs"
@@ -301,8 +301,8 @@ async fn test_multi_call_log_single_contract() -> Result<()> {
 
 #[tokio::test]
 async fn test_multi_call_log_multiple_contracts() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "LogContract",
             project = "e2e/sway/logs/contract_logs"
@@ -352,8 +352,8 @@ async fn test_multi_call_log_multiple_contracts() -> Result<()> {
 
 #[tokio::test]
 async fn test_multi_call_contract_with_contract_logs() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(
             Contract(name = "MyContract", project = "e2e/sway/logs/contract_logs"),
             Contract(
@@ -426,8 +426,8 @@ fn assert_revert_containing_msg(msg: &str, error: Error) {
 
 #[tokio::test]
 async fn test_require_log() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "RequireContract",
             project = "e2e/sway/contracts/require"
@@ -483,8 +483,8 @@ async fn test_require_log() -> Result<()> {
 
 #[tokio::test]
 async fn test_multi_call_require_log_single_contract() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "RequireContract",
             project = "e2e/sway/contracts/require"
@@ -550,8 +550,8 @@ async fn test_multi_call_require_log_single_contract() -> Result<()> {
 
 #[tokio::test]
 async fn test_multi_call_require_log_multi_contract() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "RequireContract",
             project = "e2e/sway/contracts/require"
@@ -691,8 +691,8 @@ async fn test_script_decode_logs() -> Result<()> {
 
 #[tokio::test]
 async fn test_contract_with_contract_logs() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(
             Contract(name = "MyContract", project = "e2e/sway/logs/contract_logs",),
             Contract(
@@ -739,8 +739,8 @@ async fn test_contract_with_contract_logs() -> Result<()> {
 #[tokio::test]
 #[allow(unused_variables)]
 async fn test_script_logs_with_contract_logs() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(
             Contract(name = "MyContract", project = "e2e/sway/logs/contract_logs",),
             Script(
@@ -815,8 +815,8 @@ async fn test_script_logs_with_contract_logs() -> Result<()> {
 
 #[tokio::test]
 async fn test_script_decode_logs_with_type() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Script(
             name = "LogScript",
             project = "e2e/sway/logs/script_logs"
@@ -892,8 +892,8 @@ async fn test_script_decode_logs_with_type() -> Result<()> {
 
 #[tokio::test]
 async fn test_script_require_log() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Script(
             name = "LogScript",
             project = "e2e/sway/scripts/script_require"
@@ -949,8 +949,8 @@ async fn test_script_require_log() -> Result<()> {
 
 #[tokio::test]
 async fn test_contract_require_from_contract() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(
             Contract(
                 name = "MyContract",
@@ -992,8 +992,8 @@ async fn test_contract_require_from_contract() -> Result<()> {
 
 #[tokio::test]
 async fn test_multi_call_contract_require_from_contract() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(
             Contract(
                 name = "MyContract",
@@ -1052,8 +1052,8 @@ async fn test_multi_call_contract_require_from_contract() -> Result<()> {
 
 #[tokio::test]
 async fn test_script_require_from_contract() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(
             Contract(
                 name = "MyContract",
@@ -1095,8 +1095,8 @@ fn assert_assert_eq_containing_msg<T: std::fmt::Debug>(left: T, right: T, error:
 
 #[tokio::test]
 async fn test_contract_asserts_log() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "LogContract",
             project = "e2e/sway/contracts/asserts"
@@ -1197,8 +1197,8 @@ async fn test_contract_asserts_log() -> Result<()> {
 
 #[tokio::test]
 async fn test_script_asserts_log() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Script(
             name = "LogScript",
             project = "e2e/sway/scripts/script_asserts"
@@ -1312,8 +1312,8 @@ async fn test_script_asserts_log() -> Result<()> {
 
 #[tokio::test]
 async fn contract_token_ops_error_messages() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
             project = "e2e/sway/contracts/token_ops"
@@ -1352,8 +1352,8 @@ async fn contract_token_ops_error_messages() -> Result<()> {
 
 #[tokio::test]
 async fn test_log_results() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "MyContract",
             project = "e2e/sway/logs/contract_logs"
@@ -1390,8 +1390,8 @@ async fn test_log_results() -> Result<()> {
 
 #[tokio::test]
 async fn can_configure_decoder_for_contract_log_decoding() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "MyContract",
             project = "e2e/sway/contracts/needs_custom_decoder"
@@ -1480,8 +1480,8 @@ async fn can_configure_decoder_for_contract_log_decoding() -> Result<()> {
 
 #[tokio::test]
 async fn can_configure_decoder_for_script_log_decoding() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Script(
             name = "LogScript",
             project = "e2e/sway/logs/script_needs_custom_decoder_logging"
@@ -1534,8 +1534,8 @@ async fn can_configure_decoder_for_script_log_decoding() -> Result<()> {
 
 #[tokio::test]
 async fn contract_heap_log() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "MyContract",
             project = "e2e/sway/logs/contract_logs"
@@ -1590,8 +1590,8 @@ async fn contract_heap_log() -> Result<()> {
 
 #[tokio::test]
 async fn script_heap_log() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Script(
             name = "LogScript",
             project = "e2e/sway/logs/script_heap_logs"
