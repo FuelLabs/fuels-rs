@@ -1,8 +1,11 @@
+use std::time::Duration;
+
 use fuels::{
     core::codec::EncoderConfig,
     prelude::*,
     types::{Bits256, SizedAsciiString, U256},
 };
+use tokio::time::sleep;
 
 use e2e::helpers::maybe_connect_to_testnet_and_get_wallet;
 
@@ -130,6 +133,10 @@ async fn contract_configurables() -> Result<()> {
     )?
     .deploy(&wallet, TxPolicies::default())
     .await?;
+
+    if option_env!("E2E_TARGET").unwrap_or_default() == "testnet" {
+        sleep(Duration::from_secs(10)).await;
+    }
 
     let contract_instance = MyContract::new(contract_id, wallet.clone());
     // ANCHOR_END: contract_configurables
