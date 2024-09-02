@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{str::FromStr, time::Duration};
 
 use fuels::{
     accounts::{provider::Provider, wallet::WalletUnlocked},
@@ -10,13 +10,18 @@ use fuels::{
     test_helpers::{ChainConfig, NodeConfig, WalletsConfig},
     types::errors::Result,
 };
+use tokio::time::sleep;
+
+pub fn is_testnet() -> bool {
+    option_env!("E2E_TARGET").unwrap_or_default() == "testnet"
+}
 
 pub async fn maybe_connect_to_testnet_and_get_wallets(
     wallet_config: WalletsConfig,
     node_config: Option<NodeConfig>,
     chain_config: Option<ChainConfig>,
 ) -> Result<Vec<WalletUnlocked>> {
-    if option_env!("E2E_TARGET").unwrap_or_default() == "testnet" {
+    if is_testnet() {
         let num_wallets = wallet_config.num_wallets();
         if num_wallets > TEST_WALLETS_COUNT {
             error!(
@@ -59,4 +64,10 @@ pub async fn maybe_connect_to_testnet_and_get_wallet() -> Result<WalletUnlocked>
     )
     .await?;
     Ok(wallets.pop().expect("should have one wallet"))
+}
+
+pub async fn maybe_sleep_if_testnet() {
+    if is_testnet() {
+        sleep(Duration::from_secs(10)).await;
+    }
 }
