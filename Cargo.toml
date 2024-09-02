@@ -82,23 +82,21 @@ which = { version = "6.0.0", default-features = false }
 zeroize = "1.7.0"
 
 # Dependencies from the `fuel-core` repository:
-fuel-core = { path = "../fuel-core/crates/fuel-core/", default-features = false, features = [
-  "wasm-executor",
-] }
-fuel-core-chain-config = { path = "../fuel-core/crates/chain-config/", default-features = false }
-fuel-core-client = { path = "../fuel-core/crates/client/", default-features = false } #TODO: remove this @hal3e
-fuel-core-poa = { path = "../fuel-core/crates/services/consensus_module/poa", default-features = false }
-fuel-core-services = { path = "../fuel-core/crates/services/", default-features = false }
-fuel-core-types = { path = "../fuel-core/crates/types/", default-features = false }
+fuel-core = { git = "https://github.com/FuelLabs/fuel-core", branch = "hal3e/unknown-variants", package = "fuel-core", default-features = false, features = ["wasm-executor"] }
+fuel-core-chain-config = { git = "https://github.com/FuelLabs/fuel-core", branch = "hal3e/unknown-variants", package = "fuel-core-chain-config", default-features = false }
+fuel-core-client = { git = "https://github.com/FuelLabs/fuel-core", branch = "hal3e/unknown-variants", package = "fuel-core-client", default-features = false } # TODO: remove this @hal3e
+fuel-core-poa = { git = "https://github.com/FuelLabs/fuel-core", branch = "hal3e/unknown-variants", package = "fuel-core-poa", default-features = false }
+fuel-core-services = { git = "https://github.com/FuelLabs/fuel-core", branch = "hal3e/unknown-variants", package = "fuel-core-services", default-features = false }
+fuel-core-types = { git = "https://github.com/FuelLabs/fuel-core", branch = "hal3e/unknown-variants", package = "fuel-core-types", default-features = false }
 
 # Dependencies from the `fuel-vm` repository:
-fuel-asm = { path = "../fuel-vm/fuel-asm" }
-fuel-crypto = { path = "../fuel-vm/fuel-crypto" }
-fuel-merkle = { path = "../fuel-vm/fuel-merkle" }
-fuel-storage = { path = "../fuel-vm/fuel-storage" }
-fuel-tx = { path = "../fuel-vm/fuel-tx" }
-fuel-types = { path = "../fuel-vm/fuel-types" }
-fuel-vm = { path = "../fuel-vm/fuel-vm" }
+fuel-asm = { git = "https://github.com/FuelLabs/fuel-vm", branch = "hal3e/unknown-variants", package = "fuel-asm" }
+fuel-crypto = { git = "https://github.com/FuelLabs/fuel-vm", branch = "hal3e/unknown-variants", package = "fuel-crypto" }
+fuel-merkle = { git = "https://github.com/FuelLabs/fuel-vm", branch = "hal3e/unknown-variants", package = "fuel-merkle" }
+fuel-storage = { git = "https://github.com/FuelLabs/fuel-vm", branch = "hal3e/unknown-variants", package = "fuel-storage" }
+fuel-tx = { git = "https://github.com/FuelLabs/fuel-vm", branch = "hal3e/unknown-variants", package = "fuel-tx" }
+fuel-types = { git = "https://github.com/FuelLabs/fuel-vm", branch = "hal3e/unknown-variants", package = "fuel-types" }
+fuel-vm = { git = "https://github.com/FuelLabs/fuel-vm", branch = "hal3e/unknown-variants", package = "fuel-vm" }
 
 # Workspace projects
 fuels = { version = "0.66.2", path = "./packages/fuels", default-features = false }
