@@ -1,4 +1,4 @@
-use std::{future::Future, io};
+use std::{future::Future, io, time::Duration};
 
 use fuel_core_client::client::{
     pagination::{PaginatedResult, PaginationRequest},
@@ -14,6 +14,7 @@ use fuel_core_types::services::executor::TransactionExecutionStatus;
 use fuel_tx::{Transaction, TxId, UtxoId};
 use fuel_types::{Address, AssetId, BlockHeight, ContractId, Nonce};
 use fuels_core::types::errors::{error, Error, Result};
+use governor::Jitter;
 
 use super::supported_versions::{self, VersionCompatibility};
 use crate::provider::{retry_util, RetryConfig};
@@ -42,6 +43,10 @@ pub(crate) struct RetryableClient {
 
 impl RetryableClient {
     pub(crate) async fn connect(url: impl AsRef<str>, retry_config: RetryConfig) -> Result<Self> {
+        retry_util::RATE_LIMITER
+            .until_ready_with_jitter(Jitter::up_to(Duration::from_secs(1)))
+            .await;
+
         let url = url.as_ref().to_string();
         let client = FuelClient::new(&url).map_err(|e| error!(Provider, "{e}"))?;
 
