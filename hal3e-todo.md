@@ -1,6 +1,8 @@
-- [ ] transaction: `fuel-tx`
-  - [ ] add `Unknown` variant
-  - [ ] update the `from_bytes` in `fuel-tx`
+- [x] transaction: `fuel-tx`
+  - [x] add `Unknown` transaction variant
+  - [x] add `Unknown` `TransactionRepr`
+  - [x] refactor `fuel-core` and `fuel-core-client`
+  - [x] refactor `fuels-rs`
 
 - [x] coin-type: `fuels-rs`
   - [x] `fuel-core-client` already has an `Unknown` variant - update the `fuels-rs`

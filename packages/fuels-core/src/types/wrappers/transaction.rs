@@ -191,6 +191,7 @@ pub enum TransactionType {
     Upload(UploadTransaction),
     Upgrade(UpgradeTransaction),
     Blob(BlobTransaction),
+    Unknown,
 }
 
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
@@ -297,6 +298,7 @@ impl From<TransactionType> for FuelTransaction {
             TransactionType::Upload(tx) => tx.into(),
             TransactionType::Upgrade(tx) => tx.into(),
             TransactionType::Blob(tx) => tx.into(),
+            TransactionType::Unknown => FuelTransaction::Unknown,
         }
     }
 }

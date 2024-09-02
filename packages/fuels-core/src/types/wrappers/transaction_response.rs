@@ -45,6 +45,7 @@ impl From<ClientTransactionResponse> for TransactionResponse {
             Transaction::Upgrade(tx) => TransactionType::Upgrade(tx.into()),
             Transaction::Upload(tx) => TransactionType::Upload(tx.into()),
             Transaction::Blob(tx) => TransactionType::Blob(tx.into()),
+            Transaction::Unknown => TransactionType::Unknown,
         };
 
         Self {
