@@ -1,10 +1,13 @@
+use std::time::Duration;
+
 use fuels::{
     core::codec::EncoderConfig,
     prelude::*,
     types::{Bits256, SizedAsciiString, U256},
 };
 
-use e2e::helpers::{maybe_connect_to_testnet_and_get_wallet, maybe_sleep_if_testnet};
+use e2e::helpers::{is_testnet, maybe_connect_to_testnet_and_get_wallet};
+use tokio::time::sleep;
 
 #[tokio::test]
 async fn contract_default_configurables() -> Result<()> {
@@ -131,7 +134,9 @@ async fn contract_configurables() -> Result<()> {
     .deploy(&wallet, TxPolicies::default())
     .await?;
 
-    maybe_sleep_if_testnet().await?;
+    if is_testnet() {
+        sleep(Duration::from_secs(10)).await;
+    }
 
     let contract_instance = MyContract::new(contract_id, wallet.clone());
     // ANCHOR_END: contract_configurables
@@ -198,6 +203,10 @@ async fn contract_manual_configurables() -> Result<()> {
     .with_configurables(configurables)
     .deploy(&wallet, TxPolicies::default())
     .await?;
+
+    if is_testnet() {
+        sleep(Duration::from_secs(10)).await;
+    }
 
     let contract_instance = MyContract::new(contract_id, wallet.clone());
 

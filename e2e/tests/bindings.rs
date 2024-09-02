@@ -1,5 +1,8 @@
-use e2e::helpers::{maybe_connect_to_testnet_and_get_wallet, maybe_sleep_if_testnet};
+use std::time::Duration;
+
+use e2e::helpers::{is_testnet, maybe_connect_to_testnet_and_get_wallet};
 use fuels::prelude::*;
+use tokio::time::sleep;
 
 pub fn null_contract_id() -> Bech32ContractId {
     // bech32 contract address that decodes to [0u8;32]
@@ -41,7 +44,9 @@ async fn compile_bindings_from_contract_file() -> Result<()> {
         ),
     );
 
-    maybe_sleep_if_testnet().await?;
+    if is_testnet() {
+        sleep(Duration::from_secs(10)).await;
+    }
 
     let call_handler = simple_contract_instance
         .methods()
@@ -131,7 +136,9 @@ async fn shared_types() -> Result<()> {
             wallet = "wallet"
         ),
     );
-    maybe_sleep_if_testnet().await?;
+    if is_testnet() {
+        sleep(Duration::from_secs(10)).await;
+    }
     {
         let methods = contract_a.methods();
 

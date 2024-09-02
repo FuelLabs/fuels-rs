@@ -1,4 +1,4 @@
-use std::{str::FromStr, time::Duration};
+use std::str::FromStr;
 
 use fuels::{
     accounts::{provider::Provider, wallet::WalletUnlocked},
@@ -10,7 +10,6 @@ use fuels::{
     test_helpers::{ChainConfig, NodeConfig, WalletsConfig},
     types::errors::Result,
 };
-use tokio::time::sleep;
 
 pub fn is_testnet() -> bool {
     option_env!("E2E_TARGET").unwrap_or_default() == "testnet"
@@ -64,10 +63,4 @@ pub async fn maybe_connect_to_testnet_and_get_wallet() -> Result<WalletUnlocked>
     )
     .await?;
     Ok(wallets.pop().expect("should have one wallet"))
-}
-
-pub async fn maybe_sleep_if_testnet() {
-    if is_testnet() {
-        sleep(Duration::from_secs(10)).await;
-    }
 }
