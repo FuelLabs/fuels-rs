@@ -20,7 +20,7 @@ async fn contract_default_configurables() -> Result<()> {
 
     let contract_id = Contract::load_from(
         "sway/contracts/configurables/out/release/configurables.bin",
-        LoadConfiguration::default(),
+        LoadConfiguration::default().with_salt(rand::random::<Salt>()),
     )?
     .deploy(&wallet, TxPolicies::default())
     .await?;
@@ -129,7 +129,9 @@ async fn contract_configurables() -> Result<()> {
 
     let contract_id = Contract::load_from(
         "sway/contracts/configurables/out/release/configurables.bin",
-        LoadConfiguration::default().with_configurables(configurables),
+        LoadConfiguration::default()
+            .with_configurables(configurables)
+            .with_salt(rand::random::<Salt>()),
     )?
     .deploy(&wallet, TxPolicies::default())
     .await?;
@@ -198,7 +200,7 @@ async fn contract_manual_configurables() -> Result<()> {
 
     let contract_id = Contract::load_from(
         "sway/contracts/configurables/out/release/configurables.bin",
-        LoadConfiguration::default(),
+        LoadConfiguration::default().with_salt(rand::random::<Salt>()),
     )?
     .with_configurables(configurables)
     .deploy(&wallet, TxPolicies::default())
