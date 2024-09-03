@@ -90,13 +90,13 @@ fuel-core-services = { git = "https://github.com/FuelLabs/fuel-core", branch = "
 fuel-core-types = { git = "https://github.com/FuelLabs/fuel-core", branch = "hal3e/unknown-variants", package = "fuel-core-types", default-features = false }
 
 # Dependencies from the `fuel-vm` repository:
-fuel-asm = { git = "https://github.com/FuelLabs/fuel-vm", branch = "hal3e/unknown-variants", package = "fuel-asm" }
-fuel-crypto = { git = "https://github.com/FuelLabs/fuel-vm", branch = "hal3e/unknown-variants", package = "fuel-crypto" }
-fuel-merkle = { git = "https://github.com/FuelLabs/fuel-vm", branch = "hal3e/unknown-variants", package = "fuel-merkle" }
-fuel-storage = { git = "https://github.com/FuelLabs/fuel-vm", branch = "hal3e/unknown-variants", package = "fuel-storage" }
-fuel-tx = { git = "https://github.com/FuelLabs/fuel-vm", branch = "hal3e/unknown-variants", package = "fuel-tx" }
-fuel-types = { git = "https://github.com/FuelLabs/fuel-vm", branch = "hal3e/unknown-variants", package = "fuel-types" }
-fuel-vm = { git = "https://github.com/FuelLabs/fuel-vm", branch = "hal3e/unknown-variants", package = "fuel-vm" }
+fuel-asm = { version = "0.56.0" }
+fuel-crypto = { version = "0.56.0" }
+fuel-merkle = { version = "0.56.0" }
+fuel-storage = { version = "0.56.0" }
+fuel-tx = { version = "0.56.0" }
+fuel-types = { version = "0.56.0" }
+fuel-vm = { version = "0.56.0" }
 
 # Workspace projects
 fuels = { version = "0.66.2", path = "./packages/fuels", default-features = false }
