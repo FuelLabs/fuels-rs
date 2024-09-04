@@ -1,0 +1,6 @@
+[test-groups]
+e2e = { max-threads = 1 }
+
+[[profile.default.overrides]]
+filter = 'package(e2e)'
+test-group = 'e2e'
