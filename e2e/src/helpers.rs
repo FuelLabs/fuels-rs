@@ -2,14 +2,13 @@ use std::str::FromStr;
 
 use fuels::{
     accounts::{provider::Provider, wallet::WalletUnlocked},
-    core::{
-        constants::{TESTNET_NODE_URL, TEST_WALLETS_COUNT},
-        error,
-    },
+    core::error,
     crypto::SecretKey,
     test_helpers::{ChainConfig, NodeConfig, WalletsConfig},
     types::errors::Result,
 };
+
+use crate::{TESTNET_NODE_URL, TEST_WALLETS_COUNT};
 
 pub fn is_testnet() -> bool {
     option_env!("E2E_TARGET").unwrap_or_default() == "testnet"
