@@ -11,10 +11,10 @@ pub struct ChangelogInfo {
     pub bullet_point: String,
     pub migration_note: String,
     pub release_notes: String,
-    pub pr_number: u64,
-    pub pr_title: String,
-    pub pr_author: String,
-    pub pr_url: String,
+    pub _pr_number: u64,
+    pub _pr_title: String,
+    pub _pr_author: String,
+    pub _pr_url: String,
 }
 
 pub fn capitalize(s: &str) -> String {
@@ -53,7 +53,7 @@ pub async fn get_changelog_info(
         .as_ref()
         .map_or("misc", |title| title.split(':').next().unwrap_or("misc"))
         .to_string();
-    let is_breaking = pr.title.as_ref().map_or(false, |title| title.contains("!"));
+    let is_breaking = pr.title.as_ref().map_or(false, |title| title.contains('!'));
 
     let title_description = pr
         .title
@@ -77,37 +77,31 @@ pub async fn get_changelog_info(
 
     let breaking_changes_regex = Regex::new(r"(?s)# Breaking Changes\s*(.*)").unwrap();
     let breaking_changes = breaking_changes_regex
-        .captures(&pr.body.as_ref().unwrap_or(&String::new()))
-        .map_or_else(
-            || String::new(),
-            |cap| {
-                cap.get(1).map_or(String::new(), |m| {
-                    m.as_str()
-                        .split("\n# ")
-                        .next()
-                        .unwrap_or("")
-                        .trim()
-                        .to_string()
-                })
-            },
-        );
+        .captures(pr.body.as_ref().unwrap_or(&String::new()))
+        .map_or_else(String::new, |cap| {
+            cap.get(1).map_or(String::new(), |m| {
+                m.as_str()
+                    .split("\n# ")
+                    .next()
+                    .unwrap_or("")
+                    .trim()
+                    .to_string()
+            })
+        });
 
     let release_notes_regex = Regex::new(r"(?s)In this release, we:\s*(.*)").unwrap();
     let release_notes = release_notes_regex
-        .captures(&pr.body.as_ref().unwrap_or(&String::new()))
-        .map_or_else(
-            || String::new(),
-            |cap| {
-                cap.get(1).map_or(String::new(), |m| {
-                    m.as_str()
-                        .split("\n# ")
-                        .next()
-                        .unwrap_or("")
-                        .trim()
-                        .to_string()
-                })
-            },
-        );
+        .captures(pr.body.as_ref().unwrap_or(&String::new()))
+        .map_or_else(String::new, |cap| {
+            cap.get(1).map_or(String::new(), |m| {
+                m.as_str()
+                    .split("\n# ")
+                    .next()
+                    .unwrap_or("")
+                    .trim()
+                    .to_string()
+            })
+        });
 
     let migration_note = format!(
         "### [{} - {}]({})\n\n{}",
@@ -123,10 +117,10 @@ pub async fn get_changelog_info(
         bullet_point,
         migration_note,
         release_notes,
-        pr_number,
-        pr_title,
-        pr_author,
-        pr_url,
+        _pr_number: pr_number,
+        _pr_title: pr_title,
+        _pr_author: pr_author,
+        _pr_url: pr_url,
     })
 }
 
@@ -146,7 +140,7 @@ pub async fn get_changelogs(
     let mut changelogs = Vec::new();
 
     for commit in comparison.commits {
-        match get_changelog_info(&octocrab, owner, repo, &commit.sha).await {
+        match get_changelog_info(octocrab, owner, repo, &commit.sha).await {
             Ok(info) => changelogs.push(info),
             Err(e) => {
                 println!("Error retrieving PR for commit {}: {}", commit.sha, e);
@@ -192,7 +186,7 @@ pub fn generate_changelog(changelogs: Vec<ChangelogInfo>) -> String {
         }
 
         if !changelog.release_notes.is_empty() && !summary_set.contains(&changelog.release_notes) {
-            summary_set.insert(format!("{}", changelog.release_notes.clone()));
+            summary_set.insert(changelog.release_notes.clone().to_string());
         }
     }
 
@@ -203,7 +197,7 @@ pub fn generate_changelog(changelogs: Vec<ChangelogInfo>) -> String {
         for line in summary_lines {
             content.push_str(&format!("{}\n", line));
         }
-        content.push_str("\n");
+        content.push('\n');
     }
 
     // Generate the breaking changes section
