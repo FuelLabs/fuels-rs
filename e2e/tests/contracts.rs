@@ -2309,3 +2309,53 @@ async fn loader_blob_already_uploaded_not_an_issue() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn loader_works_via_proxy() -> Result<()> {
+    let wallet = launch_provider_and_get_wallet().await?;
+
+    abigen!(
+        Contract(
+            name = "MyContract",
+            abi = "e2e/sway/contracts/huge_contract/out/release/huge_contract-abi.json"
+        ),
+        Contract(
+            name = "MyProxy",
+            abi = "e2e/sway/contracts/proxy/out/release/proxy-abi.json"
+        )
+    );
+
+    let contract_binary = "sway/contracts/huge_contract/out/release/huge_contract.bin";
+
+    let contract = Contract::load_from(contract_binary, LoadConfiguration::default())?;
+
+    let contract_id = contract
+        .convert_to_loader(100)?
+        .deploy(&wallet, TxPolicies::default())
+        .await?;
+
+    let contract_binary = "sway/contracts/proxy/out/release/proxy.bin";
+
+    let proxy_id = Contract::load_from(contract_binary, LoadConfiguration::default())?
+        .deploy(&wallet, TxPolicies::default())
+        .await?;
+
+    let proxy = MyProxy::new(proxy_id, wallet.clone());
+    proxy
+        .methods()
+        .set_target_contract(contract_id.clone())
+        .call()
+        .await?;
+
+    let response = proxy
+        .methods()
+        .something()
+        .with_contract_ids(&[contract_id])
+        .call()
+        .await?
+        .value;
+
+    assert_eq!(response, 1001);
+
+    Ok(())
+}
