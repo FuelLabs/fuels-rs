@@ -1,13 +1,15 @@
 use std::iter::repeat;
 
+use e2e::{
+    helpers::{is_testnet, maybe_connect_to_testnet_and_get_wallets},
+    TESTNET_ETHER_ASSET_ID,
+};
 use fuel_tx::{input::coin::CoinSigned, Input};
 use fuels::{
     prelude::*,
     tx::{TxPointer, UtxoId},
     types::{output::Output, Bytes32},
 };
-
-use e2e::helpers::maybe_connect_to_testnet_and_get_wallets;
 
 #[tokio::test]
 async fn test_wallet_balance_api_multi_asset() -> Result<()> {
@@ -213,20 +215,31 @@ async fn adjust_fee_resources_to_transfer_with_base_asset() -> Result<()> {
 
 #[tokio::test]
 async fn test_transfer() -> Result<()> {
-    let mut wallet_1 = WalletUnlocked::new_random(None);
-    let mut wallet_2 = WalletUnlocked::new_random(None).lock();
+    let mut wallets = maybe_connect_to_testnet_and_get_wallets(
+        WalletsConfig::new(Some(2), None, None),
+        None,
+        None,
+    )
+    .await?;
+    let mut wallet_1 = wallets.pop().unwrap();
+    let mut wallet_2 = wallets.pop().unwrap().lock();
 
-    let amount = 100;
+    let amount = 10;
     let num_coins = 1;
-    let base_asset_id = AssetId::zeroed();
-    let mut coins_1 =
-        setup_single_asset_coins(wallet_1.address(), base_asset_id, num_coins, amount);
-    let coins_2 = setup_single_asset_coins(wallet_2.address(), base_asset_id, num_coins, amount);
-    coins_1.extend(coins_2);
+    let asset_id = if is_testnet() {
+        AssetId::new(TESTNET_ETHER_ASSET_ID)
+    } else {
+        AssetId::zeroed()
+    };
+    if !is_testnet() {
+        let mut coins_1 = setup_single_asset_coins(wallet_1.address(), asset_id, num_coins, amount);
+        let coins_2 = setup_single_asset_coins(wallet_2.address(), asset_id, num_coins, amount);
+        coins_1.extend(coins_2);
 
-    let provider = setup_test_provider(coins_1, vec![], None, None).await?;
-    wallet_1.set_provider(provider.clone());
-    wallet_2.set_provider(provider);
+        let provider = setup_test_provider(coins_1, vec![], None, None).await?;
+        wallet_1.set_provider(provider.clone());
+        wallet_2.set_provider(provider);
+    }
 
     let _receipts = wallet_1
         .transfer(
@@ -238,8 +251,8 @@ async fn test_transfer() -> Result<()> {
         .await
         .unwrap();
 
-    let wallet_2_coins = wallet_2.get_coins(base_asset_id).await.unwrap();
-    let wallet_2_balance = wallet_2.get_asset_balance(&base_asset_id).await?;
+    let wallet_2_coins = wallet_2.get_coins(asset_id).await.unwrap();
+    let wallet_2_balance = wallet_2.get_asset_balance(&asset_id).await?;
     assert_eq!(wallet_2_coins.len(), 2);
     assert_eq!(wallet_2_balance, amount + amount / 2);
 
