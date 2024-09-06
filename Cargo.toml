@@ -27,6 +27,7 @@ members = [
   "scripts/check-docs",
   "scripts/fuel-core-version",
   "scripts/versions-replacer",
+  "scripts/change-log",
   "wasm-tests",
 ]
 
