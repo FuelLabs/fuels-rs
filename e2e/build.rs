@@ -45,7 +45,12 @@ impl Downloader {
         const LINK_TEMPLATE: &str = "https://github.com/FuelLabs/fuel-core/releases/download/vVERSION/fuel-core-VERSION-x86_64-unknown-linux-gnu.tar.gz";
         let link = LINK_TEMPLATE.replace("VERSION", &SUPPORTED_FUEL_CORE_VERSION.to_string());
 
-        let response = reqwest::blocking::get(link)?;
+        let response = reqwest::blocking::Client::builder()
+            .timeout(std::time::Duration::from_secs(60))
+            .build()?
+            .get(link)
+            .send()?;
+
         if !response.status().is_success() {
             anyhow::bail!("Failed to download wasm executor: {}", response.status());
         }
