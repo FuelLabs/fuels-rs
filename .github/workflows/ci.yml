@@ -215,7 +215,7 @@ jobs:
         uses: taiki-e/install-action@cargo-machete
 
       - name: Cargo (workspace-level)
-        if: ${{ matrix.cargo_command && !matrix.package && !matrix.target_testnet }}
+        if: ${{ matrix.cargo_command && !matrix.package }}
         run: cargo ${{ matrix.cargo_command }} ${{ matrix.args }}
 
       - name: Cargo (workspace-level, testnet)
