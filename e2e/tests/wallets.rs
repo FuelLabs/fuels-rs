@@ -373,6 +373,16 @@ async fn test_wallet_get_coins() -> Result<()> {
 }
 
 async fn setup_transfer_test(amount: u64) -> Result<(WalletUnlocked, WalletUnlocked)> {
+    if is_testnet() {
+        let mut wallets = maybe_connect_to_testnet_and_get_wallets(
+            WalletsConfig::new(Some(2), None, None),
+            None,
+            None,
+        )
+        .await?;
+        return Ok((wallets.pop().unwrap(), wallets.pop().unwrap()));
+    }
+
     let mut wallet_1 = WalletUnlocked::new_random(None);
     let mut wallet_2 = WalletUnlocked::new_random(None);
 
