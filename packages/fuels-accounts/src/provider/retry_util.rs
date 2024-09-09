@@ -157,7 +157,7 @@ where
         tokio::time::sleep(retry_config.interval.wait_duration(attempt)).await;
     }
 
-    last_result.expect("should not happen")
+    last_result.expect("all attempts failed or timed out")
 }
 
 #[cfg(test)]
