@@ -27,7 +27,7 @@ pub fn loader_contract_asm(blob_ids: &[BlobId]) -> Result<Vec<u8>> {
         [
             // 1. Load the blob contents into memory
             // Find the start of the hardcoded blob IDs, which are located after the code ends.
-            op::move_(0x10, RegId::IS),
+            op::move_(0x10, RegId::PC),
             // 0x10 to hold the address of the current blob ID.
             op::addi(0x10, 0x10, num_of_instructions * Instruction::SIZE as u16),
             // The contract is going to be loaded from the current value of SP onwards, save
