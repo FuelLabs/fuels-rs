@@ -39,8 +39,6 @@ impl ViewOnlyAccount for ImpersonatedAccount {
         self.provider.as_ref().ok_or_else(try_provider_error)
     }
 
-    /// Returns a vector consisting of `Input::Coin`s and `Input::Message`s for the given
-    /// asset ID and amount.
     async fn get_asset_inputs_for_amount(
         &self,
         asset_id: AssetId,

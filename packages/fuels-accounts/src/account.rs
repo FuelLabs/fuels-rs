@@ -109,9 +109,7 @@ pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync + Clone {
     }
 
     /// Returns a vector consisting of `Input::Coin`s and `Input::Message`s for the given
-    /// asset ID and amount. The `witness_index` is the position of the witness (signature)
-    /// in the transaction's list of witnesses. In the validation process, the node will
-    /// use the witness at this index to validate the coins returned by this method.
+    /// asset ID and amount.
     async fn get_asset_inputs_for_amount(
         &self,
         asset_id: AssetId,
