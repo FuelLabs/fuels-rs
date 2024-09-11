@@ -101,6 +101,7 @@ impl Predicate {
 }
 
 #[cfg(feature = "std")]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 impl ViewOnlyAccount for Predicate {
     fn address(&self) -> &Bech32Address {
         self.address()
@@ -109,11 +110,7 @@ impl ViewOnlyAccount for Predicate {
     fn try_provider(&self) -> Result<&Provider> {
         self.provider.as_ref().ok_or_else(try_provider_error)
     }
-}
 
-#[cfg(feature = "std")]
-#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
-impl Account for Predicate {
     async fn get_asset_inputs_for_amount(
         &self,
         asset_id: AssetId,
@@ -130,3 +127,6 @@ impl Account for Predicate {
             .collect::<Vec<Input>>())
     }
 }
+
+#[cfg(feature = "std")]
+impl Account for Predicate {}
