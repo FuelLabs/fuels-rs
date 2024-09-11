@@ -92,20 +92,6 @@ pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync + Clone {
 
         self.try_provider()?.get_spendable_resources(filter).await
     }
-}
-
-#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
-pub trait Account: ViewOnlyAccount {
-    /// Returns a vector consisting of `Input::Coin`s and `Input::Message`s for the given
-    /// asset ID and amount. The `witness_index` is the position of the witness (signature)
-    /// in the transaction's list of witnesses. In the validation process, the node will
-    /// use the witness at this index to validate the coins returned by this method.
-    async fn get_asset_inputs_for_amount(
-        &self,
-        asset_id: AssetId,
-        amount: u64,
-        excluded_coins: Option<Vec<CoinTypeId>>,
-    ) -> Result<Vec<Input>>;
 
     /// Returns a vector containing the output coin and change output given an asset and amount
     fn get_asset_outputs_for_amount(
@@ -121,6 +107,15 @@ pub trait Account: ViewOnlyAccount {
             Output::change(self.address().into(), 0, asset_id),
         ]
     }
+
+    /// Returns a vector consisting of `Input::Coin`s and `Input::Message`s for the given
+    /// asset ID and amount.
+    async fn get_asset_inputs_for_amount(
+        &self,
+        asset_id: AssetId,
+        amount: u64,
+        excluded_coins: Option<Vec<CoinTypeId>>,
+    ) -> Result<Vec<Input>>;
 
     /// Add base asset inputs to the transaction to cover the estimated fee.
     /// Requires contract inputs to be at the start of the transactions inputs vec
@@ -155,7 +150,10 @@ pub trait Account: ViewOnlyAccount {
 
         Ok(())
     }
+}
 
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+pub trait Account: ViewOnlyAccount {
     // Add signatures to the builder if the underlying account is a wallet
     fn add_witnesses<Tb: TransactionBuilder>(&self, _tb: &mut Tb) -> Result<()> {
         Ok(())
