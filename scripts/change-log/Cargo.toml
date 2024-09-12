@@ -1,10 +1,16 @@
 [package]
 name = "change-log"
-version = "0.1.0"
-edition = "2021"
+version = { workspace = true }
+authors = { workspace = true }
+edition = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+publish = false
+repository = { workspace = true }
+rust-version = { workspace = true }
 
 [dependencies]
 regex = { workspace = true }
-dotenv = "0.15"
-tokio = { workspace = true, features = ["full"] }
-octocrab = "0.39"
+dotenv = { workspace = true }
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+octocrab = { workspace = true, features = ["default"] }

@@ -1,5 +1,5 @@
-use octocrab::Octocrab;
 use dotenv::dotenv;
+use octocrab::Octocrab;
 
 pub async fn get_latest_release_tag() -> Result<String, Box<dyn std::error::Error>> {
     dotenv().ok();
