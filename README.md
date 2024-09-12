@@ -95,7 +95,7 @@ Install `mdbook` by running:
 cargo install mdbook
 ```
 
-Next, navigate to the `docs` folder and run the command below to start a local server and open a new tab in you browser.
+Next, navigate to the `docs` folder and run the command below to start a local server and open a new tab in your browser.
 
 ```shell
 mdbook serve --open
