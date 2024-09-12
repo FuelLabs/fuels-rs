@@ -147,7 +147,7 @@
         .call()
         .await?;
 </code></pre>
-<p>If however, you do not need do decode logs or you do not have a contract instance that was generated using the <code>abigen</code> macro you can use <code>with_contract_ids(&amp;[&amp;contract_id, ...])</code> and provide the required contract ids.</p>
+<p>If however, you do not need to decode logs or you do not have a contract instance that was generated using the <code>abigen</code> macro you can use <code>with_contract_ids(&amp;[&amp;contract_id, ...])</code> and provide the required contract ids.</p>
 <pre><code class="language-rust ignore">    let response = contract_caller_instance
         .methods()
         .increment_from_contract(lib_contract_id, 42)
