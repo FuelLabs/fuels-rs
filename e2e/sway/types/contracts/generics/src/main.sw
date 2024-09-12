@@ -41,6 +41,7 @@ struct StructWArrayGeneric<L> {
     a: [L; 2],
 }
 
+
 struct StructWTupleGeneric<M> {
     a: (M, M),
 }
@@ -50,6 +51,17 @@ enum EnumWGeneric<N> {
     A: u64,
     B: N,
 }
+
+#[allow(dead_code)]
+struct StructWTwoGenerics<T, U> {
+    a: T,
+    b: U,
+}
+
+struct StructWArrWGenericStruct<S> {
+    a: [StructWTwoGenerics<S, u8>; 3],
+}
+
 
 #[allow(dead_code)]
 struct MegaExample<T, U> {
@@ -84,6 +96,9 @@ abi MyContract {
     fn enum_w_generic(arg1: EnumWGeneric<u64>) -> EnumWGeneric<u64>;
 
     fn complex_test(arg1: MegaExample<str[2], b256>);
+   fn array_with_generic_struct(
+        arg: StructWArrWGenericStruct<b256>,
+    ) -> StructWArrWGenericStruct<b256>;
 }
 
 impl MyContract for Contract {
@@ -175,4 +190,10 @@ impl MyContract for Contract {
     }
 
     fn complex_test(_arg: MegaExample<str[2], b256>) {}
+
+    fn array_with_generic_struct(
+        arg: StructWArrWGenericStruct<b256>,
+    ) -> StructWArrWGenericStruct<b256> {
+        arg
+    }
 }
