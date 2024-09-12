@@ -27,6 +27,7 @@ members = [
   "scripts/check-docs",
   "scripts/fuel-core-version",
   "scripts/versions-replacer",
+  "scripts/change-log",
   "wasm-tests",
 ]
 
@@ -80,6 +81,8 @@ trybuild = "1.0.85"
 uint = { version = "0.9.5", default-features = false }
 which = { version = "6.0.0", default-features = false }
 zeroize = "1.7.0"
+octocrab = { version = "0.39", default-features = false }
+dotenv = { version = "0.15", default-features = false }
 
 # Dependencies from the `fuel-core` repository:
 fuel-core = { version = "0.35.0", default-features = false, features = [
