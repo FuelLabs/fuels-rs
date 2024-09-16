@@ -99,7 +99,7 @@ async fn compile_bindings_from_inline_contract() -> Result<()> {
         "#,
     ));
 
-    let wallet = launch_provider_and_get_wallet().await?;
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
 
     let contract_instance = SimpleContract::new(null_contract_id(), wallet);
 
@@ -245,6 +245,9 @@ async fn type_paths_respected() -> Result<()> {
             wallet = "wallet"
         ),
     );
+    if is_testnet() {
+        sleep(Duration::from_secs(10)).await;
+    }
     {
         let contract_a_type =
             abigen_bindings::contract_a_mod::contract_a_types::VeryCommonNameStruct {
