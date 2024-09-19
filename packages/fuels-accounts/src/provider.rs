@@ -372,8 +372,8 @@ impl Provider {
             .await?
             .into_iter()
             .flatten()
-            .map(CoinType::try_from)
-            .collect::<Result<Vec<CoinType>>>()?;
+            .map(CoinType::from)
+            .collect();
 
         Ok(res)
     }

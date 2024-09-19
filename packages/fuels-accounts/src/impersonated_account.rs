@@ -2,13 +2,15 @@ use std::fmt::Debug;
 
 use async_trait::async_trait;
 use fuel_crypto::{Message, Signature};
-use fuels_core::traits::Signer;
-use fuels_core::types::transaction_builders::TransactionBuilder;
-use fuels_core::types::{bech32::Bech32Address, errors::Result};
-use fuels_core::types::{coin_type_id::CoinTypeId, input::Input, AssetId};
+use fuels_core::{
+    traits::Signer,
+    types::{
+        bech32::Bech32Address, coin_type_id::CoinTypeId, errors::Result, input::Input,
+        transaction_builders::TransactionBuilder, AssetId,
+    },
+};
 
-use crate::accounts_utils::try_provider_error;
-use crate::{provider::Provider, Account, ViewOnlyAccount};
+use crate::{accounts_utils::try_provider_error, provider::Provider, Account, ViewOnlyAccount};
 
 /// A `ImpersonatedAccount` simulates ownership of assets held by an account with a given address.
 /// `ImpersonatedAccount` will only succeed in unlocking assets if the the network is setup with
