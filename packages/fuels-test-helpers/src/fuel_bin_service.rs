@@ -16,11 +16,18 @@ use tokio::{process::Command, spawn, task::JoinHandle, time::sleep};
 use crate::node_types::{DbType, NodeConfig, Trigger};
 
 #[derive(Debug)]
+pub(crate) struct RelayerConfig {
+    pub relayer: String,
+    pub relayer_v2_listening_contracts: String,
+}
+
+#[derive(Debug)]
 pub(crate) struct ExtendedConfig {
     pub node_config: NodeConfig,
     pub chain_config: ChainConfig,
     pub state_config: StateConfig,
     pub snapshot_dir: TempDir,
+    pub relayer_config: Option<RelayerConfig>,
 }
 
 impl ExtendedConfig {
@@ -73,6 +80,14 @@ impl ExtendedConfig {
                 ));
             }
         };
+
+        if let Some(relayer_config) = self.relayer_config {
+            args.push("--relayer".to_string());
+            args.push(relayer_config.relayer);
+
+            args.push("--relayer-v2-listening-contracts".to_string());
+            args.push(relayer_config.relayer_v2_listening_contracts);
+        }
 
         let body_limit = self.node_config.graphql_request_body_bytes_limit;
         args.push(format!("--graphql-request-body-bytes-limit={body_limit}"));
@@ -150,6 +165,49 @@ impl FuelService {
             state_config,
             chain_config,
             snapshot_dir: tempdir()?,
+            relayer_config: None,
+        };
+
+        let addr = extended_config.node_config.addr;
+        let handle = run_node(extended_config).await?;
+        server_health_check(addr).await?;
+
+        Ok(FuelService {
+            bound_address,
+            handle,
+        })
+    }
+
+    pub async fn new_node_with_relayer(
+        node_config: NodeConfig,
+        chain_config: ChainConfig,
+        state_config: StateConfig,
+        relayer_config: RelayerConfig,
+    ) {
+        let requested_port = node_config.addr.port();
+
+        let bound_address = match requested_port {
+            0 => get_socket_address()?,
+            _ if is_free(requested_port) => node_config.addr,
+            _ => {
+                return Err(error!(
+                    IO,
+                    "could not find a free port to start a fuel node"
+                ))
+            }
+        };
+
+        let node_config = NodeConfig {
+            addr: bound_address,
+            ..node_config
+        };
+
+        let extended_config = ExtendedConfig {
+            node_config,
+            state_config,
+            chain_config,
+            snapshot_dir: tempdir()?,
+            relayer_config: Some(relayer_config),
         };
 
         let addr = extended_config.node_config.addr;

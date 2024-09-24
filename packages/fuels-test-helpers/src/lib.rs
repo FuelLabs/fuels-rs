@@ -3,6 +3,7 @@ extern crate core;
 
 #[cfg(feature = "fuels-accounts")]
 pub use accounts::*;
+use fuel_bin_service::RelayerConfig;
 use fuel_tx::{Bytes32, ConsensusParameters, ContractParameters, TxParameters, UtxoId};
 use fuel_types::{AssetId, Nonce};
 use fuels_accounts::provider::Provider;
@@ -142,6 +143,40 @@ pub async fn setup_test_provider(
     };
 
     let srv = FuelService::start(node_config, chain_config, state_config).await?;
+
+    let address = srv.bound_address();
+
+    tokio::spawn(async move {
+        let _own_the_handle = srv;
+        let () = futures::future::pending().await;
+    });
+
+    Provider::from(address).await
+}
+
+#[cfg(not(feature = "fuel-core-lib"))]
+pub async fn setup_test_provider_with_relayer(
+    coins: Vec<Coin>,
+    messages: Vec<Message>,
+    node_config: Option<NodeConfig>,
+    chain_config: Option<ChainConfig>,
+    relayer_config: RelayerConfig,
+) -> Result<Provider> {
+    let node_config = node_config.unwrap_or_default();
+    let chain_config = chain_config.unwrap_or_else(testnet_chain_config);
+
+    let coin_configs = into_coin_configs(coins);
+    let message_configs = into_message_configs(messages);
+
+    let state_config = StateConfig {
+        coins: coin_configs,
+        messages: message_configs,
+        ..StateConfig::local_testnet()
+    };
+
+    let srv =
+        FuelService::start_with_relayer(node_config, chain_config, state_config, relayer_config)
+            .await?;
 
     let address = srv.bound_address();
 
@@ -380,6 +415,27 @@ mod tests {
             chain_info.consensus_parameters.fee_params().gas_per_byte(),
             gas_per_byte
         );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_setup_test_provider_with_relayer() -> Result<()> {
+        let socket = SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 4000);
+        let config = RelayerConfig {
+            relayer: "http://localhost:8545".to_string(),
+            relayer_v2_listening_contracts: "0x0000000000000000000000000000000000000000"
+                .to_string(),
+        };
+
+        let provider = setup_test_provider_with_relayer(vec![], vec![], None, None, config).await?;
+        let node_info = provider
+            .node_info()
+            .await
+            .expect("Failed to retrieve node info!");
+
+        assert_eq!(provider.url(), format!("http://127.0.0.1:4000"));
+        assert_eq!(node_info.utxo_validation, config.utxo_validation);
+
         Ok(())
     }
 }

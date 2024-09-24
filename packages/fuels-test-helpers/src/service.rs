@@ -43,6 +43,29 @@ impl FuelService {
         })
     }
 
+    #[cfg(not(feature = "fuel-core-lib"))]
+    pub async fn start_with_relayer(
+        node_config: NodeConfig,
+        chain_config: ChainConfig,
+        state_config: StateConfig,
+        relayer_config: RelayerConfig,
+    ) -> Result<Self> {
+        let service = BinFuelService::new_node_with_relayer(
+            node_config,
+            chain_config,
+            state_config,
+            Some(relayer_config),
+        )
+        .await?;
+
+        let bound_address = service.bound_address;
+
+        Ok(FuelService {
+            service,
+            bound_address,
+        })
+    }
+
     pub async fn stop(&self) -> Result<State> {
         #[cfg(feature = "fuel-core-lib")]
         let result = self.service.send_stop_signal_and_await_shutdown().await;
