@@ -3,7 +3,6 @@ extern crate core;
 
 #[cfg(feature = "fuels-accounts")]
 pub use accounts::*;
-use fuel_bin_service::RelayerConfig;
 use fuel_tx::{Bytes32, ConsensusParameters, ContractParameters, TxParameters, UtxoId};
 use fuel_types::{AssetId, Nonce};
 use fuels_accounts::provider::Provider;
@@ -21,6 +20,8 @@ mod node_types;
 
 #[cfg(not(feature = "fuel-core-lib"))]
 pub(crate) mod fuel_bin_service;
+#[cfg(not(feature = "fuel-core-lib"))]
+use fuel_bin_service::RelayerConfig;
 
 #[cfg(feature = "fuels-accounts")]
 mod accounts;
@@ -430,6 +431,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg(not(feature = "fuel-core-lib"))]
     async fn test_setup_test_provider_with_relayer() -> Result<()> {
         let container = GenericImage::new(
             "ghcr.io/foundry-rs/foundry",
