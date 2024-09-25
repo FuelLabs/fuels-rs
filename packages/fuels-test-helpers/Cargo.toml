@@ -31,6 +31,10 @@ tempfile = { workspace = true, default-features = false }
 tokio = { workspace = true, default-features = false }
 which = { workspace = true, default-features = false }
 
+[dev-dependencies]
+testcontainers = { version = "0.23.0", features = ["blocking"] }
+ethers = { version = "=2.0.8" }
+
 [features]
 default = ["fuels-accounts", "std"]
 std = ["fuels-accounts?/std", "fuels-core/std", "fuel-core-chain-config/std"]

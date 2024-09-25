@@ -7,7 +7,7 @@ use fuel_core_services::State;
 use fuels_core::types::errors::{error, Result};
 
 #[cfg(not(feature = "fuel-core-lib"))]
-use crate::fuel_bin_service::FuelService as BinFuelService;
+use crate::fuel_bin_service::{FuelService as BinFuelService, RelayerConfig};
 use crate::NodeConfig;
 
 pub struct FuelService {
@@ -54,7 +54,7 @@ impl FuelService {
             node_config,
             chain_config,
             state_config,
-            Some(relayer_config),
+            relayer_config,
         )
         .await?;
 

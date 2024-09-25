@@ -16,7 +16,7 @@ use tokio::{process::Command, spawn, task::JoinHandle, time::sleep};
 use crate::node_types::{DbType, NodeConfig, Trigger};
 
 #[derive(Debug)]
-pub(crate) struct RelayerConfig {
+pub struct RelayerConfig {
     pub relayer: String,
     pub relayer_v2_listening_contracts: String,
 }
@@ -81,12 +81,13 @@ impl ExtendedConfig {
             }
         };
 
-        if let Some(relayer_config) = self.relayer_config {
+        if let Some(relayer_config) = &self.relayer_config {
+            args.push("--enable-relayer".to_string());
             args.push("--relayer".to_string());
-            args.push(relayer_config.relayer);
+            args.push(relayer_config.relayer.clone());
 
             args.push("--relayer-v2-listening-contracts".to_string());
-            args.push(relayer_config.relayer_v2_listening_contracts);
+            args.push(relayer_config.relayer_v2_listening_contracts.clone());
         }
 
         let body_limit = self.node_config.graphql_request_body_bytes_limit;
@@ -183,7 +184,7 @@ impl FuelService {
         chain_config: ChainConfig,
         state_config: StateConfig,
         relayer_config: RelayerConfig,
-    ) {
+    ) -> FuelResult<Self> {
         let requested_port = node_config.addr.port();
 
         let bound_address = match requested_port {

@@ -208,10 +208,21 @@ pub fn generate_random_salt() -> [u8; 32] {
 
 #[cfg(test)]
 mod tests {
-    use std::net::{Ipv4Addr, SocketAddr};
+    use std::{
+        net::{Ipv4Addr, SocketAddr},
+        time::{Duration, Instant},
+    };
 
     use fuel_tx::{ConsensusParameters, ContractParameters, FeeParameters, TxParameters};
     use fuels_core::types::bech32::FUEL_BECH32_HRP;
+
+    use testcontainers::{
+        core::{IntoContainerPort, WaitFor},
+        runners::AsyncRunner,
+        GenericImage, ImageExt,
+    };
+
+    use ethers::providers::{Http, Provider};
 
     use super::*;
 
@@ -420,21 +431,86 @@ mod tests {
 
     #[tokio::test]
     async fn test_setup_test_provider_with_relayer() -> Result<()> {
+        let container = GenericImage::new(
+            "ghcr.io/foundry-rs/foundry",
+            "nightly-4351742481c98adaa9ca3e8642e619aa986b3cee",
+        )
+        .with_wait_for(WaitFor::message_on_stdout("Listening on 0.0.0.0:8545"))
+        .with_exposed_port(8545.tcp())
+        .with_entrypoint("anvil")
+        .with_cmd(["--host", "0.0.0.0", "--slots-in-an-epoch", "1"])
+        .with_mapped_port(8545, 8545.into())
+        .start()
+        .await
+        .expect("Anvil did not start");
+
+        let eth_provider = Provider::<Http>::try_from("http://127.0.0.1:8545")
+            .expect("Could not instantiate ethereum provider");
+
         let socket = SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 4000);
-        let config = RelayerConfig {
+        let node_config = NodeConfig {
+            addr: socket,
+            debug: true,
+            block_production: Trigger::Interval {
+                block_time: Duration::from_secs(1),
+            },
+            ..NodeConfig::default()
+        };
+
+        let relayer_config = RelayerConfig {
             relayer: "http://localhost:8545".to_string(),
             relayer_v2_listening_contracts: "0x0000000000000000000000000000000000000000"
                 .to_string(),
         };
 
-        let provider = setup_test_provider_with_relayer(vec![], vec![], None, None, config).await?;
-        let node_info = provider
+        let fuel_provider = setup_test_provider_with_relayer(
+            vec![],
+            vec![],
+            Some(node_config.clone()),
+            None,
+            relayer_config,
+        )
+        .await?;
+
+        let node_info = fuel_provider
             .node_info()
             .await
             .expect("Failed to retrieve node info!");
 
-        assert_eq!(provider.url(), format!("http://127.0.0.1:4000"));
-        assert_eq!(node_info.utxo_validation, config.utxo_validation);
+        assert_eq!(fuel_provider.url(), format!("http://127.0.0.1:4000"));
+        assert_eq!(node_info.utxo_validation, node_config.utxo_validation);
+
+        // Mine some eth blocks
+        let _: () = eth_provider
+            // Magic number: 128 is meant to be 4 times an epoch, so it finalizes eth blocks
+            .request("anvil_mine", vec![ethers::types::U256::from(128u64)])
+            .await
+            .expect("Could not mine blocks on Ethereum chain");
+
+        let start_time = Instant::now();
+        let timeout = Duration::from_secs(10);
+        loop {
+            // Check if we've exceeded the timeout
+            if start_time.elapsed() > timeout {
+                return Err("Timeout reached while waiting for positive DA height".into());
+            }
+
+            let height = fuel_provider.latest_block_height().await?;
+
+            let latest_block = fuel_provider
+                .block_by_height(height.into())
+                .await?
+                .ok_or("Latest block not found")?;
+
+            if latest_block.header.da_height > 0 {
+                break;
+            }
+
+            // Wait for the production of a new fuel block
+            tokio::time::sleep(Duration::from_secs(1)).await;
+        }
+
+        let _ = container.stop().await;
 
         Ok(())
     }
