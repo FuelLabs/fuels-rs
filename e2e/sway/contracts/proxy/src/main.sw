@@ -9,6 +9,12 @@ abi Proxy {
     // this targets the method of the `huge_contract` in our e2e sway contracts
     #[storage(read)]
     fn something() -> u64;
+
+    #[storage(write)]
+    fn write_some_u64(some: u64);
+
+    #[storage(read)]
+    fn read_some_u64() -> u64;
 }
 
 storage {
@@ -23,6 +29,18 @@ impl Proxy for Contract {
 
     #[storage(read)]
     fn something() -> u64 {
+        let target = storage.target_contract.read().unwrap();
+        run_external(target)
+    }
+
+    #[storage(write)]
+    fn write_some_u64(_some: u64) {
+        let target = storage.target_contract.read().unwrap();
+        run_external(target)
+    }
+
+    #[storage(read)]
+    fn read_some_u64() -> u64 {
         let target = storage.target_contract.read().unwrap();
         run_external(target)
     }
