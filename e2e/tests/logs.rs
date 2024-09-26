@@ -4,7 +4,8 @@ use fuels::{
     types::{errors::transaction::Reason, AsciiString, Bits256, SizedAsciiString},
 };
 
-use e2e::helpers::maybe_connect_to_testnet_and_get_wallet;
+mod common;
+use common::maybe_connect_to_testnet_and_get_wallet;
 
 #[tokio::test]
 async fn test_parse_logged_variables() -> Result<()> {

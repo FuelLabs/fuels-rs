@@ -1,14 +1,16 @@
 use std::iter::repeat;
 
-use e2e::{
-    helpers::{is_testnet, maybe_connect_to_testnet_and_get_wallets},
-    TESTNET_ETHER_ASSET_ID,
-};
 use fuel_tx::{input::coin::CoinSigned, Input};
 use fuels::{
     prelude::*,
     tx::{TxPointer, UtxoId},
     types::{output::Output, Bytes32},
+};
+
+mod common;
+use common::{
+    maybe_connect_to_testnet_and_get_wallet, maybe_connect_to_testnet_and_get_wallets,
+    BASE_ASSET_ID, IS_TESTNET,
 };
 
 #[tokio::test]
@@ -226,12 +228,8 @@ async fn test_transfer() -> Result<()> {
 
     let amount = 10;
     let num_coins = 1;
-    let asset_id = if is_testnet() {
-        AssetId::new(TESTNET_ETHER_ASSET_ID)
-    } else {
-        AssetId::zeroed()
-    };
-    if !is_testnet() {
+    let asset_id = *BASE_ASSET_ID;
+    if !*IS_TESTNET {
         let mut coins_1 = setup_single_asset_coins(wallet_1.address(), asset_id, num_coins, amount);
         let coins_2 = setup_single_asset_coins(wallet_2.address(), asset_id, num_coins, amount);
         coins_1.extend(coins_2);
@@ -276,7 +274,7 @@ async fn send_transfer_transactions() -> Result<()> {
 
     // Transfer 1 from wallet 1 to wallet 2.
     const SEND_AMOUNT: u64 = 1;
-    let base_asset_id = AssetId::zeroed();
+    let base_asset_id = *BASE_ASSET_ID;
     let (tx_id, _receipts) = wallet_1
         .transfer(wallet_2.address(), SEND_AMOUNT, base_asset_id, tx_policies)
         .await?;
@@ -318,23 +316,24 @@ async fn send_transfer_transactions() -> Result<()> {
 #[tokio::test]
 async fn transfer_coins_with_change() -> Result<()> {
     const AMOUNT: u64 = 5;
+    let asset_id = *BASE_ASSET_ID;
     let (wallet_1, wallet_2) = setup_transfer_test(AMOUNT).await?;
 
+    dbg!("setup");
     // Transfer 2 from wallet 1 to wallet 2.
     const SEND_AMOUNT: u64 = 2;
     let _receipts = wallet_1
         .transfer(
             wallet_2.address(),
             SEND_AMOUNT,
-            AssetId::zeroed(),
+            asset_id,
             TxPolicies::default(),
         )
         .await?;
 
-    let base_asset_id = AssetId::zeroed();
-    let wallet_1_final_coins = wallet_1
-        .get_spendable_resources(base_asset_id, 1, None)
-        .await?;
+    dbg!("send");
+
+    let wallet_1_final_coins = wallet_1.get_spendable_resources(asset_id, 1, None).await?;
 
     // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
     let expected_fee = 1;
@@ -345,7 +344,7 @@ async fn transfer_coins_with_change() -> Result<()> {
         AMOUNT - SEND_AMOUNT - expected_fee
     );
 
-    let wallet_2_final_coins = wallet_2.get_coins(base_asset_id).await?;
+    let wallet_2_final_coins = wallet_2.get_coins(asset_id).await?;
     assert_eq!(wallet_2_final_coins.len(), 1);
 
     let total_amount: u64 = wallet_2_final_coins.iter().map(|c| c.amount).sum();
@@ -373,26 +372,27 @@ async fn test_wallet_get_coins() -> Result<()> {
 }
 
 async fn setup_transfer_test(amount: u64) -> Result<(WalletUnlocked, WalletUnlocked)> {
-    if is_testnet() {
-        let mut wallets = maybe_connect_to_testnet_and_get_wallets(
-            WalletsConfig::new(Some(2), None, None),
-            None,
-            None,
-        )
-        .await?;
-        return Ok((wallets.pop().unwrap(), wallets.pop().unwrap()));
-    }
-
     let mut wallet_1 = WalletUnlocked::new_random(None);
     let mut wallet_2 = WalletUnlocked::new_random(None);
 
-    let coins = setup_single_asset_coins(wallet_1.address(), AssetId::zeroed(), 1, amount);
-
-    let provider = setup_test_provider(coins, vec![], None, None).await?;
+    let provider = if *IS_TESTNET {
+        let funding_wallet = maybe_connect_to_testnet_and_get_wallet().await?;
+        funding_wallet
+            .transfer(
+                wallet_1.address(),
+                amount,
+                *BASE_ASSET_ID,
+                TxPolicies::default(),
+            )
+            .await?;
+        funding_wallet.provider().unwrap().clone()
+    } else {
+        let coins = setup_single_asset_coins(wallet_1.address(), AssetId::zeroed(), 1, amount);
+        setup_test_provider(coins, vec![], None, None).await?
+    };
 
     wallet_1.set_provider(provider.clone());
     wallet_2.set_provider(provider);
-
     Ok((wallet_1, wallet_2))
 }
 

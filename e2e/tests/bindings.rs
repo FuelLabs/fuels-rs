@@ -1,8 +1,10 @@
 use std::time::Duration;
 
-use e2e::helpers::{is_testnet, maybe_connect_to_testnet_and_get_wallet};
 use fuels::prelude::*;
 use tokio::time::sleep;
+
+mod common;
+use common::{maybe_connect_to_testnet_and_get_wallet, IS_TESTNET};
 
 pub fn null_contract_id() -> Bech32ContractId {
     // bech32 contract address that decodes to [0u8;32]
@@ -44,7 +46,7 @@ async fn compile_bindings_from_contract_file() -> Result<()> {
         ),
     );
 
-    if is_testnet() {
+    if *IS_TESTNET {
         sleep(Duration::from_secs(10)).await;
     }
 
@@ -136,7 +138,7 @@ async fn shared_types() -> Result<()> {
             wallet = "wallet"
         ),
     );
-    if is_testnet() {
+    if *IS_TESTNET {
         sleep(Duration::from_secs(10)).await;
     }
     {
@@ -245,7 +247,7 @@ async fn type_paths_respected() -> Result<()> {
             wallet = "wallet"
         ),
     );
-    if is_testnet() {
+    if *IS_TESTNET {
         sleep(Duration::from_secs(10)).await;
     }
     {

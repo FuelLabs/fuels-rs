@@ -3,7 +3,8 @@ use fuels::{
     types::{Bits256, U256},
 };
 
-use e2e::helpers::maybe_connect_to_testnet_and_get_wallet;
+mod common;
+use common::maybe_connect_to_testnet_and_get_wallet;
 
 #[tokio::test]
 async fn script_b256() -> Result<()> {

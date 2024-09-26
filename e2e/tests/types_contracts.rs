@@ -5,7 +5,8 @@ use fuels::{
     types::{Bits256, EvmAddress, Identity, SizedAsciiString, B512, U256},
 };
 
-use e2e::helpers::maybe_connect_to_testnet_and_get_wallet;
+mod common;
+use common::maybe_connect_to_testnet_and_get_wallet;
 
 pub fn null_contract_id() -> Bech32ContractId {
     // a bech32 contract address that decodes to [0u8;32]

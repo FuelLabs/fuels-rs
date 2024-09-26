@@ -4,10 +4,8 @@ use fuels::{
     types::Identity,
 };
 
-use e2e::{
-    helpers::{is_testnet, maybe_connect_to_testnet_and_get_wallet},
-    TESTNET_ETHER_ASSET_ID,
-};
+mod common;
+use common::{maybe_connect_to_testnet_and_get_wallet, BASE_ASSET_ID};
 
 #[tokio::test]
 async fn main_function_arguments() -> Result<()> {
@@ -121,11 +119,7 @@ async fn test_output_variable_estimation() -> Result<()> {
     receiver.set_provider(provider);
 
     let amount = 10;
-    let asset_id = if is_testnet() {
-        AssetId::new(TESTNET_ETHER_ASSET_ID)
-    } else {
-        AssetId::zeroed()
-    };
+    let asset_id = *BASE_ASSET_ID;
     let script_call = script_instance.main(
         amount,
         asset_id,

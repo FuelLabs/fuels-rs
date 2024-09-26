@@ -1,5 +1,6 @@
 use std::str::FromStr;
 
+use fuel_tx::AssetId;
 use fuels::{
     accounts::{provider::Provider, wallet::WalletUnlocked},
     core::error,
@@ -7,19 +8,23 @@ use fuels::{
     test_helpers::{ChainConfig, NodeConfig, WalletsConfig},
     types::errors::Result,
 };
+use once_cell::sync::Lazy;
 
-use crate::{TESTNET_NODE_URL, TEST_WALLETS_COUNT};
-
-pub fn is_testnet() -> bool {
-    option_env!("E2E_TARGET").unwrap_or_default() == "testnet"
-}
+pub const TESTNET_NODE_URL: &str = "testnet.fuel.network";
+pub const TEST_WALLETS_COUNT: u64 = 3;
+#[allow(dead_code)]
+pub static BASE_ASSET_ID: Lazy<AssetId> = Lazy::new(|| {
+    AssetId::from_str("0xf8f8b6283d7fa5b672b530cbb84fcccb4ff8dc40f8176ef4544ddb1f1952ad07")
+        .expect("failed to parse BASE_ASSET_ID")
+});
+pub static IS_TESTNET: Lazy<bool> = Lazy::new(|| option_env!("E2E_TARGET") == Some("testnet"));
 
 pub async fn maybe_connect_to_testnet_and_get_wallets(
     wallet_config: WalletsConfig,
     node_config: Option<NodeConfig>,
     chain_config: Option<ChainConfig>,
 ) -> Result<Vec<WalletUnlocked>> {
-    if is_testnet() {
+    if *IS_TESTNET {
         let num_wallets = wallet_config.num_wallets();
         if num_wallets > TEST_WALLETS_COUNT {
             error!(

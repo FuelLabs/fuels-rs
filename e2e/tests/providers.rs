@@ -18,9 +18,8 @@ use fuels::{
     },
 };
 
-use e2e::helpers::{
-    maybe_connect_to_testnet_and_get_wallet, maybe_connect_to_testnet_and_get_wallets,
-};
+mod common;
+use common::{maybe_connect_to_testnet_and_get_wallet, maybe_connect_to_testnet_and_get_wallets};
 
 #[tokio::test]
 async fn test_provider_launch_and_connect() -> Result<()> {

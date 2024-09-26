@@ -6,8 +6,10 @@ use fuels::{
     types::{Bits256, SizedAsciiString, U256},
 };
 
-use e2e::helpers::{is_testnet, maybe_connect_to_testnet_and_get_wallet};
 use tokio::time::sleep;
+
+mod common;
+use common::{maybe_connect_to_testnet_and_get_wallet, IS_TESTNET};
 
 #[tokio::test]
 async fn contract_default_configurables() -> Result<()> {
@@ -136,7 +138,7 @@ async fn contract_configurables() -> Result<()> {
     .deploy(&wallet, TxPolicies::default())
     .await?;
 
-    if is_testnet() {
+    if *IS_TESTNET {
         sleep(Duration::from_secs(10)).await;
     }
 
@@ -206,7 +208,7 @@ async fn contract_manual_configurables() -> Result<()> {
     .deploy(&wallet, TxPolicies::default())
     .await?;
 
-    if is_testnet() {
+    if *IS_TESTNET {
         sleep(Duration::from_secs(10)).await;
     }
 
