@@ -316,7 +316,6 @@ async fn transfer_coins_with_change() -> Result<()> {
     let asset_id = *BASE_ASSET_ID;
     let (wallet_1, wallet_2) = setup_transfer_test(AMOUNT).await?;
 
-    dbg!("setup");
     // Transfer 2 from wallet 1 to wallet 2.
     const SEND_AMOUNT: u64 = 2;
     let _receipts = wallet_1
@@ -327,8 +326,6 @@ async fn transfer_coins_with_change() -> Result<()> {
             TxPolicies::default(),
         )
         .await?;
-
-    dbg!("send");
 
     let wallet_1_final_coins = wallet_1.get_spendable_resources(asset_id, 1, None).await?;
 
