@@ -13,11 +13,16 @@ use once_cell::sync::Lazy;
 pub const TESTNET_NODE_URL: &str = "testnet.fuel.network";
 pub const TEST_WALLETS_COUNT: u64 = 3;
 #[allow(dead_code)]
-pub static BASE_ASSET_ID: Lazy<AssetId> = Lazy::new(|| {
-    AssetId::from_str("0xf8f8b6283d7fa5b672b530cbb84fcccb4ff8dc40f8176ef4544ddb1f1952ad07")
-        .expect("failed to parse BASE_ASSET_ID")
-});
 pub static IS_TESTNET: Lazy<bool> = Lazy::new(|| option_env!("E2E_TARGET") == Some("testnet"));
+#[allow(dead_code)]
+pub static BASE_ASSET_ID: Lazy<AssetId> = Lazy::new(|| {
+    if *IS_TESTNET {
+        AssetId::from_str("0xf8f8b6283d7fa5b672b530cbb84fcccb4ff8dc40f8176ef4544ddb1f1952ad07")
+            .expect("failed to parse BASE_ASSET_ID")
+    } else {
+        AssetId::zeroed()
+    }
+});
 
 pub async fn maybe_connect_to_testnet_and_get_wallets(
     wallet_config: WalletsConfig,
