@@ -218,22 +218,19 @@ async fn adjust_fee_resources_to_transfer_with_base_asset() -> Result<()> {
 #[tokio::test]
 async fn test_transfer() -> Result<()> {
     let mut wallets = maybe_connect_to_testnet_and_get_wallets(
-        WalletsConfig::new(Some(2), None, None),
+        WalletsConfig::new(Some(1), None, None),
         None,
         None,
     )
     .await?;
     let mut wallet_1 = wallets.pop().unwrap();
-    let mut wallet_2 = wallets.pop().unwrap().lock();
+    let mut wallet_2 = WalletUnlocked::new_random(wallet_1.provider().cloned()).lock();
 
     let amount = 10;
     let num_coins = 1;
     let asset_id = *BASE_ASSET_ID;
     if !*IS_TESTNET {
-        let mut coins_1 = setup_single_asset_coins(wallet_1.address(), asset_id, num_coins, amount);
-        let coins_2 = setup_single_asset_coins(wallet_2.address(), asset_id, num_coins, amount);
-        coins_1.extend(coins_2);
-
+        let coins_1 = setup_single_asset_coins(wallet_1.address(), asset_id, num_coins, amount);
         let provider = setup_test_provider(coins_1, vec![], None, None).await?;
         wallet_1.set_provider(provider.clone());
         wallet_2.set_provider(provider);
@@ -243,7 +240,7 @@ async fn test_transfer() -> Result<()> {
         .transfer(
             wallet_2.address(),
             amount / 2,
-            Default::default(),
+            asset_id,
             TxPolicies::default(),
         )
         .await
@@ -251,8 +248,8 @@ async fn test_transfer() -> Result<()> {
 
     let wallet_2_coins = wallet_2.get_coins(asset_id).await.unwrap();
     let wallet_2_balance = wallet_2.get_asset_balance(&asset_id).await?;
-    assert_eq!(wallet_2_coins.len(), 2);
-    assert_eq!(wallet_2_balance, amount + amount / 2);
+    assert_eq!(wallet_2_coins.len(), 1);
+    assert_eq!(wallet_2_balance, amount / 2);
 
     Ok(())
 }
