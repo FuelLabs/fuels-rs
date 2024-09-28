@@ -1,0 +1,8 @@
+[profile.ci-testnet]
+
+[test-groups]
+testnet-e2e = { max-threads = 1 }
+
+[[profile.ci-testnet.overrides]]
+filter = 'package(e2e)'
+test-group = 'testnet-e2e'
