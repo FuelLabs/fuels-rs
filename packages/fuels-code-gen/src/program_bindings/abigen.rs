@@ -31,7 +31,7 @@ impl Abigen {
     /// # Arguments
     ///
     /// * `targets`: `AbigenTargets` detailing which ABI to generate bindings
-    /// for, and of what nature (Contract, Script or Predicate).
+    ///   for, and of what nature (Contract, Script or Predicate).
     /// * `no_std`: don't use the Rust std library.
     pub fn generate(targets: Vec<AbigenTarget>, no_std: bool) -> Result<TokenStream> {
         let generated_code = Self::generate_code(no_std, targets)?;
@@ -151,7 +151,7 @@ impl Abigen {
     /// # Arguments
     ///
     /// * `all_custom_types`: types from all ABIs whose bindings are being
-    /// generated.
+    ///   generated.
     fn filter_shared_types<'a>(
         all_custom_types: impl IntoIterator<Item = &'a FullTypeDeclaration>,
     ) -> HashSet<FullTypeDeclaration> {
