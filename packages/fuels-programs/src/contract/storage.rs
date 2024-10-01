@@ -3,11 +3,12 @@ use std::{
     default::Default,
     fmt::Debug,
     io,
-    path::{Path, PathBuf},
+    path::{self, Path, PathBuf},
 };
 
 use fuel_tx::{Bytes32, StorageSlot};
 use fuels_core::types::errors::{error, Result};
+use path_clean::PathClean;
 
 /// Configuration for contract storage
 #[derive(Debug, Clone)]
@@ -94,13 +95,23 @@ impl StorageSlots {
     }
 
     pub(crate) fn load_from_file(storage_path: impl AsRef<Path>) -> Result<Self> {
-        let storage_path = storage_path.as_ref();
-        validate_path_and_extension(storage_path, "json")?;
-
-        let storage_json_string = std::fs::read_to_string(storage_path).map_err(|e| {
+        let absolute_storage_path = path::absolute(storage_path.as_ref()).map_err(|e| {
             io::Error::new(
                 e.kind(),
-                format!("failed to read storage slots from: {storage_path:?}: {e}"),
+                format!(
+                    "failed to make path absolute: {:?}. Reason: {e}",
+                    storage_path.as_ref()
+                ),
+            )
+        })?;
+        let clean_storage_path = absolute_storage_path.clean();
+
+        validate_path_and_extension(&clean_storage_path, "json")?;
+
+        let storage_json_string = std::fs::read_to_string(&clean_storage_path).map_err(|e| {
+            io::Error::new(
+                e.kind(),
+                format!("failed to read storage slots from: {clean_storage_path:?}: {e}"),
             )
         })?;
 
