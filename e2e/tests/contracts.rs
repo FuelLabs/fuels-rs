@@ -2359,3 +2359,75 @@ async fn loader_works_via_proxy() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn loader_storage_works_via_proxy() -> Result<()> {
+    let wallet = launch_provider_and_get_wallet().await?;
+
+    abigen!(
+        Contract(
+            name = "MyContract",
+            abi = "e2e/sway/contracts/huge_contract/out/release/huge_contract-abi.json"
+        ),
+        Contract(
+            name = "MyProxy",
+            abi = "e2e/sway/contracts/proxy/out/release/proxy-abi.json"
+        )
+    );
+
+    let contract_binary = "sway/contracts/huge_contract/out/release/huge_contract.bin";
+
+    let contract = Contract::load_from(contract_binary, LoadConfiguration::default())?;
+    let contract_storage_slots = contract.storage_slots().to_vec();
+
+    let contract_id = contract
+        .convert_to_loader(100)?
+        .deploy(&wallet, TxPolicies::default())
+        .await?;
+
+    let contract_binary = "sway/contracts/proxy/out/release/proxy.bin";
+    let proxy_contract = Contract::load_from(contract_binary, LoadConfiguration::default())?;
+
+    let combined_storage_slots = [&contract_storage_slots, proxy_contract.storage_slots()].concat();
+
+    let proxy_id = proxy_contract
+        .with_storage_slots(combined_storage_slots)
+        .deploy(&wallet, TxPolicies::default())
+        .await?;
+
+    let proxy = MyProxy::new(proxy_id, wallet.clone());
+    proxy
+        .methods()
+        .set_target_contract(contract_id.clone())
+        .call()
+        .await?;
+
+    let response = proxy
+        .methods()
+        .read_some_u64()
+        .with_contract_ids(&[contract_id.clone()])
+        .call()
+        .await?
+        .value;
+
+    assert_eq!(response, 42);
+
+    let _res = proxy
+        .methods()
+        .write_some_u64(36)
+        .with_contract_ids(&[contract_id.clone()])
+        .call()
+        .await?;
+
+    let response = proxy
+        .methods()
+        .read_some_u64()
+        .with_contract_ids(&[contract_id])
+        .call()
+        .await?
+        .value;
+
+    assert_eq!(response, 36);
+
+    Ok(())
+}
