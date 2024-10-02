@@ -781,7 +781,7 @@ async fn test_caching() -> Result<()> {
     )
     .await?;
     let wallet_1 = wallets.pop().unwrap();
-    let provider = wallet_1.provider().unwrap();
+    let provider = wallet_1.try_provider()?;
     let wallet_2 = WalletUnlocked::new_random(Some(provider.clone()));
 
     // Consecutively send transfer txs. Without caching, the txs will
@@ -849,7 +849,7 @@ async fn test_cache_invalidation_on_await() -> Result<()> {
     .await?;
     let wallet = wallets.pop().unwrap();
 
-    let provider = wallet.provider().unwrap();
+    let provider = wallet.try_provider()?;
     let tx = create_revert_tx(&wallet).await?;
 
     // Pause time so that the cache doesn't invalidate items based on TTL

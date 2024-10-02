@@ -2158,7 +2158,7 @@ async fn blob_contract_deployment() -> Result<()> {
         launch_custom_provider_and_get_wallets(WalletsConfig::new(Some(2), None, None), None, None)
             .await?;
 
-    let provider = wallets[0].provider().unwrap().clone();
+    let provider = wallets[0].try_provider()?.clone();
 
     let consensus_parameters = provider.consensus_parameters();
 

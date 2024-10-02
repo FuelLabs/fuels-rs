@@ -10,7 +10,7 @@ use fuels::{
 mod common;
 use common::{
     maybe_connect_to_testnet_and_get_wallet, maybe_connect_to_testnet_and_get_wallets, IS_TESTNET,
-    NON_BASE_ASSET_ID,
+    NON_BASE_ASSET_ID, TEST_WALLETS_COUNT,
 };
 
 #[tokio::test]
@@ -371,7 +371,7 @@ async fn setup_transfer_test(amount: u64) -> Result<(WalletUnlocked, WalletUnloc
 
     let provider = if *IS_TESTNET {
         let funding_wallet = maybe_connect_to_testnet_and_get_wallet().await?;
-        let provider = funding_wallet.provider().unwrap().clone();
+        let provider = funding_wallet.try_provider()?;
         funding_wallet
             .transfer(
                 wallet_1.address(),
@@ -380,7 +380,7 @@ async fn setup_transfer_test(amount: u64) -> Result<(WalletUnlocked, WalletUnloc
                 TxPolicies::default(),
             )
             .await?;
-        provider
+        provider.clone()
     } else {
         let coins = setup_single_asset_coins(wallet_1.address(), AssetId::zeroed(), 1, amount);
         setup_test_provider(coins, vec![], None, None).await?
@@ -423,7 +423,7 @@ async fn transfer_coins_of_non_base_asset() -> Result<()> {
 
     if *IS_TESTNET {
         let funding_wallet = maybe_connect_to_testnet_and_get_wallet().await?;
-        let provider = funding_wallet.provider().unwrap().clone();
+        let provider = funding_wallet.try_provider()?;
         wallet_1.set_provider(provider.clone());
         wallet_2.set_provider(provider.clone());
         funding_wallet
@@ -475,7 +475,7 @@ async fn transfer_coins_of_non_base_asset() -> Result<()> {
 
 #[tokio::test]
 async fn test_transfer_with_multiple_signatures() -> Result<()> {
-    let wallet_config = base_asset_wallet_config(5);
+    let wallet_config = base_asset_wallet_config(TEST_WALLETS_COUNT);
     let wallets = maybe_connect_to_testnet_and_get_wallets(wallet_config, None, None).await?;
     let provider = wallets[0].try_provider()?;
 
