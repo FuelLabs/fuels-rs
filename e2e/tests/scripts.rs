@@ -5,7 +5,7 @@ use fuels::{
 };
 
 mod common;
-use common::{maybe_connect_to_testnet_and_get_wallet, BASE_ASSET_ID};
+use common::maybe_connect_to_testnet_and_get_wallet;
 
 #[tokio::test]
 async fn main_function_arguments() -> Result<()> {
@@ -116,10 +116,10 @@ async fn test_output_variable_estimation() -> Result<()> {
 
     let provider = wallet.try_provider()?.clone();
     let mut receiver = WalletUnlocked::new_random(None);
-    receiver.set_provider(provider);
+    receiver.set_provider(provider.clone());
 
     let amount = 10;
-    let asset_id = *BASE_ASSET_ID;
+    let asset_id = *provider.base_asset_id();
     let script_call = script_instance.main(
         amount,
         asset_id,

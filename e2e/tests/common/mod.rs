@@ -1,12 +1,11 @@
 use std::str::FromStr;
 
-use fuel_tx::AssetId;
 use fuels::{
     accounts::{provider::Provider, wallet::WalletUnlocked},
     core::error,
     crypto::SecretKey,
     test_helpers::{ChainConfig, NodeConfig, WalletsConfig},
-    types::errors::Result,
+    types::{errors::Result, AssetId},
 };
 use once_cell::sync::Lazy;
 
@@ -15,12 +14,12 @@ pub const TEST_WALLETS_COUNT: u64 = 3;
 #[allow(dead_code)]
 pub static IS_TESTNET: Lazy<bool> = Lazy::new(|| option_env!("E2E_TARGET") == Some("testnet"));
 #[allow(dead_code)]
-pub static BASE_ASSET_ID: Lazy<AssetId> = Lazy::new(|| {
+pub static NON_BASE_ASSET_ID: Lazy<AssetId> = Lazy::new(|| {
     if *IS_TESTNET {
-        AssetId::from_str("0xf8f8b6283d7fa5b672b530cbb84fcccb4ff8dc40f8176ef4544ddb1f1952ad07")
-            .expect("failed to parse BASE_ASSET_ID")
+        AssetId::from_str("0x61ff55126ae96ddf201080243b2f9e6baa1bab1b4924af510c0785c3ae9cd693")
+            .expect("failed to parse NON_BASE_ASSET_ID")
     } else {
-        AssetId::zeroed()
+        AssetId::from([1; 32usize])
     }
 });
 
