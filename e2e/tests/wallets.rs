@@ -393,7 +393,7 @@ async fn setup_transfer_test(amount: u64) -> Result<(WalletUnlocked, WalletUnloc
 
 #[tokio::test]
 async fn transfer_more_than_owned() -> Result<()> {
-    const AMOUNT: u64 = 1000000;
+    const AMOUNT: u64 = 10_000;
     let (wallet_1, wallet_2) = setup_transfer_test(AMOUNT).await?;
 
     // Transferring more than balance should fail.
