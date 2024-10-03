@@ -27,6 +27,10 @@ async fn contract_default_configurables() -> Result<()> {
     .deploy(&wallet, TxPolicies::default())
     .await?;
 
+    if *IS_TESTNET {
+        sleep(Duration::from_secs(10)).await;
+    }
+
     let contract_instance = MyContract::new(contract_id, wallet.clone());
 
     let response = contract_instance
@@ -73,6 +77,10 @@ async fn script_default_configurables() -> Result<()> {
         )
     );
 
+    if *IS_TESTNET {
+        sleep(Duration::from_secs(10)).await;
+    }
+
     let response = script_instance.main().call().await?;
 
     let expected_value = (
@@ -107,6 +115,10 @@ async fn contract_configurables() -> Result<()> {
     ));
 
     let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
+
+    if *IS_TESTNET {
+        sleep(Duration::from_secs(10)).await;
+    }
 
     let str_4: SizedAsciiString<4> = "FUEL".try_into()?;
     let new_struct = StructWithGeneric {
@@ -179,6 +191,10 @@ async fn contract_manual_configurables() -> Result<()> {
         project = "e2e/sway/contracts/configurables"
     )));
 
+    if *IS_TESTNET {
+        sleep(Duration::from_secs(10)).await;
+    }
+
     let str_4: SizedAsciiString<4> = "FUEL".try_into()?;
     let new_struct = StructWithGeneric {
         field_1: 16u8,
@@ -249,6 +265,11 @@ async fn script_configurables() -> Result<()> {
     ));
 
     let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
+
+    if *IS_TESTNET {
+        sleep(Duration::from_secs(10)).await;
+    }
+
     let bin_path = "sway/scripts/script_configurables/out/release/script_configurables.bin";
     let instance = MyScript::new(wallet, bin_path);
 
