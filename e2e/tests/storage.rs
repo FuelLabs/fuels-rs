@@ -24,7 +24,9 @@ async fn test_storage_initialization() -> Result<()> {
 
     let contract_id = Contract::load_from(
         "sway/contracts/storage/out/release/storage.bin",
-        LoadConfiguration::default().with_storage_configuration(storage_configuration),
+        LoadConfiguration::default()
+            .with_storage_configuration(storage_configuration)
+            .with_salt(rand::random::<Salt>()),
     )?
     .deploy(&wallet, TxPolicies::default())
     .await?;
@@ -53,7 +55,7 @@ async fn test_init_storage_automatically() -> Result<()> {
 
     let contract_id = Contract::load_from(
         "sway/contracts/storage/out/release/storage.bin",
-        LoadConfiguration::default(),
+        LoadConfiguration::default().with_salt(rand::random::<Salt>()),
     )?
     .deploy(&wallet, TxPolicies::default())
     .await?;
