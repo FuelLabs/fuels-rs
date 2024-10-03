@@ -103,6 +103,10 @@ async fn compile_bindings_from_inline_contract() -> Result<()> {
 
     let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
 
+    if *IS_TESTNET {
+        sleep(Duration::from_secs(10)).await;
+    }
+
     let contract_instance = SimpleContract::new(null_contract_id(), wallet);
 
     let call_handler = contract_instance.methods().takes_u32_returns_bool(42_u32);
@@ -138,9 +142,11 @@ async fn shared_types() -> Result<()> {
             wallet = "wallet"
         ),
     );
+
     if *IS_TESTNET {
         sleep(Duration::from_secs(10)).await;
     }
+
     {
         let methods = contract_a.methods();
 
@@ -247,9 +253,11 @@ async fn type_paths_respected() -> Result<()> {
             wallet = "wallet"
         ),
     );
+
     if *IS_TESTNET {
         sleep(Duration::from_secs(10)).await;
     }
+
     {
         let contract_a_type =
             abigen_bindings::contract_a_mod::contract_a_types::VeryCommonNameStruct {
