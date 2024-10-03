@@ -7,7 +7,7 @@ use fuel_core_services::State;
 use fuels_core::types::errors::{error, Result};
 
 #[cfg(not(feature = "fuel-core-lib"))]
-use crate::fuel_bin_service::FuelService as BinFuelService;
+use crate::fuel_bin_service::{FuelService as BinFuelService, RelayerConfig};
 use crate::NodeConfig;
 
 pub struct FuelService {
@@ -34,6 +34,29 @@ impl FuelService {
 
         #[cfg(not(feature = "fuel-core-lib"))]
         let service = BinFuelService::new_node(node_config, chain_config, state_config).await?;
+
+        let bound_address = service.bound_address;
+
+        Ok(FuelService {
+            service,
+            bound_address,
+        })
+    }
+
+    #[cfg(not(feature = "fuel-core-lib"))]
+    pub async fn start_with_relayer(
+        node_config: NodeConfig,
+        chain_config: ChainConfig,
+        state_config: StateConfig,
+        relayer_config: RelayerConfig,
+    ) -> Result<Self> {
+        let service = BinFuelService::new_node_with_relayer(
+            node_config,
+            chain_config,
+            state_config,
+            relayer_config,
+        )
+        .await?;
 
         let bound_address = service.bound_address;
 
