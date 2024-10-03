@@ -1,4 +1,5 @@
 [profile.ci-testnet]
+slow-timeout = "2m"
 
 [test-groups]
 testnet-e2e = { max-threads = 1 }
