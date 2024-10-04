@@ -38,6 +38,7 @@ members = [
   'sway/logs/script_needs_custom_decoder_logging',
   'sway/logs/script_with_contract_logs',
   'sway/predicates/basic_predicate',
+  'sway/predicates/predicate_blobs',
   'sway/predicates/predicate_configurables',
   'sway/predicates/predicate_witnesses',
   'sway/predicates/signatures',

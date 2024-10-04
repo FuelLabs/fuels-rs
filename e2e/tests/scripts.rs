@@ -1,9 +1,11 @@
-
 use fuels::{
-    core::codec::{DecoderConfig, EncoderConfig},
+    core::{
+        codec::{DecoderConfig, EncoderConfig},
+        traits::Tokenizable,
+    },
     prelude::*,
     programs::executable::Executable,
-    types::Identity,
+    types::{Bits256, Identity},
 };
 
 #[tokio::test]
@@ -420,7 +422,17 @@ async fn can_be_run_in_blobs_builder() -> Result<()> {
 
     loader.upload_blob(wallet.clone()).await;
 
-    let mut tb = ScriptTransactionBuilder::default().with_script(loader.code());
+    let encoder = fuels::core::codec::ABIEncoder::default();
+    let token = MyStruct {
+        field_a: MyEnum::B(99),
+        field_b: Bits256([17; 32]),
+    }
+    .into_token();
+    let data = encoder.encode(&[token]).unwrap();
+
+    let mut tb = ScriptTransactionBuilder::default()
+        .with_script(loader.code())
+        .with_script_data(data);
 
     wallet.adjust_for_fee(&mut tb, 0).await.unwrap();
 
@@ -454,7 +466,16 @@ async fn can_be_run_in_blobs_high_level() -> Result<()> {
         .unwrap();
     let mut my_script = my_script.with_configurables(configurables);
 
-    my_script.convert_into_loader().await.main().call().await?;
+    let arg = MyStruct {
+        field_a: MyEnum::B(99),
+        field_b: Bits256([17; 32]),
+    };
+    my_script
+        .convert_into_loader()
+        .await
+        .main(arg)
+        .call()
+        .await?;
 
     Ok(())
 }

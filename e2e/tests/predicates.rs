@@ -6,6 +6,7 @@ use fuels::{
         traits::Tokenizable,
     },
     prelude::*,
+    programs::executable::Executable,
     types::{coin::Coin, coin_type::CoinType, input::Input, message::Message, output::Output},
 };
 
@@ -1081,6 +1082,63 @@ async fn predicate_with_invalid_data_fails() -> Result<()> {
 
     assert!(error_string.contains("PredicateVerificationFailed(Panic(PredicateReturnedNonOne))"));
     assert_eq!(receiver.get_asset_balance(&other_asset_id).await?, 0);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn predicate_blobs() -> Result<()> {
+    abigen!(Predicate(
+        name = "MyPredicate",
+        abi = "e2e/sway/predicates/predicate_blobs/out/release/predicate_blobs-abi.json"
+    ));
+
+    let configurables = MyPredicateConfigurables::default()
+        .with_SECRET_NUMBER(10001)
+        .unwrap();
+
+    let predicate_data = MyPredicateEncoder::default().encode_data(1, 19)?;
+
+    let executable =
+        Executable::load_from("sway/predicates/predicate_blobs/out/release/predicate_blobs.bin")
+            .with_configurables(configurables);
+
+    let loader = executable.to_loader();
+
+    let mut predicate: Predicate = Predicate::from_code(loader.code()).with_data(predicate_data);
+
+    let num_coins = 4;
+    let num_messages = 8;
+    let amount = 16;
+    let (provider, predicate_balance, receiver, receiver_balance, asset_id) =
+        setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
+
+    loader.upload_blob(receiver.clone()).await;
+
+    predicate.set_provider(provider.clone());
+
+    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
+    let expected_fee = 1;
+    predicate
+        .transfer(
+            receiver.address(),
+            predicate_balance - expected_fee,
+            asset_id,
+            TxPolicies::default(),
+        )
+        .await?;
+
+    // The predicate has spent the funds
+    assert_address_balance(predicate.address(), &provider, asset_id, 0).await;
+
+    // Funds were transferred
+    assert_address_balance(
+        receiver.address(),
+        &provider,
+        asset_id,
+        receiver_balance + predicate_balance - expected_fee,
+    )
+    .await;
 
     Ok(())
 }
