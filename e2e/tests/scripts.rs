@@ -413,13 +413,10 @@ async fn can_be_run_in_blobs_builder() -> Result<()> {
     ));
 
     let binary_path = "./sway/scripts/script_blobs/out/release/script_blobs.bin";
-    let binary = std::fs::read(binary_path).unwrap();
     let wallet = launch_provider_and_get_wallet().await.unwrap();
     let provider = wallet.provider().unwrap().clone();
 
     let regular = Executable::load_from(binary_path);
-
-    let code = regular.code();
 
     let configurables = MyScriptConfigurables::default()
         .with_SECRET_NUMBER(10001)
@@ -432,7 +429,7 @@ async fn can_be_run_in_blobs_builder() -> Result<()> {
 
     wallet.adjust_for_fee(&mut tb, 0).await.unwrap();
 
-    tb.add_signer(wallet.clone()).unwrap();
+    wallet.add_witnesses(&mut tb).unwrap();
 
     let tx = tb.build(&provider).await.unwrap();
 

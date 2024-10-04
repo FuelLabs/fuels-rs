@@ -1,8 +1,7 @@
 use fuel_asm::{op, Instruction, RegId};
 use fuels_core::{
     constants::WORD_SIZE,
-    traits::Signer,
-    types::transaction_builders::{Blob, BlobId, BlobTransactionBuilder, TransactionBuilder},
+    types::transaction_builders::{Blob, BlobId, BlobTransactionBuilder},
     Configurables,
 };
 
