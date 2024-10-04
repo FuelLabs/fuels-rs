@@ -42,7 +42,7 @@ pub(crate) fn script_bindings(
         #[derive(Debug,Clone)]
         pub struct #name<A: ::fuels::accounts::Account>{
             account: A,
-            binary: ::std::vec::Vec<u8>,
+            unconfigured_binary: ::std::vec::Vec<u8>,
             configurables: ::fuels::core::Configurables,
             converted_into_loader: bool,
             log_decoder: ::fuels::core::codec::LogDecoder,
@@ -56,7 +56,7 @@ pub(crate) fn script_bindings(
                                             .expect(&format!("could not read script binary {binary_filepath:?}"));
                 Self {
                     account,
-                    binary,
+                    unconfigured_binary: binary,
                     configurables: ::core::default::Default::default(),
                     converted_into_loader: false,
                     log_decoder: ::fuels::core::codec::LogDecoder::new(#log_formatters_lookup),
@@ -67,7 +67,7 @@ pub(crate) fn script_bindings(
             pub fn with_account<U: ::fuels::accounts::Account>(self, account: U) -> #name<U> {
                     #name {
                         account,
-                        binary: self.binary,
+                        unconfigured_binary: self.unconfigured_binary,
                         log_decoder: self.log_decoder,
                         encoder_config: self.encoder_config,
                         configurables: self.configurables,
@@ -83,10 +83,14 @@ pub(crate) fn script_bindings(
             }
 
             pub fn code(&self) -> ::std::vec::Vec<u8> {
-                // TODO: rename to code
-                let mut code = self.binary.clone();
-                self.configurables.update_constants_in(&mut code);
-                code
+                if self.converted_into_loader {
+                    let regular = ::fuels::programs::executable::Executable::from_bytes(self.unconfigured_binary.clone()).with_configurables(self.configurables.clone());
+                    regular.to_loader().code()
+                } else {
+                    let mut code = self.unconfigured_binary.clone();
+                    self.configurables.update_constants_in(&mut code);
+                    code
+                }
             }
 
             pub fn with_encoder_config(mut self, encoder_config: ::fuels::core::codec::EncoderConfig)
@@ -102,19 +106,16 @@ pub(crate) fn script_bindings(
             }
 
             pub async fn convert_into_loader(&mut self) -> &mut Self {
-
                 if self.converted_into_loader {
                     ::core::todo!("Error if already called")
                 }
 
-                let regular = ::fuels::programs::executable::Executable::from_bytes(self.binary.clone()).with_configurables(self.configurables.clone());
+                let regular = ::fuels::programs::executable::Executable::from_bytes(self.unconfigured_binary.clone()).with_configurables(self.configurables.clone());
                 let loader = regular.to_loader();
 
                 loader.upload_blob(self.account.clone()).await;
 
                 self.converted_into_loader = true;
-
-                self.binary = loader.code();
 
                 self
             }
@@ -143,7 +144,7 @@ fn expand_fn(fn_abi: &FullABIFunction) -> Result<TokenStream> {
             let encoded_args = ::fuels::core::codec::ABIEncoder::new(self.encoder_config).encode(&#arg_tokens);
 
             ::fuels::programs::calls::CallHandler::new_script_call(
-                self.binary.clone(),
+                self.code(),
                 encoded_args,
                 self.account.clone(),
                 self.log_decoder.clone()
@@ -222,7 +223,7 @@ mod tests {
                 let encoded_args=::fuels::core::codec::ABIEncoder::new(self.encoder_config)
                     .encode(&[::fuels::core::traits::Tokenizable::into_token(bimbam)]);
                  ::fuels::programs::calls::CallHandler::new_script_call(
-                    self.binary.clone(),
+                    self.code(),
                     encoded_args,
                     self.account.clone(),
                     self.log_decoder.clone()

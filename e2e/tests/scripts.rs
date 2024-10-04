@@ -1,14 +1,9 @@
-use std::marker::PhantomData;
 
-use fuel_asm::{op, Instruction, RegId};
 use fuels::{
-    core::{
-        codec::{DecoderConfig, EncoderConfig},
-        Configurables,
-    },
+    core::codec::{DecoderConfig, EncoderConfig},
     prelude::*,
     programs::executable::Executable,
-    types::{Identity, Token},
+    types::Identity,
 };
 
 #[tokio::test]
