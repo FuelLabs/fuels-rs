@@ -1,6 +1,9 @@
 use fuel_asm::{op, Instruction, RegId};
 use fuels::{
-    core::codec::{DecoderConfig, EncoderConfig},
+    core::{
+        codec::{DecoderConfig, EncoderConfig},
+        Configurables,
+    },
     prelude::*,
     types::{Identity, Token},
 };
@@ -404,13 +407,21 @@ fn get_data_offset(binary: &[u8]) -> usize {
     u64::from_be_bytes(data_offset) as usize
 }
 
-fn new_loader(original_binary: &[u8], blob_id: &BlobId) -> Result<Vec<u8>> {
+fn new_loader(
+    mut original_binary: Vec<u8>,
+    configurables: impl Into<Configurables>,
+    blob_id: &BlobId,
+) -> Result<Vec<u8>> {
     // The final code is going to have this structure:
     // 1. loader instructions
     // 2. blob id
     // 3. length_of_data_section
     // 4. the data_section (updated with configurables as needed)
-    let offset = get_data_offset(original_binary);
+
+    let configurables: Configurables = configurables.into();
+    configurables.update_constants_in(&mut original_binary);
+
+    let offset = get_data_offset(&original_binary);
 
     let data_section = original_binary[offset..].to_vec();
 
@@ -503,8 +514,12 @@ fn new_loader(original_binary: &[u8], blob_id: &BlobId) -> Result<Vec<u8>> {
 
 #[tokio::test]
 async fn can_be_run_in_blobs() -> Result<()> {
-    let binary = std::fs::read("./sway/scripts/script_blobs/out/release/script_blobs.bin").unwrap();
+    abigen!(Script(
+        abi = "e2e/sway/scripts/script_blobs/out/release/script_blobs-abi.json",
+        name = "MyScript"
+    ));
 
+    let binary = std::fs::read("./sway/scripts/script_blobs/out/release/script_blobs.bin").unwrap();
     let wallet = launch_provider_and_get_wallet().await.unwrap();
     let provider = wallet.provider().unwrap().clone();
 
@@ -526,7 +541,10 @@ async fn can_be_run_in_blobs() -> Result<()> {
         .check(None)
         .unwrap();
 
-    let new_binary = new_loader(&binary, &blob_id).unwrap();
+    let configurables = MyScriptConfigurables::default()
+        .with_SECRET_NUMBER(10001)
+        .unwrap();
+    let new_binary = new_loader(binary, configurables, &blob_id).unwrap();
 
     let mut tb = ScriptTransactionBuilder::default().with_script(new_binary);
 
