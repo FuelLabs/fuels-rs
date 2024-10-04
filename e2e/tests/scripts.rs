@@ -7,7 +7,7 @@ use fuels::{
         Configurables,
     },
     prelude::*,
-    programs::contract::{Executable, Regular},
+    programs::executable::Executable,
     types::{Identity, Token},
 };
 
@@ -406,7 +406,7 @@ async fn simulations_can_be_made_without_coins() -> Result<()> {
 }
 
 #[tokio::test]
-async fn can_be_run_in_blobs() -> Result<()> {
+async fn can_be_run_in_blobs_builder() -> Result<()> {
     abigen!(Script(
         abi = "e2e/sway/scripts/script_blobs/out/release/script_blobs-abi.json",
         name = "MyScript"
@@ -442,6 +442,27 @@ async fn can_be_run_in_blobs() -> Result<()> {
         .unwrap();
 
     response.check(None).unwrap();
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn can_be_run_in_blobs_high_level() -> Result<()> {
+    setup_program_test!(
+        Abigen(Script(
+            project = "e2e/sway/scripts/script_blobs",
+            name = "MyScript"
+        )),
+        Wallets("wallet"),
+        LoadScript(name = "my_script", script = "MyScript", wallet = "wallet")
+    );
+
+    let configurables = MyScriptConfigurables::default()
+        .with_SECRET_NUMBER(10001)
+        .unwrap();
+    let mut my_script = my_script.with_configurables(configurables);
+
+    my_script.convert_into_loader().await.main().call().await?;
 
     Ok(())
 }

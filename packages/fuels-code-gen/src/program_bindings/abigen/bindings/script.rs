@@ -43,6 +43,8 @@ pub(crate) fn script_bindings(
         pub struct #name<A: ::fuels::accounts::Account>{
             account: A,
             binary: ::std::vec::Vec<u8>,
+            configurables: ::fuels::core::Configurables,
+            converted_into_loader: bool,
             log_decoder: ::fuels::core::codec::LogDecoder,
             encoder_config: ::fuels::core::codec::EncoderConfig,
         }
@@ -55,6 +57,8 @@ pub(crate) fn script_bindings(
                 Self {
                     account,
                     binary,
+                    configurables: ::core::default::Default::default(),
+                    converted_into_loader: false,
                     log_decoder: ::fuels::core::codec::LogDecoder::new(#log_formatters_lookup),
                     encoder_config: ::fuels::core::codec::EncoderConfig::default(),
                 }
@@ -66,15 +70,23 @@ pub(crate) fn script_bindings(
                         binary: self.binary,
                         log_decoder: self.log_decoder,
                         encoder_config: self.encoder_config,
+                        configurables: self.configurables,
+                        converted_into_loader: self.converted_into_loader,
                     }
             }
 
             pub fn with_configurables(mut self, configurables: impl Into<::fuels::core::Configurables>)
                 -> Self
             {
-                let configurables: ::fuels::core::Configurables = configurables.into();
-                configurables.update_constants_in(&mut self.binary);
+                self.configurables = configurables.into();
                 self
+            }
+
+            pub fn code(&self) -> ::std::vec::Vec<u8> {
+                // TODO: rename to code
+                let mut code = self.binary.clone();
+                self.configurables.update_constants_in(&mut code);
+                code
             }
 
             pub fn with_encoder_config(mut self, encoder_config: ::fuels::core::codec::EncoderConfig)
@@ -87,6 +99,24 @@ pub(crate) fn script_bindings(
 
             pub fn log_decoder(&self) -> ::fuels::core::codec::LogDecoder {
                 self.log_decoder.clone()
+            }
+
+            pub async fn convert_into_loader(&mut self) -> &mut Self {
+
+                if self.converted_into_loader {
+                    ::core::todo!("Error if already called")
+                }
+
+                let regular = ::fuels::programs::executable::Executable::from_bytes(self.binary.clone()).with_configurables(self.configurables.clone());
+                let loader = regular.to_loader();
+
+                loader.upload_blob(self.account.clone()).await;
+
+                self.converted_into_loader = true;
+
+                self.binary = loader.code();
+
+                self
             }
 
             #main_function
@@ -111,6 +141,7 @@ fn expand_fn(fn_abi: &FullABIFunction) -> Result<TokenStream> {
     let original_output_type = generator.output_type();
     let body = quote! {
             let encoded_args = ::fuels::core::codec::ABIEncoder::new(self.encoder_config).encode(&#arg_tokens);
+
             ::fuels::programs::calls::CallHandler::new_script_call(
                 self.binary.clone(),
                 encoded_args,
