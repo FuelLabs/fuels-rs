@@ -1,7 +1,8 @@
+use fuel_asm::{op, Instruction, RegId};
 use fuels::{
     core::codec::{DecoderConfig, EncoderConfig},
     prelude::*,
-    types::Identity,
+    types::{Identity, Token},
 };
 
 #[tokio::test]
@@ -394,6 +395,127 @@ async fn simulations_can_be_made_without_coins() -> Result<()> {
         .value;
 
     assert_eq!(value.as_ref(), "hello");
+
+    Ok(())
+}
+
+fn get_data_offset(binary: &[u8]) -> usize {
+    let data_offset: [u8; 8] = binary[8..16].try_into().unwrap();
+    u64::from_be_bytes(data_offset) as usize
+}
+
+fn our_loader(original_binary: &[u8], blob_id: &BlobId) -> Result<Vec<u8>> {
+    let offset = get_data_offset(original_binary);
+
+    let mut data_section = original_binary[offset..].to_vec();
+    assert_eq!(data_section[..8], 9000u64.to_be_bytes());
+
+    data_section[..8].copy_from_slice(&10001u64.to_be_bytes());
+
+    let data_section_len = data_section.len();
+
+    const BLOB_ID_SIZE: u16 = 32;
+    let get_instructions = |num_of_instructions, num_of_blobs| {
+        // There are 2 main steps:
+        // 1. Load the blob contents into memory
+        // 2. Jump to the beginning of the memory where the blobs were loaded
+        // After that the execution continues normally with the loaded contract reading our
+        // prepared fn selector and jumps to the selected contract method.
+        [
+            // 1. Load the blob contents into memory
+            // Find the start of the hardcoded blob IDs, which are located after the code ends.
+            op::move_(0x10, RegId::PC),
+            // 0x10 to hold the address of the current blob ID.
+            op::addi(0x10, 0x10, num_of_instructions * Instruction::SIZE as u16),
+            // The contract is going to be loaded from the current value of SP onwards, save
+            // the location into 0x16 so we can jump into it later on.
+            op::move_(0x16, RegId::SP),
+            // Loop counter.
+            op::movi(0x13, num_of_blobs),
+            // LOOP starts here.
+            // 0x11 to hold the size of the current blob.
+            op::bsiz(0x11, 0x10),
+            // Push the blob contents onto the stack.
+            op::ldc(0x10, 0, 0x11, 1),
+            // Move on to the next blob.
+            op::addi(0x10, 0x10, BLOB_ID_SIZE),
+            // Decrement the loop counter.
+            op::subi(0x13, 0x13, 1),
+            // Jump backwards (3+1) instructions if the counter has not reached 0.
+            op::jnzb(0x13, RegId::ZERO, 3),
+            // TODO: is an immediate here to little, can the data section be bigger?
+            op::cfei(data_section_len as u32),
+            op::subi(0x11, RegId::SP, data_section_len as u16),
+            op::mcpi(0x11, 0x10, data_section_len as u16),
+            // 2. Jump into the memory where the contract is loaded.
+            // What follows is called _jmp_mem by the sway compiler.
+            // Subtract the address contained in IS because jmp will add it back.
+            op::sub(0x16, 0x16, RegId::IS),
+            // jmp will multiply by 4, so we need to divide to cancel that out.
+            op::divi(0x16, 0x16, 4),
+            // Jump to the start of the contract we loaded.
+            op::jmp(0x16),
+        ]
+    };
+
+    let num_of_instructions = u16::try_from(get_instructions(0, 0).len())
+        .expect("to never have more than u16::MAX instructions");
+
+    let num_of_blobs = 1;
+
+    let instruction_bytes = get_instructions(num_of_instructions, num_of_blobs)
+        .into_iter()
+        .flat_map(|instruction| instruction.to_bytes());
+
+    let blob_bytes = blob_id.iter().copied();
+
+    Ok(instruction_bytes
+        .chain(blob_bytes)
+        .chain(data_section)
+        .collect())
+}
+
+#[tokio::test]
+async fn can_be_run_in_blobs() -> Result<()> {
+    let binary = std::fs::read("./sway/scripts/script_blobs/out/release/script_blobs.bin").unwrap();
+
+    let wallet = launch_provider_and_get_wallet().await.unwrap();
+    let provider = wallet.provider().unwrap().clone();
+
+    let data_section_offset = get_data_offset(&binary);
+    let blob = Blob::new(binary[..data_section_offset].to_vec());
+
+    let blob_id = blob.id();
+
+    let mut blob_tb = BlobTransactionBuilder::default().with_blob(blob);
+
+    wallet.adjust_for_fee(&mut blob_tb, 0).await.unwrap();
+    blob_tb.add_signer(wallet.clone()).unwrap();
+
+    let tx = blob_tb.build(provider.clone()).await.unwrap();
+    provider
+        .send_transaction_and_await_commit(tx)
+        .await
+        .unwrap()
+        .check(None)
+        .unwrap();
+
+    let new_binary = our_loader(&binary, &blob_id).unwrap();
+
+    let mut tb = ScriptTransactionBuilder::default().with_script(new_binary);
+
+    wallet.adjust_for_fee(&mut tb, 0).await.unwrap();
+
+    tb.add_signer(wallet.clone()).unwrap();
+
+    let tx = tb.build(&provider).await.unwrap();
+
+    let response = provider
+        .send_transaction_and_await_commit(tx)
+        .await
+        .unwrap();
+
+    response.check(None).unwrap();
 
     Ok(())
 }

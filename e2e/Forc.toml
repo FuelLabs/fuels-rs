@@ -48,6 +48,7 @@ members = [
   'sway/scripts/reverting',
   'sway/scripts/script_array',
   'sway/scripts/script_asserts',
+  'sway/scripts/script_blobs',
   'sway/scripts/script_configurables',
   'sway/scripts/script_enum',
   'sway/scripts/script_needs_custom_decoder',
