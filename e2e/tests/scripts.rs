@@ -410,14 +410,12 @@ async fn can_be_run_in_blobs_builder() -> Result<()> {
     ));
 
     let binary_path = "./sway/scripts/script_blobs/out/release/script_blobs.bin";
-    let wallet = launch_provider_and_get_wallet().await.unwrap();
-    let provider = wallet.provider().unwrap().clone();
+    let wallet = launch_provider_and_get_wallet().await?;
+    let provider = wallet.try_provider()?.clone();
 
     let regular = Executable::load_from(binary_path);
 
-    let configurables = MyScriptConfigurables::default()
-        .with_SECRET_NUMBER(10001)
-        .unwrap();
+    let configurables = MyScriptConfigurables::default().with_SECRET_NUMBER(10001)?;
     let loader = regular.to_loader().with_configurables(configurables);
 
     loader.upload_blob(wallet.clone()).await;
@@ -428,24 +426,21 @@ async fn can_be_run_in_blobs_builder() -> Result<()> {
         field_b: Bits256([17; 32]),
     }
     .into_token();
-    let data = encoder.encode(&[token]).unwrap();
+    let data = encoder.encode(&[token])?;
 
     let mut tb = ScriptTransactionBuilder::default()
         .with_script(loader.code())
         .with_script_data(data);
 
-    wallet.adjust_for_fee(&mut tb, 0).await.unwrap();
+    wallet.adjust_for_fee(&mut tb, 0).await?;
 
-    wallet.add_witnesses(&mut tb).unwrap();
+    wallet.add_witnesses(&mut tb)?;
 
-    let tx = tb.build(&provider).await.unwrap();
+    let tx = tb.build(&provider).await?;
 
-    let response = provider
-        .send_transaction_and_await_commit(tx)
-        .await
-        .unwrap();
+    let response = provider.send_transaction_and_await_commit(tx).await?;
 
-    response.check(None).unwrap();
+    response.check(None)?;
 
     Ok(())
 }
@@ -461,9 +456,7 @@ async fn can_be_run_in_blobs_high_level() -> Result<()> {
         LoadScript(name = "my_script", script = "MyScript", wallet = "wallet")
     );
 
-    let configurables = MyScriptConfigurables::default()
-        .with_SECRET_NUMBER(10001)
-        .unwrap();
+    let configurables = MyScriptConfigurables::default().with_SECRET_NUMBER(10001)?;
     let mut my_script = my_script.with_configurables(configurables);
 
     let arg = MyStruct {

@@ -1093,9 +1093,7 @@ async fn predicate_blobs() -> Result<()> {
         abi = "e2e/sway/predicates/predicate_blobs/out/release/predicate_blobs-abi.json"
     ));
 
-    let configurables = MyPredicateConfigurables::default()
-        .with_SECRET_NUMBER(10001)
-        .unwrap();
+    let configurables = MyPredicateConfigurables::default().with_SECRET_NUMBER(10001)?;
 
     let predicate_data = MyPredicateEncoder::default().encode_data(1, 19)?;
 
