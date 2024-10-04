@@ -1,7 +1,5 @@
 [project]
-authors = ["Segfault Magnet"]
+authors = ["Fuel Labs <contact@fuel.sh>"]
 entry = "main.sw"
 license = "Apache-2.0"
 name = "predicate_blobs"
-
-[dependencies]
