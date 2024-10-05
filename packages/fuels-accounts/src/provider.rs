@@ -761,7 +761,7 @@ impl DryRunner for Provider {
         tx: &FuelTransaction,
         _latest_chain_executor_version: Option<u32>,
     ) -> Result<Option<FuelTransaction>> {
-        // We always delegate the estimation to the client beacuse estimating locally is no longer
+        // We always delegate the estimation to the client because estimating locally is no longer
         // possible due to the need of blob storage
         Ok(Some(self.client.estimate_predicates(tx).await?))
     }
