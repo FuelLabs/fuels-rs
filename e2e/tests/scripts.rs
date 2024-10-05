@@ -413,14 +413,14 @@ async fn can_be_run_in_blobs_builder() -> Result<()> {
     let wallet = launch_provider_and_get_wallet().await?;
     let provider = wallet.try_provider()?.clone();
 
-    let regular = Executable::load_from(binary_path);
+    let regular = Executable::load_from(binary_path)?;
 
     let configurables = MyScriptConfigurables::default().with_SECRET_NUMBER(10001)?;
     let loader = regular
-        .convert_to_loader()
+        .convert_to_loader()?
         .with_configurables(configurables);
 
-    loader.upload_blob(wallet.clone()).await;
+    loader.upload_blob(wallet.clone()).await?;
 
     let encoder = fuels::core::codec::ABIEncoder::default();
     let token = MyStruct {
@@ -468,7 +468,7 @@ async fn can_be_run_in_blobs_high_level() -> Result<()> {
     // TODO check before uploading if it was uploaded already
     my_script
         .convert_into_loader()
-        .await
+        .await?
         .main(arg)
         .call()
         .await?;

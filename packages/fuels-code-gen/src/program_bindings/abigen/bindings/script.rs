@@ -83,13 +83,13 @@ pub(crate) fn script_bindings(
             }
 
             pub fn code(&self) -> ::std::vec::Vec<u8> {
+                let regular = ::fuels::programs::executable::Executable::from_bytes(self.unconfigured_binary.clone()).with_configurables(self.configurables.clone());
+
                 if self.converted_into_loader {
-                    let regular = ::fuels::programs::executable::Executable::from_bytes(self.unconfigured_binary.clone()).with_configurables(self.configurables.clone());
-                    regular.to_loader().code()
+                    let loader = regular.convert_to_loader().expect("cannot fail since we already converted to the loader successfully");
+                    loader.code()
                 } else {
-                    let mut code = self.unconfigured_binary.clone();
-                    self.configurables.update_constants_in(&mut code);
-                    code
+                    regular.code()
                 }
             }
 
@@ -105,19 +105,17 @@ pub(crate) fn script_bindings(
                 self.log_decoder.clone()
             }
 
-            pub async fn convert_into_loader(&mut self) -> &mut Self {
-                if self.converted_into_loader {
-                    return self;
+            pub async fn convert_into_loader(&mut self) -> ::fuels::types::errors::Result<&mut Self> {
+                if !self.converted_into_loader {
+                    let regular = ::fuels::programs::executable::Executable::from_bytes(self.unconfigured_binary.clone()).with_configurables(self.configurables.clone());
+                    let loader = regular.convert_to_loader()?;
+
+                    let _tx_id = loader.upload_blob(self.account.clone()).await?;
+
+                    self.converted_into_loader = true;
                 }
+                ::fuels::types::errors::Result::Ok(self)
 
-                let regular = ::fuels::programs::executable::Executable::from_bytes(self.unconfigured_binary.clone()).with_configurables(self.configurables.clone());
-                let loader = regular.to_loader();
-
-                loader.upload_blob(self.account.clone()).await;
-
-                self.converted_into_loader = true;
-
-                self
             }
 
             #main_function

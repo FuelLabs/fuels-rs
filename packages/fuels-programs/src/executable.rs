@@ -1,8 +1,10 @@
 use fuel_asm::{op, Instruction, RegId};
+use fuel_tx::TxId;
 use fuels_core::{
     constants::WORD_SIZE,
     types::{
         errors::Result,
+        transaction::Transaction,
         transaction_builders::{Blob, BlobId, BlobTransactionBuilder},
     },
     Configurables,
@@ -23,7 +25,6 @@ impl Regular {
     }
 }
 
-// TODO replace unwraps with `?`
 pub struct Executable<State> {
     state: State,
 }
@@ -66,18 +67,31 @@ impl Executable<Regular> {
     }
 
     pub fn convert_to_loader(self) -> Result<Executable<Loader>> {
-        Executable {
+        validate_loader_can_be_made_from_code(
+            self.state.code.clone(),
+            self.state.configurables.clone(),
+        )?;
+
+        Ok(Executable {
             state: Loader {
                 code: self.state.code,
                 configurables: self.state.configurables,
             },
-        }
+        })
     }
 }
 
 fn extract_data_offset(binary: &[u8]) -> Result<usize> {
-    // TODO bounds checks
-    let data_offset: [u8; 8] = binary[8..16].try_into()?;
+    if binary.len() < 16 {
+        return Err(fuels_core::error!(
+            Other,
+            "given binary is too short to contain a data offset, len: {}",
+            binary.len()
+        ));
+    }
+
+    let data_offset: [u8; 8] = binary[8..16].try_into().expect("checked above");
+
     Ok(u64::from_be_bytes(data_offset) as usize)
 }
 
@@ -90,7 +104,14 @@ fn transform_into_configurable_loader(binary: Vec<u8>, blob_id: &BlobId) -> Resu
 
     let offset = extract_data_offset(&binary)?;
 
-    // TODO bounds checks
+    if binary.len() <= offset {
+        return Err(fuels_core::error!(
+            Other,
+            "data section offset is out of bounds, offset: {offset}, binary len: {}",
+            binary.len()
+        ));
+    }
+
     let data_section = binary[offset..].to_vec();
 
     let data_section_len = data_section.len();
@@ -178,6 +199,18 @@ fn transform_into_configurable_loader(binary: Vec<u8>, blob_id: &BlobId) -> Resu
         .collect())
 }
 
+fn validate_loader_can_be_made_from_code(
+    mut code: Vec<u8>,
+    configurables: Configurables,
+) -> Result<()> {
+    configurables.update_constants_in(&mut code);
+
+    // BlobId currently doesn't affect our ability to produce the loader code
+    transform_into_configurable_loader(code, &Default::default())?;
+
+    Ok(())
+}
+
 impl Executable<Loader> {
     pub fn with_configurables(self, configurables: impl Into<Configurables>) -> Self {
         Executable {
@@ -188,7 +221,7 @@ impl Executable<Loader> {
         }
     }
 
-    pub fn code(&self) -> Result<Vec<u8>> {
+    pub fn code(&self) -> Vec<u8> {
         let mut code = self.state.code.clone();
 
         self.state.configurables.update_constants_in(&mut code);
@@ -196,21 +229,20 @@ impl Executable<Loader> {
         let blob_id = self.blob().id();
 
         transform_into_configurable_loader(code, &blob_id)
+            .expect("checked before turning into a Executable<Loader>")
     }
 
     pub fn blob(&self) -> Blob {
-        // TODO: check bounds
-        let data_section_offset = extract_data_offset(&self.state.code);
+        let data_section_offset = extract_data_offset(&self.state.code)
+            .expect("checked before turning into a Executable<Loader>");
 
         let code_without_data_section = self.state.code[..data_section_offset].to_vec();
 
         Blob::new(code_without_data_section)
     }
 
-    pub async fn upload_blob(&self, account: impl fuels_accounts::Account) {
-        let blob = self.blob();
-
-        let mut tb = BlobTransactionBuilder::default().with_blob(blob);
+    pub async fn upload_blob(&self, account: impl fuels_accounts::Account) -> Result<TxId> {
+        let mut tb = BlobTransactionBuilder::default().with_blob(self.blob());
 
         account.adjust_for_fee(&mut tb, 0).await?;
 
@@ -218,10 +250,13 @@ impl Executable<Loader> {
 
         let provider = account.try_provider()?;
         let tx = tb.build(provider).await?;
+        let tx_id = tx.id(provider.chain_id());
 
         provider
             .send_transaction_and_await_commit(tx)
             .await?
             .check(None)?;
+
+        Ok(tx_id)
     }
 }

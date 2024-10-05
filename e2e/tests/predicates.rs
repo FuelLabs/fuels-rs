@@ -1098,10 +1098,10 @@ async fn predicate_blobs() -> Result<()> {
     let predicate_data = MyPredicateEncoder::default().encode_data(1, 19)?;
 
     let executable =
-        Executable::load_from("sway/predicates/predicate_blobs/out/release/predicate_blobs.bin")
+        Executable::load_from("sway/predicates/predicate_blobs/out/release/predicate_blobs.bin")?
             .with_configurables(configurables);
 
-    let loader = executable.convert_to_loader();
+    let loader = executable.convert_to_loader()?;
 
     let mut predicate: Predicate = Predicate::from_code(loader.code()).with_data(predicate_data);
 
@@ -1111,7 +1111,7 @@ async fn predicate_blobs() -> Result<()> {
     let (provider, predicate_balance, receiver, receiver_balance, asset_id) =
         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
-    loader.upload_blob(receiver.clone()).await;
+    loader.upload_blob(receiver.clone()).await?;
 
     predicate.set_provider(provider.clone());
 
