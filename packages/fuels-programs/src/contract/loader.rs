@@ -192,6 +192,7 @@ impl Contract<Loader<BlobsNotUploaded>> {
                 continue;
             }
 
+            eprintln!("Uploading blob: {:?}", id);
             let mut tb = BlobTransactionBuilder::default()
                 .with_blob(blob)
                 .with_tx_policies(tx_policies)
@@ -203,6 +204,7 @@ impl Contract<Loader<BlobsNotUploaded>> {
             let tx = tb.build(provider).await?;
 
             let tx_status_response = provider.send_transaction_and_await_commit(tx).await;
+            eprintln!("Blob upload finished");
 
             match tx_status_response {
                 Ok(tx_status_response) => {

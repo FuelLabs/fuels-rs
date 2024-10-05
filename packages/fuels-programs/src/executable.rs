@@ -184,7 +184,6 @@ fn transform_into_configurable_loader(binary: Vec<u8>, blob_id: &BlobId) -> Resu
     const REG_ADDRESS_OF_DATA_AFTER_CODE: u8 = 0x10;
     const REG_START_OF_LOADED_CODE: u8 = 0x11;
     const REG_GENERAL_USE: u8 = 0x12;
-    const REG_START_OF_DATA_SECTION: u8 = 0x13;
     let get_instructions = |num_of_instructions| {
         // There are 3 main steps:
         // 1. Load the blob content into memory
@@ -223,7 +222,7 @@ fn transform_into_configurable_loader(binary: Vec<u8>, blob_id: &BlobId) -> Resu
                 WORD_SIZE as u16,
             ),
             // load the data section of the executable
-            op::ldc(REG_START_OF_DATA_SECTION, 0, REG_GENERAL_USE, 2),
+            op::ldc(REG_ADDRESS_OF_DATA_AFTER_CODE, 0, REG_GENERAL_USE, 2),
             // Jump into the memory where the contract is loaded.
             // What follows is called _jmp_mem by the sway compiler.
             // Subtract the address contained in IS because jmp will add it back.
