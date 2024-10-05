@@ -1,10 +1,8 @@
 use fuel_asm::{op, Instruction, RegId};
-use fuel_tx::TxId;
 use fuels_core::{
     constants::WORD_SIZE,
     types::{
         errors::Result,
-        transaction::Transaction,
         transaction_builders::{Blob, BlobId, BlobTransactionBuilder},
     },
     Configurables,
@@ -241,22 +239,28 @@ impl Executable<Loader> {
         Blob::new(code_without_data_section)
     }
 
-    pub async fn upload_blob(&self, account: impl fuels_accounts::Account) -> Result<TxId> {
+    pub async fn upload_blob(&self, account: impl fuels_accounts::Account) -> Result<()> {
+        let blob = self.blob();
+        let provider = account.try_provider()?;
+
+        // TODO: use more optimal endpoint once it is made available in fuel-core-client
+        if provider.blob(blob.id()).await?.is_some() {
+            return Ok(());
+        }
+
         let mut tb = BlobTransactionBuilder::default().with_blob(self.blob());
 
         account.adjust_for_fee(&mut tb, 0).await?;
 
         account.add_witnesses(&mut tb)?;
 
-        let provider = account.try_provider()?;
         let tx = tb.build(provider).await?;
-        let tx_id = tx.id(provider.chain_id());
 
         provider
             .send_transaction_and_await_commit(tx)
             .await?
             .check(None)?;
 
-        Ok(tx_id)
+        Ok(())
     }
 }

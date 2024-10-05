@@ -110,7 +110,7 @@ pub(crate) fn script_bindings(
                     let regular = ::fuels::programs::executable::Executable::from_bytes(self.unconfigured_binary.clone()).with_configurables(self.configurables.clone());
                     let loader = regular.convert_to_loader()?;
 
-                    let _tx_id = loader.upload_blob(self.account.clone()).await?;
+                    loader.upload_blob(self.account.clone()).await?;
 
                     self.converted_into_loader = true;
                 }

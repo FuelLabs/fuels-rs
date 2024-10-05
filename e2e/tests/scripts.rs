@@ -465,13 +465,15 @@ async fn can_be_run_in_blobs_high_level() -> Result<()> {
         field_a: MyEnum::B(99),
         field_b: Bits256([17; 32]),
     };
-    // TODO check before uploading if it was uploaded already
-    my_script
+    let secret = my_script
         .convert_into_loader()
         .await?
         .main(arg)
         .call()
-        .await?;
+        .await?
+        .value;
+
+    assert_eq!(secret, 10001);
 
     Ok(())
 }

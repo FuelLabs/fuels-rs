@@ -40,6 +40,7 @@ use fuels_core::{
         message_proof::MessageProof,
         node_info::NodeInfo,
         transaction::{Transaction, Transactions},
+        transaction_builders::{Blob, BlobId},
         transaction_response::TransactionResponse,
         tx_status::TxStatus,
         DryRun, DryRunner,
@@ -148,6 +149,14 @@ impl Provider {
 
     pub fn url(&self) -> &str {
         self.client.url()
+    }
+
+    pub async fn blob(&self, blob_id: BlobId) -> Result<Option<Blob>> {
+        Ok(self
+            .client
+            .blob(blob_id.into())
+            .await?
+            .map(|blob| Blob::new(blob.bytecode)))
     }
 
     /// Sends a transaction to the underlying Provider's client.
