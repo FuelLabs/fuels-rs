@@ -222,16 +222,8 @@ fn transform_into_configurable_loader(binary: Vec<u8>, blob_id: &BlobId) -> Resu
                 REG_ADDRESS_OF_DATA_AFTER_CODE,
                 WORD_SIZE as u16,
             ),
-            // extend the stack
-            op::cfe(REG_GENERAL_USE),
-            // move to the start of the newly allocated stack
-            op::sub(REG_START_OF_DATA_SECTION, RegId::SP, REG_GENERAL_USE),
-            // load the data section onto the stack
-            op::mcp(
-                REG_START_OF_DATA_SECTION,
-                REG_ADDRESS_OF_DATA_AFTER_CODE,
-                REG_GENERAL_USE,
-            ),
+            // load the data section of the executable
+            op::ldc(REG_START_OF_DATA_SECTION, 0, REG_GENERAL_USE, 2),
             // Jump into the memory where the contract is loaded.
             // What follows is called _jmp_mem by the sway compiler.
             // Subtract the address contained in IS because jmp will add it back.
