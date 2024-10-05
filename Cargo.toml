@@ -95,13 +95,13 @@ fuel-core-services = { version = "0.36.0", default-features = false }
 fuel-core-types = { version = "0.36.0", default-features = false }
 
 # Dependencies from the `fuel-vm` repository:
-fuel-asm = { version = "0.57.0" }
-fuel-crypto = { version = "0.57.0" }
-fuel-merkle = { version = "0.57.0" }
-fuel-storage = { version = "0.57.0" }
-fuel-tx = { version = "0.57.0" }
-fuel-types = { version = "0.57.0" }
-fuel-vm = { version = "0.57.0" }
+fuel-asm = { version = "0.58.0" }
+fuel-crypto = { version = "0.58.0" }
+fuel-merkle = { version = "0.58.0" }
+fuel-storage = { version = "0.58.0" }
+fuel-tx = { version = "0.58.0" }
+fuel-types = { version = "0.58.0" }
+fuel-vm = { version = "0.58.0" }
 
 # Workspace projects
 fuels = { version = "0.66.5", path = "./packages/fuels", default-features = false }
@@ -114,13 +114,6 @@ fuels-test-helpers = { version = "0.66.5", path = "./packages/fuels-test-helpers
 versions-replacer = { version = "0.66.5", path = "./scripts/versions-replacer", default-features = false }
 
 [patch.crates-io]
-fuel-vm = { git = "https://github.com/FuelLabs/fuel-vm", rev = "0adb5f8" }
-fuel-asm = { git = "https://github.com/FuelLabs/fuel-vm", rev = "0adb5f8" }
-fuel-crypto = { git = "https://github.com/FuelLabs/fuel-vm", rev = "0adb5f8" }
-fuel-merkle = { git = "https://github.com/FuelLabs/fuel-vm", rev = "0adb5f8" }
-fuel-storage = { git = "https://github.com/FuelLabs/fuel-vm", rev = "0adb5f8" }
-fuel-tx = { git = "https://github.com/FuelLabs/fuel-vm", rev = "0adb5f8" }
-fuel-types = { git = "https://github.com/FuelLabs/fuel-vm", rev = "0adb5f8" }
 fuel-core = { git = "https://github.com/FuelLabs/fuel-core", branch = "feat/blob_exists_query" }
 fuel-core-chain-config = { git = "https://github.com/FuelLabs/fuel-core", branch = "feat/blob_exists_query" }
 fuel-core-client = { git = "https://github.com/FuelLabs/fuel-core", branch = "feat/blob_exists_query" }
