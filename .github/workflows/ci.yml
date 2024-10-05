@@ -115,7 +115,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2.7.3
         continue-on-error: true
         with:
-          key: "fuel-core-build ${{ FUEL_CORE_PATCH_BRANCH }} ${{ FUEL_CORE_PATCH_REVISION }}"
+          key: "fuel-core-build"
       - name: Install Fuel Core
         run: |
           if [[ -n $FUEL_CORE_PATCH_BRANCH ]]; then
