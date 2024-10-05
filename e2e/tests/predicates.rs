@@ -661,8 +661,14 @@ async fn predicate_default_configurables() -> Result<()> {
     };
     let new_enum = EnumWithGeneric::VariantOne(true);
 
-    let predicate_data =
-        MyPredicateEncoder::default().encode_data(true, 8, new_struct, new_enum)?;
+    let predicate_data = MyPredicateEncoder::default().encode_data(
+        true,
+        8,
+        (8, true),
+        [253, 254, 255],
+        new_struct,
+        new_enum,
+    )?;
 
     let mut predicate: Predicate = Predicate::load_from(
         "sway/predicates/predicate_configurables/out/release/predicate_configurables.bin",
@@ -711,6 +717,8 @@ async fn predicate_configurables() -> Result<()> {
         abi = "e2e/sway/predicates/predicate_configurables/out/release/predicate_configurables-abi.json"
     ));
 
+    let new_tuple = (16, false);
+    let new_array = [123, 124, 125];
     let new_struct = StructWithGeneric {
         field_1: 32u8,
         field_2: 64,
@@ -719,11 +727,13 @@ async fn predicate_configurables() -> Result<()> {
 
     let configurables = MyPredicateConfigurables::default()
         .with_U8(8)?
+        .with_TUPLE(new_tuple)?
+        .with_ARRAY(new_array)?
         .with_STRUCT(new_struct.clone())?
         .with_ENUM(new_enum.clone())?;
 
-    let predicate_data =
-        MyPredicateEncoder::default().encode_data(true, 8u8, new_struct, new_enum)?;
+    let predicate_data = MyPredicateEncoder::default()
+        .encode_data(true, 8u8, new_tuple, new_array, new_struct, new_enum)?;
 
     let mut predicate: Predicate = Predicate::load_from(
         "sway/predicates/predicate_configurables/out/release/predicate_configurables.bin",
@@ -1140,6 +1150,77 @@ async fn predicate_blobs() -> Result<()> {
         )
         .await?;
     // ANCHOR_END: uploading_the_blob
+
+    // The predicate has spent the funds
+    assert_address_balance(predicate.address(), &provider, asset_id, 0).await;
+
+    // Funds were transferred
+    assert_address_balance(
+        receiver.address(),
+        &provider,
+        asset_id,
+        receiver_balance + predicate_balance - expected_fee,
+    )
+    .await;
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn predicate_configurables_in_blobs() -> Result<()> {
+    abigen!(Predicate(
+        name = "MyPredicate",
+        abi = "e2e/sway/predicates/predicate_configurables/out/release/predicate_configurables-abi.json"
+    ));
+
+    let new_tuple = (16, false);
+    let new_array = [123, 124, 125];
+    let new_struct = StructWithGeneric {
+        field_1: 32u8,
+        field_2: 64,
+    };
+    let new_enum = EnumWithGeneric::VariantTwo;
+
+    let configurables = MyPredicateConfigurables::default()
+        .with_U8(8)?
+        .with_TUPLE(new_tuple)?
+        .with_ARRAY(new_array)?
+        .with_STRUCT(new_struct.clone())?
+        .with_ENUM(new_enum.clone())?;
+
+    let predicate_data = MyPredicateEncoder::default()
+        .encode_data(true, 8u8, new_tuple, new_array, new_struct, new_enum)?;
+
+    let executable = Executable::load_from(
+        "sway/predicates/predicate_configurables/out/release/predicate_configurables.bin",
+    )?;
+
+    let loader = executable
+        .convert_to_loader()?
+        .with_configurables(configurables);
+
+    let mut predicate: Predicate = Predicate::from_code(loader.code()).with_data(predicate_data);
+
+    let num_coins = 4;
+    let num_messages = 8;
+    let amount = 16;
+    let (provider, predicate_balance, receiver, receiver_balance, asset_id, extra_wallet) =
+        setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
+
+    predicate.set_provider(provider.clone());
+
+    loader.upload_blob(extra_wallet).await?;
+
+    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
+    let expected_fee = 1;
+    predicate
+        .transfer(
+            receiver.address(),
+            predicate_balance - expected_fee,
+            asset_id,
+            TxPolicies::default(),
+        )
+        .await?;
 
     // The predicate has spent the funds
     assert_address_balance(predicate.address(), &provider, asset_id, 0).await;
