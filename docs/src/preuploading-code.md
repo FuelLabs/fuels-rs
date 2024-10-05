@@ -15,8 +15,8 @@ A high level pre-upload:
 {{#include ../../e2e/tests/scripts.rs:preload_high_level}}
 ```
 
-The upload of the blob is handled inside of `convert_into_loader` method. If you
-want more fine grained control over it you can create the script transaction
+The upload of the blob is handled inside of the `convert_into_loader` method. If you
+want more fine-grained control over it, you can create the script transaction
 manually:
 
 ```rust,ignore
@@ -38,5 +38,5 @@ containing its code:
 {{#include ../../e2e/tests/predicates.rs:uploading_the_blob}}
 ```
 
-By pre-uploading the predicate code you allow for cheaper calls to the predicate
+By pre-uploading the predicate code, you allow for cheaper calls to the predicate
 from subsequent callers.
