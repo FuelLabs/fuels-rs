@@ -17,7 +17,8 @@ env:
   DASEL_VERSION: https://github.com/TomWright/dasel/releases/download/v2.3.6/dasel_linux_amd64
   RUSTFLAGS: "-D warnings"
   FUEL_CORE_VERSION: 0.36.0
-  FUEL_CORE_PATCH_BRANCH: "feature/predicate-ldc"
+  FUEL_CORE_PATCH_BRANCH: ""
+  FUEL_CORE_PATCH_REVISION: "773226c"
   RUST_VERSION: 1.79.0
   FORC_VERSION: 0.64.0
   FORC_PATCH_BRANCH: ""
@@ -108,6 +109,9 @@ jobs:
         run: |
           if [[ -n $FUEL_CORE_PATCH_BRANCH ]]; then
             cargo install --locked fuel-core-bin --git https://github.com/FuelLabs/fuel-core --branch "$FUEL_CORE_PATCH_BRANCH" --root fuel-core-install
+          elif [[ -n $FUEL_CORE_PATCH_REVISION ]]; then
+            cargo install --locked fuel-core-bin --git https://github.com/FuelLabs/fuel-core --rev "$FUEL_CORE_PATCH_REVISION" --root fuel-core-install
+
           else
             curl -sSLf https://github.com/FuelLabs/fuel-core/releases/download/v${{ env.FUEL_CORE_VERSION }}/fuel-core-${{ env.FUEL_CORE_VERSION }}-x86_64-unknown-linux-gnu.tar.gz -L -o fuel-core.tar.gz
             tar -xvf fuel-core.tar.gz
