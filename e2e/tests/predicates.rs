@@ -1101,17 +1101,20 @@ async fn predicate_blobs() -> Result<()> {
         abi = "e2e/sway/predicates/predicate_blobs/out/release/predicate_blobs-abi.json"
     ));
 
+    // ANCHOR: preparing_the_predicate
     let configurables = MyPredicateConfigurables::default().with_SECRET_NUMBER(10001)?;
 
     let predicate_data = MyPredicateEncoder::default().encode_data(1, 19)?;
 
     let executable =
-        Executable::load_from("sway/predicates/predicate_blobs/out/release/predicate_blobs.bin")?
-            .with_configurables(configurables);
+        Executable::load_from("sway/predicates/predicate_blobs/out/release/predicate_blobs.bin")?;
 
-    let loader = executable.convert_to_loader()?;
+    let loader = executable
+        .convert_to_loader()?
+        .with_configurables(configurables);
 
     let mut predicate: Predicate = Predicate::from_code(loader.code()).with_data(predicate_data);
+    // ANCHOR_END: preparing_the_predicate
 
     let num_coins = 4;
     let num_messages = 8;
@@ -1121,11 +1124,11 @@ async fn predicate_blobs() -> Result<()> {
 
     // we don't want to pay with the recipient wallet so that we don't affect the assertion we're
     // gonna make later on
+    // ANCHOR: uploading_the_blob
     loader.upload_blob(extra_wallet).await?;
 
     predicate.set_provider(provider.clone());
 
-    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
     let expected_fee = 1;
     predicate
         .transfer(
@@ -1135,6 +1138,7 @@ async fn predicate_blobs() -> Result<()> {
             TxPolicies::default(),
         )
         .await?;
+    // ANCHOR_END: uploading_the_blob
 
     // The predicate has spent the funds
     assert_address_balance(predicate.address(), &provider, asset_id, 0).await;

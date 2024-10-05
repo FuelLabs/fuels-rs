@@ -413,6 +413,7 @@ async fn can_be_run_in_blobs_builder() -> Result<()> {
     let wallet = launch_provider_and_get_wallet().await?;
     let provider = wallet.try_provider()?.clone();
 
+    // ANCHOR: preload_low_level
     let regular = Executable::load_from(binary_path)?;
 
     let configurables = MyScriptConfigurables::default().with_SECRET_NUMBER(10001)?;
@@ -420,8 +421,7 @@ async fn can_be_run_in_blobs_builder() -> Result<()> {
         .convert_to_loader()?
         .with_configurables(configurables);
 
-    loader.upload_blob(wallet.clone()).await?;
-    // checking that it will handle duplicate blobs well
+    // The Blob must be uploaded manually, otherwise the script code will revert.
     loader.upload_blob(wallet.clone()).await?;
 
     let encoder = fuels::core::codec::ABIEncoder::default();
@@ -445,6 +445,7 @@ async fn can_be_run_in_blobs_builder() -> Result<()> {
     let response = provider.send_transaction_and_await_commit(tx).await?;
 
     response.check(None)?;
+    // ANCHOR_END: preload_low_level
 
     Ok(())
 }
@@ -493,7 +494,9 @@ async fn no_data_section_blob_run() -> Result<()> {
 
     let mut my_script = my_script;
 
+    // ANCHOR: preload_high_level
     my_script.convert_into_loader().await?.main().call().await?;
+    // ANCHOR_END: preload_high_level
 
     Ok(())
 }
