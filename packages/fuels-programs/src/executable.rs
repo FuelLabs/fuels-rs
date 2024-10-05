@@ -1,7 +1,10 @@
 use fuel_asm::{op, Instruction, RegId};
 use fuels_core::{
     constants::WORD_SIZE,
-    types::transaction_builders::{Blob, BlobId, BlobTransactionBuilder},
+    types::{
+        errors::Result,
+        transaction_builders::{Blob, BlobId, BlobTransactionBuilder},
+    },
     Configurables,
 };
 
@@ -32,12 +35,12 @@ impl Executable<Regular> {
         }
     }
 
-    pub fn load_from(path: &str) -> Executable<Regular> {
-        let code = std::fs::read(path).unwrap();
+    pub fn load_from(path: &str) -> Result<Executable<Regular>> {
+        let code = std::fs::read(path)?;
 
-        Executable {
+        Ok(Executable {
             state: Regular::new(code, Default::default()),
-        }
+        })
     }
 }
 
@@ -62,7 +65,7 @@ impl Executable<Regular> {
         code
     }
 
-    pub fn convert_to_loader(self) -> Executable<Loader> {
+    pub fn convert_to_loader(self) -> Result<Executable<Loader>> {
         Executable {
             state: Loader {
                 code: self.state.code,
@@ -72,23 +75,20 @@ impl Executable<Regular> {
     }
 }
 
-fn extract_data_offset(binary: &[u8]) -> usize {
+fn extract_data_offset(binary: &[u8]) -> Result<usize> {
     // TODO bounds checks
-    let data_offset: [u8; 8] = binary[8..16].try_into().unwrap();
-    u64::from_be_bytes(data_offset) as usize
+    let data_offset: [u8; 8] = binary[8..16].try_into()?;
+    Ok(u64::from_be_bytes(data_offset) as usize)
 }
 
-fn transform_into_configurable_loader(
-    binary: Vec<u8>,
-    blob_id: &BlobId,
-) -> fuels_core::types::errors::Result<Vec<u8>> {
+fn transform_into_configurable_loader(binary: Vec<u8>, blob_id: &BlobId) -> Result<Vec<u8>> {
     // The final code is going to have this structure:
     // 1. loader instructions
     // 2. blob id
     // 3. length_of_data_section
     // 4. the data_section (updated with configurables as needed)
 
-    let offset = extract_data_offset(&binary);
+    let offset = extract_data_offset(&binary)?;
 
     // TODO bounds checks
     let data_section = binary[offset..].to_vec();
@@ -188,14 +188,14 @@ impl Executable<Loader> {
         }
     }
 
-    pub fn code(&self) -> Vec<u8> {
+    pub fn code(&self) -> Result<Vec<u8>> {
         let mut code = self.state.code.clone();
 
         self.state.configurables.update_constants_in(&mut code);
 
         let blob_id = self.blob().id();
 
-        transform_into_configurable_loader(code, &blob_id).unwrap()
+        transform_into_configurable_loader(code, &blob_id)
     }
 
     pub fn blob(&self) -> Blob {
@@ -212,18 +212,16 @@ impl Executable<Loader> {
 
         let mut tb = BlobTransactionBuilder::default().with_blob(blob);
 
-        account.adjust_for_fee(&mut tb, 0).await.unwrap();
+        account.adjust_for_fee(&mut tb, 0).await?;
 
-        account.add_witnesses(&mut tb).unwrap();
+        account.add_witnesses(&mut tb)?;
 
-        let provider = account.try_provider().unwrap();
-        let tx = tb.build(provider).await.unwrap();
+        let provider = account.try_provider()?;
+        let tx = tb.build(provider).await?;
 
         provider
             .send_transaction_and_await_commit(tx)
-            .await
-            .unwrap()
-            .check(None)
-            .unwrap();
+            .await?
+            .check(None)?;
     }
 }
