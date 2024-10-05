@@ -504,3 +504,55 @@ async fn no_data_section_blob_run() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn loader_script_calling_loader_proxy() -> Result<()> {
+    setup_program_test!(
+        Abigen(
+            Contract(
+                name = "MyContract",
+                project = "e2e/sway/contracts/huge_contract"
+            ),
+            Contract(name = "MyProxy", project = "e2e/sway/contracts/proxy"),
+            Script(name = "MyScript", project = "e2e/sway/scripts/script_proxy"),
+        ),
+        Wallets("wallet"),
+        LoadScript(name = "my_script", script = "MyScript", wallet = "wallet")
+    );
+
+    let contract_binary = "sway/contracts/huge_contract/out/release/huge_contract.bin";
+
+    let contract = Contract::load_from(contract_binary, LoadConfiguration::default())?;
+
+    let contract_id = contract
+        .convert_to_loader(100)?
+        .deploy(&wallet, TxPolicies::default())
+        .await?;
+
+    let contract_binary = "sway/contracts/proxy/out/release/proxy.bin";
+
+    let proxy_id = Contract::load_from(contract_binary, LoadConfiguration::default())?
+        .convert_to_loader(100)?
+        .deploy(&wallet, TxPolicies::default())
+        .await?;
+
+    let proxy = MyProxy::new(proxy_id.clone(), wallet.clone());
+    proxy
+        .methods()
+        .set_target_contract(contract_id.clone())
+        .call()
+        .await?;
+
+    let mut my_script = my_script;
+    let result = my_script
+        .convert_into_loader()
+        .await?
+        .main(proxy_id.clone())
+        .with_contract_ids(&[contract_id, proxy_id])
+        .call()
+        .await?;
+
+    assert!(result.value);
+
+    Ok(())
+}
