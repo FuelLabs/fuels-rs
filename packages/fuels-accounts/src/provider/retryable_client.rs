@@ -144,6 +144,10 @@ impl RetryableClient {
         self.wrap(|| self.client.blob(blob_id)).await
     }
 
+    pub async fn blob_exists(&self, blob_id: BlobId) -> RequestResult<bool> {
+        self.wrap(|| self.client.blob_exists(blob_id)).await
+    }
+
     pub async fn latest_gas_price(&self) -> RequestResult<LatestGasPrice> {
         self.wrap(|| self.client.latest_gas_price()).await
     }

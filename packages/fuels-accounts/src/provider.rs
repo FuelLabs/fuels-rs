@@ -156,6 +156,10 @@ impl Provider {
             .map(|blob| Blob::new(blob.bytecode)))
     }
 
+    pub async fn blob_exists(&self, blob_id: BlobId) -> Result<bool> {
+        Ok(self.client.blob_exists(blob_id.into()).await?)
+    }
+
     /// Sends a transaction to the underlying Provider's client.
     pub async fn send_transaction_and_await_commit<T: Transaction>(
         &self,

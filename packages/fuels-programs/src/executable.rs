@@ -138,8 +138,7 @@ impl Executable<Loader> {
         let blob = self.blob();
         let provider = account.try_provider()?;
 
-        // TODO: use more optimal endpoint once it is made available in fuel-core-client
-        if provider.blob(blob.id()).await?.is_some() {
+        if provider.blob_exists(blob.id()).await? {
             return Ok(());
         }
 
