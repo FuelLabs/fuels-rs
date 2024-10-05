@@ -9,7 +9,7 @@ duplication.
 
 ## Scripts
 
-A high level preload:
+A high level pre-upload:
 
 ```rust,ignore
 {{#include ../../e2e/tests/scripts.rs:preload_high_level}}
