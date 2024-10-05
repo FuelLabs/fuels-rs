@@ -17,10 +17,7 @@ use fuel_core_client::client::{
         gas_price::{EstimateGasPrice, LatestGasPrice},
     },
 };
-use fuel_core_types::{
-    blockchain::header::LATEST_STATE_TRANSITION_VERSION,
-    services::executor::TransactionExecutionResult,
-};
+use fuel_core_types::services::executor::TransactionExecutionResult;
 use fuel_tx::{
     AssetId, ConsensusParameters, Receipt, Transaction as FuelTransaction, TxId, UtxoId,
 };
@@ -762,25 +759,10 @@ impl DryRunner for Provider {
     async fn maybe_estimate_predicates(
         &self,
         tx: &FuelTransaction,
-        latest_chain_executor_version: Option<u32>,
+        _latest_chain_executor_version: Option<u32>,
     ) -> Result<Option<FuelTransaction>> {
         // We always delegate the estimation to the client beacuse estimating locally is no longer
         // possible due to the need of blob storage
         Ok(Some(self.client.estimate_predicates(tx).await?))
-        // let latest_chain_executor_version = match latest_chain_executor_version {
-        //     Some(exec_version) => exec_version,
-        //     None => {
-        //         self.chain_info()
-        //             .await?
-        //             .latest_block
-        //             .header
-        //             .state_transition_bytecode_version
-        //     }
-        // };
-        //
-        // Ok(
-        //     (latest_chain_executor_version > LATEST_STATE_TRANSITION_VERSION)
-        //         .then_some(self.client.estimate_predicates(tx).await?),
-        // )
     }
 }

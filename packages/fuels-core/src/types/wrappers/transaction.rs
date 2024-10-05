@@ -19,7 +19,6 @@ use fuel_tx::{
     TransactionFee, UniqueIdentifier, Upgrade, Upload, Witness,
 };
 use fuel_types::{bytes::padded_len_usize, AssetId, ChainId};
-use fuel_vm::checked_transaction::{CheckPredicateParams, CheckPredicates, IntoChecked};
 use itertools::Itertools;
 
 use crate::{
@@ -177,7 +176,6 @@ impl TxPolicies {
 }
 
 use fuel_tx::field::{BytecodeWitnessIndex, Salt, StorageSlots};
-use fuel_vm::prelude::MemoryInstance;
 
 use crate::types::coin_type_id::CoinTypeId;
 
@@ -378,17 +376,10 @@ macro_rules! impl_tx_wrapper {
         impl ValidatablePredicates for $wrapper {
             fn validate_predicates(
                 self,
-                consensus_parameters: &ConsensusParameters,
-                block_height: u32,
+                _consensus_parameters: &ConsensusParameters,
+                _block_height: u32,
             ) -> Result<()> {
-                // Can no longer validate predicates locally
-                // let checked = self
-                //     .tx
-                //     .into_checked(block_height.into(), consensus_parameters)?;
-                //
-                // let check_predicates_parameters: CheckPredicateParams = consensus_parameters.into();
-
-                // checked.check_predicates(&check_predicates_parameters, MemoryInstance::new())?;
+                // Can no longer validate predicates locally due to the need for blob storage
 
                 Ok(())
             }
