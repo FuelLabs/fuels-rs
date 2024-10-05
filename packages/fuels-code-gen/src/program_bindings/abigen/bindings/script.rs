@@ -105,6 +105,10 @@ pub(crate) fn script_bindings(
                 self.log_decoder.clone()
             }
 
+            /// Will upload the script code as a blob to the network and change the script code
+            /// into a loader that will fetch the blob and load it into memory before executing the
+            /// code inside. Allows you to optimize fees by paying for most of the code once and
+            /// then just running a small loader.
             pub async fn convert_into_loader(&mut self) -> ::fuels::types::errors::Result<&mut Self> {
                 if !self.converted_into_loader {
                     let regular = ::fuels::programs::executable::Executable::from_bytes(self.unconfigured_binary.clone()).with_configurables(self.configurables.clone());

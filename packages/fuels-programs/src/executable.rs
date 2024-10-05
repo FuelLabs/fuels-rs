@@ -8,6 +8,7 @@ use fuels_core::{
     Configurables,
 };
 
+/// This struct represents a standard executable with its associated bytecode and configurables.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Regular {
     code: Vec<u8>,
@@ -23,6 +24,9 @@ impl Regular {
     }
 }
 
+/// Used to transform Script or Predicate code into a loader variant, where the code is uploaded as
+/// a blob and the binary itself is substituted with code that will load the blob code and apply
+/// the given configurables to the Script/Predicate.
 pub struct Executable<State> {
     state: State,
 }
@@ -34,6 +38,15 @@ impl Executable<Regular> {
         }
     }
 
+    /// Loads an `Executable<Regular>` from a file at the given path.
+    ///
+    /// # Parameters
+    ///
+    /// - `path`: The file path to load the executable from.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing the `Executable<Regular>` or an error if loading fails.
     pub fn load_from(path: &str) -> Result<Executable<Regular>> {
         let code = std::fs::read(path)?;
 
@@ -41,14 +54,7 @@ impl Executable<Regular> {
             state: Regular::new(code, Default::default()),
         })
     }
-}
 
-pub struct Loader {
-    code: Vec<u8>,
-    configurables: Configurables,
-}
-
-impl Executable<Regular> {
     pub fn with_configurables(self, configurables: impl Into<Configurables>) -> Self {
         Executable {
             state: Regular {
@@ -58,12 +64,23 @@ impl Executable<Regular> {
         }
     }
 
+    /// Returns the code of the executable with configurables applied.
+    ///
+    /// # Returns
+    ///
+    /// The bytecode of the executable with configurables updated.
     pub fn code(&self) -> Vec<u8> {
         let mut code = self.state.code.clone();
         self.state.configurables.update_constants_in(&mut code);
         code
     }
 
+    /// Converts the `Executable<Regular>` into an `Executable<Loader>`.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing the `Executable<Loader>` or an error if loader code cannot be
+    /// generated for the given binary.
     pub fn convert_to_loader(self) -> Result<Executable<Loader>> {
         validate_loader_can_be_made_from_code(
             self.state.code.clone(),
@@ -76,6 +93,70 @@ impl Executable<Regular> {
                 configurables: self.state.configurables,
             },
         })
+    }
+}
+
+pub struct Loader {
+    code: Vec<u8>,
+    configurables: Configurables,
+}
+
+impl Executable<Loader> {
+    pub fn with_configurables(self, configurables: impl Into<Configurables>) -> Self {
+        Executable {
+            state: Loader {
+                configurables: configurables.into(),
+                ..self.state
+            },
+        }
+    }
+
+    /// Returns the code of the loader executable with configurables applied.
+    pub fn code(&self) -> Vec<u8> {
+        let mut code = self.state.code.clone();
+
+        self.state.configurables.update_constants_in(&mut code);
+
+        let blob_id = self.blob().id();
+
+        transform_into_configurable_loader(code, &blob_id)
+            .expect("checked before turning into a Executable<Loader>")
+    }
+
+    /// A Blob containing the original executable code minus the data section.
+    pub fn blob(&self) -> Blob {
+        let data_section_offset = extract_data_offset(&self.state.code)
+            .expect("checked before turning into a Executable<Loader>");
+
+        let code_without_data_section = self.state.code[..data_section_offset].to_vec();
+
+        Blob::new(code_without_data_section)
+    }
+
+    /// Uploads a blob containing the original executable code minus the data section.
+    pub async fn upload_blob(&self, account: impl fuels_accounts::Account) -> Result<()> {
+        let blob = self.blob();
+        let provider = account.try_provider()?;
+
+        // TODO: use more optimal endpoint once it is made available in fuel-core-client
+        if provider.blob(blob.id()).await?.is_some() {
+            return Ok(());
+        }
+
+        let mut tb = BlobTransactionBuilder::default().with_blob(self.blob());
+
+        account.adjust_for_fee(&mut tb, 0).await?;
+
+        account.add_witnesses(&mut tb)?;
+
+        let tx = tb.build(provider).await?;
+
+        provider
+            .send_transaction_and_await_commit(tx)
+            .await?
+            .check(None)?;
+
+        Ok(())
     }
 }
 
@@ -94,7 +175,7 @@ fn extract_data_offset(binary: &[u8]) -> Result<usize> {
 }
 
 fn transform_into_configurable_loader(binary: Vec<u8>, blob_id: &BlobId) -> Result<Vec<u8>> {
-    // The final code is going to have this structure (if the data section is non empty):
+    // The final code is going to have this structure (if the data section is non-empty):
     // 1. loader instructions
     // 2. blob id
     // 3. length_of_data_section
@@ -253,62 +334,6 @@ fn validate_loader_can_be_made_from_code(
     transform_into_configurable_loader(code, &Default::default())?;
 
     Ok(())
-}
-
-impl Executable<Loader> {
-    pub fn with_configurables(self, configurables: impl Into<Configurables>) -> Self {
-        Executable {
-            state: Loader {
-                configurables: configurables.into(),
-                ..self.state
-            },
-        }
-    }
-
-    pub fn code(&self) -> Vec<u8> {
-        let mut code = self.state.code.clone();
-
-        self.state.configurables.update_constants_in(&mut code);
-
-        let blob_id = self.blob().id();
-
-        transform_into_configurable_loader(code, &blob_id)
-            .expect("checked before turning into a Executable<Loader>")
-    }
-
-    pub fn blob(&self) -> Blob {
-        let data_section_offset = extract_data_offset(&self.state.code)
-            .expect("checked before turning into a Executable<Loader>");
-
-        let code_without_data_section = self.state.code[..data_section_offset].to_vec();
-
-        Blob::new(code_without_data_section)
-    }
-
-    pub async fn upload_blob(&self, account: impl fuels_accounts::Account) -> Result<()> {
-        let blob = self.blob();
-        let provider = account.try_provider()?;
-
-        // TODO: use more optimal endpoint once it is made available in fuel-core-client
-        if provider.blob(blob.id()).await?.is_some() {
-            return Ok(());
-        }
-
-        let mut tb = BlobTransactionBuilder::default().with_blob(self.blob());
-
-        account.adjust_for_fee(&mut tb, 0).await?;
-
-        account.add_witnesses(&mut tb)?;
-
-        let tx = tb.build(provider).await?;
-
-        provider
-            .send_transaction_and_await_commit(tx)
-            .await?
-            .check(None)?;
-
-        Ok(())
-    }
 }
 
 #[cfg(test)]
