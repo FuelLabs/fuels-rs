@@ -64,13 +64,14 @@ async fn setup_predicate_test(
     num_coins: u64,
     num_messages: u64,
     amount: u64,
-) -> Result<(Provider, u64, WalletUnlocked, u64, AssetId)> {
+) -> Result<(Provider, u64, WalletUnlocked, u64, AssetId, WalletUnlocked)> {
     let receiver_num_coins = 1;
     let receiver_amount = 1;
     let receiver_balance = receiver_num_coins * receiver_amount;
 
     let predicate_balance = (num_coins + num_messages) * amount;
     let mut receiver = WalletUnlocked::new_random(None);
+    let extra_wallet = WalletUnlocked::new_random(None);
 
     let (mut coins, messages, asset_id) =
         get_test_coins_and_messages(predicate_address, num_coins, num_messages, amount, 0);
@@ -80,6 +81,12 @@ async fn setup_predicate_test(
         asset_id,
         receiver_num_coins,
         receiver_amount,
+    ));
+    coins.extend(setup_single_asset_coins(
+        extra_wallet.address(),
+        AssetId::zeroed(),
+        10000,
+        u64::MAX,
     ));
 
     coins.extend(setup_single_asset_coins(
@@ -98,6 +105,7 @@ async fn setup_predicate_test(
         receiver,
         receiver_balance,
         asset_id,
+        extra_wallet,
     ))
 }
 
@@ -159,7 +167,7 @@ async fn spend_predicate_coins_messages_basic() -> Result<()> {
     let num_coins = 4;
     let num_messages = 8;
     let amount = 16;
-    let (provider, predicate_balance, receiver, receiver_balance, asset_id) =
+    let (provider, predicate_balance, receiver, receiver_balance, asset_id, _) =
         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
     predicate.set_provider(provider.clone());
@@ -212,7 +220,7 @@ async fn pay_with_predicate() -> Result<()> {
     let num_coins = 4;
     let num_messages = 8;
     let amount = 16;
-    let (provider, _predicate_balance, _receiver, _receiver_balance, _asset_id) =
+    let (provider, _predicate_balance, _receiver, _receiver_balance, _asset_id, _) =
         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
     predicate.set_provider(provider.clone());
@@ -281,7 +289,7 @@ async fn pay_with_predicate_vector_data() -> Result<()> {
     let num_coins = 4;
     let num_messages = 8;
     let amount = 16;
-    let (provider, _predicate_balance, _receiver, _receiver_balance, _asset_id) =
+    let (provider, _predicate_balance, _receiver, _receiver_balance, _asset_id, _) =
         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
     predicate.set_provider(provider.clone());
@@ -343,7 +351,7 @@ async fn predicate_contract_transfer() -> Result<()> {
     let num_coins = 4;
     let num_messages = 8;
     let amount = 300;
-    let (provider, _predicate_balance, _receiver, _receiver_balance, _asset_id) =
+    let (provider, _predicate_balance, _receiver, _receiver_balance, _asset_id, _) =
         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
     predicate.set_provider(provider.clone());
@@ -399,7 +407,7 @@ async fn predicate_transfer_to_base_layer() -> Result<()> {
     let num_coins = 4;
     let num_messages = 8;
     let amount = 300;
-    let (provider, _predicate_balance, _receiver, _receiver_balance, _asset_id) =
+    let (provider, _predicate_balance, _receiver, _receiver_balance, _asset_id, _) =
         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
     predicate.set_provider(provider.clone());
@@ -532,7 +540,7 @@ async fn contract_tx_and_call_params_with_predicate() -> Result<()> {
     let num_coins = 1;
     let num_messages = 1;
     let amount = 1000;
-    let (provider, _predicate_balance, _receiver, _receiver_balance, _asset_id) =
+    let (provider, _predicate_balance, _receiver, _receiver_balance, _asset_id, _) =
         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
     predicate.set_provider(provider.clone());
@@ -612,7 +620,7 @@ async fn diff_asset_predicate_payment() -> Result<()> {
     let num_coins = 1;
     let num_messages = 1;
     let amount = 1_000_000_000;
-    let (provider, _predicate_balance, _receiver, _receiver_balance, _asset_id) =
+    let (provider, _predicate_balance, _receiver, _receiver_balance, _asset_id, _) =
         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
     predicate.set_provider(provider.clone());
@@ -663,7 +671,7 @@ async fn predicate_default_configurables() -> Result<()> {
     let num_coins = 4;
     let num_messages = 8;
     let amount = 16;
-    let (provider, predicate_balance, receiver, receiver_balance, asset_id) =
+    let (provider, predicate_balance, receiver, receiver_balance, asset_id, _) =
         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
     predicate.set_provider(provider.clone());
@@ -726,7 +734,7 @@ async fn predicate_configurables() -> Result<()> {
     let num_coins = 4;
     let num_messages = 8;
     let amount = 16;
-    let (provider, predicate_balance, receiver, receiver_balance, asset_id) =
+    let (provider, predicate_balance, receiver, receiver_balance, asset_id, _) =
         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
     predicate.set_provider(provider.clone());
@@ -875,7 +883,7 @@ async fn predicate_can_access_manually_added_witnesses() -> Result<()> {
     let num_coins = 4;
     let num_messages = 0;
     let amount = 16;
-    let (provider, predicate_balance, receiver, receiver_balance, asset_id) =
+    let (provider, predicate_balance, receiver, receiver_balance, asset_id, _) =
         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
     predicate.set_provider(provider.clone());
@@ -943,7 +951,7 @@ async fn tx_id_not_changed_after_adding_witnesses() -> Result<()> {
     let num_coins = 4;
     let num_messages = 0;
     let amount = 16;
-    let (provider, _predicate_balance, receiver, _receiver_balance, asset_id) =
+    let (provider, _predicate_balance, receiver, _receiver_balance, asset_id, _) =
         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
     predicate.set_provider(provider.clone());
@@ -1023,7 +1031,7 @@ async fn predicate_transfers_non_base_asset() -> Result<()> {
     let num_coins = 4;
     let num_message = 6;
     let amount = 20;
-    let (provider, _, receiver, _, _) =
+    let (provider, _, receiver, _, _, _) =
         setup_predicate_test(predicate.address(), num_coins, num_message, amount).await?;
     predicate.set_provider(provider);
     let other_asset_id = AssetId::from([1u8; 32]);
@@ -1063,7 +1071,7 @@ async fn predicate_with_invalid_data_fails() -> Result<()> {
     let num_coins = 4;
     let num_message = 6;
     let amount = 20;
-    let (provider, _, receiver, _, _) =
+    let (provider, _, receiver, _, _, _) =
         setup_predicate_test(predicate.address(), num_coins, num_message, amount).await?;
     predicate.set_provider(provider);
     let other_asset_id = AssetId::from([1u8; 32]);
@@ -1108,10 +1116,12 @@ async fn predicate_blobs() -> Result<()> {
     let num_coins = 4;
     let num_messages = 8;
     let amount = 16;
-    let (provider, predicate_balance, receiver, receiver_balance, asset_id) =
+    let (provider, predicate_balance, receiver, receiver_balance, asset_id, extra_wallet) =
         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
-    loader.upload_blob(receiver.clone()).await?;
+    // we don't want to pay with the recipient wallet so that we don't affect the assertion we're
+    // gonna make later on
+    loader.upload_blob(extra_wallet).await?;
 
     predicate.set_provider(provider.clone());
 
@@ -1130,7 +1140,6 @@ async fn predicate_blobs() -> Result<()> {
     assert_address_balance(predicate.address(), &provider, asset_id, 0).await;
 
     // Funds were transferred
-    // TODO pay for blob upload with other wallet to not affect this assert
     assert_address_balance(
         receiver.address(),
         &provider,
