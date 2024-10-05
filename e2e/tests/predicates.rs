@@ -71,7 +71,7 @@ async fn setup_predicate_test(
 
     let predicate_balance = (num_coins + num_messages) * amount;
     let mut receiver = WalletUnlocked::new_random(None);
-    let extra_wallet = WalletUnlocked::new_random(None);
+    let mut extra_wallet = WalletUnlocked::new_random(None);
 
     let (mut coins, messages, asset_id) =
         get_test_coins_and_messages(predicate_address, num_coins, num_messages, amount, 0);
@@ -98,6 +98,7 @@ async fn setup_predicate_test(
 
     let provider = setup_test_provider(coins, messages, None, None).await?;
     receiver.set_provider(provider.clone());
+    extra_wallet.set_provider(provider.clone());
 
     Ok((
         provider,
