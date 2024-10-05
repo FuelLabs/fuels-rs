@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use fuels::{
     core::{
         codec::{DecoderConfig, EncoderConfig},
@@ -279,6 +281,7 @@ async fn test_script_submit_and_response() -> Result<()> {
 
     // ANCHOR: submit_response_script
     let submitted_tx = script_instance.main(my_struct).submit().await?;
+    tokio::time::sleep(Duration::from_millis(500)).await;
     let value = submitted_tx.response().await?.value;
     // ANCHOR_END: submit_response_script
 
@@ -315,6 +318,7 @@ async fn test_script_transaction_builder() -> Result<()> {
     let tx = tb.build(provider).await?;
 
     let tx_id = provider.send_transaction(tx).await?;
+    tokio::time::sleep(Duration::from_millis(500)).await;
     let tx_status = provider.tx_status(&tx_id).await?;
 
     let response = script_call_handler.get_response_from(tx_status)?;

@@ -112,18 +112,3 @@ fuels-macros = { version = "0.66.5", path = "./packages/fuels-macros", default-f
 fuels-programs = { version = "0.66.5", path = "./packages/fuels-programs", default-features = false }
 fuels-test-helpers = { version = "0.66.5", path = "./packages/fuels-test-helpers", default-features = false }
 versions-replacer = { version = "0.66.5", path = "./scripts/versions-replacer", default-features = false }
-
-[patch.crates-io]
-fuel-vm = { git = "https://github.com/FuelLabs/fuel-vm", branch = "feature/ldc-mode-2" }
-fuel-asm = { git = "https://github.com/FuelLabs/fuel-vm", branch = "feature/ldc-mode-2" }
-fuel-crypto = { git = "https://github.com/FuelLabs/fuel-vm", branch = "feature/ldc-mode-2" }
-fuel-merkle = { git = "https://github.com/FuelLabs/fuel-vm", branch = "feature/ldc-mode-2" }
-fuel-storage = { git = "https://github.com/FuelLabs/fuel-vm", branch = "feature/ldc-mode-2" }
-fuel-tx = { git = "https://github.com/FuelLabs/fuel-vm", branch = "feature/ldc-mode-2" }
-fuel-types = { git = "https://github.com/FuelLabs/fuel-vm", branch = "feature/ldc-mode-2" }
-fuel-core = { git = "https://github.com/FuelLabs/fuel-core", branch = "feature/predicate-ldc" }
-fuel-core-chain-config = { git = "https://github.com/FuelLabs/fuel-core", branch = "feature/predicate-ldc" }
-fuel-core-client = { git = "https://github.com/FuelLabs/fuel-core", branch = "feature/predicate-ldc" }
-fuel-core-poa = { git = "https://github.com/FuelLabs/fuel-core", branch = "feature/predicate-ldc" }
-fuel-core-services = { git = "https://github.com/FuelLabs/fuel-core", branch = "feature/predicate-ldc" }
-fuel-core-types = { git = "https://github.com/FuelLabs/fuel-core", branch = "feature/predicate-ldc" }

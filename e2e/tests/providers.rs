@@ -960,6 +960,7 @@ async fn can_produce_blocks_with_trig_never() -> Result<()> {
     provider.send_transaction(tx).await?;
     provider.produce_blocks(1, None).await?;
 
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
     let status = provider.tx_status(&tx_id).await?;
     assert!(matches!(status, TxStatus::Success { .. }));
 
