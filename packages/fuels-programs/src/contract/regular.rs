@@ -31,7 +31,7 @@ mod code_types {
     }
 
     impl Regular {
-        pub fn new(code: Vec<u8>, configurables: Configurables) -> Self {
+        pub(crate) fn new(code: Vec<u8>, configurables: Configurables) -> Self {
             Self {
                 code,
                 configurables,

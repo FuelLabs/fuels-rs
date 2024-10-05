@@ -416,7 +416,9 @@ async fn can_be_run_in_blobs_builder() -> Result<()> {
     let regular = Executable::load_from(binary_path);
 
     let configurables = MyScriptConfigurables::default().with_SECRET_NUMBER(10001)?;
-    let loader = regular.to_loader().with_configurables(configurables);
+    let loader = regular
+        .convert_to_loader()
+        .with_configurables(configurables);
 
     loader.upload_blob(wallet.clone()).await;
 
@@ -463,6 +465,7 @@ async fn can_be_run_in_blobs_high_level() -> Result<()> {
         field_a: MyEnum::B(99),
         field_b: Bits256([17; 32]),
     };
+    // TODO check before uploading if it was uploaded already
     my_script
         .convert_into_loader()
         .await

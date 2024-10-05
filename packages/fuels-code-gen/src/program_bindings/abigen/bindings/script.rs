@@ -107,7 +107,7 @@ pub(crate) fn script_bindings(
 
             pub async fn convert_into_loader(&mut self) -> &mut Self {
                 if self.converted_into_loader {
-                    ::core::todo!("Error if already called")
+                    return self;
                 }
 
                 let regular = ::fuels::programs::executable::Executable::from_bytes(self.unconfigured_binary.clone()).with_configurables(self.configurables.clone());

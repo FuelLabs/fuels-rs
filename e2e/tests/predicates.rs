@@ -1101,7 +1101,7 @@ async fn predicate_blobs() -> Result<()> {
         Executable::load_from("sway/predicates/predicate_blobs/out/release/predicate_blobs.bin")
             .with_configurables(configurables);
 
-    let loader = executable.to_loader();
+    let loader = executable.convert_to_loader();
 
     let mut predicate: Predicate = Predicate::from_code(loader.code()).with_data(predicate_data);
 
@@ -1130,6 +1130,7 @@ async fn predicate_blobs() -> Result<()> {
     assert_address_balance(predicate.address(), &provider, asset_id, 0).await;
 
     // Funds were transferred
+    // TODO pay for blob upload with other wallet to not affect this assert
     assert_address_balance(
         receiver.address(),
         &provider,

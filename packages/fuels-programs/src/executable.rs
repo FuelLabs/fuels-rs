@@ -20,6 +20,7 @@ impl Regular {
     }
 }
 
+// TODO replace unwraps with `?`
 pub struct Executable<State> {
     state: State,
 }
@@ -61,7 +62,7 @@ impl Executable<Regular> {
         code
     }
 
-    pub fn to_loader(self) -> Executable<Loader> {
+    pub fn convert_to_loader(self) -> Executable<Loader> {
         Executable {
             state: Loader {
                 code: self.state.code,
@@ -72,12 +73,13 @@ impl Executable<Regular> {
 }
 
 fn extract_data_offset(binary: &[u8]) -> usize {
+    // TODO bounds checks
     let data_offset: [u8; 8] = binary[8..16].try_into().unwrap();
     u64::from_be_bytes(data_offset) as usize
 }
 
 fn transform_into_configurable_loader(
-    original_binary: Vec<u8>,
+    binary: Vec<u8>,
     blob_id: &BlobId,
 ) -> fuels_core::types::errors::Result<Vec<u8>> {
     // The final code is going to have this structure:
@@ -86,11 +88,10 @@ fn transform_into_configurable_loader(
     // 3. length_of_data_section
     // 4. the data_section (updated with configurables as needed)
 
-    let offset = extract_data_offset(&original_binary);
+    let offset = extract_data_offset(&binary);
 
-    let data_section = original_binary[offset..].to_vec();
-
-    // update the data_section here as necessary (with configurables)
+    // TODO bounds checks
+    let data_section = binary[offset..].to_vec();
 
     let data_section_len = data_section.len();
 
