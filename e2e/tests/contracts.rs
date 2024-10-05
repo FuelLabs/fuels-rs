@@ -2170,7 +2170,6 @@ async fn blob_contract_deployment() -> Result<()> {
 
     let contract = Contract::load_from(contract_binary, LoadConfiguration::default())?;
 
-    eprintln!("About to upload contract");
     let contract_id = contract
         .convert_to_loader(100_000)?
         .deploy(&wallets[0], TxPolicies::default())
