@@ -114,9 +114,9 @@ fuels-test-helpers = { version = "0.66.5", path = "./packages/fuels-test-helpers
 versions-replacer = { version = "0.66.5", path = "./scripts/versions-replacer", default-features = false }
 
 [patch.crates-io]
-fuel-core = { git = "https://github.com/FuelLabs/fuel-core", branch = "feat/blob_exists_query" }
-fuel-core-chain-config = { git = "https://github.com/FuelLabs/fuel-core", branch = "feat/blob_exists_query" }
-fuel-core-client = { git = "https://github.com/FuelLabs/fuel-core", branch = "feat/blob_exists_query" }
-fuel-core-poa = { git = "https://github.com/FuelLabs/fuel-core", branch = "feat/blob_exists_query" }
-fuel-core-services = { git = "https://github.com/FuelLabs/fuel-core", branch = "feat/blob_exists_query" }
-fuel-core-types = { git = "https://github.com/FuelLabs/fuel-core", branch = "feat/blob_exists_query" }
+fuel-core = { git = "https://github.com/FuelLabs/fuel-core", branch = "feature/predicate-ldc" }
+fuel-core-chain-config = { git = "https://github.com/FuelLabs/fuel-core", branch = "feature/predicate-ldc" }
+fuel-core-client = { git = "https://github.com/FuelLabs/fuel-core", branch = "feature/predicate-ldc" }
+fuel-core-poa = { git = "https://github.com/FuelLabs/fuel-core", branch = "feature/predicate-ldc" }
+fuel-core-services = { git = "https://github.com/FuelLabs/fuel-core", branch = "feature/predicate-ldc" }
+fuel-core-types = { git = "https://github.com/FuelLabs/fuel-core", branch = "feature/predicate-ldc" }
