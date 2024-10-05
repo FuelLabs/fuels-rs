@@ -421,6 +421,8 @@ async fn can_be_run_in_blobs_builder() -> Result<()> {
         .with_configurables(configurables);
 
     loader.upload_blob(wallet.clone()).await?;
+    // checking that it will handle duplicate blobs well
+    loader.upload_blob(wallet.clone()).await?;
 
     let encoder = fuels::core::codec::ABIEncoder::default();
     let token = MyStruct {
