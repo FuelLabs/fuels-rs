@@ -66,6 +66,9 @@ async fn script_default_configurables() -> Result<()> {
         )
     );
 
+    let mut script_instance = script_instance;
+    script_instance.convert_into_loader().await?;
+
     let response = script_instance.main().call().await?;
 
     let expected_value = (
