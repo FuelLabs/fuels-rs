@@ -94,26 +94,11 @@ fn extract_data_offset(binary: &[u8]) -> Result<usize> {
 }
 
 fn transform_into_configurable_loader(binary: Vec<u8>, blob_id: &BlobId) -> Result<Vec<u8>> {
-    // The final code is going to have this structure:
+    // The final code is going to have this structure (if the data section is non empty):
     // 1. loader instructions
     // 2. blob id
     // 3. length_of_data_section
     // 4. the data_section (updated with configurables as needed)
-
-    let offset = extract_data_offset(&binary)?;
-
-    if binary.len() <= offset {
-        return Err(fuels_core::error!(
-            Other,
-            "data section offset is out of bounds, offset: {offset}, binary len: {}",
-            binary.len()
-        ));
-    }
-
-    let data_section = binary[offset..].to_vec();
-
-    let data_section_len = data_section.len();
-
     const BLOB_ID_SIZE: u16 = 32;
     const REG_ADDRESS_OF_DATA_AFTER_CODE: u8 = 0x10;
     const REG_START_OF_LOADED_CODE: u8 = 0x11;
@@ -181,20 +166,81 @@ fn transform_into_configurable_loader(binary: Vec<u8>, blob_id: &BlobId) -> Resu
         ]
     };
 
-    let num_of_instructions = u16::try_from(get_instructions(0).len())
-        .expect("to never have more than u16::MAX instructions");
+    let get_instructions_no_data_section = |num_of_instructions| {
+        // There are 2 main steps:
+        // 1. Load the blob content into memory
+        // 2. Jump to the beginning of the memory where the blob was loaded
+        [
+            // 1. Load the blob content into memory
+            // Find the start of the hardcoded blob ID, which is located after the loader code ends.
+            op::move_(REG_ADDRESS_OF_DATA_AFTER_CODE, RegId::PC),
+            // hold the address of the blob ID.
+            op::addi(
+                REG_ADDRESS_OF_DATA_AFTER_CODE,
+                REG_ADDRESS_OF_DATA_AFTER_CODE,
+                num_of_instructions * Instruction::SIZE as u16,
+            ),
+            // The code is going to be loaded from the current value of SP onwards, save
+            // the location into REG_START_OF_LOADED_CODE so we can jump into it at the end.
+            op::move_(REG_START_OF_LOADED_CODE, RegId::SP),
+            // REG_GENERAL_USE to hold the size of the blob.
+            op::bsiz(REG_GENERAL_USE, REG_ADDRESS_OF_DATA_AFTER_CODE),
+            // Push the blob contents onto the stack.
+            op::ldc(REG_ADDRESS_OF_DATA_AFTER_CODE, 0, REG_GENERAL_USE, 1),
+            // Jump into the memory where the contract is loaded.
+            // What follows is called _jmp_mem by the sway compiler.
+            // Subtract the address contained in IS because jmp will add it back.
+            op::sub(
+                REG_START_OF_LOADED_CODE,
+                REG_START_OF_LOADED_CODE,
+                RegId::IS,
+            ),
+            // jmp will multiply by 4, so we need to divide to cancel that out.
+            op::divi(REG_START_OF_LOADED_CODE, REG_START_OF_LOADED_CODE, 4),
+            // Jump to the start of the contract we loaded.
+            op::jmp(REG_START_OF_LOADED_CODE),
+        ]
+    };
 
-    let instruction_bytes = get_instructions(num_of_instructions)
-        .into_iter()
-        .flat_map(|instruction| instruction.to_bytes());
+    let offset = extract_data_offset(&binary)?;
 
-    let blob_bytes = blob_id.iter().copied();
+    if binary.len() < offset {
+        return Err(fuels_core::error!(
+            Other,
+            "data section offset is out of bounds, offset: {offset}, binary len: {}",
+            binary.len()
+        ));
+    }
 
-    Ok(instruction_bytes
-        .chain(blob_bytes)
-        .chain(data_section_len.to_be_bytes())
-        .chain(data_section)
-        .collect())
+    let data_section = binary[offset..].to_vec();
+
+    if !data_section.is_empty() {
+        let num_of_instructions = u16::try_from(get_instructions(0).len())
+            .expect("to never have more than u16::MAX instructions");
+
+        let instruction_bytes = get_instructions(num_of_instructions)
+            .into_iter()
+            .flat_map(|instruction| instruction.to_bytes());
+
+        let blob_bytes = blob_id.iter().copied();
+
+        Ok(instruction_bytes
+            .chain(blob_bytes)
+            .chain(data_section.len().to_be_bytes())
+            .chain(data_section)
+            .collect())
+    } else {
+        let num_of_instructions = u16::try_from(get_instructions_no_data_section(0).len())
+            .expect("to never have more than u16::MAX instructions");
+
+        let instruction_bytes = get_instructions_no_data_section(num_of_instructions)
+            .into_iter()
+            .flat_map(|instruction| instruction.to_bytes());
+
+        let blob_bytes = blob_id.iter().copied();
+
+        Ok(instruction_bytes.chain(blob_bytes).collect())
+    }
 }
 
 fn validate_loader_can_be_made_from_code(
@@ -262,5 +308,141 @@ impl Executable<Loader> {
             .check(None)?;
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fuels_core::Configurables;
+    use std::io::Write;
+    use tempfile::NamedTempFile;
+
+    #[test]
+    fn test_executable_regular_from_bytes() {
+        // Given: Some bytecode
+        let code = vec![1u8, 2, 3, 4];
+
+        // When: Creating an Executable<Regular> from bytes
+        let executable = Executable::<Regular>::from_bytes(code.clone());
+
+        // Then: The executable should have the given code and default configurables
+        assert_eq!(executable.state.code, code);
+        assert_eq!(executable.state.configurables, Default::default());
+    }
+
+    #[test]
+    fn test_executable_regular_load_from() {
+        // Given: A temporary file containing some bytecode
+        let code = vec![5u8, 6, 7, 8];
+        let mut temp_file = NamedTempFile::new().expect("Failed to create temp file");
+        temp_file
+            .write_all(&code)
+            .expect("Failed to write to temp file");
+        let path = temp_file.path().to_str().unwrap();
+
+        // When: Loading an Executable<Regular> from the file
+        let executable_result = Executable::<Regular>::load_from(path);
+
+        // Then: The executable should be created successfully with the correct code
+        assert!(executable_result.is_ok());
+        let executable = executable_result.unwrap();
+        assert_eq!(executable.state.code, code);
+        assert_eq!(executable.state.configurables, Default::default());
+    }
+
+    #[test]
+    fn test_executable_regular_load_from_invalid_path() {
+        // Given: An invalid file path
+        let invalid_path = "/nonexistent/path/to/file";
+
+        // When: Attempting to load an Executable<Regular> from the invalid path
+        let executable_result = Executable::<Regular>::load_from(invalid_path);
+
+        // Then: The operation should fail with an error
+        assert!(executable_result.is_err());
+    }
+
+    #[test]
+    fn test_executable_regular_with_configurables() {
+        // Given: An Executable<Regular> and some configurables
+        let code = vec![1u8, 2, 3, 4];
+        let executable = Executable::<Regular>::from_bytes(code);
+        let configurables = Configurables::new(vec![(2, vec![1])]);
+
+        // When: Setting new configurables
+        let new_executable = executable.with_configurables(configurables.clone());
+
+        // Then: The executable should have the new configurables
+        assert_eq!(new_executable.state.configurables, configurables);
+    }
+
+    #[test]
+    fn test_executable_regular_code() {
+        // Given: An Executable<Regular> with some code and configurables
+        let code = vec![1u8, 2, 3, 4];
+        let configurables = Configurables::new(vec![(1, vec![1])]);
+        let executable =
+            Executable::<Regular>::from_bytes(code.clone()).with_configurables(configurables);
+
+        // When: Retrieving the code after applying configurables
+        let modified_code = executable.code();
+
+        assert_eq!(modified_code, vec![1, 1, 3, 4]);
+    }
+
+    #[test]
+    fn test_loader_extracts_code_and_data_section_correctly() {
+        // Given: An Executable<Regular> with valid code
+        let padding = vec![0; 8];
+        let offset = 20u64.to_be_bytes().to_vec();
+        let some_random_instruction = vec![1, 2, 3, 4];
+        let data_section = vec![5, 6, 7, 8];
+        let code = [
+            padding.clone(),
+            offset.clone(),
+            some_random_instruction.clone(),
+            data_section,
+        ]
+        .concat();
+        let executable = Executable::<Regular>::from_bytes(code.clone());
+
+        // When: Converting to a loader
+        let loader = executable.convert_to_loader().unwrap();
+
+        let blob = loader.blob();
+        let data_stripped_code = [padding, offset, some_random_instruction].concat();
+        assert_eq!(blob.as_ref(), data_stripped_code);
+
+        let loader_code = loader.code();
+        let blob_id = blob.id();
+        assert_eq!(
+            loader_code,
+            transform_into_configurable_loader(code, &blob_id).unwrap()
+        )
+    }
+
+    #[test]
+    fn test_executable_regular_convert_to_loader_with_invalid_code() {
+        // Given: An Executable<Regular> with invalid code (too short)
+        let code = vec![1u8, 2]; // Insufficient length for a valid data offset
+        let executable = Executable::<Regular>::from_bytes(code);
+
+        // When: Attempting to convert to a loader
+        let result = executable.convert_to_loader();
+
+        // Then: The conversion should fail with an error
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn executable_with_no_data_section() {
+        // to skip over the first 2 half words and skip over the offset itself, basically stating
+        // that there is no data section
+        let data_section_offset = 16u64;
+
+        let code = [vec![0; 8], data_section_offset.to_be_bytes().to_vec()].concat();
+
+        Executable::from_bytes(code).convert_to_loader().unwrap();
     }
 }

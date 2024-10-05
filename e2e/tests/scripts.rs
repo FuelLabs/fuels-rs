@@ -479,3 +479,21 @@ async fn can_be_run_in_blobs_high_level() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn no_data_section_blob_run() -> Result<()> {
+    setup_program_test!(
+        Abigen(Script(
+            project = "e2e/sway/scripts/empty",
+            name = "MyScript"
+        )),
+        Wallets("wallet"),
+        LoadScript(name = "my_script", script = "MyScript", wallet = "wallet")
+    );
+
+    let mut my_script = my_script;
+
+    my_script.convert_into_loader().await?.main().call().await?;
+
+    Ok(())
+}

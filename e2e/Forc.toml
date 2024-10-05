@@ -45,6 +45,7 @@ members = [
   'sway/predicates/swap',
   'sway/scripts/arguments',
   'sway/scripts/basic_script',
+  'sway/scripts/empty',
   'sway/scripts/require_from_contract',
   'sway/scripts/reverting',
   'sway/scripts/script_array',
