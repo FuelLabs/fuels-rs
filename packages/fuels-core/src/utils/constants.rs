@@ -8,7 +8,7 @@ pub const DEFAULT_CALL_PARAMS_AMOUNT: u64 = 0;
 // ANCHOR_END: default_call_parameters
 
 pub const DEFAULT_GAS_ESTIMATION_TOLERANCE: f64 = 0.2;
-pub const DEFAULT_GAS_ESTIMATION_BLOCK_HORIZON: u32 = 1;
+pub const DEFAULT_GAS_ESTIMATION_BLOCK_HORIZON: u32 = 5;
 
 // The size of a signature inside a transaction `Witness`
 pub const WITNESS_STATIC_SIZE: usize = 8;

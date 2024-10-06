@@ -4,6 +4,7 @@ use fuels::{
     core::{
         codec::{DecoderConfig, EncoderConfig},
         traits::Tokenizable,
+        Configurables,
     },
     prelude::*,
     programs::executable::Executable,
@@ -553,6 +554,61 @@ async fn loader_script_calling_loader_proxy() -> Result<()> {
         .await?;
 
     assert!(result.value);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn loader_can_be_presented_as_a_normal_script_with_shifted_configurables() -> Result<()> {
+    abigen!(Script(
+        abi = "e2e/sway/scripts/script_blobs/out/release/script_blobs-abi.json",
+        name = "MyScript"
+    ));
+
+    let binary_path = "./sway/scripts/script_blobs/out/release/script_blobs.bin";
+    let wallet = launch_provider_and_get_wallet().await?;
+    let provider = wallet.try_provider()?.clone();
+
+    let regular = Executable::load_from(binary_path)?;
+
+    let configurables = MyScriptConfigurables::default().with_SECRET_NUMBER(10001)?;
+    let loader = regular.clone().convert_to_loader()?;
+
+    // The Blob must be uploaded manually, otherwise the script code will revert.
+    loader.upload_blob(wallet.clone()).await?;
+
+    let encoder = fuels::core::codec::ABIEncoder::default();
+    let token = MyStruct {
+        field_a: MyEnum::B(99),
+        field_b: Bits256([17; 32]),
+    }
+    .into_token();
+    let data = encoder.encode(&[token])?;
+
+    let configurables: Configurables = configurables.into();
+
+    let shifted_configurables = configurables
+        .with_shifted_offsets(-(regular.data_offset_in_code().unwrap() as i64))
+        .unwrap()
+        .with_shifted_offsets(loader.data_offset_in_code() as i64)
+        .unwrap();
+
+    let loader_posing_as_normal_script =
+        Executable::from_bytes(loader.code()).with_configurables(shifted_configurables);
+
+    let mut tb = ScriptTransactionBuilder::default()
+        .with_script(loader_posing_as_normal_script.code())
+        .with_script_data(data);
+
+    wallet.adjust_for_fee(&mut tb, 0).await?;
+
+    wallet.add_witnesses(&mut tb)?;
+
+    let tx = tb.build(&provider).await?;
+
+    let response = provider.send_transaction_and_await_commit(tx).await?;
+
+    response.check(None)?;
 
     Ok(())
 }
