@@ -17,7 +17,6 @@ impl Configurables {
         Self { offsets_with_data }
     }
 
-    // TODO: test
     pub fn with_shifted_offsets(self, shift: i64) -> Result<Self> {
         let new_offsets_with_data = self
             .offsets_with_data
