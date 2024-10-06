@@ -7,6 +7,7 @@ use fuels_core::{
     },
     Configurables,
 };
+use itertools::Itertools;
 
 /// This struct represents a standard executable with its associated bytecode and configurables.
 #[derive(Debug, Clone, PartialEq)]
@@ -111,6 +112,8 @@ impl Executable<Loader> {
         }
     }
 
+    pub fn data_offset_in_code(&self) -> Vec<u8> {}
+
     /// Returns the code of the loader executable with configurables applied.
     pub fn code(&self) -> Vec<u8> {
         let mut code = self.state.code.clone();
@@ -173,7 +176,10 @@ fn extract_data_offset(binary: &[u8]) -> Result<usize> {
     Ok(u64::from_be_bytes(data_offset) as usize)
 }
 
-fn transform_into_configurable_loader(binary: Vec<u8>, blob_id: &BlobId) -> Result<Vec<u8>> {
+fn transform_into_configurable_loader(
+    binary: Vec<u8>,
+    blob_id: &BlobId,
+) -> Result<(Vec<u8>, usize)> {
     // The final code is going to have this structure (if the data section is non-empty):
     // 1. loader instructions
     // 2. blob id
@@ -291,15 +297,28 @@ fn transform_into_configurable_loader(binary: Vec<u8>, blob_id: &BlobId) -> Resu
 
         let instruction_bytes = get_instructions(num_of_instructions)
             .into_iter()
-            .flat_map(|instruction| instruction.to_bytes());
+            .flat_map(|instruction| instruction.to_bytes())
+            .collect_vec();
 
-        let blob_bytes = blob_id.iter().copied();
+        let blob_bytes = blob_id.iter().copied().collect_vec();
 
-        Ok(instruction_bytes
+        let original_data_section_len_encoded = u64::try_from(data_section.len())
+            .expect("data section to be less than u64::MAX")
+            .to_be_bytes();
+
+        // The data section is placed after all of the instructions, the BlobId, and the number representing
+        // how big the data section is.
+        let new_data_section_offset =
+            instruction_bytes.len() + blob_bytes.len() + original_data_section_len_encoded.len();
+
+        let code = instruction_bytes
+            .into_iter()
             .chain(blob_bytes)
-            .chain(data_section.len().to_be_bytes())
+            .chain(original_data_section_len_encoded)
             .chain(data_section)
-            .collect())
+            .collect();
+
+        Ok((code, new_data_section_offset))
     } else {
         let num_of_instructions = u16::try_from(get_instructions_no_data_section(0).len())
             .expect("to never have more than u16::MAX instructions");
@@ -310,7 +329,11 @@ fn transform_into_configurable_loader(binary: Vec<u8>, blob_id: &BlobId) -> Resu
 
         let blob_bytes = blob_id.iter().copied();
 
-        Ok(instruction_bytes.chain(blob_bytes).collect())
+        let code = instruction_bytes.chain(blob_bytes).collect_vec();
+        // there is no data section, so we point the offset to the end of the file
+        let new_data_section_offset = code.len();
+
+        Ok((code, new_data_section_offset))
     }
 }
 
