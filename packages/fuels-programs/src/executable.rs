@@ -28,6 +28,7 @@ impl Regular {
 /// Used to transform Script or Predicate code into a loader variant, where the code is uploaded as
 /// a blob and the binary itself is substituted with code that will load the blob code and apply
 /// the given configurables to the Script/Predicate.
+#[derive(Debug, Clone, PartialEq)]
 pub struct Executable<State> {
     state: State,
 }
@@ -63,6 +64,10 @@ impl Executable<Regular> {
                 ..self.state
             },
         }
+    }
+
+    pub fn data_offset_in_code(&self) -> Result<usize> {
+        extract_data_offset(&self.state.code)
     }
 
     /// Returns the code of the executable with configurables applied.
@@ -112,10 +117,11 @@ impl Executable<Loader> {
         }
     }
 
-    pub fn data_offset_in_code(&self) -> Vec<u8> {}
+    pub fn data_offset_in_code(&self) -> usize {
+        self.code_with_offset().1
+    }
 
-    /// Returns the code of the loader executable with configurables applied.
-    pub fn code(&self) -> Vec<u8> {
+    fn code_with_offset(&self) -> (Vec<u8>, usize) {
         let mut code = self.state.code.clone();
 
         self.state.configurables.update_constants_in(&mut code);
@@ -124,6 +130,11 @@ impl Executable<Loader> {
 
         transform_into_configurable_loader(code, &blob_id)
             .expect("checked before turning into a Executable<Loader>")
+    }
+
+    /// Returns the code of the loader executable with configurables applied.
+    pub fn code(&self) -> Vec<u8> {
+        self.code_with_offset().0
     }
 
     /// A Blob containing the original executable code minus the data section.
@@ -456,7 +467,9 @@ mod tests {
         let blob_id = blob.id();
         assert_eq!(
             loader_code,
-            transform_into_configurable_loader(code, &blob_id).unwrap()
+            transform_into_configurable_loader(code, &blob_id)
+                .unwrap()
+                .0
         )
     }
 
