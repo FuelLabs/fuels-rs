@@ -2297,7 +2297,7 @@ async fn blob_contract_deployment() -> Result<()> {
          "the testnet size limit was around 100kB, we want a contract bigger than that to reflect prod (current: {contract_size}B)"
      );
 
-    // TODO(oleksii): blob deployments on testnet are expensive (not enough coins)
+    // TODO(oleksii): huge contract too big for testnet limits
     let wallets =
         launch_custom_provider_and_get_wallets(WalletsConfig::new(Some(2), None, None), None, None)
             .await?;

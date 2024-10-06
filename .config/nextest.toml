@@ -1,8 +1,8 @@
 [profile.ci-testnet]
-slow-timeout = "2m"
+slow-timeout = { period = "60s", terminate-after = 2 }
 
-[test-groups]
-testnet-e2e = { max-threads = 1 }
+[test-groups.testnet-e2e]
+max-threads = 1
 
 [[profile.ci-testnet.overrides]]
 filter = 'package(e2e)'
