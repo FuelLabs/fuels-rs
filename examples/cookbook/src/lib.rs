@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
+    use std::{str::FromStr, time::Duration};
 
     use fuels::{
         accounts::{predicate::Predicate, wallet::WalletUnlocked, Account, ViewOnlyAccount},
@@ -318,6 +318,7 @@ mod tests {
         let tx_id = provider.send_transaction(tx).await?;
         // ANCHOR_END: custom_tx_build
 
+        tokio::time::sleep(Duration::from_millis(500)).await;
         // ANCHOR: custom_tx_verify
         let status = provider.tx_status(&tx_id).await?;
         assert!(matches!(status, TxStatus::Success { .. }));

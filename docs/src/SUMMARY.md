@@ -44,6 +44,7 @@
 - [Running scripts](./running-scripts.md)
 - [Predicates](./predicates/index.md)
   - [Signatures example](./predicates/send-spend-predicate.md)
+- [Pre-uploading code](./preuploading-code.md)
 - [Custom transactions](./custom-transactions/index.md)
   - [Transaction builders](./custom-transactions/transaction-builders.md)
   - [Custom contract and script calls](./custom-transactions/custom-calls.md)

@@ -77,6 +77,9 @@ async fn script_default_configurables() -> Result<()> {
         )
     );
 
+    let mut script_instance = script_instance;
+    script_instance.convert_into_loader().await?;
+
     if *IS_TESTNET {
         sleep(Duration::from_secs(10)).await;
     }

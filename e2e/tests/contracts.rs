@@ -1594,6 +1594,7 @@ async fn test_contract_submit_and_response() -> Result<()> {
     let contract_methods = contract_instance.methods();
 
     let submitted_tx = contract_methods.get(1, 2).submit().await?;
+    tokio::time::sleep(Duration::from_millis(500)).await;
     let value = submitted_tx.response().await?.value;
 
     assert_eq!(value, 3);
@@ -1607,6 +1608,7 @@ async fn test_contract_submit_and_response() -> Result<()> {
         .add_call(call_handler_2);
 
     let handle = multi_call_handler.submit().await?;
+    tokio::time::sleep(Duration::from_millis(500)).await;
     let (val_1, val_2): (u64, u64) = handle.response().await?.value;
 
     assert_eq!(val_1, 7);
@@ -1812,6 +1814,8 @@ async fn contract_custom_call_no_signatures_strategy() -> Result<()> {
     // ANCHOR_END: tb_no_signatures_strategy
 
     let tx_id = provider.send_transaction(tx).await?;
+    tokio::time::sleep(Duration::from_millis(500)).await;
+
     let tx_status = provider.tx_status(&tx_id).await?;
 
     let response = call_handler.get_response_from(tx_status)?;
@@ -2514,6 +2518,78 @@ async fn loader_works_via_proxy() -> Result<()> {
         .value;
 
     assert_eq!(response, 1001);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn loader_storage_works_via_proxy() -> Result<()> {
+    let wallet = launch_provider_and_get_wallet().await?;
+
+    abigen!(
+        Contract(
+            name = "MyContract",
+            abi = "e2e/sway/contracts/huge_contract/out/release/huge_contract-abi.json"
+        ),
+        Contract(
+            name = "MyProxy",
+            abi = "e2e/sway/contracts/proxy/out/release/proxy-abi.json"
+        )
+    );
+
+    let contract_binary = "sway/contracts/huge_contract/out/release/huge_contract.bin";
+
+    let contract = Contract::load_from(contract_binary, LoadConfiguration::default())?;
+    let contract_storage_slots = contract.storage_slots().to_vec();
+
+    let contract_id = contract
+        .convert_to_loader(100)?
+        .deploy(&wallet, TxPolicies::default())
+        .await?;
+
+    let contract_binary = "sway/contracts/proxy/out/release/proxy.bin";
+    let proxy_contract = Contract::load_from(contract_binary, LoadConfiguration::default())?;
+
+    let combined_storage_slots = [&contract_storage_slots, proxy_contract.storage_slots()].concat();
+
+    let proxy_id = proxy_contract
+        .with_storage_slots(combined_storage_slots)
+        .deploy(&wallet, TxPolicies::default())
+        .await?;
+
+    let proxy = MyProxy::new(proxy_id, wallet.clone());
+    proxy
+        .methods()
+        .set_target_contract(contract_id.clone())
+        .call()
+        .await?;
+
+    let response = proxy
+        .methods()
+        .read_some_u64()
+        .with_contract_ids(&[contract_id.clone()])
+        .call()
+        .await?
+        .value;
+
+    assert_eq!(response, 42);
+
+    let _res = proxy
+        .methods()
+        .write_some_u64(36)
+        .with_contract_ids(&[contract_id.clone()])
+        .call()
+        .await?;
+
+    let response = proxy
+        .methods()
+        .read_some_u64()
+        .with_contract_ids(&[contract_id])
+        .call()
+        .await?
+        .value;
+
+    assert_eq!(response, 36);
 
     Ok(())
 }
