@@ -417,7 +417,7 @@ async fn can_be_run_in_blobs_builder() -> Result<()> {
     ));
 
     let binary_path = "./sway/scripts/script_blobs/out/release/script_blobs.bin";
-    let wallet = launch_provider_and_get_wallet().await?;
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     let provider = wallet.try_provider()?.clone();
 
     // ANCHOR: preload_low_level
@@ -459,12 +459,13 @@ async fn can_be_run_in_blobs_builder() -> Result<()> {
 
 #[tokio::test]
 async fn can_be_run_in_blobs_high_level() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
+
     setup_program_test!(
         Abigen(Script(
             project = "e2e/sway/scripts/script_blobs",
             name = "MyScript"
         )),
-        Wallets("wallet"),
         LoadScript(name = "my_script", script = "MyScript", wallet = "wallet")
     );
 
@@ -490,12 +491,12 @@ async fn can_be_run_in_blobs_high_level() -> Result<()> {
 
 #[tokio::test]
 async fn no_data_section_blob_run() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
         Abigen(Script(
             project = "e2e/sway/scripts/empty",
             name = "MyScript"
         )),
-        Wallets("wallet"),
         LoadScript(name = "my_script", script = "MyScript", wallet = "wallet")
     );
 
@@ -509,7 +510,8 @@ async fn no_data_section_blob_run() -> Result<()> {
 }
 
 #[tokio::test]
-async fn loader_script_calling_loader_proxy() -> Result<()> {
+async fn loader_script_calling_loader_proxy_blobs() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
         Abigen(
             Contract(
@@ -519,7 +521,6 @@ async fn loader_script_calling_loader_proxy() -> Result<()> {
             Contract(name = "MyProxy", project = "e2e/sway/contracts/proxy"),
             Script(name = "MyScript", project = "e2e/sway/scripts/script_proxy"),
         ),
-        Wallets("wallet"),
         LoadScript(name = "my_script", script = "MyScript", wallet = "wallet")
     );
 
