@@ -569,7 +569,6 @@ async fn loader_can_be_presented_as_a_normal_script_with_shifted_configurables()
     let wallet = launch_provider_and_get_wallet().await?;
     let provider = wallet.try_provider()?.clone();
 
-    // ANCHOR: preload_low_level
     let regular = Executable::load_from(binary_path)?;
 
     let configurables = MyScriptConfigurables::default().with_SECRET_NUMBER(10001)?;
@@ -610,7 +609,6 @@ async fn loader_can_be_presented_as_a_normal_script_with_shifted_configurables()
     let response = provider.send_transaction_and_await_commit(tx).await?;
 
     response.check(None)?;
-    // ANCHOR_END: preload_low_level
 
     Ok(())
 }
