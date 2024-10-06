@@ -19,9 +19,6 @@ use fuel_tx::{
     TransactionFee, UniqueIdentifier, Upgrade, Upload, Witness,
 };
 use fuel_types::{bytes::padded_len_usize, AssetId, ChainId};
-use fuel_vm::checked_transaction::{
-    CheckPredicateParams, CheckPredicates, EstimatePredicates, IntoChecked,
-};
 use itertools::Itertools;
 
 use crate::{
@@ -179,7 +176,6 @@ impl TxPolicies {
 }
 
 use fuel_tx::field::{BytecodeWitnessIndex, Salt, StorageSlots};
-use fuel_vm::prelude::MemoryInstance;
 
 use crate::types::coin_type_id::CoinTypeId;
 
@@ -380,16 +376,10 @@ macro_rules! impl_tx_wrapper {
         impl ValidatablePredicates for $wrapper {
             fn validate_predicates(
                 self,
-                consensus_parameters: &ConsensusParameters,
-                block_height: u32,
+                _consensus_parameters: &ConsensusParameters,
+                _block_height: u32,
             ) -> Result<()> {
-                let checked = self
-                    .tx
-                    .into_checked(block_height.into(), consensus_parameters)?;
-
-                let check_predicates_parameters: CheckPredicateParams = consensus_parameters.into();
-
-                checked.check_predicates(&check_predicates_parameters, MemoryInstance::new())?;
+                // Can no longer validate predicates locally due to the need for blob storage
 
                 Ok(())
             }
@@ -564,10 +554,12 @@ impl EstimablePredicates for UploadTransaction {
         {
             tx.as_upload().expect("is upload").clone_into(&mut self.tx);
         } else {
-            self.tx.estimate_predicates(
-                &provider.consensus_parameters().into(),
-                MemoryInstance::new(),
-            )?;
+            // We no longer estimate locally since we don't have the blob storage.
+            // maybe_estimate_predicates should always return an estimation
+            return Err(error!(
+                Other,
+                "Should have been given an estimation from the node. This is a bug."
+            ));
         }
 
         Ok(())
@@ -590,10 +582,12 @@ impl EstimablePredicates for UpgradeTransaction {
                 .expect("is upgrade")
                 .clone_into(&mut self.tx);
         } else {
-            self.tx.estimate_predicates(
-                &provider.consensus_parameters().into(),
-                MemoryInstance::new(),
-            )?;
+            // We no longer estimate locally since we don't have the blob storage.
+            // maybe_estimate_predicates should always return an estimation
+            return Err(error!(
+                Other,
+                "Should have been given an estimation from the node. This is a bug."
+            ));
         }
 
         Ok(())
@@ -614,10 +608,12 @@ impl EstimablePredicates for CreateTransaction {
         {
             tx.as_create().expect("is create").clone_into(&mut self.tx);
         } else {
-            self.tx.estimate_predicates(
-                &provider.consensus_parameters().into(),
-                MemoryInstance::new(),
-            )?;
+            // We no longer estimate locally since we don't have the blob storage.
+            // maybe_estimate_predicates should always return an estimation
+            return Err(error!(
+                Other,
+                "Should have been given an estimation from the node. This is a bug."
+            ));
         }
 
         Ok(())
@@ -652,10 +648,12 @@ impl EstimablePredicates for ScriptTransaction {
         {
             tx.as_script().expect("is script").clone_into(&mut self.tx);
         } else {
-            self.tx.estimate_predicates(
-                &provider.consensus_parameters().into(),
-                MemoryInstance::new(),
-            )?;
+            // We no longer estimate locally since we don't have the blob storage.
+            // maybe_estimate_predicates should always return an estimation
+            return Err(error!(
+                Other,
+                "Should have been given an estimation from the node. This is a bug."
+            ));
         }
 
         Ok(())
@@ -676,10 +674,12 @@ impl EstimablePredicates for BlobTransaction {
         {
             tx.as_blob().expect("is blob").clone_into(&mut self.tx);
         } else {
-            self.tx.estimate_predicates(
-                &provider.consensus_parameters().into(),
-                MemoryInstance::new(),
-            )?;
+            // We no longer estimate locally since we don't have the blob storage.
+            // maybe_estimate_predicates should always return an estimation
+            return Err(error!(
+                Other,
+                "Should have been given an estimation from the node. This is a bug."
+            ));
         }
 
         Ok(())

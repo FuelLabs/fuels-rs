@@ -417,7 +417,7 @@ mod tests {
         tb.add_signer(wallet.clone())?;
         // ANCHOR_END: sign_tb
 
-        let tx = tb.build(&MockDryRunner::default()).await?; // Resolve signatures and add corresponding witness indexes
+        let tx = tb.build(MockDryRunner::default()).await?; // Resolve signatures and add corresponding witness indexes
 
         // Extract the signature from the tx witnesses
         let bytes = <[u8; Signature::LEN]>::try_from(tx.witnesses().first().unwrap().as_ref())?;

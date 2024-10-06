@@ -6,6 +6,7 @@ use fuels::{
         traits::Tokenizable,
     },
     prelude::*,
+    programs::executable::Executable,
     types::{coin::Coin, coin_type::CoinType, input::Input, message::Message, output::Output},
 };
 
@@ -63,13 +64,14 @@ async fn setup_predicate_test(
     num_coins: u64,
     num_messages: u64,
     amount: u64,
-) -> Result<(Provider, u64, WalletUnlocked, u64, AssetId)> {
+) -> Result<(Provider, u64, WalletUnlocked, u64, AssetId, WalletUnlocked)> {
     let receiver_num_coins = 1;
     let receiver_amount = 1;
     let receiver_balance = receiver_num_coins * receiver_amount;
 
     let predicate_balance = (num_coins + num_messages) * amount;
     let mut receiver = WalletUnlocked::new_random(None);
+    let mut extra_wallet = WalletUnlocked::new_random(None);
 
     let (mut coins, messages, asset_id) =
         get_test_coins_and_messages(predicate_address, num_coins, num_messages, amount, 0);
@@ -79,6 +81,12 @@ async fn setup_predicate_test(
         asset_id,
         receiver_num_coins,
         receiver_amount,
+    ));
+    coins.extend(setup_single_asset_coins(
+        extra_wallet.address(),
+        AssetId::zeroed(),
+        10000,
+        u64::MAX,
     ));
 
     coins.extend(setup_single_asset_coins(
@@ -90,6 +98,7 @@ async fn setup_predicate_test(
 
     let provider = setup_test_provider(coins, messages, None, None).await?;
     receiver.set_provider(provider.clone());
+    extra_wallet.set_provider(provider.clone());
 
     Ok((
         provider,
@@ -97,6 +106,7 @@ async fn setup_predicate_test(
         receiver,
         receiver_balance,
         asset_id,
+        extra_wallet,
     ))
 }
 
@@ -158,7 +168,7 @@ async fn spend_predicate_coins_messages_basic() -> Result<()> {
     let num_coins = 4;
     let num_messages = 8;
     let amount = 16;
-    let (provider, predicate_balance, receiver, receiver_balance, asset_id) =
+    let (provider, predicate_balance, receiver, receiver_balance, asset_id, _) =
         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
     predicate.set_provider(provider.clone());
@@ -211,7 +221,7 @@ async fn pay_with_predicate() -> Result<()> {
     let num_coins = 4;
     let num_messages = 8;
     let amount = 16;
-    let (provider, _predicate_balance, _receiver, _receiver_balance, _asset_id) =
+    let (provider, _predicate_balance, _receiver, _receiver_balance, _asset_id, _) =
         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
     predicate.set_provider(provider.clone());
@@ -280,7 +290,7 @@ async fn pay_with_predicate_vector_data() -> Result<()> {
     let num_coins = 4;
     let num_messages = 8;
     let amount = 16;
-    let (provider, _predicate_balance, _receiver, _receiver_balance, _asset_id) =
+    let (provider, _predicate_balance, _receiver, _receiver_balance, _asset_id, _) =
         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
     predicate.set_provider(provider.clone());
@@ -342,7 +352,7 @@ async fn predicate_contract_transfer() -> Result<()> {
     let num_coins = 4;
     let num_messages = 8;
     let amount = 300;
-    let (provider, _predicate_balance, _receiver, _receiver_balance, _asset_id) =
+    let (provider, _predicate_balance, _receiver, _receiver_balance, _asset_id, _) =
         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
     predicate.set_provider(provider.clone());
@@ -398,7 +408,7 @@ async fn predicate_transfer_to_base_layer() -> Result<()> {
     let num_coins = 4;
     let num_messages = 8;
     let amount = 300;
-    let (provider, _predicate_balance, _receiver, _receiver_balance, _asset_id) =
+    let (provider, _predicate_balance, _receiver, _receiver_balance, _asset_id, _) =
         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
     predicate.set_provider(provider.clone());
@@ -531,7 +541,7 @@ async fn contract_tx_and_call_params_with_predicate() -> Result<()> {
     let num_coins = 1;
     let num_messages = 1;
     let amount = 1000;
-    let (provider, _predicate_balance, _receiver, _receiver_balance, _asset_id) =
+    let (provider, _predicate_balance, _receiver, _receiver_balance, _asset_id, _) =
         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
     predicate.set_provider(provider.clone());
@@ -611,7 +621,7 @@ async fn diff_asset_predicate_payment() -> Result<()> {
     let num_coins = 1;
     let num_messages = 1;
     let amount = 1_000_000_000;
-    let (provider, _predicate_balance, _receiver, _receiver_balance, _asset_id) =
+    let (provider, _predicate_balance, _receiver, _receiver_balance, _asset_id, _) =
         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
     predicate.set_provider(provider.clone());
@@ -651,8 +661,14 @@ async fn predicate_default_configurables() -> Result<()> {
     };
     let new_enum = EnumWithGeneric::VariantOne(true);
 
-    let predicate_data =
-        MyPredicateEncoder::default().encode_data(true, 8, new_struct, new_enum)?;
+    let predicate_data = MyPredicateEncoder::default().encode_data(
+        true,
+        8,
+        (8, true),
+        [253, 254, 255],
+        new_struct,
+        new_enum,
+    )?;
 
     let mut predicate: Predicate = Predicate::load_from(
         "sway/predicates/predicate_configurables/out/release/predicate_configurables.bin",
@@ -662,7 +678,7 @@ async fn predicate_default_configurables() -> Result<()> {
     let num_coins = 4;
     let num_messages = 8;
     let amount = 16;
-    let (provider, predicate_balance, receiver, receiver_balance, asset_id) =
+    let (provider, predicate_balance, receiver, receiver_balance, asset_id, _) =
         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
     predicate.set_provider(provider.clone());
@@ -701,6 +717,8 @@ async fn predicate_configurables() -> Result<()> {
         abi = "e2e/sway/predicates/predicate_configurables/out/release/predicate_configurables-abi.json"
     ));
 
+    let new_tuple = (16, false);
+    let new_array = [123, 124, 125];
     let new_struct = StructWithGeneric {
         field_1: 32u8,
         field_2: 64,
@@ -709,11 +727,13 @@ async fn predicate_configurables() -> Result<()> {
 
     let configurables = MyPredicateConfigurables::default()
         .with_U8(8)?
+        .with_TUPLE(new_tuple)?
+        .with_ARRAY(new_array)?
         .with_STRUCT(new_struct.clone())?
         .with_ENUM(new_enum.clone())?;
 
-    let predicate_data =
-        MyPredicateEncoder::default().encode_data(true, 8u8, new_struct, new_enum)?;
+    let predicate_data = MyPredicateEncoder::default()
+        .encode_data(true, 8u8, new_tuple, new_array, new_struct, new_enum)?;
 
     let mut predicate: Predicate = Predicate::load_from(
         "sway/predicates/predicate_configurables/out/release/predicate_configurables.bin",
@@ -725,7 +745,7 @@ async fn predicate_configurables() -> Result<()> {
     let num_coins = 4;
     let num_messages = 8;
     let amount = 16;
-    let (provider, predicate_balance, receiver, receiver_balance, asset_id) =
+    let (provider, predicate_balance, receiver, receiver_balance, asset_id, _) =
         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
     predicate.set_provider(provider.clone());
@@ -874,7 +894,7 @@ async fn predicate_can_access_manually_added_witnesses() -> Result<()> {
     let num_coins = 4;
     let num_messages = 0;
     let amount = 16;
-    let (provider, predicate_balance, receiver, receiver_balance, asset_id) =
+    let (provider, predicate_balance, receiver, receiver_balance, asset_id, _) =
         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
     predicate.set_provider(provider.clone());
@@ -942,7 +962,7 @@ async fn tx_id_not_changed_after_adding_witnesses() -> Result<()> {
     let num_coins = 4;
     let num_messages = 0;
     let amount = 16;
-    let (provider, _predicate_balance, receiver, _receiver_balance, asset_id) =
+    let (provider, _predicate_balance, receiver, _receiver_balance, asset_id, _) =
         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
     predicate.set_provider(provider.clone());
@@ -1022,7 +1042,7 @@ async fn predicate_transfers_non_base_asset() -> Result<()> {
     let num_coins = 4;
     let num_message = 6;
     let amount = 20;
-    let (provider, _, receiver, _, _) =
+    let (provider, _, receiver, _, _, _) =
         setup_predicate_test(predicate.address(), num_coins, num_message, amount).await?;
     predicate.set_provider(provider);
     let other_asset_id = AssetId::from([1u8; 32]);
@@ -1062,7 +1082,7 @@ async fn predicate_with_invalid_data_fails() -> Result<()> {
     let num_coins = 4;
     let num_message = 6;
     let amount = 20;
-    let (provider, _, receiver, _, _) =
+    let (provider, _, receiver, _, _, _) =
         setup_predicate_test(predicate.address(), num_coins, num_message, amount).await?;
     predicate.set_provider(provider);
     let other_asset_id = AssetId::from([1u8; 32]);
@@ -1081,6 +1101,138 @@ async fn predicate_with_invalid_data_fails() -> Result<()> {
 
     assert!(error_string.contains("PredicateVerificationFailed(Panic(PredicateReturnedNonOne))"));
     assert_eq!(receiver.get_asset_balance(&other_asset_id).await?, 0);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn predicate_blobs() -> Result<()> {
+    abigen!(Predicate(
+        name = "MyPredicate",
+        abi = "e2e/sway/predicates/predicate_blobs/out/release/predicate_blobs-abi.json"
+    ));
+
+    // ANCHOR: preparing_the_predicate
+    let configurables = MyPredicateConfigurables::default().with_SECRET_NUMBER(10001)?;
+
+    let predicate_data = MyPredicateEncoder::default().encode_data(1, 19)?;
+
+    let executable =
+        Executable::load_from("sway/predicates/predicate_blobs/out/release/predicate_blobs.bin")?;
+
+    let loader = executable
+        .convert_to_loader()?
+        .with_configurables(configurables);
+
+    let mut predicate: Predicate = Predicate::from_code(loader.code()).with_data(predicate_data);
+    // ANCHOR_END: preparing_the_predicate
+
+    let num_coins = 4;
+    let num_messages = 8;
+    let amount = 16;
+    let (provider, predicate_balance, receiver, receiver_balance, asset_id, extra_wallet) =
+        setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
+
+    // we don't want to pay with the recipient wallet so that we don't affect the assertion we're
+    // gonna make later on
+    // ANCHOR: uploading_the_blob
+    loader.upload_blob(extra_wallet).await?;
+
+    predicate.set_provider(provider.clone());
+
+    let expected_fee = 1;
+    predicate
+        .transfer(
+            receiver.address(),
+            predicate_balance - expected_fee,
+            asset_id,
+            TxPolicies::default(),
+        )
+        .await?;
+    // ANCHOR_END: uploading_the_blob
+
+    // The predicate has spent the funds
+    assert_address_balance(predicate.address(), &provider, asset_id, 0).await;
+
+    // Funds were transferred
+    assert_address_balance(
+        receiver.address(),
+        &provider,
+        asset_id,
+        receiver_balance + predicate_balance - expected_fee,
+    )
+    .await;
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn predicate_configurables_in_blobs() -> Result<()> {
+    abigen!(Predicate(
+        name = "MyPredicate",
+        abi = "e2e/sway/predicates/predicate_configurables/out/release/predicate_configurables-abi.json"
+    ));
+
+    let new_tuple = (16, false);
+    let new_array = [123, 124, 125];
+    let new_struct = StructWithGeneric {
+        field_1: 32u8,
+        field_2: 64,
+    };
+    let new_enum = EnumWithGeneric::VariantTwo;
+
+    let configurables = MyPredicateConfigurables::default()
+        .with_U8(8)?
+        .with_TUPLE(new_tuple)?
+        .with_ARRAY(new_array)?
+        .with_STRUCT(new_struct.clone())?
+        .with_ENUM(new_enum.clone())?;
+
+    let predicate_data = MyPredicateEncoder::default()
+        .encode_data(true, 8u8, new_tuple, new_array, new_struct, new_enum)?;
+
+    let executable = Executable::load_from(
+        "sway/predicates/predicate_configurables/out/release/predicate_configurables.bin",
+    )?;
+
+    let loader = executable
+        .convert_to_loader()?
+        .with_configurables(configurables);
+
+    let mut predicate: Predicate = Predicate::from_code(loader.code()).with_data(predicate_data);
+
+    let num_coins = 4;
+    let num_messages = 8;
+    let amount = 16;
+    let (provider, predicate_balance, receiver, receiver_balance, asset_id, extra_wallet) =
+        setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
+
+    predicate.set_provider(provider.clone());
+
+    loader.upload_blob(extra_wallet).await?;
+
+    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
+    let expected_fee = 1;
+    predicate
+        .transfer(
+            receiver.address(),
+            predicate_balance - expected_fee,
+            asset_id,
+            TxPolicies::default(),
+        )
+        .await?;
+
+    // The predicate has spent the funds
+    assert_address_balance(predicate.address(), &provider, asset_id, 0).await;
+
+    // Funds were transferred
+    assert_address_balance(
+        receiver.address(),
+        &provider,
+        asset_id,
+        receiver_balance + predicate_balance - expected_fee,
+    )
+    .await;
 
     Ok(())
 }

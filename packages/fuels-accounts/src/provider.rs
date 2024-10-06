@@ -17,10 +17,7 @@ use fuel_core_client::client::{
         gas_price::{EstimateGasPrice, LatestGasPrice},
     },
 };
-use fuel_core_types::{
-    blockchain::header::LATEST_STATE_TRANSITION_VERSION,
-    services::executor::TransactionExecutionResult,
-};
+use fuel_core_types::services::executor::TransactionExecutionResult;
 use fuel_tx::{
     AssetId, ConsensusParameters, Receipt, Transaction as FuelTransaction, TxId, UtxoId,
 };
@@ -40,6 +37,7 @@ use fuels_core::{
         message_proof::MessageProof,
         node_info::NodeInfo,
         transaction::{Transaction, Transactions},
+        transaction_builders::{Blob, BlobId},
         transaction_response::TransactionResponse,
         tx_status::TxStatus,
         DryRun, DryRunner,
@@ -148,6 +146,18 @@ impl Provider {
 
     pub fn url(&self) -> &str {
         self.client.url()
+    }
+
+    pub async fn blob(&self, blob_id: BlobId) -> Result<Option<Blob>> {
+        Ok(self
+            .client
+            .blob(blob_id.into())
+            .await?
+            .map(|blob| Blob::new(blob.bytecode)))
+    }
+
+    pub async fn blob_exists(&self, blob_id: BlobId) -> Result<bool> {
+        Ok(self.client.blob_exists(blob_id.into()).await?)
     }
 
     /// Sends a transaction to the underlying Provider's client.
@@ -753,22 +763,10 @@ impl DryRunner for Provider {
     async fn maybe_estimate_predicates(
         &self,
         tx: &FuelTransaction,
-        latest_chain_executor_version: Option<u32>,
+        _latest_chain_executor_version: Option<u32>,
     ) -> Result<Option<FuelTransaction>> {
-        let latest_chain_executor_version = match latest_chain_executor_version {
-            Some(exec_version) => exec_version,
-            None => {
-                self.chain_info()
-                    .await?
-                    .latest_block
-                    .header
-                    .state_transition_bytecode_version
-            }
-        };
-
-        Ok(
-            (latest_chain_executor_version > LATEST_STATE_TRANSITION_VERSION)
-                .then_some(self.client.estimate_predicates(tx).await?),
-        )
+        // We always delegate the estimation to the client because estimating locally is no longer
+        // possible due to the need of blob storage
+        Ok(Some(self.client.estimate_predicates(tx).await?))
     }
 }

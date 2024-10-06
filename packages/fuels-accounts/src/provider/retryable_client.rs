@@ -5,13 +5,13 @@ use fuel_core_client::client::{
     types::{
         gas_price::{EstimateGasPrice, LatestGasPrice},
         primitives::{BlockId, TransactionId},
-        Balance, Block, ChainInfo, Coin, CoinType, ContractBalance, Message, MessageProof,
+        Balance, Blob, Block, ChainInfo, Coin, CoinType, ContractBalance, Message, MessageProof,
         NodeInfo, TransactionResponse, TransactionStatus,
     },
     FuelClient,
 };
 use fuel_core_types::services::executor::TransactionExecutionStatus;
-use fuel_tx::{Transaction, TxId, UtxoId};
+use fuel_tx::{BlobId, Transaction, TxId, UtxoId};
 use fuel_types::{Address, AssetId, BlockHeight, ContractId, Nonce};
 use fuels_core::types::errors::{error, Error, Result};
 
@@ -138,6 +138,14 @@ impl RetryableClient {
 
     pub async fn node_info(&self) -> RequestResult<NodeInfo> {
         self.wrap(|| self.client.node_info()).await
+    }
+
+    pub async fn blob(&self, blob_id: BlobId) -> RequestResult<Option<Blob>> {
+        self.wrap(|| self.client.blob(blob_id)).await
+    }
+
+    pub async fn blob_exists(&self, blob_id: BlobId) -> RequestResult<bool> {
+        self.wrap(|| self.client.blob_exists(blob_id)).await
     }
 
     pub async fn latest_gas_price(&self) -> RequestResult<LatestGasPrice> {

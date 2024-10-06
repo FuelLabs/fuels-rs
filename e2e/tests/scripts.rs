@@ -1,7 +1,13 @@
+use std::time::Duration;
+
 use fuels::{
-    core::codec::{DecoderConfig, EncoderConfig},
+    core::{
+        codec::{DecoderConfig, EncoderConfig},
+        traits::Tokenizable,
+    },
     prelude::*,
-    types::Identity,
+    programs::executable::Executable,
+    types::{Bits256, Identity},
 };
 
 #[tokio::test]
@@ -275,6 +281,7 @@ async fn test_script_submit_and_response() -> Result<()> {
 
     // ANCHOR: submit_response_script
     let submitted_tx = script_instance.main(my_struct).submit().await?;
+    tokio::time::sleep(Duration::from_millis(500)).await;
     let value = submitted_tx.response().await?.value;
     // ANCHOR_END: submit_response_script
 
@@ -311,6 +318,7 @@ async fn test_script_transaction_builder() -> Result<()> {
     let tx = tb.build(provider).await?;
 
     let tx_id = provider.send_transaction(tx).await?;
+    tokio::time::sleep(Duration::from_millis(500)).await;
     let tx_status = provider.tx_status(&tx_id).await?;
 
     let response = script_call_handler.get_response_from(tx_status)?;
@@ -394,6 +402,157 @@ async fn simulations_can_be_made_without_coins() -> Result<()> {
         .value;
 
     assert_eq!(value.as_ref(), "hello");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn can_be_run_in_blobs_builder() -> Result<()> {
+    abigen!(Script(
+        abi = "e2e/sway/scripts/script_blobs/out/release/script_blobs-abi.json",
+        name = "MyScript"
+    ));
+
+    let binary_path = "./sway/scripts/script_blobs/out/release/script_blobs.bin";
+    let wallet = launch_provider_and_get_wallet().await?;
+    let provider = wallet.try_provider()?.clone();
+
+    // ANCHOR: preload_low_level
+    let regular = Executable::load_from(binary_path)?;
+
+    let configurables = MyScriptConfigurables::default().with_SECRET_NUMBER(10001)?;
+    let loader = regular
+        .convert_to_loader()?
+        .with_configurables(configurables);
+
+    // The Blob must be uploaded manually, otherwise the script code will revert.
+    loader.upload_blob(wallet.clone()).await?;
+
+    let encoder = fuels::core::codec::ABIEncoder::default();
+    let token = MyStruct {
+        field_a: MyEnum::B(99),
+        field_b: Bits256([17; 32]),
+    }
+    .into_token();
+    let data = encoder.encode(&[token])?;
+
+    let mut tb = ScriptTransactionBuilder::default()
+        .with_script(loader.code())
+        .with_script_data(data);
+
+    wallet.adjust_for_fee(&mut tb, 0).await?;
+
+    wallet.add_witnesses(&mut tb)?;
+
+    let tx = tb.build(&provider).await?;
+
+    let response = provider.send_transaction_and_await_commit(tx).await?;
+
+    response.check(None)?;
+    // ANCHOR_END: preload_low_level
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn can_be_run_in_blobs_high_level() -> Result<()> {
+    setup_program_test!(
+        Abigen(Script(
+            project = "e2e/sway/scripts/script_blobs",
+            name = "MyScript"
+        )),
+        Wallets("wallet"),
+        LoadScript(name = "my_script", script = "MyScript", wallet = "wallet")
+    );
+
+    let configurables = MyScriptConfigurables::default().with_SECRET_NUMBER(10001)?;
+    let mut my_script = my_script.with_configurables(configurables);
+
+    let arg = MyStruct {
+        field_a: MyEnum::B(99),
+        field_b: Bits256([17; 32]),
+    };
+    let secret = my_script
+        .convert_into_loader()
+        .await?
+        .main(arg)
+        .call()
+        .await?
+        .value;
+
+    assert_eq!(secret, 10001);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn no_data_section_blob_run() -> Result<()> {
+    setup_program_test!(
+        Abigen(Script(
+            project = "e2e/sway/scripts/empty",
+            name = "MyScript"
+        )),
+        Wallets("wallet"),
+        LoadScript(name = "my_script", script = "MyScript", wallet = "wallet")
+    );
+
+    let mut my_script = my_script;
+
+    // ANCHOR: preload_high_level
+    my_script.convert_into_loader().await?.main().call().await?;
+    // ANCHOR_END: preload_high_level
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn loader_script_calling_loader_proxy() -> Result<()> {
+    setup_program_test!(
+        Abigen(
+            Contract(
+                name = "MyContract",
+                project = "e2e/sway/contracts/huge_contract"
+            ),
+            Contract(name = "MyProxy", project = "e2e/sway/contracts/proxy"),
+            Script(name = "MyScript", project = "e2e/sway/scripts/script_proxy"),
+        ),
+        Wallets("wallet"),
+        LoadScript(name = "my_script", script = "MyScript", wallet = "wallet")
+    );
+
+    let contract_binary = "sway/contracts/huge_contract/out/release/huge_contract.bin";
+
+    let contract = Contract::load_from(contract_binary, LoadConfiguration::default())?;
+
+    let contract_id = contract
+        .convert_to_loader(100)?
+        .deploy(&wallet, TxPolicies::default())
+        .await?;
+
+    let contract_binary = "sway/contracts/proxy/out/release/proxy.bin";
+
+    let proxy_id = Contract::load_from(contract_binary, LoadConfiguration::default())?
+        .convert_to_loader(100)?
+        .deploy(&wallet, TxPolicies::default())
+        .await?;
+
+    let proxy = MyProxy::new(proxy_id.clone(), wallet.clone());
+    proxy
+        .methods()
+        .set_target_contract(contract_id.clone())
+        .call()
+        .await?;
+
+    let mut my_script = my_script;
+    let result = my_script
+        .convert_into_loader()
+        .await?
+        .main(proxy_id.clone())
+        .with_contract_ids(&[contract_id, proxy_id])
+        .call()
+        .await?;
+
+    assert!(result.value);
 
     Ok(())
 }

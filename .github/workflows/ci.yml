@@ -16,8 +16,9 @@ env:
   CARGO_TERM_COLOR: always
   DASEL_VERSION: https://github.com/TomWright/dasel/releases/download/v2.3.6/dasel_linux_amd64
   RUSTFLAGS: "-D warnings"
-  FUEL_CORE_VERSION: 0.36.0
-  FUEL_CORE_PATCH_BRANCH:
+  FUEL_CORE_VERSION: 0.37.0
+  FUEL_CORE_PATCH_BRANCH: ""
+  FUEL_CORE_PATCH_REVISION: ""
   RUST_VERSION: 1.79.0
   FORC_VERSION: 0.64.0
   FORC_PATCH_BRANCH: ""
@@ -99,6 +100,42 @@ jobs:
           echo "Comparing minimum supported toolchain ($MIN_VERSION) with ci toolchain (RUST_VERSION)"
           test "$MIN_VERSION" == "$RUST_VERSION"
 
+  # Fetch Fuel Core and upload as artifact, useful when we build the core from a
+  # revision so that we can repeat flaky tests without rebuilding the core.
+  fetch-fuel-core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          targets: wasm32-unknown-unknown
+
+        # selecting a toolchain either by action or manual `rustup` calls should happen
+        # before the cache plugin, as it uses the current rustc version as its cache key
+      - uses: Swatinem/rust-cache@v2.7.3
+        continue-on-error: true
+        with:
+          key: "fuel-core-build"
+      - name: Install Fuel Core
+        run: |
+          if [[ -n $FUEL_CORE_PATCH_BRANCH ]]; then
+            cargo install --locked fuel-core-bin --git https://github.com/FuelLabs/fuel-core --branch "$FUEL_CORE_PATCH_BRANCH" --root fuel-core-install
+          elif [[ -n $FUEL_CORE_PATCH_REVISION ]]; then
+            cargo install --locked fuel-core-bin --git https://github.com/FuelLabs/fuel-core --rev "$FUEL_CORE_PATCH_REVISION" --root fuel-core-install
+
+          else
+            curl -sSLf https://github.com/FuelLabs/fuel-core/releases/download/v${{ env.FUEL_CORE_VERSION }}/fuel-core-${{ env.FUEL_CORE_VERSION }}-x86_64-unknown-linux-gnu.tar.gz -L -o fuel-core.tar.gz
+            tar -xvf fuel-core.tar.gz
+            chmod +x fuel-core-${{ env.FUEL_CORE_VERSION }}-x86_64-unknown-linux-gnu/fuel-core
+            mkdir -p fuel-core-install/bin
+            mv fuel-core-${{ env.FUEL_CORE_VERSION }}-x86_64-unknown-linux-gnu/fuel-core fuel-core-install/bin/fuel-core
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fuel-core
+          path: fuel-core-install/bin/fuel-core
+
   # Ensure workspace is publishable
   publish-crates-check:
     runs-on: ubuntu-latest
@@ -123,6 +160,7 @@ jobs:
       - verify-rust-version
       - get-workspace-members
       - publish-crates-check
+      - fetch-fuel-core
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -136,11 +174,11 @@ jobs:
             args: --all-targets
             download_sway_artifacts: sway-examples
           - cargo_command: nextest
-            args: run --all-targets --features "default fuel-core-lib coin-cache" --workspace --cargo-quiet
+            args: run --all-targets --features "default fuel-core-lib coin-cache" --workspace --cargo-quiet --no-fail-fast
             download_sway_artifacts: sway-examples
             install_fuel_core: true
           - cargo_command: nextest
-            args: run --all-targets --workspace --cargo-quiet
+            args: run --all-targets --workspace --cargo-quiet --no-fail-fast
             download_sway_artifacts: sway-examples
             install_fuel_core: true
           - cargo_command: test
@@ -175,17 +213,16 @@ jobs:
         with:
           key: "${{ matrix.cargo_command }} ${{ matrix.args }} ${{ matrix.package }}"
 
+      - name: Download Fuel Core
+        if: ${{ matrix.install_fuel_core }}
+        uses: actions/download-artifact@v4
+        with:
+          name: fuel-core
       - name: Install Fuel Core
         if: ${{ matrix.install_fuel_core }}
         run: |
-          if [[ -n $FUEL_CORE_PATCH_BRANCH ]]; then
-            cargo install --locked fuel-core-bin --git https://github.com/FuelLabs/fuel-core --branch "$FUEL_CORE_PATCH_BRANCH"
-          else
-            curl -sSLf https://github.com/FuelLabs/fuel-core/releases/download/v${{ env.FUEL_CORE_VERSION }}/fuel-core-${{ env.FUEL_CORE_VERSION }}-x86_64-unknown-linux-gnu.tar.gz -L -o fuel-core.tar.gz
-            tar -xvf fuel-core.tar.gz
-            chmod +x fuel-core-${{ env.FUEL_CORE_VERSION }}-x86_64-unknown-linux-gnu/fuel-core
-            mv fuel-core-${{ env.FUEL_CORE_VERSION }}-x86_64-unknown-linux-gnu/fuel-core /usr/local/bin/fuel-core
-          fi
+          chmod +x fuel-core
+          mv fuel-core /usr/local/bin/fuel-core
 
       - name: Download sway example artifacts
         if: ${{ matrix.download_sway_artifacts }}
