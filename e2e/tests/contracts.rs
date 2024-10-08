@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use fuel_tx::{
     consensus_parameters::{ConsensusParametersV1, FeeParametersV1},
     ConsensusParameters, FeeParameters,
@@ -10,12 +8,17 @@ use fuels::{
     tx::ContractParameters,
     types::{errors::transaction::Reason, input::Input, Bits256, Identity},
 };
-use tokio::time::Instant;
+use tokio::time::{sleep, Duration, Instant};
+
+mod common;
+use common::{
+    maybe_connect_to_testnet_and_get_wallet, maybe_connect_to_testnet_and_get_wallets, IS_TESTNET,
+};
 
 #[tokio::test]
 async fn test_multiple_args() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
             project = "e2e/sway/contracts/contract_test"
@@ -26,6 +29,10 @@ async fn test_multiple_args() -> Result<()> {
             wallet = "wallet"
         ),
     );
+
+    if *IS_TESTNET {
+        sleep(Duration::from_secs(10)).await;
+    }
 
     // Make sure we can call the contract with multiple arguments
     let contract_methods = contract_instance.methods();
@@ -45,8 +52,8 @@ async fn test_multiple_args() -> Result<()> {
 #[tokio::test]
 async fn test_contract_calling_contract() -> Result<()> {
     // Tests a contract call that calls another contract (FooCaller calls FooContract underneath)
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(
             Contract(
                 name = "LibContract",
@@ -73,6 +80,11 @@ async fn test_contract_calling_contract() -> Result<()> {
             wallet = "wallet"
         ),
     );
+
+    if *IS_TESTNET {
+        sleep(Duration::from_secs(10)).await;
+    }
+
     let lib_contract_id = lib_contract_instance.contract_id();
     let lib_contract_id2 = lib_contract_instance2.contract_id();
 
@@ -117,8 +129,8 @@ async fn test_contract_calling_contract() -> Result<()> {
 
 #[tokio::test]
 async fn test_reverting_transaction() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "RevertContract",
             project = "e2e/sway/contracts/revert_transaction_error"
@@ -129,6 +141,10 @@ async fn test_reverting_transaction() -> Result<()> {
             wallet = "wallet"
         ),
     );
+
+    if *IS_TESTNET {
+        sleep(Duration::from_secs(10)).await;
+    }
 
     let response = contract_instance
         .methods()
@@ -146,8 +162,8 @@ async fn test_reverting_transaction() -> Result<()> {
 
 #[tokio::test]
 async fn test_multiple_read_calls() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "MultiReadContract",
             project = "e2e/sway/contracts/multiple_read_calls"
@@ -158,6 +174,10 @@ async fn test_multiple_read_calls() -> Result<()> {
             wallet = "wallet"
         ),
     );
+
+    if *IS_TESTNET {
+        sleep(Duration::from_secs(10)).await;
+    }
 
     let contract_methods = contract_instance.methods();
     contract_methods.store(42).call().await?;
@@ -182,8 +202,8 @@ async fn test_multiple_read_calls() -> Result<()> {
 
 #[tokio::test]
 async fn test_multi_call_beginner() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
             project = "e2e/sway/contracts/contract_test"
@@ -194,6 +214,10 @@ async fn test_multi_call_beginner() -> Result<()> {
             wallet = "wallet"
         ),
     );
+
+    if *IS_TESTNET {
+        sleep(Duration::from_secs(10)).await;
+    }
 
     let contract_methods = contract_instance.methods();
     let call_handler_1 = contract_methods.get_single(7);
@@ -213,8 +237,8 @@ async fn test_multi_call_beginner() -> Result<()> {
 
 #[tokio::test]
 async fn test_multi_call_pro() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
             project = "e2e/sway/contracts/contract_test"
@@ -225,6 +249,10 @@ async fn test_multi_call_pro() -> Result<()> {
             wallet = "wallet"
         ),
     );
+
+    if *IS_TESTNET {
+        sleep(Duration::from_secs(10)).await;
+    }
 
     let my_type_1 = MyType { x: 1, y: 2 };
     let my_type_2 = MyType { x: 3, y: 4 };
@@ -266,8 +294,8 @@ async fn test_multi_call_pro() -> Result<()> {
 
 #[tokio::test]
 async fn test_contract_call_fee_estimation() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
             project = "e2e/sway/contracts/contract_test"
@@ -278,6 +306,10 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
             wallet = "wallet"
         ),
     );
+
+    if *IS_TESTNET {
+        sleep(Duration::from_secs(10)).await;
+    }
 
     let gas_limit = 800;
     let tolerance = Some(0.2);
@@ -303,8 +335,8 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
 
 #[tokio::test]
 async fn contract_call_has_same_estimated_and_used_gas() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
             project = "e2e/sway/contracts/contract_test"
@@ -315,6 +347,11 @@ async fn contract_call_has_same_estimated_and_used_gas() -> Result<()> {
             wallet = "wallet"
         ),
     );
+
+    if *IS_TESTNET {
+        sleep(Duration::from_secs(10)).await;
+    }
+
     let contract_methods = contract_instance.methods();
 
     let tolerance = Some(0.0);
@@ -338,8 +375,8 @@ async fn contract_call_has_same_estimated_and_used_gas() -> Result<()> {
 
 #[tokio::test]
 async fn mult_call_has_same_estimated_and_used_gas() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
             project = "e2e/sway/contracts/contract_test"
@@ -350,6 +387,10 @@ async fn mult_call_has_same_estimated_and_used_gas() -> Result<()> {
             wallet = "wallet"
         ),
     );
+
+    if *IS_TESTNET {
+        sleep(Duration::from_secs(10)).await;
+    }
 
     let contract_methods = contract_instance.methods();
     let call_handler_1 = contract_methods.initialize_counter(42);
@@ -374,8 +415,8 @@ async fn mult_call_has_same_estimated_and_used_gas() -> Result<()> {
 
 #[tokio::test]
 async fn contract_method_call_respects_maturity() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "BlockHeightContract",
             project = "e2e/sway/contracts/transaction_block_height"
@@ -386,6 +427,10 @@ async fn contract_method_call_respects_maturity() -> Result<()> {
             wallet = "wallet"
         ),
     );
+
+    if *IS_TESTNET {
+        sleep(Duration::from_secs(10)).await;
+    }
 
     let call_w_maturity = |maturity| {
         contract_instance
@@ -409,8 +454,8 @@ async fn contract_method_call_respects_maturity() -> Result<()> {
 
 #[tokio::test]
 async fn test_auth_msg_sender_from_sdk() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "AuthContract",
             project = "e2e/sway/contracts/auth_testing_contract"
@@ -421,6 +466,10 @@ async fn test_auth_msg_sender_from_sdk() -> Result<()> {
             wallet = "wallet"
         ),
     );
+
+    if *IS_TESTNET {
+        sleep(Duration::from_secs(10)).await;
+    }
 
     // Contract returns true if `msg_sender()` matches `wallet.address()`.
     let response = contract_instance
@@ -435,8 +484,8 @@ async fn test_auth_msg_sender_from_sdk() -> Result<()> {
 
 #[tokio::test]
 async fn test_large_return_data() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
             project = "e2e/sway/contracts/large_return_data"
@@ -447,6 +496,10 @@ async fn test_large_return_data() -> Result<()> {
             wallet = "wallet"
         ),
     );
+
+    if *IS_TESTNET {
+        sleep(Duration::from_secs(10)).await;
+    }
 
     let contract_methods = contract_instance.methods();
     let res = contract_methods.get_id().call().await?;
@@ -492,8 +545,8 @@ async fn test_large_return_data() -> Result<()> {
 
 #[tokio::test]
 async fn can_handle_function_called_new() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
             project = "e2e/sway/contracts/contract_test"
@@ -505,6 +558,10 @@ async fn can_handle_function_called_new() -> Result<()> {
         ),
     );
 
+    if *IS_TESTNET {
+        sleep(Duration::from_secs(10)).await;
+    }
+
     let response = contract_instance.methods().new().call().await?.value;
 
     assert_eq!(response, 12345);
@@ -514,8 +571,8 @@ async fn can_handle_function_called_new() -> Result<()> {
 #[tokio::test]
 async fn test_contract_setup_macro_deploy_with_salt() -> Result<()> {
     // ANCHOR: contract_setup_macro_multi
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(
             Contract(
                 name = "LibContract",
@@ -542,10 +599,13 @@ async fn test_contract_setup_macro_deploy_with_salt() -> Result<()> {
             wallet = "wallet"
         ),
     );
+
+    if *IS_TESTNET {
+        sleep(Duration::from_secs(10)).await;
+    }
+
     let lib_contract_id = lib_contract_instance.contract_id();
-
     let contract_caller_id = contract_caller_instance.contract_id();
-
     let contract_caller_id2 = contract_caller_instance2.contract_id();
 
     // Because we deploy with salt, we can deploy the same contract multiple times
@@ -576,8 +636,8 @@ async fn test_contract_setup_macro_deploy_with_salt() -> Result<()> {
 
 #[tokio::test]
 async fn test_wallet_getter() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
             project = "e2e/sway/contracts/contract_test"
@@ -588,6 +648,10 @@ async fn test_wallet_getter() -> Result<()> {
             wallet = "wallet"
         ),
     );
+
+    if *IS_TESTNET {
+        sleep(Duration::from_secs(10)).await;
+    }
 
     assert_eq!(contract_instance.account().address(), wallet.address());
     //`contract_id()` is tested in
@@ -600,7 +664,7 @@ async fn test_connect_wallet() -> Result<()> {
     // ANCHOR: contract_setup_macro_manual_wallet
     let config = WalletsConfig::new(Some(2), Some(1), Some(DEFAULT_COIN_AMOUNT));
 
-    let mut wallets = launch_custom_provider_and_get_wallets(config, None, None).await?;
+    let mut wallets = maybe_connect_to_testnet_and_get_wallets(config, None, None).await?;
     let wallet = wallets.pop().unwrap();
     let wallet_2 = wallets.pop().unwrap();
 
@@ -616,6 +680,10 @@ async fn test_connect_wallet() -> Result<()> {
         ),
     );
     // ANCHOR_END: contract_setup_macro_manual_wallet
+
+    if *IS_TESTNET {
+        sleep(Duration::from_secs(10)).await;
+    }
 
     // pay for call with wallet
     let tx_policies = TxPolicies::default()
@@ -658,14 +726,18 @@ async fn setup_output_variable_estimation_test() -> Result<(
     Bech32ContractId,
 )> {
     let wallet_config = WalletsConfig::new(Some(3), None, None);
-    let wallets = launch_custom_provider_and_get_wallets(wallet_config, None, None).await?;
+    let wallets = maybe_connect_to_testnet_and_get_wallets(wallet_config, None, None).await?;
 
     let contract_id = Contract::load_from(
         "sway/contracts/token_ops/out/release/token_ops.bin",
-        LoadConfiguration::default(),
+        LoadConfiguration::default().with_salt(rand::random::<Salt>()),
     )?
     .deploy(&wallets[0], TxPolicies::default())
     .await?;
+
+    if *IS_TESTNET {
+        sleep(Duration::from_secs(10)).await;
+    }
 
     let mint_asset_id = contract_id.asset_id(&Bits256::zeroed());
     let addresses = wallets
@@ -687,6 +759,10 @@ async fn test_output_variable_estimation() -> Result<()> {
 
     let (wallets, addresses, mint_asset_id, contract_id) =
         setup_output_variable_estimation_test().await?;
+
+    if *IS_TESTNET {
+        sleep(Duration::from_secs(10)).await;
+    }
 
     let contract_instance = MyContract::new(contract_id, wallets[0].clone());
     let contract_methods = contract_instance.methods();
@@ -731,6 +807,10 @@ async fn test_output_variable_estimation_multicall() -> Result<()> {
 
     let (wallets, addresses, mint_asset_id, contract_id) =
         setup_output_variable_estimation_test().await?;
+
+    if *IS_TESTNET {
+        sleep(Duration::from_secs(10)).await;
+    }
 
     let contract_instance = MyContract::new(contract_id.clone(), wallets[0].clone());
     let contract_methods = contract_instance.methods();
@@ -791,6 +871,7 @@ async fn test_contract_instance_get_balances() -> Result<()> {
             wallet = "wallet"
         ),
     );
+
     let contract_id = contract_instance.contract_id();
 
     // Check the current balance of the contract with id 'contract_id'
@@ -823,8 +904,8 @@ async fn contract_call_futures_implement_send() -> Result<()> {
     {
     }
 
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
             project = "e2e/sway/contracts/contract_test"
@@ -835,6 +916,10 @@ async fn contract_call_futures_implement_send() -> Result<()> {
             wallet = "wallet"
         ),
     );
+
+    if *IS_TESTNET {
+        sleep(Duration::from_secs(10)).await;
+    }
 
     tokio_spawn_imitation(async move {
         contract_instance
@@ -849,8 +934,8 @@ async fn contract_call_futures_implement_send() -> Result<()> {
 
 #[tokio::test]
 async fn test_contract_set_estimation() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(
             Contract(
                 name = "LibContract",
@@ -872,6 +957,11 @@ async fn test_contract_set_estimation() -> Result<()> {
             wallet = "wallet"
         ),
     );
+
+    if *IS_TESTNET {
+        sleep(Duration::from_secs(10)).await;
+    }
+
     let lib_contract_id = lib_contract_instance.contract_id();
 
     let res = lib_contract_instance.methods().increment(42).call().await?;
@@ -905,8 +995,8 @@ async fn test_contract_set_estimation() -> Result<()> {
 
 #[tokio::test]
 async fn test_output_variable_contract_id_estimation_multicall() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(
             Contract(
                 name = "LibContract",
@@ -937,6 +1027,10 @@ async fn test_output_variable_contract_id_estimation_multicall() -> Result<()> {
             wallet = "wallet"
         ),
     );
+
+    if *IS_TESTNET {
+        sleep(Duration::from_secs(10)).await;
+    }
 
     let lib_contract_id = lib_contract_instance.contract_id();
 
@@ -1092,8 +1186,11 @@ async fn contract_load_error_messages() {
         let binary_path = "sway/contracts/contract_test/out/release/no_file_on_path.bin";
         let expected_error = format!("io: file \"{binary_path}\" does not exist");
 
-        let error = Contract::load_from(binary_path, LoadConfiguration::default())
-            .expect_err("should have failed");
+        let error = Contract::load_from(
+            binary_path,
+            LoadConfiguration::default().with_salt(rand::random::<Salt>()),
+        )
+        .expect_err("should have failed");
 
         assert_eq!(error.to_string(), expected_error);
     }
@@ -1101,8 +1198,11 @@ async fn contract_load_error_messages() {
         let binary_path = "sway/contracts/contract_test/out/release/contract_test-abi.json";
         let expected_error = format!("expected \"{binary_path}\" to have '.bin' extension");
 
-        let error = Contract::load_from(binary_path, LoadConfiguration::default())
-            .expect_err("should have failed");
+        let error = Contract::load_from(
+            binary_path,
+            LoadConfiguration::default().with_salt(rand::random::<Salt>()),
+        )
+        .expect_err("should have failed");
 
         assert_eq!(error.to_string(), expected_error);
     }
@@ -1110,8 +1210,8 @@ async fn contract_load_error_messages() {
 
 #[tokio::test]
 async fn test_payable_annotation() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
             project = "e2e/sway/contracts/payable_annotation"
@@ -1122,6 +1222,10 @@ async fn test_payable_annotation() -> Result<()> {
             wallet = "wallet"
         ),
     );
+
+    if *IS_TESTNET {
+        sleep(Duration::from_secs(10)).await;
+    }
 
     let contract_methods = contract_instance.methods();
 
@@ -1188,8 +1292,8 @@ async fn multi_call_from_calls_with_different_account_types() -> Result<()> {
 async fn low_level_call() -> Result<()> {
     use fuels::types::SizedAsciiString;
 
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(
             Contract(
                 name = "MyCallerContract",
@@ -1211,6 +1315,10 @@ async fn low_level_call() -> Result<()> {
             wallet = "wallet"
         ),
     );
+
+    if *IS_TESTNET {
+        sleep(Duration::from_secs(10)).await;
+    }
 
     let function_selector = encode_fn_selector("initialize_counter");
     let call_data = calldata!(42u64)?;
@@ -1401,8 +1509,8 @@ fn db_rocksdb() {
 
 #[tokio::test]
 async fn can_configure_decoding_of_contract_return() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "MyContract",
             project = "e2e/sway/contracts/needs_custom_decoder"
@@ -1413,6 +1521,10 @@ async fn can_configure_decoding_of_contract_return() -> Result<()> {
             wallet = "wallet"
         )
     );
+
+    if *IS_TESTNET {
+        sleep(Duration::from_secs(10)).await;
+    }
 
     let methods = contract_instance.methods();
     {
@@ -1462,8 +1574,8 @@ async fn can_configure_decoding_of_contract_return() -> Result<()> {
 
 #[tokio::test]
 async fn test_contract_submit_and_response() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
             project = "e2e/sway/contracts/contract_test"
@@ -1474,6 +1586,10 @@ async fn test_contract_submit_and_response() -> Result<()> {
             wallet = "wallet"
         ),
     );
+
+    if *IS_TESTNET {
+        sleep(Duration::from_secs(10)).await;
+    }
 
     let contract_methods = contract_instance.methods();
 
@@ -1503,8 +1619,8 @@ async fn test_contract_submit_and_response() -> Result<()> {
 
 #[tokio::test]
 async fn test_heap_type_multicall() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(
             Contract(
                 name = "TestContract",
@@ -1526,6 +1642,10 @@ async fn test_heap_type_multicall() -> Result<()> {
             wallet = "wallet"
         ),
     );
+
+    if *IS_TESTNET {
+        sleep(Duration::from_secs(10)).await;
+    }
 
     {
         let call_handler_1 = contract_instance.methods().u8_in_vec(5);
@@ -1549,13 +1669,11 @@ async fn test_heap_type_multicall() -> Result<()> {
 
 #[tokio::test]
 async fn heap_types_correctly_offset_in_create_transactions_w_storage_slots() -> Result<()> {
-    setup_program_test!(
-        Wallets("wallet"),
-        Abigen(Predicate(
-            name = "MyPredicate",
-            project = "e2e/sway/types/predicates/predicate_vector"
-        ),),
-    );
+    let wallet = launch_provider_and_get_wallet().await?;
+    setup_program_test!(Abigen(Predicate(
+        name = "MyPredicate",
+        project = "e2e/sway/types/predicates/predicate_vector"
+    ),),);
 
     let provider = wallet.try_provider()?.clone();
     let data = MyPredicateEncoder::default().encode_data(18, 24, vec![2, 4, 42])?;
@@ -1579,7 +1697,7 @@ async fn heap_types_correctly_offset_in_create_transactions_w_storage_slots() ->
     // Storage slots were loaded automatically by default
     Contract::load_from(
         "sway/contracts/storage/out/release/storage.bin",
-        LoadConfiguration::default(),
+        LoadConfiguration::default().with_salt(rand::random::<Salt>()),
     )?
     .deploy(&predicate, TxPolicies::default())
     .await?;
@@ -1589,8 +1707,8 @@ async fn heap_types_correctly_offset_in_create_transactions_w_storage_slots() ->
 
 #[tokio::test]
 async fn test_arguments_with_gas_forwarded() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(
             Contract(
                 name = "TestContract",
@@ -1612,6 +1730,10 @@ async fn test_arguments_with_gas_forwarded() -> Result<()> {
             wallet = "wallet"
         ),
     );
+
+    if *IS_TESTNET {
+        sleep(Duration::from_secs(10)).await;
+    }
 
     let x = 128;
     let vec_input = vec![0, 1, 2];
@@ -1651,8 +1773,8 @@ async fn test_arguments_with_gas_forwarded() -> Result<()> {
 
 #[tokio::test]
 async fn contract_custom_call_no_signatures_strategy() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
             project = "e2e/sway/contracts/contract_test"
@@ -1663,6 +1785,11 @@ async fn contract_custom_call_no_signatures_strategy() -> Result<()> {
             wallet = "wallet"
         ),
     );
+
+    if *IS_TESTNET {
+        sleep(Duration::from_secs(10)).await;
+    }
+
     let provider = wallet.try_provider()?;
 
     let counter = 42;
@@ -1700,19 +1827,21 @@ async fn contract_custom_call_no_signatures_strategy() -> Result<()> {
 
 #[tokio::test]
 async fn contract_encoder_config_is_applied() -> Result<()> {
-    setup_program_test!(
-        Abigen(Contract(
-            name = "TestContract",
-            project = "e2e/sway/contracts/contract_test"
-        )),
-        Wallets("wallet")
-    );
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
+    setup_program_test!(Abigen(Contract(
+        name = "TestContract",
+        project = "e2e/sway/contracts/contract_test"
+    )),);
     let contract_id = Contract::load_from(
         "sway/contracts/contract_test/out/release/contract_test.bin",
-        LoadConfiguration::default(),
+        LoadConfiguration::default().with_salt(rand::random::<Salt>()),
     )?
     .deploy(&wallet, TxPolicies::default())
     .await?;
+
+    if *IS_TESTNET {
+        sleep(Duration::from_secs(10)).await;
+    }
 
     let instance = TestContract::new(contract_id.clone(), wallet.clone());
 
@@ -1760,8 +1889,8 @@ async fn contract_encoder_config_is_applied() -> Result<()> {
 
 #[tokio::test]
 async fn test_reentrant_calls() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "LibContractCaller",
             project = "e2e/sway/contracts/lib_contract_caller"
@@ -1772,6 +1901,10 @@ async fn test_reentrant_calls() -> Result<()> {
             wallet = "wallet"
         ),
     );
+
+    if *IS_TESTNET {
+        sleep(Duration::from_secs(10)).await;
+    }
 
     let contract_id = contract_caller_instance.contract_id();
     let response = contract_caller_instance
@@ -1834,8 +1967,8 @@ async fn msg_sender_gas_estimation_issue() {
 
 #[tokio::test]
 async fn variable_output_estimation_is_optimized() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "MyContract",
             project = "e2e/sway/contracts/var_outputs"
@@ -1846,6 +1979,10 @@ async fn variable_output_estimation_is_optimized() -> Result<()> {
             wallet = "wallet"
         )
     );
+
+    if *IS_TESTNET {
+        sleep(Duration::from_secs(10)).await;
+    }
 
     let contract_methods = contract_instance.methods();
 
@@ -1908,7 +2045,7 @@ async fn simulations_can_be_made_without_coins() -> Result<()> {
 
     let contract_id = Contract::load_from(
         "sway/contracts/contract_test/out/release/contract_test.bin",
-        LoadConfiguration::default(),
+        LoadConfiguration::default().with_salt(rand::random::<Salt>()),
     )?
     .deploy(wallet, TxPolicies::default())
     .await?;
@@ -1939,7 +2076,7 @@ async fn simulations_can_be_made_without_coins_multicall() -> Result<()> {
 
     let contract_id = Contract::load_from(
         "sway/contracts/contract_test/out/release/contract_test.bin",
-        LoadConfiguration::default(),
+        LoadConfiguration::default().with_salt(rand::random::<Salt>()),
     )?
     .deploy(wallet, TxPolicies::default())
     .await?;
@@ -1998,7 +2135,7 @@ async fn contract_call_with_non_zero_base_asset_id_and_tip() -> Result<()> {
 
     let contract_id = Contract::load_from(
         "sway/contracts/contract_test/out/release/contract_test.bin",
-        LoadConfiguration::default(),
+        LoadConfiguration::default().with_salt(rand::random::<Salt>()),
     )?
     .deploy(wallet, TxPolicies::default())
     .await?;
@@ -2160,11 +2297,12 @@ async fn blob_contract_deployment() -> Result<()> {
          "the testnet size limit was around 100kB, we want a contract bigger than that to reflect prod (current: {contract_size}B)"
      );
 
+    // TODO(oleksii): huge contract too big for testnet limits
     let wallets =
         launch_custom_provider_and_get_wallets(WalletsConfig::new(Some(2), None, None), None, None)
             .await?;
 
-    let provider = wallets[0].provider().unwrap().clone();
+    let provider = wallets[0].try_provider()?.clone();
 
     let consensus_parameters = provider.consensus_parameters();
 
@@ -2174,7 +2312,10 @@ async fn blob_contract_deployment() -> Result<()> {
          "this test should ideally be run with a contract bigger than the max contract size ({contract_max_size}B) so that we know deployment couldn't have happened without blobs"
      );
 
-    let contract = Contract::load_from(contract_binary, LoadConfiguration::default())?;
+    let contract = Contract::load_from(
+        contract_binary,
+        LoadConfiguration::default().with_salt(rand::random::<Salt>()),
+    )?;
 
     let contract_id = contract
         .convert_to_loader(100_000)?
@@ -2193,20 +2334,22 @@ async fn blob_contract_deployment() -> Result<()> {
 #[tokio::test]
 async fn regular_contract_can_be_deployed() -> Result<()> {
     // given
-    setup_program_test!(
-        Wallets("wallet"),
-        Abigen(Contract(
-            name = "MyContract",
-            project = "e2e/sway/contracts/contract_test"
-        )),
-    );
+    // TODO(oleksii): blob deployments on testnet are expensive (not enough coins)
+    let wallet = launch_provider_and_get_wallet().await?;
+    setup_program_test!(Abigen(Contract(
+        name = "MyContract",
+        project = "e2e/sway/contracts/contract_test"
+    )),);
 
     let contract_binary = "sway/contracts/contract_test/out/release/contract_test.bin";
 
     // when
-    let contract_id = Contract::load_from(contract_binary, LoadConfiguration::default())?
-        .deploy(&wallet, TxPolicies::default())
-        .await?;
+    let contract_id = Contract::load_from(
+        contract_binary,
+        LoadConfiguration::default().with_salt(rand::random::<Salt>()),
+    )?
+    .deploy(&wallet, TxPolicies::default())
+    .await?;
 
     // then
     let contract_instance = MyContract::new(contract_id, wallet);
@@ -2225,20 +2368,22 @@ async fn regular_contract_can_be_deployed() -> Result<()> {
 
 #[tokio::test]
 async fn unuploaded_loader_can_be_deployed_directly() -> Result<()> {
-    setup_program_test!(
-        Wallets("wallet"),
-        Abigen(Contract(
-            name = "MyContract",
-            project = "e2e/sway/contracts/huge_contract"
-        )),
-    );
+    // TODO(oleksii): blob deployments on testnet are expensive (not enough coins)
+    let wallet = launch_provider_and_get_wallet().await?;
+    setup_program_test!(Abigen(Contract(
+        name = "MyContract",
+        project = "e2e/sway/contracts/huge_contract"
+    )),);
 
     let contract_binary = "sway/contracts/huge_contract/out/release/huge_contract.bin";
 
-    let contract_id = Contract::load_from(contract_binary, LoadConfiguration::default())?
-        .convert_to_loader(1024)?
-        .deploy(&wallet, TxPolicies::default())
-        .await?;
+    let contract_id = Contract::load_from(
+        contract_binary,
+        LoadConfiguration::default().with_salt(rand::random::<Salt>()),
+    )?
+    .convert_to_loader(1024)?
+    .deploy(&wallet, TxPolicies::default())
+    .await?;
 
     let contract_instance = MyContract::new(contract_id, wallet);
 
@@ -2251,20 +2396,22 @@ async fn unuploaded_loader_can_be_deployed_directly() -> Result<()> {
 
 #[tokio::test]
 async fn unuploaded_loader_can_upload_blobs_separately_then_deploy() -> Result<()> {
-    setup_program_test!(
-        Wallets("wallet"),
-        Abigen(Contract(
-            name = "MyContract",
-            project = "e2e/sway/contracts/huge_contract"
-        )),
-    );
+    // TODO(oleksii): blob deployments on testnet are expensive (not enough coins)
+    let wallet = launch_provider_and_get_wallet().await?;
+    setup_program_test!(Abigen(Contract(
+        name = "MyContract",
+        project = "e2e/sway/contracts/huge_contract"
+    )),);
 
     let contract_binary = "sway/contracts/huge_contract/out/release/huge_contract.bin";
 
-    let contract = Contract::load_from(contract_binary, LoadConfiguration::default())?
-        .convert_to_loader(1024)?
-        .upload_blobs(&wallet, TxPolicies::default())
-        .await?;
+    let contract = Contract::load_from(
+        contract_binary,
+        LoadConfiguration::default().with_salt(rand::random::<Salt>()),
+    )?
+    .convert_to_loader(1024)?
+    .upload_blobs(&wallet, TxPolicies::default())
+    .await?;
 
     let blob_ids = contract.blob_ids();
 
@@ -2288,17 +2435,19 @@ async fn unuploaded_loader_can_upload_blobs_separately_then_deploy() -> Result<(
 
 #[tokio::test]
 async fn loader_blob_already_uploaded_not_an_issue() -> Result<()> {
-    setup_program_test!(
-        Wallets("wallet"),
-        Abigen(Contract(
-            name = "MyContract",
-            project = "e2e/sway/contracts/huge_contract"
-        )),
-    );
+    // TODO(oleksii): blob deployments on testnet are expensive (not enough coins)
+    let wallet = launch_provider_and_get_wallet().await?;
+    setup_program_test!(Abigen(Contract(
+        name = "MyContract",
+        project = "e2e/sway/contracts/huge_contract"
+    )),);
 
     let contract_binary = "sway/contracts/huge_contract/out/release/huge_contract.bin";
-    let contract = Contract::load_from(contract_binary, LoadConfiguration::default())?
-        .convert_to_loader(1024)?;
+    let contract = Contract::load_from(
+        contract_binary,
+        LoadConfiguration::default().with_salt(rand::random::<Salt>()),
+    )?
+    .convert_to_loader(1024)?;
 
     // this will upload blobs
     contract
@@ -2318,6 +2467,7 @@ async fn loader_blob_already_uploaded_not_an_issue() -> Result<()> {
 
 #[tokio::test]
 async fn loader_works_via_proxy() -> Result<()> {
+    // TODO(oleksii): blob deployments on testnet are expensive (not enough coins)
     let wallet = launch_provider_and_get_wallet().await?;
 
     abigen!(
@@ -2333,7 +2483,10 @@ async fn loader_works_via_proxy() -> Result<()> {
 
     let contract_binary = "sway/contracts/huge_contract/out/release/huge_contract.bin";
 
-    let contract = Contract::load_from(contract_binary, LoadConfiguration::default())?;
+    let contract = Contract::load_from(
+        contract_binary,
+        LoadConfiguration::default().with_salt(rand::random::<Salt>()),
+    )?;
 
     let contract_id = contract
         .convert_to_loader(100)?
@@ -2342,9 +2495,12 @@ async fn loader_works_via_proxy() -> Result<()> {
 
     let contract_binary = "sway/contracts/proxy/out/release/proxy.bin";
 
-    let proxy_id = Contract::load_from(contract_binary, LoadConfiguration::default())?
-        .deploy(&wallet, TxPolicies::default())
-        .await?;
+    let proxy_id = Contract::load_from(
+        contract_binary,
+        LoadConfiguration::default().with_salt(rand::random::<Salt>()),
+    )?
+    .deploy(&wallet, TxPolicies::default())
+    .await?;
 
     let proxy = MyProxy::new(proxy_id, wallet.clone());
     proxy

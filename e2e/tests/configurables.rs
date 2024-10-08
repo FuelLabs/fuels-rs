@@ -1,8 +1,15 @@
+use std::time::Duration;
+
 use fuels::{
     core::codec::EncoderConfig,
     prelude::*,
     types::{Bits256, SizedAsciiString, U256},
 };
+
+use tokio::time::sleep;
+
+mod common;
+use common::{maybe_connect_to_testnet_and_get_wallet, IS_TESTNET};
 
 #[tokio::test]
 async fn contract_default_configurables() -> Result<()> {
@@ -11,14 +18,18 @@ async fn contract_default_configurables() -> Result<()> {
         abi = "e2e/sway/contracts/configurables/out/release/configurables-abi.json"
     ));
 
-    let wallet = launch_provider_and_get_wallet().await?;
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
 
     let contract_id = Contract::load_from(
         "sway/contracts/configurables/out/release/configurables.bin",
-        LoadConfiguration::default(),
+        LoadConfiguration::default().with_salt(rand::random::<Salt>()),
     )?
     .deploy(&wallet, TxPolicies::default())
     .await?;
+
+    if *IS_TESTNET {
+        sleep(Duration::from_secs(10)).await;
+    }
 
     let contract_instance = MyContract::new(contract_id, wallet.clone());
 
@@ -53,8 +64,8 @@ async fn contract_default_configurables() -> Result<()> {
 
 #[tokio::test]
 async fn script_default_configurables() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
             project = "e2e/sway/scripts/script_configurables"
@@ -68,6 +79,10 @@ async fn script_default_configurables() -> Result<()> {
 
     let mut script_instance = script_instance;
     script_instance.convert_into_loader().await?;
+
+    if *IS_TESTNET {
+        sleep(Duration::from_secs(10)).await;
+    }
 
     let response = script_instance.main().call().await?;
 
@@ -102,7 +117,11 @@ async fn contract_configurables() -> Result<()> {
         abi = "e2e/sway/contracts/configurables/out/release/configurables-abi.json"
     ));
 
-    let wallet = launch_provider_and_get_wallet().await?;
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
+
+    if *IS_TESTNET {
+        sleep(Duration::from_secs(10)).await;
+    }
 
     let str_4: SizedAsciiString<4> = "FUEL".try_into()?;
     let new_struct = StructWithGeneric {
@@ -127,10 +146,16 @@ async fn contract_configurables() -> Result<()> {
 
     let contract_id = Contract::load_from(
         "sway/contracts/configurables/out/release/configurables.bin",
-        LoadConfiguration::default().with_configurables(configurables),
+        LoadConfiguration::default()
+            .with_configurables(configurables)
+            .with_salt(rand::random::<Salt>()),
     )?
     .deploy(&wallet, TxPolicies::default())
     .await?;
+
+    if *IS_TESTNET {
+        sleep(Duration::from_secs(10)).await;
+    }
 
     let contract_instance = MyContract::new(contract_id, wallet.clone());
     // ANCHOR_END: contract_configurables
@@ -163,13 +188,15 @@ async fn contract_configurables() -> Result<()> {
 
 #[tokio::test]
 async fn contract_manual_configurables() -> Result<()> {
-    setup_program_test!(
-        Abigen(Contract(
-            name = "MyContract",
-            project = "e2e/sway/contracts/configurables"
-        )),
-        Wallets("wallet")
-    );
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
+    setup_program_test!(Abigen(Contract(
+        name = "MyContract",
+        project = "e2e/sway/contracts/configurables"
+    )));
+
+    if *IS_TESTNET {
+        sleep(Duration::from_secs(10)).await;
+    }
 
     let str_4: SizedAsciiString<4> = "FUEL".try_into()?;
     let new_struct = StructWithGeneric {
@@ -194,11 +221,15 @@ async fn contract_manual_configurables() -> Result<()> {
 
     let contract_id = Contract::load_from(
         "sway/contracts/configurables/out/release/configurables.bin",
-        LoadConfiguration::default(),
+        LoadConfiguration::default().with_salt(rand::random::<Salt>()),
     )?
     .with_configurables(configurables)
     .deploy(&wallet, TxPolicies::default())
     .await?;
+
+    if *IS_TESTNET {
+        sleep(Duration::from_secs(10)).await;
+    }
 
     let contract_instance = MyContract::new(contract_id, wallet.clone());
 
@@ -236,7 +267,12 @@ async fn script_configurables() -> Result<()> {
         abi = "e2e/sway/scripts/script_configurables/out/release/script_configurables-abi.json"
     ));
 
-    let wallet = launch_provider_and_get_wallet().await?;
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
+
+    if *IS_TESTNET {
+        sleep(Duration::from_secs(10)).await;
+    }
+
     let bin_path = "sway/scripts/script_configurables/out/release/script_configurables.bin";
     let instance = MyScript::new(wallet, bin_path);
 

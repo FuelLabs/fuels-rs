@@ -4,7 +4,7 @@ use fuel_types::AssetId;
 // the number of coins per wallet and the amount per coin
 pub const DEFAULT_NUM_WALLETS: u64 = 10;
 pub const DEFAULT_NUM_COINS: u64 = 1;
-pub const DEFAULT_COIN_AMOUNT: u64 = 1_000_000_000;
+pub const DEFAULT_COIN_AMOUNT: u64 = 100_000;
 
 #[derive(Debug, Clone)]
 pub struct AssetConfig {
