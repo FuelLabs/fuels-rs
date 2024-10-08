@@ -1,5 +1,5 @@
 [profile.ci-testnet]
-slow-timeout = { period = "60s", terminate-after = 2 }
+slow-timeout = { period = "90s", terminate-after = 2 }
 
 [test-groups.testnet-e2e]
 max-threads = 1
