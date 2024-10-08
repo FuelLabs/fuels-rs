@@ -16,7 +16,7 @@ env:
   CARGO_TERM_COLOR: always
   DASEL_VERSION: https://github.com/TomWright/dasel/releases/download/v2.3.6/dasel_linux_amd64
   RUSTFLAGS: "-D warnings"
-  FUEL_CORE_VERSION: 0.37.0
+  FUEL_CORE_VERSION: 0.38.0
   FUEL_CORE_PATCH_BRANCH: ""
   FUEL_CORE_PATCH_REVISION: ""
   RUST_VERSION: 1.79.0
