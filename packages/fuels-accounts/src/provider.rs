@@ -711,6 +711,10 @@ impl Provider {
         Ok(proof)
     }
 
+    pub async fn is_user_account(&self, address: impl Into<Bytes32>) -> Result<bool> {
+        self.client.is_user_account(*address.into()).await
+    }
+
     pub fn with_retry_config(mut self, retry_config: RetryConfig) -> Self {
         self.client.set_retry_config(retry_config);
 

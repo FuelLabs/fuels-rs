@@ -1204,3 +1204,70 @@ async fn contract_call_with_impersonation() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn is_account_query_test() -> Result<()> {
+    {
+        let wallet = launch_provider_and_get_wallet().await?;
+        let provider = wallet.provider().unwrap().clone();
+
+        let blob = Blob::new(vec![1; 100]);
+        let blob_id = blob.id();
+
+        let is_account = provider.is_user_account(blob_id).await?;
+        assert!(is_account);
+
+        let mut tb = BlobTransactionBuilder::default().with_blob(blob);
+        wallet.adjust_for_fee(&mut tb, 0).await?;
+        wallet.add_witnesses(&mut tb)?;
+        let tx = tb.build(provider.clone()).await?;
+
+        provider
+            .send_transaction_and_await_commit(tx)
+            .await?
+            .check(None)?;
+
+        let is_account = provider.is_user_account(blob_id).await?;
+        assert!(!is_account);
+    }
+    {
+        let wallet = launch_provider_and_get_wallet().await?;
+        let provider = wallet.provider().unwrap().clone();
+
+        let contract = Contract::load_from(
+            "sway/contracts/contract_test/out/release/contract_test.bin",
+            LoadConfiguration::default(),
+        )?;
+        let contract_id = contract.contract_id();
+
+        let is_account = provider.is_user_account(*contract_id).await?;
+        assert!(is_account);
+
+        contract.deploy(&wallet, TxPolicies::default()).await?;
+
+        let is_account = provider.is_user_account(*contract_id).await?;
+        assert!(!is_account);
+    }
+    {
+        let wallet = launch_provider_and_get_wallet().await?;
+        let provider = wallet.provider().unwrap().clone();
+
+        let mut tb = ScriptTransactionBuilder::default();
+        wallet.adjust_for_fee(&mut tb, 0).await?;
+        wallet.add_witnesses(&mut tb)?;
+        let tx = tb.build(provider.clone()).await?;
+
+        let tx_id = tx.id(provider.chain_id());
+        let is_account = provider.is_user_account(tx_id).await?;
+        assert!(is_account);
+
+        provider
+            .send_transaction_and_await_commit(tx)
+            .await?
+            .check(None)?;
+        let is_account = provider.is_user_account(tx_id).await?;
+        assert!(!is_account);
+    }
+
+    Ok(())
+}
