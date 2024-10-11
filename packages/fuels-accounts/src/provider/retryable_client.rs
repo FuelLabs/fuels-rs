@@ -304,5 +304,11 @@ impl RetryableClient {
         })
         .await
     }
+
+    pub async fn contract_exists(&self, contract_id: &ContractId) -> RequestResult<bool> {
+        self.wrap(|| self.client.contract(contract_id))
+            .await
+            .map(|contract| contract.is_some())
+    }
     // DELEGATION END
 }
