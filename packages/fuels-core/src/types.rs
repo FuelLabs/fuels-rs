@@ -17,6 +17,7 @@ pub mod transaction_builders;
 pub mod tx_status;
 mod wrappers;
 pub use dry_runner::*;
+pub mod checksum_address;
 
 pub type ByteArray = [u8; 8];
 pub type Selector = Vec<u8>;
