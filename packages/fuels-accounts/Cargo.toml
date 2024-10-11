@@ -36,7 +36,7 @@ tokio = { workspace = true, features = ["test-util"] }
 
 [build-dependencies]
 cynic = { workspace = true, features = ["default"], optional = true } # TODO reduce features
-fuel-core-client = { workspace = true, features = ["std"], optional = true }
+fuel-core-client = { workspace = true, optional = true }
 
 [features]
 default = ["std"]
