@@ -1,5 +1,5 @@
 use crate::types::errors::{Error, Result};
-use sha3::{Digest, Keccak256};
+use sha2::{Digest, Sha256};
 
 pub fn checksum_encode(address: &str) -> Result<String> {
     let trimmed = address.trim_start_matches("0x");
@@ -7,7 +7,7 @@ pub fn checksum_encode(address: &str) -> Result<String> {
 
     let lowercase = trimmed.to_ascii_lowercase();
 
-    let hash = Keccak256::digest(lowercase.as_bytes());
+    let hash = Sha256::digest(lowercase.as_bytes());
     let mut checksum = String::with_capacity(trimmed.len());
 
     for (i, addr_char) in lowercase.chars().enumerate() {
@@ -68,10 +68,10 @@ mod test {
     use super::*;
 
     const VALID_CHECKSUM: [&str; 4] = [
-        "0x9Cfb2cAD509d417ec40b70EBe1Dd72A3624d46fdD1eA5420Dbd755cE7F4dc897",
-        "0x54944E5B8189827e470e5A8BAcFc6c3667397dc4e1eEf7EF3519d16d6d6c6610",
-        "c36Be0e14D3Eaf5d8d233E0F4a40B3B4E48427D25F84C460d2B03b242a38479E",
-        "a1184D77D0D08A064e03B2bD9F50863e88FADDeA4693a05cA1Ee9B1732ea99b7",
+        "0x9cfB2CAd509D417ec40b70ebE1DD72a3624D46fdD1Ea5420dBD755CE7f4Dc897",
+        "0x54944e5B8189827e470e5a8bAcFC6C3667397DC4E1EEF7EF3519d16D6D6c6610",
+        "c36bE0E14d3EAf5d8D233e0F4a40b3b4e48427D25F84C460d2B03B242A38479e",
+        "a1184D77D0D08A064E03b2bd9f50863e88faDdea4693A05cA1ee9B1732ea99B7",
     ];
     const INVALID_CHECKSUM: [&str; 8] = [
         "0x587aa0482482efEa0234752d1ad9a9c438D1f34D2859b8bef2d56A432cB68e33",
