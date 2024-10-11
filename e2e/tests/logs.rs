@@ -375,7 +375,7 @@ async fn test_multi_call_contract_with_contract_logs() -> Result<()> {
         "./sway/logs/contract_logs/out/release/contract_logs.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(&wallet, TxPolicies::default())
+    .deploy_if_not_exists(&wallet, TxPolicies::default())
     .await?;
 
     let contract_instance = MyContract::new(contract_id.clone(), wallet.clone());
@@ -709,7 +709,7 @@ async fn test_contract_with_contract_logs() -> Result<()> {
         "./sway/logs/contract_logs/out/release/contract_logs.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(&wallet, TxPolicies::default())
+    .deploy_if_not_exists(&wallet, TxPolicies::default())
     .await?;
 
     let contract_instance = MyContract::new(contract_id.clone(), wallet.clone());
@@ -970,7 +970,7 @@ async fn test_contract_require_from_contract() -> Result<()> {
         "./sway/contracts/lib_contract/out/release/lib_contract.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(&wallet, TxPolicies::default())
+    .deploy_if_not_exists(&wallet, TxPolicies::default())
     .await?;
 
     let contract_instance = MyContract::new(contract_id.clone(), wallet.clone());
@@ -1022,7 +1022,7 @@ async fn test_multi_call_contract_require_from_contract() -> Result<()> {
         "./sway/contracts/lib_contract/out/release/lib_contract.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(&wallet, TxPolicies::default())
+    .deploy_if_not_exists(&wallet, TxPolicies::default())
     .await?;
 
     let lib_contract_instance = MyContract::new(contract_id.clone(), wallet.clone());
@@ -1111,7 +1111,7 @@ async fn test_loader_script_require_from_loader_contract() -> Result<()> {
     let contract = Contract::load_from(contract_binary, LoadConfiguration::default())?;
     let contract_id = contract
         .convert_to_loader(100_000)?
-        .deploy(&wallet, TxPolicies::default())
+        .deploy_if_not_exists(&wallet, TxPolicies::default())
         .await?;
     let contract_instance = MyContract::new(contract_id, wallet);
 

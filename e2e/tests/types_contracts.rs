@@ -78,7 +78,7 @@ async fn call_with_structs() -> Result<()> {
         "sway/types/contracts/complex_types_contract/out/release/complex_types_contract.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(&wallet, TxPolicies::default())
+    .deploy_if_not_exists(&wallet, TxPolicies::default())
     .await?;
 
     let contract_methods = MyContract::new(contract_id, wallet).methods();
