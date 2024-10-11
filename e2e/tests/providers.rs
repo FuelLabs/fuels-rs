@@ -294,7 +294,8 @@ async fn contract_deployment_respects_maturity() -> Result<()> {
             LoadConfiguration::default(),
         )
         .map(|loaded_contract| {
-            loaded_contract.deploy_if_not_exists(wallet, TxPolicies::default().with_maturity(maturity))
+            loaded_contract
+                .deploy_if_not_exists(wallet, TxPolicies::default().with_maturity(maturity))
         })
     };
 
