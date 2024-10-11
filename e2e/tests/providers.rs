@@ -132,7 +132,8 @@ async fn test_input_message() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -325,7 +326,8 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -363,7 +365,8 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TokenContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     let contract_id = contract_instance.contract_id();
@@ -474,7 +477,8 @@ async fn test_gas_errors() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -526,7 +530,8 @@ async fn test_call_param_gas_errors() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -568,7 +573,8 @@ async fn test_get_gas_used() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -715,7 +721,8 @@ async fn test_sway_timestamp() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -876,7 +883,8 @@ async fn can_fetch_mint_transactions() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -1027,7 +1035,8 @@ async fn tx_respects_policies() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 

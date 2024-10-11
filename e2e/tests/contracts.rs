@@ -23,7 +23,8 @@ async fn test_multiple_args() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -60,17 +61,20 @@ async fn test_contract_calling_contract() -> Result<()> {
         Deploy(
             name = "lib_contract_instance",
             contract = "LibContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
         Deploy(
             name = "lib_contract_instance2",
             contract = "LibContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
         Deploy(
             name = "contract_caller_instance",
             contract = "LibContractCaller",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     let lib_contract_id = lib_contract_instance.contract_id();
@@ -126,7 +130,8 @@ async fn test_reverting_transaction() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "RevertContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -155,7 +160,8 @@ async fn test_multiple_read_calls() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "MultiReadContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -191,7 +197,8 @@ async fn test_multi_call_beginner() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -222,7 +229,8 @@ async fn test_multi_call_pro() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -275,7 +283,8 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -312,7 +321,8 @@ async fn contract_call_has_same_estimated_and_used_gas() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     let contract_methods = contract_instance.methods();
@@ -347,7 +357,8 @@ async fn mult_call_has_same_estimated_and_used_gas() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -383,7 +394,8 @@ async fn contract_method_call_respects_maturity() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "BlockHeightContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -418,7 +430,8 @@ async fn test_auth_msg_sender_from_sdk() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "AuthContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -444,7 +457,8 @@ async fn test_large_return_data() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -501,7 +515,8 @@ async fn can_handle_function_called_new() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -529,17 +544,18 @@ async fn test_contract_setup_macro_deploy_with_salt() -> Result<()> {
         Deploy(
             name = "lib_contract_instance",
             contract = "LibContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
         Deploy(
             name = "contract_caller_instance",
             contract = "LibContractCaller",
-            wallet = "wallet"
+            wallet = "wallet",
         ),
         Deploy(
             name = "contract_caller_instance2",
             contract = "LibContractCaller",
-            wallet = "wallet"
+            wallet = "wallet",
         ),
     );
     let lib_contract_id = lib_contract_instance.contract_id();
@@ -585,7 +601,8 @@ async fn test_wallet_getter() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -612,7 +629,8 @@ async fn test_connect_wallet() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     // ANCHOR_END: contract_setup_macro_manual_wallet
@@ -788,7 +806,8 @@ async fn test_contract_instance_get_balances() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     let contract_id = contract_instance.contract_id();
@@ -832,7 +851,8 @@ async fn contract_call_futures_implement_send() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -864,12 +884,14 @@ async fn test_contract_set_estimation() -> Result<()> {
         Deploy(
             name = "lib_contract_instance",
             contract = "LibContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
         Deploy(
             name = "contract_caller_instance",
             contract = "LibContractCaller",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     let lib_contract_id = lib_contract_instance.contract_id();
@@ -924,17 +946,20 @@ async fn test_output_variable_contract_id_estimation_multicall() -> Result<()> {
         Deploy(
             name = "lib_contract_instance",
             contract = "LibContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
         Deploy(
             name = "contract_caller_instance",
             contract = "LibContractCaller",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
         Deploy(
             name = "contract_test_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -1007,7 +1032,8 @@ async fn test_contract_call_with_non_default_max_input() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -1057,7 +1083,8 @@ async fn test_add_custom_assets() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "MyContract",
-            wallet = "wallet_1"
+            wallet = "wallet_1",
+            random_salt = false,
         ),
     );
 
@@ -1119,7 +1146,8 @@ async fn test_payable_annotation() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -1203,12 +1231,14 @@ async fn low_level_call() -> Result<()> {
         Deploy(
             name = "caller_contract_instance",
             contract = "MyCallerContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
         Deploy(
             name = "target_contract_instance",
             contract = "MyTargetContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -1410,7 +1440,8 @@ async fn can_configure_decoding_of_contract_return() -> Result<()> {
         Deploy(
             contract = "MyContract",
             name = "contract_instance",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         )
     );
 
@@ -1471,7 +1502,8 @@ async fn test_contract_submit_and_response() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -1518,12 +1550,14 @@ async fn test_heap_type_multicall() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "VectorOutputContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
         Deploy(
             name = "contract_instance_2",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -1604,12 +1638,14 @@ async fn test_arguments_with_gas_forwarded() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
         Deploy(
             name = "contract_instance_2",
             contract = "VectorOutputContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -1660,7 +1696,8 @@ async fn contract_custom_call_no_signatures_strategy() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     let provider = wallet.try_provider()?;
@@ -1769,7 +1806,8 @@ async fn test_reentrant_calls() -> Result<()> {
         Deploy(
             name = "contract_caller_instance",
             contract = "LibContractCaller",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -1810,7 +1848,8 @@ async fn msg_sender_gas_estimation_issue() {
         Deploy(
             contract = "MyContract",
             name = "contract_instance",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         )
     );
 
@@ -1843,7 +1882,8 @@ async fn variable_output_estimation_is_optimized() -> Result<()> {
         Deploy(
             contract = "MyContract",
             name = "contract_instance",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         )
     );
 
@@ -2043,7 +2083,8 @@ async fn max_fee_estimation_respects_tolerance() -> Result<()> {
         Deploy(
             name = "contract_instance",
             wallet = "deploy_wallet",
-            contract = "MyContract"
+            contract = "MyContract",
+            random_salt = false,
         )
     );
     let contract_instance = contract_instance.with_account(call_wallet.clone());
