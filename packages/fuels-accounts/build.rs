@@ -1,7 +1,7 @@
 fn main() {
-    #[cfg(not(feature = "std"))]
+    #[cfg(feature = "std")]
     {
-        use std::{env, fs};
+        use std::fs;
 
         fs::create_dir_all("target").expect("Unable to create target directory");
         fs::write(

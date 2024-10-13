@@ -35,7 +35,7 @@ tempfile = { workspace = true }
 tokio = { workspace = true, features = ["test-util"] }
 
 [build-dependencies]
-cynic = { workspace = true, features = ["default"], optional = true } # TODO reduce features
+cynic = { workspace = true, features = ["default"], optional = true }
 fuel-core-client = { workspace = true, optional = true }
 
 [features]

@@ -306,6 +306,7 @@ impl RetryableClient {
         })
         .await
     }
+    // DELEGATION END
 
     pub async fn is_user_account(&self, address: [u8; 32]) -> Result<bool> {
         let blob_id = BlobId::from(address);
@@ -326,7 +327,6 @@ impl RetryableClient {
 
         Ok(!is_resource)
     }
-    // DELEGATION END
 }
 
 mod custom_queries {
