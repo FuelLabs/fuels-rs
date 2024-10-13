@@ -1,5 +1,7 @@
 use std::{future::Future, io};
 
+use custom_queries::{IsUserAccountQuery, IsUserAccountVariables};
+use cynic::QueryBuilder;
 use fuel_core_client::client::{
     pagination::{PaginatedResult, PaginationRequest},
     types::{
@@ -305,4 +307,54 @@ impl RetryableClient {
         .await
     }
     // DELEGATION END
+
+    pub async fn is_user_account(&self, address: [u8; 32]) -> Result<bool> {
+        let blob_id = BlobId::from(address);
+        let contract_id = ContractId::from(address);
+        let transaction_id = TransactionId::from(address);
+
+        let query = IsUserAccountQuery::build(IsUserAccountVariables {
+            blob_id: blob_id.into(),
+            contract_id: contract_id.into(),
+            transaction_id: transaction_id.into(),
+        });
+
+        let response = self.client.query(query).await?;
+
+        let is_resource = response.blob.is_some()
+            || response.contract.is_some()
+            || response.transaction.is_some();
+
+        Ok(!is_resource)
+    }
+}
+
+mod custom_queries {
+    use fuel_core_client::client::schema::blob::BlobIdFragment;
+    use fuel_core_client::client::schema::schema;
+    use fuel_core_client::client::schema::{
+        contract::ContractIdFragment, tx::TransactionIdFragment, BlobId, ContractId, TransactionId,
+    };
+
+    #[derive(cynic::QueryVariables, Debug)]
+    pub struct IsUserAccountVariables {
+        pub blob_id: BlobId,
+        pub contract_id: ContractId,
+        pub transaction_id: TransactionId,
+    }
+
+    #[derive(cynic::QueryFragment, Debug)]
+    #[cynic(
+        graphql_type = "Query",
+        variables = "IsUserAccountVariables",
+        schema_path = "./target/fuel-core-client-schema.sdl"
+    )]
+    pub struct IsUserAccountQuery {
+        #[arguments(id: $blob_id)]
+        pub blob: Option<BlobIdFragment>,
+        #[arguments(id: $contract_id)]
+        pub contract: Option<ContractIdFragment>,
+        #[arguments(id: $transaction_id)]
+        pub transaction: Option<TransactionIdFragment>,
+    }
 }
