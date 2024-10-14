@@ -105,7 +105,7 @@ impl Default for RetryConfig {
         Self {
             max_attempts: NonZeroU32::new(1).expect("should not fail"),
             interval: Default::default(),
-            timeout: Duration::from_secs(5),
+            timeout: Duration::from_secs(15),
         }
     }
 }
