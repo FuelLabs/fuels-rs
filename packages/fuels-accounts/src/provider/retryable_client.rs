@@ -1,9 +1,10 @@
 use std::{future::Future, io};
 
-use custom_queries::{IsUserAccountQuery, IsUserAccountVariables};
+use custom_queries::{ContractExistsQuery, IsUserAccountQuery, IsUserAccountVariables};
 use cynic::QueryBuilder;
 use fuel_core_client::client::{
     pagination::{PaginatedResult, PaginationRequest},
+    schema::contract::ContractByIdArgs,
     types::{
         gas_price::{EstimateGasPrice, LatestGasPrice},
         primitives::{BlockId, TransactionId},
@@ -308,9 +309,19 @@ impl RetryableClient {
     }
 
     pub async fn contract_exists(&self, contract_id: &ContractId) -> RequestResult<bool> {
-        self.wrap(|| self.client.contract(contract_id))
-            .await
-            .map(|contract| contract.is_some())
+        self.wrap(|| {
+            let query = ContractExistsQuery::build(ContractByIdArgs {
+                id: (*contract_id).into(),
+            });
+            self.client.query(query)
+        })
+        .await
+        .map(|query| {
+            query
+                .contract
+                .map(|contract| ContractId::from(contract.id) == *contract_id)
+                .unwrap_or(false)
+        })
     }
     // DELEGATION END
 
@@ -339,7 +350,9 @@ mod custom_queries {
     use fuel_core_client::client::schema::blob::BlobIdFragment;
     use fuel_core_client::client::schema::schema;
     use fuel_core_client::client::schema::{
-        contract::ContractIdFragment, tx::TransactionIdFragment, BlobId, ContractId, TransactionId,
+        contract::{ContractByIdArgs, ContractIdFragment},
+        tx::TransactionIdFragment,
+        BlobId, ContractId, TransactionId,
     };
 
     #[derive(cynic::QueryVariables, Debug)]
@@ -362,5 +375,25 @@ mod custom_queries {
         pub contract: Option<ContractIdFragment>,
         #[arguments(id: $transaction_id)]
         pub transaction: Option<TransactionIdFragment>,
+    }
+
+    #[derive(cynic::QueryFragment, Clone, Debug)]
+    #[cynic(
+        schema_path = "./target/fuel-core-client-schema.sdl",
+        graphql_type = "Contract"
+    )]
+    pub struct ContractIdOnly {
+        pub id: ContractId,
+    }
+
+    #[derive(cynic::QueryFragment, Clone, Debug)]
+    #[cynic(
+        schema_path = "./target/fuel-core-client-schema.sdl",
+        graphql_type = "Query",
+        variables = "ContractByIdArgs"
+    )]
+    pub struct ContractExistsQuery {
+        #[arguments(id: $id)]
+        pub contract: Option<ContractIdOnly>,
     }
 }
