@@ -12,6 +12,7 @@ description = "Fuel Rust SDK accounts."
 [dependencies]
 async-trait = { workspace = true, default-features = false }
 chrono = { workspace = true }
+cynic = { workspace = true, optional = true }
 elliptic-curve = { workspace = true, default-features = false }
 eth-keystore = { workspace = true, optional = true }
 fuel-core-client = { workspace = true, optional = true }
@@ -33,6 +34,10 @@ fuel-tx = { workspace = true, features = ["test-helpers", "random"] }
 tempfile = { workspace = true }
 tokio = { workspace = true, features = ["test-util"] }
 
+[build-dependencies]
+cynic = { workspace = true, features = ["default"], optional = true }
+fuel-core-client = { workspace = true, optional = true }
+
 [features]
 default = ["std"]
 coin-cache = ["tokio?/time"]
@@ -41,4 +46,5 @@ std = [
   "dep:tokio",
   "fuel-core-client/default",
   "dep:eth-keystore",
+  "dep:cynic",
 ]
