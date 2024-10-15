@@ -39,7 +39,7 @@ readme = "README.md"
 license = "Apache-2.0"
 repository = "https://github.com/FuelLabs/fuels-rs"
 rust-version = "1.79.0"
-version = "0.66.8"
+version = "0.66.9"
 
 [workspace.dependencies]
 Inflector = "0.11.4"
