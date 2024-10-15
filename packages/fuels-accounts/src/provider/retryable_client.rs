@@ -380,20 +380,11 @@ mod custom_queries {
     #[derive(cynic::QueryFragment, Clone, Debug)]
     #[cynic(
         schema_path = "./target/fuel-core-client-schema.sdl",
-        graphql_type = "Contract"
-    )]
-    pub struct ContractIdOnly {
-        pub id: ContractId,
-    }
-
-    #[derive(cynic::QueryFragment, Clone, Debug)]
-    #[cynic(
-        schema_path = "./target/fuel-core-client-schema.sdl",
         graphql_type = "Query",
         variables = "ContractByIdArgs"
     )]
     pub struct ContractExistsQuery {
         #[arguments(id: $id)]
-        pub contract: Option<ContractIdOnly>,
+        pub contract: Option<ContractIdFragment>,
     }
 }
