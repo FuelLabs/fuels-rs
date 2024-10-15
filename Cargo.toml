@@ -86,14 +86,14 @@ octocrab = { version = "0.39", default-features = false }
 dotenv = { version = "0.15", default-features = false }
 
 # Dependencies from the `fuel-core` repository:
-fuel-core = { version = "0.39.0", default-features = false, features = [
+fuel-core = { version = "0.40.0", default-features = false, features = [
   "wasm-executor",
 ] }
-fuel-core-chain-config = { version = "0.39.0", default-features = false }
-fuel-core-client = { version = "0.39.0", default-features = false }
-fuel-core-poa = { version = "0.39.0", default-features = false }
-fuel-core-services = { version = "0.39.0", default-features = false }
-fuel-core-types = { version = "0.39.0", default-features = false }
+fuel-core-chain-config = { version = "0.40.0", default-features = false }
+fuel-core-client = { version = "0.40.0", default-features = false }
+fuel-core-poa = { version = "0.40.0", default-features = false }
+fuel-core-services = { version = "0.40.0", default-features = false }
+fuel-core-types = { version = "0.40.0", default-features = false }
 
 # Dependencies from the `fuel-vm` repository:
 fuel-asm = { version = "0.58.0" }
