@@ -237,7 +237,7 @@ impl Contract<Loader<BlobsNotUploaded>> {
     }
 
     /// Deploys the loader contract after uploading the code blobs,
-    /// skipping deploy if it was already deployed with this ID.
+    /// if there is no contract with this ContractId Already.
     pub async fn deploy_if_not_exists(
         self,
         account: &impl Account,
