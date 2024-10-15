@@ -415,7 +415,7 @@ async fn mult_call_has_same_estimated_and_used_gas() -> Result<()> {
 
 #[tokio::test]
 async fn contract_method_call_respects_maturity() -> Result<()> {
-    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
+    let wallet = launch_provider_and_get_wallet().await?;
     setup_program_test!(
         Abigen(Contract(
             name = "BlockHeightContract",
@@ -427,10 +427,6 @@ async fn contract_method_call_respects_maturity() -> Result<()> {
             wallet = "wallet"
         ),
     );
-
-    if *IS_TESTNET {
-        sleep(Duration::from_secs(10)).await;
-    }
 
     let call_w_maturity = |maturity| {
         contract_instance
@@ -995,7 +991,7 @@ async fn test_contract_set_estimation() -> Result<()> {
 
 #[tokio::test]
 async fn test_output_variable_contract_id_estimation_multicall() -> Result<()> {
-    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
+    let wallet = launch_provider_and_get_wallet().await?;
     setup_program_test!(
         Abigen(
             Contract(
@@ -1027,10 +1023,6 @@ async fn test_output_variable_contract_id_estimation_multicall() -> Result<()> {
             wallet = "wallet"
         ),
     );
-
-    if *IS_TESTNET {
-        sleep(Duration::from_secs(10)).await;
-    }
 
     let lib_contract_id = lib_contract_instance.contract_id();
 
@@ -1574,7 +1566,7 @@ async fn can_configure_decoding_of_contract_return() -> Result<()> {
 
 #[tokio::test]
 async fn test_contract_submit_and_response() -> Result<()> {
-    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
+    let wallet = launch_provider_and_get_wallet().await?;
     setup_program_test!(
         Abigen(Contract(
             name = "TestContract",
@@ -1586,10 +1578,6 @@ async fn test_contract_submit_and_response() -> Result<()> {
             wallet = "wallet"
         ),
     );
-
-    if *IS_TESTNET {
-        sleep(Duration::from_secs(10)).await;
-    }
 
     let contract_methods = contract_instance.methods();
 
@@ -1707,7 +1695,7 @@ async fn heap_types_correctly_offset_in_create_transactions_w_storage_slots() ->
 
 #[tokio::test]
 async fn test_arguments_with_gas_forwarded() -> Result<()> {
-    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
+    let wallet = launch_provider_and_get_wallet().await?;
     setup_program_test!(
         Abigen(
             Contract(
@@ -1730,10 +1718,6 @@ async fn test_arguments_with_gas_forwarded() -> Result<()> {
             wallet = "wallet"
         ),
     );
-
-    if *IS_TESTNET {
-        sleep(Duration::from_secs(10)).await;
-    }
 
     let x = 128;
     let vec_input = vec![0, 1, 2];
@@ -1773,7 +1757,7 @@ async fn test_arguments_with_gas_forwarded() -> Result<()> {
 
 #[tokio::test]
 async fn contract_custom_call_no_signatures_strategy() -> Result<()> {
-    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
+    let wallet = launch_provider_and_get_wallet().await?;
     setup_program_test!(
         Abigen(Contract(
             name = "TestContract",
@@ -1785,10 +1769,6 @@ async fn contract_custom_call_no_signatures_strategy() -> Result<()> {
             wallet = "wallet"
         ),
     );
-
-    if *IS_TESTNET {
-        sleep(Duration::from_secs(10)).await;
-    }
 
     let provider = wallet.try_provider()?;
 
