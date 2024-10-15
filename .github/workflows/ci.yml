@@ -16,7 +16,7 @@ env:
   CARGO_TERM_COLOR: always
   DASEL_VERSION: https://github.com/TomWright/dasel/releases/download/v2.3.6/dasel_linux_amd64
   RUSTFLAGS: "-D warnings"
-  FUEL_CORE_VERSION: 0.39.0
+  FUEL_CORE_VERSION: 0.40.0
   FUEL_CORE_PATCH_BRANCH: ""
   FUEL_CORE_PATCH_REVISION: ""
   RUST_VERSION: 1.79.0
@@ -28,7 +28,7 @@ env:
 
 jobs:
   setup-test-projects:
-    runs-on: ubuntu-latest
+    runs-on: buildjet-4vcpu-ubuntu-2204
     steps:
       - uses: actions/checkout@v3
       - name: Install toolchain
@@ -37,7 +37,7 @@ jobs:
           toolchain: ${{ env.RUST_VERSION }}
         # selecting a toolchain either by action or manual `rustup` calls should happen
         # before the cache plugin, as it uses the current rustc version as its cache key
-      - uses: Swatinem/rust-cache@v2.7.3
+      - uses: buildjet/cache@v3
         with:
           prefix-key: "v1-rust"
 
@@ -73,7 +73,7 @@ jobs:
             e2e/sway/**/out/*
 
   get-workspace-members:
-    runs-on: ubuntu-latest
+    runs-on: buildjet-4vcpu-ubuntu-2204
     outputs:
       members: ${{ steps.set-members.outputs.members }}
     steps:
@@ -88,7 +88,7 @@ jobs:
           echo "members=$members" >> $GITHUB_OUTPUT
 
   verify-rust-version:
-    runs-on: ubuntu-latest
+    runs-on: buildjet-4vcpu-ubuntu-2204
     steps:
       - uses: actions/checkout@v3
       # Ensure CI is using the same minimum toolchain specified in fuels Cargo.toml
@@ -103,7 +103,7 @@ jobs:
   # Fetch Fuel Core and upload as artifact, useful when we build the core from a
   # revision so that we can repeat flaky tests without rebuilding the core.
   fetch-fuel-core:
-    runs-on: ubuntu-latest
+    runs-on: buildjet-4vcpu-ubuntu-2204
     steps:
       - uses: dtolnay/rust-toolchain@master
         with:
@@ -112,7 +112,7 @@ jobs:
 
         # selecting a toolchain either by action or manual `rustup` calls should happen
         # before the cache plugin, as it uses the current rustc version as its cache key
-      - uses: Swatinem/rust-cache@v2.7.3
+      - uses: buildjet/cache@v3
         continue-on-error: true
         with:
           key: "fuel-core-build"
@@ -138,7 +138,7 @@ jobs:
 
   # Ensure workspace is publishable
   publish-crates-check:
-    runs-on: ubuntu-latest
+    runs-on: buildjet-4vcpu-ubuntu-2204
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -161,7 +161,7 @@ jobs:
       - get-workspace-members
       - publish-crates-check
       - fetch-fuel-core
-    runs-on: ubuntu-latest
+    runs-on: buildjet-4vcpu-ubuntu-2204
     strategy:
       matrix:
         cargo_command: [check]
@@ -208,7 +208,7 @@ jobs:
 
         # selecting a toolchain either by action or manual `rustup` calls should happen
         # before the cache plugin, as it uses the current rustc version as its cache key
-      - uses: Swatinem/rust-cache@v2.7.3
+      - uses: buildjet/cache@v3
         continue-on-error: true
         with:
           key: "${{ matrix.cargo_command }} ${{ matrix.args }} ${{ matrix.package }}"
@@ -284,7 +284,7 @@ jobs:
       - publish-crates-check
     # Only do this job if publishing a release
     if: github.event_name == 'release' && github.event.action == 'published'
-    runs-on: ubuntu-latest
+    runs-on: buildjet-4vcpu-ubuntu-2204
 
     steps:
       - name: Checkout repository
