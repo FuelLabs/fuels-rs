@@ -67,7 +67,7 @@ impl FuelService {
 
         use fuel_core::{
             combined_database::CombinedDatabaseConfig,
-            fuel_core_graphql_api::ServiceConfig as GraphQLConfig,
+            fuel_core_graphql_api::{Costs, ServiceConfig as GraphQLConfig},
         };
         use fuel_core_chain_config::SnapshotReader;
 
@@ -96,6 +96,29 @@ impl FuelService {
                 max_queries_resolver_recursive_depth: 1,
                 max_queries_directives: 10,
                 max_concurrent_queries: 1024,
+                database_batch_size: 100,
+                number_of_threads: 2,
+                costs: Costs {
+                    balance_query: 40001,
+                    coins_to_spend: 40001,
+                    get_peers: 40001,
+                    estimate_predicates: 40001,
+                    dry_run: 12000,
+                    submit: 40001,
+                    submit_and_await: 40001,
+                    status_change: 40001,
+                    storage_read: 40,
+                    tx_get: 50,
+                    tx_status_read: 50,
+                    tx_raw_payload: 150,
+                    block_header: 150,
+                    block_transactions: 1500,
+                    block_transactions_ids: 50,
+                    storage_iterator: 100,
+                    bytecode_read: 8000,
+                    state_transition_bytecode_read: 76_000,
+                    da_compressed_block_read: 4000,
+                },
                 request_body_bytes_limit: 16 * 1024 * 1024,
                 query_log_threshold_time: Duration::from_secs(2),
                 api_request_timeout: Duration::from_secs(60),
