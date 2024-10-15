@@ -236,6 +236,18 @@ impl Contract<Loader<BlobsNotUploaded>> {
             .await
     }
 
+    /// Deploys the loader contract after uploading the code blobs,
+    /// if there is no contract with this ContractId Already.
+    pub async fn deploy_if_not_exists(
+        self,
+        account: &impl Account,
+        tx_policies: TxPolicies,
+    ) -> Result<Bech32ContractId> {
+        self.upload_blobs(account, tx_policies)
+            .await?
+            .deploy_if_not_exists(account, tx_policies)
+            .await
+    }
     /// Reverts the contract from a loader contract back to a regular contract.
     pub fn revert_to_regular(self) -> Contract<Regular> {
         let code = self
@@ -309,6 +321,16 @@ impl Contract<Loader<BlobsUploaded>> {
     ) -> Result<Bech32ContractId> {
         Contract::regular(self.code(), self.salt, self.storage_slots)
             .deploy(account, tx_policies)
+            .await
+    }
+
+    pub async fn deploy_if_not_exists(
+        self,
+        account: &impl Account,
+        tx_policies: TxPolicies,
+    ) -> Result<Bech32ContractId> {
+        Contract::regular(self.code(), self.salt, self.storage_slots)
+            .deploy_if_not_exists(account, tx_policies)
             .await
     }
 }

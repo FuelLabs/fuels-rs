@@ -23,7 +23,7 @@ async fn test_storage_initialization() -> Result<()> {
         "sway/contracts/storage/out/release/storage.bin",
         LoadConfiguration::default().with_storage_configuration(storage_configuration),
     )?
-    .deploy(&wallet, TxPolicies::default())
+    .deploy_if_not_exists(&wallet, TxPolicies::default())
     .await?;
 
     let contract_instance = MyContract::new(contract_id, wallet.clone());
@@ -52,7 +52,7 @@ async fn test_init_storage_automatically() -> Result<()> {
         "sway/contracts/storage/out/release/storage.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(&wallet, TxPolicies::default())
+    .deploy_if_not_exists(&wallet, TxPolicies::default())
     .await?;
 
     let contract_methods = MyContract::new(contract_id, wallet.clone()).methods();

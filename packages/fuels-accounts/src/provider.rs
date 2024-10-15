@@ -720,6 +720,10 @@ impl Provider {
 
         self
     }
+
+    pub async fn contract_exists(&self, contract_id: &Bech32ContractId) -> Result<bool> {
+        Ok(self.client.contract_exists(&contract_id.into()).await?)
+    }
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]

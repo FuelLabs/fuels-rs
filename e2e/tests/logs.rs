@@ -15,7 +15,8 @@ async fn test_parse_logged_variables() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "LogContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -53,7 +54,8 @@ async fn test_parse_logs_values() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "LogContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -87,7 +89,8 @@ async fn test_parse_logs_custom_types() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "LogContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -127,7 +130,8 @@ async fn test_parse_logs_generic_types() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "LogContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -179,7 +183,8 @@ async fn test_decode_logs() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "LogContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -233,7 +238,8 @@ async fn test_decode_logs_with_no_logs() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -260,7 +266,8 @@ async fn test_multi_call_log_single_contract() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "LogContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -308,12 +315,14 @@ async fn test_multi_call_log_multiple_contracts() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "LogContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
         Deploy(
             name = "contract_instance2",
             contract = "LogContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -362,12 +371,14 @@ async fn test_multi_call_contract_with_contract_logs() -> Result<()> {
         Deploy(
             name = "contract_caller_instance",
             contract = "ContractCaller",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
         Deploy(
             name = "contract_caller_instance2",
             contract = "ContractCaller",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -375,7 +386,7 @@ async fn test_multi_call_contract_with_contract_logs() -> Result<()> {
         "./sway/logs/contract_logs/out/release/contract_logs.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(&wallet, TxPolicies::default())
+    .deploy_if_not_exists(&wallet, TxPolicies::default())
     .await?;
 
     let contract_instance = MyContract::new(contract_id.clone(), wallet.clone());
@@ -433,7 +444,8 @@ async fn test_require_log() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "RequireContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -490,7 +502,8 @@ async fn test_multi_call_require_log_single_contract() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "RequireContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -557,12 +570,14 @@ async fn test_multi_call_require_log_multi_contract() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "RequireContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
         Deploy(
             name = "contract_instance2",
             contract = "RequireContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -701,7 +716,8 @@ async fn test_contract_with_contract_logs() -> Result<()> {
         Deploy(
             name = "contract_caller_instance",
             contract = "ContractCaller",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         )
     );
 
@@ -709,7 +725,7 @@ async fn test_contract_with_contract_logs() -> Result<()> {
         "./sway/logs/contract_logs/out/release/contract_logs.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(&wallet, TxPolicies::default())
+    .deploy_if_not_exists(&wallet, TxPolicies::default())
     .await?;
 
     let contract_instance = MyContract::new(contract_id.clone(), wallet.clone());
@@ -749,7 +765,8 @@ async fn test_script_logs_with_contract_logs() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "MyContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
         LoadScript(
             name = "script_instance",
@@ -962,7 +979,8 @@ async fn test_contract_require_from_contract() -> Result<()> {
         Deploy(
             name = "contract_caller_instance",
             contract = "ContractCaller",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         )
     );
 
@@ -970,7 +988,7 @@ async fn test_contract_require_from_contract() -> Result<()> {
         "./sway/contracts/lib_contract/out/release/lib_contract.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(&wallet, TxPolicies::default())
+    .deploy_if_not_exists(&wallet, TxPolicies::default())
     .await?;
 
     let contract_instance = MyContract::new(contract_id.clone(), wallet.clone());
@@ -1009,12 +1027,14 @@ async fn test_multi_call_contract_require_from_contract() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "ContractLogs",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
         Deploy(
             name = "contract_caller_instance",
             contract = "ContractCaller",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -1022,7 +1042,7 @@ async fn test_multi_call_contract_require_from_contract() -> Result<()> {
         "./sway/contracts/lib_contract/out/release/lib_contract.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(&wallet, TxPolicies::default())
+    .deploy_if_not_exists(&wallet, TxPolicies::default())
     .await?;
 
     let lib_contract_instance = MyContract::new(contract_id.clone(), wallet.clone());
@@ -1065,7 +1085,8 @@ async fn test_script_require_from_contract() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "MyContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
         LoadScript(
             name = "script_instance",
@@ -1111,7 +1132,7 @@ async fn test_loader_script_require_from_loader_contract() -> Result<()> {
     let contract = Contract::load_from(contract_binary, LoadConfiguration::default())?;
     let contract_id = contract
         .convert_to_loader(100_000)?
-        .deploy(&wallet, TxPolicies::default())
+        .deploy_if_not_exists(&wallet, TxPolicies::default())
         .await?;
     let contract_instance = MyContract::new(contract_id, wallet);
 
@@ -1146,7 +1167,8 @@ async fn test_contract_asserts_log() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "LogContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -1363,7 +1385,8 @@ async fn contract_token_ops_error_messages() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     let contract_methods = contract_instance.methods();
@@ -1403,7 +1426,8 @@ async fn test_log_results() -> Result<()> {
         Deploy(
             contract = "MyContract",
             name = "contract_instance",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         )
     );
 
@@ -1441,7 +1465,8 @@ async fn can_configure_decoder_for_contract_log_decoding() -> Result<()> {
         Deploy(
             contract = "MyContract",
             name = "contract_instance",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         )
     );
 
@@ -1585,7 +1610,8 @@ async fn contract_heap_log() -> Result<()> {
         Deploy(
             contract = "MyContract",
             name = "contract_instance",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         )
     );
     let contract_methods = contract_instance.methods();

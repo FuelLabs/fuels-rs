@@ -169,6 +169,22 @@ impl Contract<Regular> {
         Ok(contract_id.into())
     }
 
+    /// Deploys a compiled contract to a running node if a contract with
+    /// the corresponding [`ContractId`] doesn't exist.
+    pub async fn deploy_if_not_exists(
+        self,
+        account: &impl Account,
+        tx_policies: TxPolicies,
+    ) -> Result<Bech32ContractId> {
+        let contract_id = Bech32ContractId::from(self.contract_id());
+        let provider = account.try_provider()?;
+        if provider.contract_exists(&contract_id).await? {
+            Ok(contract_id)
+        } else {
+            self.deploy(account, tx_policies).await
+        }
+    }
+
     /// Converts a regular contract into a loader contract, splitting the code into blobs.
     pub fn convert_to_loader(
         self,

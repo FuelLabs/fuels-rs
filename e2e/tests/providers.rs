@@ -40,7 +40,7 @@ async fn test_provider_launch_and_connect() -> Result<()> {
         "sway/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(&wallet, TxPolicies::default())
+    .deploy_if_not_exists(&wallet, TxPolicies::default())
     .await?;
 
     let contract_instance_connected = MyContract::new(contract_id.clone(), wallet.clone());
@@ -88,7 +88,7 @@ async fn test_network_error() -> Result<()> {
         "sway/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(&wallet, TxPolicies::default())
+    .deploy_if_not_exists(&wallet, TxPolicies::default())
     .await;
 
     assert!(matches!(response, Err(Error::Provider(_))));
@@ -132,7 +132,8 @@ async fn test_input_message() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -179,7 +180,7 @@ async fn test_input_message_pays_fee() -> Result<()> {
         "sway/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(&wallet, TxPolicies::default())
+    .deploy_if_not_exists(&wallet, TxPolicies::default())
     .await?;
 
     let contract_instance = MyContract::new(contract_id, wallet.clone());
@@ -293,7 +294,8 @@ async fn contract_deployment_respects_maturity() -> Result<()> {
             LoadConfiguration::default(),
         )
         .map(|loaded_contract| {
-            loaded_contract.deploy(wallet, TxPolicies::default().with_maturity(maturity))
+            loaded_contract
+                .deploy_if_not_exists(wallet, TxPolicies::default().with_maturity(maturity))
         })
     };
 
@@ -325,7 +327,8 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -363,7 +366,8 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TokenContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     let contract_id = contract_instance.contract_id();
@@ -474,7 +478,8 @@ async fn test_gas_errors() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -526,7 +531,8 @@ async fn test_call_param_gas_errors() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -568,7 +574,8 @@ async fn test_get_gas_used() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -715,7 +722,8 @@ async fn test_sway_timestamp() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -876,7 +884,8 @@ async fn can_fetch_mint_transactions() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -1027,7 +1036,8 @@ async fn tx_respects_policies() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -1190,7 +1200,7 @@ async fn contract_call_with_impersonation() -> Result<()> {
         "sway/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(&wallet, TxPolicies::default())
+    .deploy_if_not_exists(&wallet, TxPolicies::default())
     .await?;
 
     let contract_instance = MyContract::new(contract_id, impersonator.clone());

@@ -19,7 +19,8 @@ mod hygiene {
             Deploy(
                 name = "simple_contract_instance",
                 contract = "SimpleContract",
-                wallet = "wallet"
+                wallet = "wallet",
+                random_salt = false,
             ),
         );
     }
@@ -36,7 +37,8 @@ async fn compile_bindings_from_contract_file() {
         Deploy(
             name = "simple_contract_instance",
             contract = "SimpleContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -119,12 +121,14 @@ async fn shared_types() -> Result<()> {
         Deploy(
             name = "contract_a",
             contract = "ContractA",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
         Deploy(
             name = "contract_b",
             contract = "ContractB",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     {
@@ -230,7 +234,8 @@ async fn type_paths_respected() -> Result<()> {
         Deploy(
             name = "contract_a_instance",
             contract = "ContractA",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     {
