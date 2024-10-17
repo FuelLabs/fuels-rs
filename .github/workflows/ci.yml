@@ -185,7 +185,7 @@ jobs:
             download_sway_artifacts: sway-examples
             install_fuel_core: true
           - cargo_command: nextest
-            args: run --package e2e --profile ci-testnet --cargo-quiet --no-fail-fast
+            args: run --package e2e --profile ci-testnet --no-fail-fast
             download_sway_artifacts: sway-examples
             install_fuel_core: true
             target_testnet: true
