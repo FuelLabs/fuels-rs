@@ -11,6 +11,9 @@ use fuels::{
     types::{Bits256, Identity},
 };
 
+mod common;
+use common::maybe_connect_to_testnet_and_get_wallet;
+
 #[tokio::test]
 async fn main_function_arguments() -> Result<()> {
     // ANCHOR: script_with_arguments
@@ -19,7 +22,7 @@ async fn main_function_arguments() -> Result<()> {
         name = "MyScript",
         abi = "e2e/sway/scripts/arguments/out/release/arguments-abi.json"
     ));
-    let wallet = launch_provider_and_get_wallet().await?;
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     let bin_path = "sway/scripts/arguments/out/release/arguments.bin";
     let script_instance = MyScript::new(wallet, bin_path);
 
@@ -39,8 +42,8 @@ async fn main_function_arguments() -> Result<()> {
 
 #[tokio::test]
 async fn script_call_has_same_estimated_and_used_gas() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
             project = "e2e/sway/scripts/basic_script"
@@ -72,8 +75,8 @@ async fn script_call_has_same_estimated_and_used_gas() -> Result<()> {
 
 #[tokio::test]
 async fn test_basic_script_with_tx_policies() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Script(
             name = "bimbam_script",
             project = "e2e/sway/scripts/basic_script"
@@ -105,8 +108,8 @@ async fn test_basic_script_with_tx_policies() -> Result<()> {
 
 #[tokio::test]
 async fn test_output_variable_estimation() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Script(
             name = "transfer_script",
             project = "e2e/sway/scripts/transfer_script"
@@ -120,10 +123,10 @@ async fn test_output_variable_estimation() -> Result<()> {
 
     let provider = wallet.try_provider()?.clone();
     let mut receiver = WalletUnlocked::new_random(None);
-    receiver.set_provider(provider);
+    receiver.set_provider(provider.clone());
 
-    let amount = 1000;
-    let asset_id = AssetId::zeroed();
+    let amount = 10;
+    let asset_id = *provider.base_asset_id();
     let script_call = script_instance.main(
         amount,
         asset_id,
@@ -146,8 +149,8 @@ async fn test_output_variable_estimation() -> Result<()> {
 
 #[tokio::test]
 async fn test_script_struct() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
             project = "e2e/sway/scripts/script_struct"
@@ -171,8 +174,8 @@ async fn test_script_struct() -> Result<()> {
 
 #[tokio::test]
 async fn test_script_enum() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
             project = "e2e/sway/scripts/script_enum"
@@ -193,8 +196,8 @@ async fn test_script_enum() -> Result<()> {
 
 #[tokio::test]
 async fn test_script_array() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
             project = "e2e/sway/scripts/script_array"
@@ -215,8 +218,8 @@ async fn test_script_array() -> Result<()> {
 
 #[tokio::test]
 async fn can_configure_decoder_on_script_call() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
             project = "e2e/sway/scripts/script_needs_custom_decoder"
@@ -262,8 +265,8 @@ async fn can_configure_decoder_on_script_call() -> Result<()> {
 
 #[tokio::test]
 async fn test_script_submit_and_response() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
             project = "e2e/sway/scripts/script_struct"
@@ -292,8 +295,8 @@ async fn test_script_submit_and_response() -> Result<()> {
 
 #[tokio::test]
 async fn test_script_transaction_builder() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
             project = "e2e/sway/scripts/basic_script"
@@ -336,7 +339,7 @@ async fn script_encoder_config_is_applied() {
         name = "MyScript",
         abi = "e2e/sway/scripts/basic_script/out/release/basic_script-abi.json"
     ));
-    let wallet = launch_provider_and_get_wallet().await.expect("");
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await.expect("");
     let bin_path = "sway/scripts/basic_script/out/release/basic_script.bin";
 
     let script_instance_without_encoder_config = MyScript::new(wallet.clone(), bin_path);
@@ -379,8 +382,8 @@ async fn script_encoder_config_is_applied() {
 }
 #[tokio::test]
 async fn simulations_can_be_made_without_coins() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
             project = "e2e/sway/scripts/basic_script"
@@ -415,7 +418,7 @@ async fn can_be_run_in_blobs_builder() -> Result<()> {
     ));
 
     let binary_path = "./sway/scripts/script_blobs/out/release/script_blobs.bin";
-    let wallet = launch_provider_and_get_wallet().await?;
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     let provider = wallet.try_provider()?.clone();
 
     // ANCHOR: preload_low_level
@@ -457,12 +460,13 @@ async fn can_be_run_in_blobs_builder() -> Result<()> {
 
 #[tokio::test]
 async fn can_be_run_in_blobs_high_level() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
+
     setup_program_test!(
         Abigen(Script(
             project = "e2e/sway/scripts/script_blobs",
             name = "MyScript"
         )),
-        Wallets("wallet"),
         LoadScript(name = "my_script", script = "MyScript", wallet = "wallet")
     );
 
@@ -488,12 +492,12 @@ async fn can_be_run_in_blobs_high_level() -> Result<()> {
 
 #[tokio::test]
 async fn no_data_section_blob_run() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
         Abigen(Script(
             project = "e2e/sway/scripts/empty",
             name = "MyScript"
         )),
-        Wallets("wallet"),
         LoadScript(name = "my_script", script = "MyScript", wallet = "wallet")
     );
 
@@ -507,7 +511,8 @@ async fn no_data_section_blob_run() -> Result<()> {
 }
 
 #[tokio::test]
-async fn loader_script_calling_loader_proxy() -> Result<()> {
+async fn loader_script_calling_loader_proxy_blobs() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
         Abigen(
             Contract(
@@ -517,7 +522,6 @@ async fn loader_script_calling_loader_proxy() -> Result<()> {
             Contract(name = "MyProxy", project = "e2e/sway/contracts/proxy"),
             Script(name = "MyScript", project = "e2e/sway/scripts/script_proxy"),
         ),
-        Wallets("wallet"),
         LoadScript(name = "my_script", script = "MyScript", wallet = "wallet")
     );
 

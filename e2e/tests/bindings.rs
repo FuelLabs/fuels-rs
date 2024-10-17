@@ -1,4 +1,10 @@
+use std::time::Duration;
+
 use fuels::prelude::*;
+use tokio::time::sleep;
+
+mod common;
+use common::{maybe_connect_to_testnet_and_get_wallet, IS_TESTNET};
 
 pub fn null_contract_id() -> Bech32ContractId {
     // bech32 contract address that decodes to [0u8;32]
@@ -26,9 +32,9 @@ mod hygiene {
 }
 
 #[tokio::test]
-async fn compile_bindings_from_contract_file() {
+async fn compile_bindings_from_contract_file() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "SimpleContract",
             project = "e2e/sway/bindings/simple_contract"
@@ -40,6 +46,10 @@ async fn compile_bindings_from_contract_file() {
         ),
     );
 
+    if *IS_TESTNET {
+        sleep(Duration::from_secs(10)).await;
+    }
+
     let call_handler = simple_contract_instance
         .methods()
         .takes_int_returns_bool(42);
@@ -47,6 +57,7 @@ async fn compile_bindings_from_contract_file() {
     let encoded_args = call_handler.call.encoded_args.unwrap();
 
     assert_eq!(encoded_args, [0, 0, 0, 42]);
+    Ok(())
 }
 
 #[tokio::test]
@@ -90,7 +101,11 @@ async fn compile_bindings_from_inline_contract() -> Result<()> {
         "#,
     ));
 
-    let wallet = launch_provider_and_get_wallet().await?;
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
+
+    if *IS_TESTNET {
+        sleep(Duration::from_secs(10)).await;
+    }
 
     let contract_instance = SimpleContract::new(null_contract_id(), wallet);
 
@@ -104,8 +119,8 @@ async fn compile_bindings_from_inline_contract() -> Result<()> {
 
 #[tokio::test]
 async fn shared_types() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(
             Contract(
                 name = "ContractA",
@@ -127,6 +142,11 @@ async fn shared_types() -> Result<()> {
             wallet = "wallet"
         ),
     );
+
+    if *IS_TESTNET {
+        sleep(Duration::from_secs(10)).await;
+    }
+
     {
         let methods = contract_a.methods();
 
@@ -221,8 +241,8 @@ async fn shared_types() -> Result<()> {
 
 #[tokio::test]
 async fn type_paths_respected() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "ContractA",
             project = "e2e/sway/bindings/type_paths"
@@ -233,6 +253,11 @@ async fn type_paths_respected() -> Result<()> {
             wallet = "wallet"
         ),
     );
+
+    if *IS_TESTNET {
+        sleep(Duration::from_secs(10)).await;
+    }
+
     {
         let contract_a_type =
             abigen_bindings::contract_a_mod::contract_a_types::VeryCommonNameStruct {

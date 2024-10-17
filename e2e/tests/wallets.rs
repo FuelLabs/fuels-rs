@@ -7,6 +7,12 @@ use fuels::{
     types::{output::Output, Bytes32},
 };
 
+mod common;
+use common::{
+    maybe_connect_to_testnet_and_get_wallet, maybe_connect_to_testnet_and_get_wallets, IS_TESTNET,
+    NON_BASE_ASSET_ID, TEST_WALLETS_COUNT,
+};
+
 #[tokio::test]
 async fn test_wallet_balance_api_multi_asset() -> Result<()> {
     let mut wallet = WalletUnlocked::new_random(None);
@@ -211,35 +217,40 @@ async fn adjust_fee_resources_to_transfer_with_base_asset() -> Result<()> {
 
 #[tokio::test]
 async fn test_transfer() -> Result<()> {
-    let mut wallet_1 = WalletUnlocked::new_random(None);
-    let mut wallet_2 = WalletUnlocked::new_random(None).lock();
+    let mut wallets = maybe_connect_to_testnet_and_get_wallets(
+        WalletsConfig::new(Some(1), None, None),
+        None,
+        None,
+    )
+    .await?;
+    let mut wallet_1 = wallets.pop().unwrap();
+    let mut wallet_2 = WalletUnlocked::new_random(wallet_1.provider().cloned()).lock();
 
-    let amount = 100;
+    let amount = 10;
     let num_coins = 1;
-    let base_asset_id = AssetId::zeroed();
-    let mut coins_1 =
-        setup_single_asset_coins(wallet_1.address(), base_asset_id, num_coins, amount);
-    let coins_2 = setup_single_asset_coins(wallet_2.address(), base_asset_id, num_coins, amount);
-    coins_1.extend(coins_2);
+    let asset_id = *wallet_1.try_provider()?.base_asset_id();
 
-    let provider = setup_test_provider(coins_1, vec![], None, None).await?;
-    wallet_1.set_provider(provider.clone());
-    wallet_2.set_provider(provider);
+    if !*IS_TESTNET {
+        let coins_1 = setup_single_asset_coins(wallet_1.address(), asset_id, num_coins, amount);
+        let provider = setup_test_provider(coins_1, vec![], None, None).await?;
+        wallet_1.set_provider(provider.clone());
+        wallet_2.set_provider(provider);
+    }
 
     let _receipts = wallet_1
         .transfer(
             wallet_2.address(),
             amount / 2,
-            Default::default(),
+            asset_id,
             TxPolicies::default(),
         )
         .await
         .unwrap();
 
-    let wallet_2_coins = wallet_2.get_coins(base_asset_id).await.unwrap();
-    let wallet_2_balance = wallet_2.get_asset_balance(&base_asset_id).await?;
-    assert_eq!(wallet_2_coins.len(), 2);
-    assert_eq!(wallet_2_balance, amount + amount / 2);
+    let wallet_2_coins = wallet_2.get_coins(asset_id).await.unwrap();
+    let wallet_2_balance = wallet_2.get_asset_balance(&asset_id).await?;
+    assert_eq!(wallet_2_coins.len(), 1);
+    assert_eq!(wallet_2_balance, amount / 2);
 
     Ok(())
 }
@@ -261,17 +272,15 @@ async fn send_transfer_transactions() -> Result<()> {
 
     // Transfer 1 from wallet 1 to wallet 2.
     const SEND_AMOUNT: u64 = 1;
-    let base_asset_id = AssetId::zeroed();
+    let provider = wallet_1.try_provider()?;
+
+    let base_asset_id = *provider.base_asset_id();
     let (tx_id, _receipts) = wallet_1
         .transfer(wallet_2.address(), SEND_AMOUNT, base_asset_id, tx_policies)
         .await?;
 
     // Assert that the transaction was properly configured.
-    let res = wallet_1
-        .try_provider()?
-        .get_transaction_by_id(&tx_id)
-        .await?
-        .unwrap();
+    let res = provider.get_transaction_by_id(&tx_id).await?.unwrap();
 
     let script: ScriptTransaction = match res.transaction {
         TransactionType::Script(tx) => tx,
@@ -304,6 +313,8 @@ async fn send_transfer_transactions() -> Result<()> {
 async fn transfer_coins_with_change() -> Result<()> {
     const AMOUNT: u64 = 5;
     let (wallet_1, wallet_2) = setup_transfer_test(AMOUNT).await?;
+    let provider = wallet_1.try_provider()?;
+    let asset_id = *provider.base_asset_id();
 
     // Transfer 2 from wallet 1 to wallet 2.
     const SEND_AMOUNT: u64 = 2;
@@ -311,15 +322,12 @@ async fn transfer_coins_with_change() -> Result<()> {
         .transfer(
             wallet_2.address(),
             SEND_AMOUNT,
-            AssetId::zeroed(),
+            asset_id,
             TxPolicies::default(),
         )
         .await?;
 
-    let base_asset_id = AssetId::zeroed();
-    let wallet_1_final_coins = wallet_1
-        .get_spendable_resources(base_asset_id, 1, None)
-        .await?;
+    let wallet_1_final_coins = wallet_1.get_spendable_resources(asset_id, 1, None).await?;
 
     // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
     let expected_fee = 1;
@@ -330,7 +338,7 @@ async fn transfer_coins_with_change() -> Result<()> {
         AMOUNT - SEND_AMOUNT - expected_fee
     );
 
-    let wallet_2_final_coins = wallet_2.get_coins(base_asset_id).await?;
+    let wallet_2_final_coins = wallet_2.get_coins(asset_id).await?;
     assert_eq!(wallet_2_final_coins.len(), 1);
 
     let total_amount: u64 = wallet_2_final_coins.iter().map(|c| c.amount).sum();
@@ -361,19 +369,31 @@ async fn setup_transfer_test(amount: u64) -> Result<(WalletUnlocked, WalletUnloc
     let mut wallet_1 = WalletUnlocked::new_random(None);
     let mut wallet_2 = WalletUnlocked::new_random(None);
 
-    let coins = setup_single_asset_coins(wallet_1.address(), AssetId::zeroed(), 1, amount);
-
-    let provider = setup_test_provider(coins, vec![], None, None).await?;
+    let provider = if *IS_TESTNET {
+        let funding_wallet = maybe_connect_to_testnet_and_get_wallet().await?;
+        let provider = funding_wallet.try_provider()?;
+        funding_wallet
+            .transfer(
+                wallet_1.address(),
+                amount,
+                *provider.base_asset_id(),
+                TxPolicies::default(),
+            )
+            .await?;
+        provider.clone()
+    } else {
+        let coins = setup_single_asset_coins(wallet_1.address(), AssetId::zeroed(), 1, amount);
+        setup_test_provider(coins, vec![], None, None).await?
+    };
 
     wallet_1.set_provider(provider.clone());
     wallet_2.set_provider(provider);
-
     Ok((wallet_1, wallet_2))
 }
 
 #[tokio::test]
 async fn transfer_more_than_owned() -> Result<()> {
-    const AMOUNT: u64 = 1000000;
+    const AMOUNT: u64 = 10_000;
     let (wallet_1, wallet_2) = setup_transfer_test(AMOUNT).await?;
 
     // Transferring more than balance should fail.
@@ -399,17 +419,37 @@ async fn transfer_coins_of_non_base_asset() -> Result<()> {
     const AMOUNT: u64 = 10000;
     let mut wallet_1 = WalletUnlocked::new_random(None);
     let mut wallet_2 = WalletUnlocked::new_random(None);
+    let asset_id = *NON_BASE_ASSET_ID;
 
-    let asset_id: AssetId = AssetId::from([1; 32usize]);
-    let mut coins = setup_single_asset_coins(wallet_1.address(), asset_id, 1, AMOUNT);
-    // setup base asset coins to pay tx fees
-    let base_coins = setup_single_asset_coins(wallet_1.address(), AssetId::zeroed(), 1, AMOUNT);
-    coins.extend(base_coins);
+    if *IS_TESTNET {
+        let funding_wallet = maybe_connect_to_testnet_and_get_wallet().await?;
+        let provider = funding_wallet.try_provider()?;
+        wallet_1.set_provider(provider.clone());
+        wallet_2.set_provider(provider.clone());
+        funding_wallet
+            .transfer(wallet_1.address(), AMOUNT, asset_id, TxPolicies::default())
+            .await?;
+        // setup base asset coins to pay tx fees
+        let base_asset_id = provider.base_asset_id();
+        funding_wallet
+            .transfer(
+                wallet_1.address(),
+                AMOUNT,
+                *base_asset_id,
+                TxPolicies::default(),
+            )
+            .await?;
+    } else {
+        let mut coins = setup_single_asset_coins(wallet_1.address(), asset_id, 1, AMOUNT);
+        // setup base asset coins to pay tx fees
+        let base_coins = setup_single_asset_coins(wallet_1.address(), AssetId::zeroed(), 1, AMOUNT);
+        coins.extend(base_coins);
 
-    let provider = setup_test_provider(coins, vec![], None, None).await?;
+        let provider = setup_test_provider(coins, vec![], None, None).await?;
 
-    wallet_1.set_provider(provider.clone());
-    wallet_2.set_provider(provider);
+        wallet_1.set_provider(provider.clone());
+        wallet_2.set_provider(provider);
+    }
 
     const SEND_AMOUNT: u64 = 200;
     let _receipts = wallet_1
@@ -435,8 +475,8 @@ async fn transfer_coins_of_non_base_asset() -> Result<()> {
 
 #[tokio::test]
 async fn test_transfer_with_multiple_signatures() -> Result<()> {
-    let wallet_config = base_asset_wallet_config(5);
-    let wallets = launch_custom_provider_and_get_wallets(wallet_config, None, None).await?;
+    let wallet_config = base_asset_wallet_config(TEST_WALLETS_COUNT);
+    let wallets = maybe_connect_to_testnet_and_get_wallets(wallet_config, None, None).await?;
     let provider = wallets[0].try_provider()?;
 
     let mut receiver = WalletUnlocked::new_random(None);
