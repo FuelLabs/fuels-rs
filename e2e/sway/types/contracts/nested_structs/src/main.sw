@@ -25,6 +25,7 @@ struct MemoryAddress {
 
 abi MyContract {
     fn get_struct() -> AllStruct;
+    #[payable]
     fn check_struct_integrity(arg: AllStruct) -> bool;
     fn nested_struct_with_reserved_keyword_substring(call_data: CallData) -> CallData;
 }
@@ -38,6 +39,7 @@ impl MyContract for Contract {
             },
         }
     }
+    #[payable]
     fn check_struct_integrity(arg: AllStruct) -> bool {
         arg.some_struct.field == 12345u32 && arg.some_struct.field_2 == true
     }

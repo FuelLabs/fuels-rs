@@ -7,6 +7,7 @@ use fuel_tx::{
 use fuels::{
     core::codec::{calldata, encode_fn_selector, DecoderConfig, EncoderConfig},
     prelude::*,
+    programs::calls::ContractCall,
     tx::ContractParameters,
     types::{errors::transaction::Reason, input::Input, Bits256, Identity},
 };
@@ -464,6 +465,8 @@ async fn test_large_return_data() -> Result<()> {
 
     let contract_methods = contract_instance.methods();
     let res = contract_methods.get_id().call().await?;
+
+    panic!("{:?}", res.receipts);
 
     assert_eq!(
         res.value.0,
@@ -2480,3 +2483,57 @@ async fn loader_storage_works_via_proxy() -> Result<()> {
 
     Ok(())
 }
+
+// #[tokio::test]
+// async fn can_debug_script_contents() -> Result<()> {
+//     abigen!(Contract(
+//         name = "MyContract",
+//         abi = "e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
+//     ));
+//
+//     let wallet = WalletUnlocked::new_random(None);
+//     let contract_id = Contract::load_from(
+//         "e2e/sway/abi/wasm_contract/out/release/wasm_contract.bin",
+//         Default::default(),
+//     )
+//     .unwrap()
+//     .contract_id();
+//
+//     let tb = MyContract::new(contract_id, wallet)
+//         .methods()
+//         .test_function(SomeEnum::V2(SomeStruct { a: 2, b: true }))
+//         .transaction_builder()
+//         .await
+//         .unwrap();
+//
+//     let script = tb.script;
+//     let script_data = tb.script_data;
+//
+//     struct ContractCallDescription {
+//         id: ContractId,
+//         args: String,
+//     }
+//
+//     enum ScriptType {
+//         ContractCall(Vec<ContractCallDescription>),
+//         LoaderScript(BlobId),
+//         Unknown,
+//     }
+//
+//     fn parse_script(script: &[u8], data: &[u8]) -> Result<ScriptType> {
+//         todo!()
+//     }
+//
+//     let ScriptType::ContractCall(script_type) = parse_script(&script, &script_data)? else {
+//         panic!()
+//     };
+//
+//     assert_eq!(script_type.len(), 1);
+//     assert_eq!(script_type[0].id, contract_id);
+//     assert_eq!(
+//         script_type[0].args,
+//         "SomeEnum::V2( SomeStruct{ a: 2, b: true })"
+//     );
+//
+//     Ok(())
+// }

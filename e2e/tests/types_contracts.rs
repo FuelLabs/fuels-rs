@@ -1,9 +1,17 @@
-use std::str::FromStr;
+use std::{any::Any, collections::HashMap, str::FromStr};
 
-use fuels::{
-    prelude::*,
-    types::{Bits256, EvmAddress, Identity, SizedAsciiString, B512, U256},
+use fuel_abi_types::abi::{full_program::FullProgramABI, unified_program::UnifiedProgramABI};
+use fuel_asm::{
+    op::{self, MOVI},
+    Instruction, Opcode,
 };
+use fuel_tx::field::ScriptData;
+use fuels::{
+    core::codec::ABIDecoder,
+    prelude::*,
+    types::{param_types::ParamType, Bits256, EvmAddress, Identity, SizedAsciiString, B512, U256},
+};
+use logic::ScriptType;
 
 pub fn null_contract_id() -> Bech32ContractId {
     // a bech32 contract address that decodes to [0u8;32]
@@ -2008,6 +2016,318 @@ async fn nested_heap_types() -> Result<()> {
         .await?;
 
     assert_eq!(result.value, expected);
+
+    Ok(())
+}
+
+mod logic {
+    use std::collections::HashMap;
+
+    use fuel_abi_types::abi::unified_program::UnifiedProgramABI;
+    use fuel_asm::{Instruction, Opcode};
+    use fuel_tx::{AssetId, ContractId};
+    use fuels::{
+        core::{codec::ABIDecoder, constants::WORD_SIZE},
+        prelude::Result,
+        types::{param_types::ParamType, transaction_builders::BlobId},
+    };
+
+    pub struct ContractCallDescription {
+        pub amount: u64,
+        pub asset_id: AssetId,
+        pub contract_id: ContractId,
+        pub fn_selector: String,
+        pub encoded_args: Vec<u8>,
+        pub gas_forwarded: Option<u64>,
+    }
+
+    pub enum ScriptType {
+        ContractCall(Vec<ContractCallDescription>),
+        LoaderScript(BlobId),
+        Unknown,
+    }
+
+    struct V1CallInstructions {
+        instructions: Vec<Instruction>,
+    }
+
+    impl V1CallInstructions {
+        pub fn new(instructions: &[Instruction]) -> Option<Self> {
+            if Self::check_gas_fwd_variant(instructions) || Self::check_normal_variant(instructions)
+            {
+                Some(Self {
+                    instructions: Vec::from(instructions),
+                })
+            } else {
+                None
+            }
+        }
+
+        fn has_gas_forwarding_instructions(&self) -> bool {
+            Self::check_gas_fwd_variant(&self.instructions)
+        }
+
+        const NO_GAS_FWD_OPCODES: [Opcode; 5] = [
+            Opcode::MOVI,
+            Opcode::MOVI,
+            Opcode::LW,
+            Opcode::MOVI,
+            Opcode::CALL,
+        ];
+
+        const GAS_FWD_OPCODES: [Opcode; 7] = [
+            Opcode::MOVI,
+            Opcode::MOVI,
+            Opcode::LW,
+            Opcode::MOVI,
+            Opcode::MOVI,
+            Opcode::LW,
+            Opcode::CALL,
+        ];
+
+        fn check_normal_variant(instructions: &[Instruction]) -> bool {
+            Self::NO_GAS_FWD_OPCODES
+                .iter()
+                .zip(instructions.iter())
+                .all(|(expected, actual)| expected == &actual.opcode())
+        }
+
+        fn check_gas_fwd_variant(instructions: &[Instruction]) -> bool {
+            Self::GAS_FWD_OPCODES
+                .iter()
+                .zip(instructions.iter())
+                .all(|(expected, actual)| expected == &actual.opcode())
+        }
+    }
+
+    impl ContractCallDescription {
+        pub fn decode_fn_args(&self, abi: &str) -> Result<Vec<String>> {
+            let parsed_abi = UnifiedProgramABI::from_json_abi(abi)?;
+
+            let fun = parsed_abi
+                .functions
+                .iter()
+                .find(|fun| fun.name == self.fn_selector)
+                .unwrap();
+
+            let type_lookup = parsed_abi
+                .types
+                .into_iter()
+                .map(|decl| (decl.type_id, decl))
+                .collect::<HashMap<_, _>>();
+
+            let input_param_types = fun
+                .inputs
+                .iter()
+                .map(|type_application| {
+                    ParamType::try_from_type_application(type_application, &type_lookup)
+                })
+                .collect::<Result<Vec<_>>>()
+                .unwrap();
+
+            ABIDecoder::default()
+                .decode_multiple_as_debug_str(&input_param_types, &self.encoded_args)
+        }
+    }
+
+    trait CallDataOffsetExtract {
+        fn call_data_offset(&self) -> u32;
+        fn describe_contract_call<'a>(
+            &self,
+            script_data: &'a [u8],
+        ) -> (ContractCallDescription, &'a [u8]);
+    }
+
+    impl CallDataOffsetExtract for V1CallInstructions {
+        fn call_data_offset(&self) -> u32 {
+            let Instruction::MOVI(movi) = self.instructions[0] else {
+                panic!("should have validated the first instruction is a MOVI");
+            };
+
+            movi.imm18().into()
+        }
+
+        fn describe_contract_call<'a>(
+            &self,
+            script_data: &'a [u8],
+        ) -> (ContractCallDescription, &'a [u8]) {
+            let amount = u64::from_be_bytes(script_data[..8].try_into().unwrap());
+            let data = &script_data[8..];
+
+            let asset_id = AssetId::new(data[..32].try_into().unwrap());
+            let data = &data[32..];
+
+            let contract_id = ContractId::new(data[..32].try_into().unwrap());
+            let data = &data[32..];
+
+            let _fn_selector_offset = &data[..8];
+            let data = &data[8..];
+
+            let _encoded_args_offset = &data[..8];
+            let data = &data[8..];
+
+            let fn_selector_len = u64::from_be_bytes(data[..8].try_into().unwrap()) as usize;
+            let data = &data[8..];
+
+            let fn_selector = String::from_utf8(data[..fn_selector_len].to_vec()).unwrap();
+            let data = &data[fn_selector_len..];
+
+            let encoded_args = if self.has_gas_forwarding_instructions() {
+                data[..data.len() - WORD_SIZE].to_vec()
+            } else {
+                data.to_vec()
+            };
+            let data = &data[encoded_args.len()..];
+
+            let gas_forwarded = self
+                .has_gas_forwarding_instructions()
+                .then(|| u64::from_be_bytes(data[..WORD_SIZE].try_into().unwrap()));
+
+            (
+                ContractCallDescription {
+                    amount,
+                    asset_id,
+                    contract_id,
+                    fn_selector,
+                    encoded_args,
+                    gas_forwarded,
+                },
+                data,
+            )
+        }
+    }
+
+    fn parse_contract_calls(
+        instructions: &[Instruction],
+        script_data: &[u8],
+    ) -> Option<Vec<ContractCallDescription>> {
+        let instructions = V1CallInstructions::new(instructions).unwrap();
+        let offset = instructions.call_data_offset();
+
+        let contract_call_description = instructions.describe_contract_call(&script_data).0;
+
+        Some(vec![contract_call_description])
+    }
+
+    pub fn parse_script(script: &[u8], data: &[u8]) -> Result<ScriptType> {
+        let instructions = fuel_asm::from_bytes(script.to_vec())
+            .collect::<std::result::Result<Vec<Instruction>, _>>()
+            .unwrap();
+
+        if let Some(contract_calls) = parse_contract_calls(&instructions, data) {
+            return Ok(ScriptType::ContractCall(contract_calls));
+        }
+
+        panic!("Not a contract call")
+    }
+}
+
+#[tokio::test]
+async fn can_debug_single_call() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Contract(
+            name = "MyContract",
+            project = "e2e/sway/types/contracts/nested_structs"
+        ))
+    );
+    let contract_id = Contract::load_from(
+        "sway/types/contracts/nested_structs/out/release/nested_structs.bin",
+        Default::default(),
+    )
+    .unwrap()
+    .contract_id();
+
+    let call_handler = MyContract::new(contract_id, wallet)
+        .methods()
+        .check_struct_integrity(AllStruct {
+            some_struct: SomeStruct {
+                field: 2,
+                field_2: true,
+            },
+        });
+
+    // without gas forwarding
+    {
+        let tb = call_handler
+            .clone()
+            .call_params(CallParameters::default().with_amount(10))
+            .unwrap()
+            .transaction_builder()
+            .await
+            .unwrap();
+
+        let script = tb.script;
+        let script_data = tb.script_data;
+
+        let ScriptType::ContractCall(call_descriptions) =
+            logic::parse_script(&script, &script_data)?
+        else {
+            panic!("expected a contract call")
+        };
+
+        assert_eq!(call_descriptions.len(), 1);
+        let call_description = &call_descriptions[0];
+
+        assert_eq!(call_description.contract_id, contract_id);
+        assert_eq!(call_description.amount, 10);
+        assert_eq!(call_description.asset_id, AssetId::default());
+        assert_eq!(call_description.fn_selector, "check_struct_integrity");
+        assert!(call_description.gas_forwarded.is_none());
+
+        let abi = std::fs::read_to_string(
+            "./sway/types/contracts/nested_structs/out/release/nested_structs-abi.json",
+        )
+        .unwrap();
+
+        assert_eq!(
+            call_description.decode_fn_args(&abi).unwrap(),
+            vec!["AllStruct { some_struct: SomeStruct { field: 2, field_2: true } }"]
+        );
+    }
+
+    // with gas forwarding
+    {
+        let tb = call_handler
+            .clone()
+            .call_params(
+                CallParameters::default()
+                    .with_amount(10)
+                    .with_gas_forwarded(20),
+            )
+            .unwrap()
+            .transaction_builder()
+            .await
+            .unwrap();
+
+        let script = tb.script;
+        let script_data = tb.script_data;
+
+        let ScriptType::ContractCall(call_descriptions) =
+            logic::parse_script(&script, &script_data)?
+        else {
+            panic!("expected a contract call")
+        };
+
+        assert_eq!(call_descriptions.len(), 1);
+        let call_description = &call_descriptions[0];
+
+        assert_eq!(call_description.contract_id, contract_id);
+        assert_eq!(call_description.amount, 10);
+        assert_eq!(call_description.asset_id, AssetId::default());
+        assert_eq!(call_description.fn_selector, "check_struct_integrity");
+        assert_eq!(call_description.gas_forwarded, Some(20));
+
+        let abi = std::fs::read_to_string(
+            "./sway/types/contracts/nested_structs/out/release/nested_structs-abi.json",
+        )
+        .unwrap();
+
+        assert_eq!(
+            call_description.decode_fn_args(&abi).unwrap(),
+            vec!["AllStruct { some_struct: SomeStruct { field: 2, field_2: true } }"]
+        );
+    }
 
     Ok(())
 }
