@@ -42,7 +42,9 @@ pub(crate) fn script_bindings(
         #[derive(Debug,Clone)]
         pub struct #name<A: ::fuels::accounts::Account>{
             account: A,
-            binary: ::std::vec::Vec<u8>,
+            unconfigured_binary: ::std::vec::Vec<u8>,
+            configurables: ::fuels::core::Configurables,
+            converted_into_loader: bool,
             log_decoder: ::fuels::core::codec::LogDecoder,
             encoder_config: ::fuels::core::codec::EncoderConfig,
         }
@@ -54,7 +56,9 @@ pub(crate) fn script_bindings(
                                             .expect(&format!("could not read script binary {binary_filepath:?}"));
                 Self {
                     account,
-                    binary,
+                    unconfigured_binary: binary,
+                    configurables: ::core::default::Default::default(),
+                    converted_into_loader: false,
                     log_decoder: ::fuels::core::codec::LogDecoder::new(#log_formatters_lookup),
                     encoder_config: ::fuels::core::codec::EncoderConfig::default(),
                 }
@@ -63,18 +67,30 @@ pub(crate) fn script_bindings(
             pub fn with_account<U: ::fuels::accounts::Account>(self, account: U) -> #name<U> {
                     #name {
                         account,
-                        binary: self.binary,
+                        unconfigured_binary: self.unconfigured_binary,
                         log_decoder: self.log_decoder,
                         encoder_config: self.encoder_config,
+                        configurables: self.configurables,
+                        converted_into_loader: self.converted_into_loader,
                     }
             }
 
             pub fn with_configurables(mut self, configurables: impl Into<::fuels::core::Configurables>)
                 -> Self
             {
-                let configurables: ::fuels::core::Configurables = configurables.into();
-                configurables.update_constants_in(&mut self.binary);
+                self.configurables = configurables.into();
                 self
+            }
+
+            pub fn code(&self) -> ::std::vec::Vec<u8> {
+                let regular = ::fuels::programs::executable::Executable::from_bytes(self.unconfigured_binary.clone()).with_configurables(self.configurables.clone());
+
+                if self.converted_into_loader {
+                    let loader = regular.convert_to_loader().expect("cannot fail since we already converted to the loader successfully");
+                    loader.code()
+                } else {
+                    regular.code()
+                }
             }
 
             pub fn with_encoder_config(mut self, encoder_config: ::fuels::core::codec::EncoderConfig)
@@ -87,6 +103,23 @@ pub(crate) fn script_bindings(
 
             pub fn log_decoder(&self) -> ::fuels::core::codec::LogDecoder {
                 self.log_decoder.clone()
+            }
+
+            /// Will upload the script code as a blob to the network and change the script code
+            /// into a loader that will fetch the blob and load it into memory before executing the
+            /// code inside. Allows you to optimize fees by paying for most of the code once and
+            /// then just running a small loader.
+            pub async fn convert_into_loader(&mut self) -> ::fuels::types::errors::Result<&mut Self> {
+                if !self.converted_into_loader {
+                    let regular = ::fuels::programs::executable::Executable::from_bytes(self.unconfigured_binary.clone()).with_configurables(self.configurables.clone());
+                    let loader = regular.convert_to_loader()?;
+
+                    loader.upload_blob(self.account.clone()).await?;
+
+                    self.converted_into_loader = true;
+                }
+                ::fuels::types::errors::Result::Ok(self)
+
             }
 
             #main_function
@@ -111,8 +144,9 @@ fn expand_fn(fn_abi: &FullABIFunction) -> Result<TokenStream> {
     let original_output_type = generator.output_type();
     let body = quote! {
             let encoded_args = ::fuels::core::codec::ABIEncoder::new(self.encoder_config).encode(&#arg_tokens);
+
             ::fuels::programs::calls::CallHandler::new_script_call(
-                self.binary.clone(),
+                self.code(),
                 encoded_args,
                 self.account.clone(),
                 self.log_decoder.clone()
@@ -191,7 +225,7 @@ mod tests {
                 let encoded_args=::fuels::core::codec::ABIEncoder::new(self.encoder_config)
                     .encode(&[::fuels::core::traits::Tokenizable::into_token(bimbam)]);
                  ::fuels::programs::calls::CallHandler::new_script_call(
-                    self.binary.clone(),
+                    self.code(),
                     encoded_args,
                     self.account.clone(),
                     self.log_decoder.clone()

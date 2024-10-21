@@ -1,4 +1,5 @@
 use std::fs;
+use std::time::Duration;
 
 use fuel_tx::{
     consensus_parameters::{ConsensusParametersV1, FeeParametersV1},
@@ -1484,6 +1485,7 @@ async fn test_contract_submit_and_response() -> Result<()> {
     let contract_methods = contract_instance.methods();
 
     let submitted_tx = contract_methods.get(1, 2).submit().await?;
+    tokio::time::sleep(Duration::from_millis(500)).await;
     let value = submitted_tx.response().await?.value;
 
     assert_eq!(value, 3);
@@ -1497,6 +1499,7 @@ async fn test_contract_submit_and_response() -> Result<()> {
         .add_call(call_handler_2);
 
     let handle = multi_call_handler.submit().await?;
+    tokio::time::sleep(Duration::from_millis(500)).await;
     let (val_1, val_2): (u64, u64) = handle.response().await?.value;
 
     assert_eq!(val_1, 7);
@@ -1691,6 +1694,8 @@ async fn contract_custom_call_no_signatures_strategy() -> Result<()> {
     // ANCHOR_END: tb_no_signatures_strategy
 
     let tx_id = provider.send_transaction(tx).await?;
+    tokio::time::sleep(Duration::from_millis(500)).await;
+
     let tx_status = provider.tx_status(&tx_id).await?;
 
     let response = call_handler.get_response_from(tx_status)?;

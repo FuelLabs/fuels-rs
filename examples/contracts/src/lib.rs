@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
+    use std::{collections::HashSet, time::Duration};
 
     use fuels::{
         core::codec::{encode_fn_selector, DecoderConfig, EncoderConfig},
@@ -211,6 +211,7 @@ mod tests {
             .submit()
             .await?;
 
+        tokio::time::sleep(Duration::from_millis(500)).await;
         let value = response.response().await?.value;
 
         // ANCHOR_END: submit_response_contract
@@ -585,6 +586,7 @@ mod tests {
         let multi_call_handler = multi_call_handler_tmp.clone();
         // ANCHOR: submit_response_multicontract
         let submitted_tx = multi_call_handler.submit().await?;
+        tokio::time::sleep(Duration::from_millis(500)).await;
         let (counter, array): (u64, [u64; 2]) = submitted_tx.response().await?.value;
         // ANCHOR_END: submit_response_multicontract
 
@@ -886,6 +888,8 @@ mod tests {
         let tx = tb.build(provider).await?;
 
         let tx_id = provider.send_transaction(tx).await?;
+        tokio::time::sleep(Duration::from_millis(500)).await;
+
         let tx_status = provider.tx_status(&tx_id).await?;
 
         let response = call_handler.get_response_from(tx_status)?;

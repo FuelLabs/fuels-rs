@@ -1086,6 +1086,50 @@ async fn test_script_require_from_contract() -> Result<()> {
     Ok(())
 }
 
+#[tokio::test]
+async fn test_loader_script_require_from_loader_contract() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(
+            Contract(
+                name = "MyContract",
+                project = "e2e/sway/contracts/lib_contract",
+            ),
+            Script(
+                name = "LogScript",
+                project = "e2e/sway/scripts/require_from_contract"
+            )
+        ),
+        LoadScript(
+            name = "script_instance",
+            script = "LogScript",
+            wallet = "wallet"
+        )
+    );
+
+    let contract_binary = "sway/contracts/lib_contract/out/release/lib_contract.bin";
+    let contract = Contract::load_from(contract_binary, LoadConfiguration::default())?;
+    let contract_id = contract
+        .convert_to_loader(100_000)?
+        .deploy(&wallet, TxPolicies::default())
+        .await?;
+    let contract_instance = MyContract::new(contract_id, wallet);
+
+    let mut script_instance = script_instance;
+    script_instance.convert_into_loader().await?;
+
+    let error = script_instance
+        .main(contract_instance.id())
+        .with_contracts(&[&contract_instance])
+        .call()
+        .await
+        .expect_err("should return a revert error");
+
+    assert_revert_containing_msg("require from contract", error);
+
+    Ok(())
+}
+
 fn assert_assert_eq_containing_msg<T: std::fmt::Debug>(left: T, right: T, error: Error) {
     let msg = format!("left: `\"{left:?}\"`\n right: `\"{right:?}\"`");
     assert_revert_containing_msg(&msg, error)
