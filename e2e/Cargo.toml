@@ -23,6 +23,8 @@ fuels = { workspace = true }
 tai64 = { workspace = true }
 tempfile = { workspace = true }
 tokio = { workspace = true, features = ["test-util"] }
+# TODO: segfault remove
+fuel-abi-types = { workspace = true }
 
 [build-dependencies]
 anyhow = { workspace = true, features = ["std"] }
