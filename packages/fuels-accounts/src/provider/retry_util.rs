@@ -1,11 +1,6 @@
 use std::{fmt::Debug, future::Future, num::NonZeroU32, time::Duration};
 
 use fuels_core::types::errors::{error, Result};
-use governor::{DefaultDirectRateLimiter, Jitter, Quota, RateLimiter};
-use once_cell::sync::Lazy;
-
-pub static RATE_LIMITER: Lazy<DefaultDirectRateLimiter> =
-    Lazy::new(|| RateLimiter::direct(Quota::per_second(NonZeroU32::try_from(1u32).unwrap())));
 
 /// A set of strategies to control retry intervals between attempts.
 ///
@@ -143,9 +138,6 @@ where
     let mut last_result = None;
 
     for attempt in 0..retry_config.max_attempts.into() {
-        RATE_LIMITER
-            .until_ready_with_jitter(Jitter::up_to(Duration::from_secs(1)))
-            .await;
         if let Ok(result) = tokio::time::timeout(retry_config.timeout, action()).await {
             if should_retry(&result) {
                 last_result = Some(result);

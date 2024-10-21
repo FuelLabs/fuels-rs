@@ -21,9 +21,7 @@ fuel-crypto = { workspace = true, features = ["random"] }
 fuel-tx = { workspace = true }
 fuel-types = { workspace = true, features = ["random"] }
 fuels-core = { workspace = true, default-features = false }
-governor = { workspace = true }
 itertools = { workspace = true }
-once_cell = { workspace = true }
 rand = { workspace = true, default-features = false }
 semver = { workspace = true }
 tai64 = { workspace = true, features = ["serde"] }
