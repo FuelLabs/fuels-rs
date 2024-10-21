@@ -253,12 +253,8 @@ jobs:
 
       - name: Cargo (workspace-level)
         if: ${{ matrix.cargo_command && !matrix.package }}
-        run: cargo ${{ matrix.cargo_command }} ${{ matrix.args }}
-
-      - name: Cargo (workspace-level, testnet)
-        if: ${{ matrix.cargo_command && !matrix.package && matrix.target_testnet }}
         env:
-          E2E_TARGET: testnet
+          E2E_TARGET: "${{ matrix.target_testnet && 'testnet' || '' }}"
         run: cargo ${{ matrix.cargo_command }} ${{ matrix.args }}
 
       - name: Cargo (package-level)
