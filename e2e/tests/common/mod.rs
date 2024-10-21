@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{env, str::FromStr};
 
 use fuels::{
     accounts::{provider::Provider, wallet::WalletUnlocked},
@@ -12,7 +12,8 @@ use once_cell::sync::Lazy;
 pub const TESTNET_NODE_URL: &str = "testnet.fuel.network";
 pub const TEST_WALLETS_COUNT: u64 = 3;
 #[allow(dead_code)]
-pub static IS_TESTNET: Lazy<bool> = Lazy::new(|| option_env!("E2E_TARGET") == Some("testnet"));
+pub static IS_TESTNET: Lazy<bool> =
+    Lazy::new(|| env::var("E2E_TARGET") == Ok("testnet".to_string()));
 #[allow(dead_code)]
 pub static NON_BASE_ASSET_ID: Lazy<AssetId> = Lazy::new(|| {
     if *IS_TESTNET {
