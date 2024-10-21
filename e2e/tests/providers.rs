@@ -357,7 +357,7 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<()> {
 
 #[tokio::test]
 async fn test_amount_and_asset_forwarding() -> Result<()> {
-    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
+    let wallet = launch_provider_and_get_wallet().await?;
     setup_program_test!(
         Abigen(Contract(
             name = "TokenContract",
@@ -701,7 +701,7 @@ async fn test_sway_timestamp() -> Result<()> {
         },
         ..NodeConfig::default()
     };
-    let mut wallets = maybe_connect_to_testnet_and_get_wallets(
+    let mut wallets = launch_custom_provider_and_get_wallets(
         WalletsConfig::new(Some(1), Some(1), Some(100)),
         Some(provider_config),
         None,
@@ -841,7 +841,7 @@ async fn test_cache_invalidation_on_await() -> Result<()> {
 
     // create wallet with 1 coin so that the cache prevents further
     // spending unless the coin is invalidated from the cache
-    let mut wallets = maybe_connect_to_testnet_and_get_wallets(
+    let mut wallets = launch_custom_provider_and_get_wallets(
         WalletsConfig::new(Some(1), Some(1), Some(100)),
         Some(provider_config),
         None,
