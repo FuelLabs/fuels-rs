@@ -854,9 +854,6 @@ async fn test_cache_invalidation_on_await() -> Result<()> {
     let provider = wallet.try_provider()?;
     let tx = create_revert_tx(&wallet).await?;
 
-    // Pause time so that the cache doesn't invalidate items based on TTL
-    tokio::time::pause();
-
     // tx inputs should be cached and then invalidated due to the tx failing
     let tx_status = provider.send_transaction_and_await_commit(tx).await?;
 
