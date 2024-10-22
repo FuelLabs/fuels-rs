@@ -13,7 +13,7 @@ rust-version = { workspace = true }
 argh = "0.1.12"
 cargo_metadata = "0.18.1"
 color-eyre = "0.6.2"
-once_cell = "1.18.0"
+once_cell = { workspace = true }
 regex = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 walkdir = "2.4.0"

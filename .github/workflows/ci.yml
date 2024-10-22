@@ -25,6 +25,9 @@ env:
   FORC_PATCH_REVISION: ""
   NEXTEST_HIDE_PROGRESS_BAR: "true"
   NEXTEST_STATUS_LEVEL: "fail"
+  TEST_WALLET_SECRET_KEY_1: ${{ secrets.TEST_WALLET_SECRET_KEY_1 }}
+  TEST_WALLET_SECRET_KEY_2: ${{ secrets.TEST_WALLET_SECRET_KEY_2 }}
+  TEST_WALLET_SECRET_KEY_3: ${{ secrets.TEST_WALLET_SECRET_KEY_3 }}
 
 jobs:
   setup-test-projects:
@@ -181,6 +184,14 @@ jobs:
             args: run --all-targets --workspace --cargo-quiet --no-fail-fast
             download_sway_artifacts: sway-examples
             install_fuel_core: true
+          - cargo_command: nextest
+            args: run --package e2e --profile ci-testnet --no-fail-fast
+            download_sway_artifacts: sway-examples
+            install_fuel_core: true
+            target_testnet: true
+            if: |
+              (github.event_name == 'push' && github.event.base_ref == 'master') ||
+              (github.event_name == 'pull_request' && contains(github.event.head_commit.message, '[testnet]'))
           - cargo_command: test
             args: --doc --workspace
           - cargo_command: machete
@@ -242,6 +253,8 @@ jobs:
 
       - name: Cargo (workspace-level)
         if: ${{ matrix.cargo_command && !matrix.package }}
+        env:
+          E2E_TARGET: "${{ matrix.target_testnet && 'testnet' || '' }}"
         run: cargo ${{ matrix.cargo_command }} ${{ matrix.args }}
 
       - name: Cargo (package-level)

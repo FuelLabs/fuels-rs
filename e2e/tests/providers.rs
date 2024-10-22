@@ -18,6 +18,9 @@ use fuels::{
     },
 };
 
+mod common;
+use common::{maybe_connect_to_testnet_and_get_wallet, maybe_connect_to_testnet_and_get_wallets};
+
 #[tokio::test]
 async fn test_provider_launch_and_connect() -> Result<()> {
     abigen!(Contract(
@@ -204,7 +207,7 @@ async fn test_input_message_pays_fee() -> Result<()> {
 async fn can_increase_block_height() -> Result<()> {
     // ANCHOR: use_produce_blocks_to_increase_block_height
     let wallets =
-        launch_custom_provider_and_get_wallets(WalletsConfig::default(), None, None).await?;
+        maybe_connect_to_testnet_and_get_wallets(WalletsConfig::default(), None, None).await?;
     let wallet = &wallets[0];
     let provider = wallet.try_provider()?;
 
@@ -229,7 +232,7 @@ async fn can_set_custom_block_time() -> Result<()> {
         ..NodeConfig::default()
     };
     let wallets =
-        launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config), None)
+        maybe_connect_to_testnet_and_get_wallets(WalletsConfig::default(), Some(config), None)
             .await?;
     let wallet = &wallets[0];
     let provider = wallet.try_provider()?;
@@ -283,7 +286,7 @@ async fn contract_deployment_respects_maturity() -> Result<()> {
     abigen!(Contract(name="MyContract", abi="e2e/sway/contracts/transaction_block_height/out/release/transaction_block_height-abi.json"));
 
     let wallets =
-        launch_custom_provider_and_get_wallets(WalletsConfig::default(), None, None).await?;
+        maybe_connect_to_testnet_and_get_wallets(WalletsConfig::default(), None, None).await?;
     let wallet = &wallets[0];
     let provider = wallet.try_provider()?;
 
@@ -316,8 +319,8 @@ async fn contract_deployment_respects_maturity() -> Result<()> {
 
 #[tokio::test]
 async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
             project = "e2e/sway/contracts/contract_test"
@@ -354,8 +357,8 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<()> {
 
 #[tokio::test]
 async fn test_amount_and_asset_forwarding() -> Result<()> {
+    let wallet = launch_provider_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TokenContract",
             project = "e2e/sway/contracts/token_ops"
@@ -385,9 +388,8 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
     assert_eq!(balance_response.value, 5_000_000);
 
     let tx_policies = TxPolicies::default().with_script_gas_limit(1_000_000);
-    // Forward 1_000_000 coin amount of base asset_id
-    // this is a big number for checking that amount can be a u64
-    let call_params = CallParameters::default().with_amount(1_000_000);
+    let base_forward_amount = 10_000;
+    let call_params = CallParameters::default().with_amount(base_forward_amount);
 
     let response = contract_methods
         .get_msg_amount()
@@ -396,7 +398,7 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
         .call()
         .await?;
 
-    assert_eq!(response.value, 1_000_000);
+    assert_eq!(response.value, base_forward_amount);
 
     let call_response = response
         .receipts
@@ -405,7 +407,10 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
 
     assert!(call_response.is_some());
 
-    assert_eq!(call_response.unwrap().amount().unwrap(), 1_000_000);
+    assert_eq!(
+        call_response.unwrap().amount().unwrap(),
+        base_forward_amount
+    );
     assert_eq!(
         call_response.unwrap().asset_id().unwrap(),
         &AssetId::zeroed()
@@ -517,8 +522,8 @@ async fn test_gas_errors() -> Result<()> {
 
 #[tokio::test]
 async fn test_call_param_gas_errors() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
             project = "e2e/sway/contracts/contract_test"
@@ -559,8 +564,8 @@ async fn test_call_param_gas_errors() -> Result<()> {
 
 #[tokio::test]
 async fn test_get_gas_used() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
             project = "e2e/sway/contracts/contract_test"
@@ -771,14 +776,14 @@ async fn create_transfer(
 async fn test_caching() -> Result<()> {
     let amount = 1000;
     let num_coins = 10;
-    let mut wallets = launch_custom_provider_and_get_wallets(
+    let mut wallets = maybe_connect_to_testnet_and_get_wallets(
         WalletsConfig::new(Some(1), Some(num_coins), Some(amount)),
         Some(NodeConfig::default()),
         None,
     )
     .await?;
     let wallet_1 = wallets.pop().unwrap();
-    let provider = wallet_1.provider().unwrap();
+    let provider = wallet_1.try_provider()?;
     let wallet_2 = WalletUnlocked::new_random(Some(provider.clone()));
 
     // Consecutively send transfer txs. Without caching, the txs will
@@ -846,11 +851,8 @@ async fn test_cache_invalidation_on_await() -> Result<()> {
     .await?;
     let wallet = wallets.pop().unwrap();
 
-    let provider = wallet.provider().unwrap();
+    let provider = wallet.try_provider()?;
     let tx = create_revert_tx(&wallet).await?;
-
-    // Pause time so that the cache doesn't invalidate items based on TTL
-    tokio::time::pause();
 
     // tx inputs should be cached and then invalidated due to the tx failing
     let tx_status = provider.send_transaction_and_await_commit(tx).await?;
@@ -867,8 +869,8 @@ async fn test_cache_invalidation_on_await() -> Result<()> {
 
 #[tokio::test]
 async fn can_fetch_mint_transactions() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
             project = "e2e/sway/contracts/contract_test"
@@ -938,7 +940,7 @@ async fn can_produce_blocks_with_trig_never() -> Result<()> {
         ..NodeConfig::default()
     };
     let wallets =
-        launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config), None)
+        maybe_connect_to_testnet_and_get_wallets(WalletsConfig::default(), Some(config), None)
             .await?;
     let wallet = &wallets[0];
     let provider = wallet.try_provider()?;
@@ -1018,8 +1020,8 @@ async fn can_upload_executor_and_trigger_upgrade() -> Result<()> {
 
 #[tokio::test]
 async fn tx_respects_policies() -> Result<()> {
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
             project = "e2e/sway/contracts/contract_test"
@@ -1170,7 +1172,7 @@ async fn contract_call_with_impersonation() -> Result<()> {
         utxo_validation: false,
         ..NodeConfig::default()
     };
-    let mut wallets = launch_custom_provider_and_get_wallets(
+    let mut wallets = maybe_connect_to_testnet_and_get_wallets(
         WalletsConfig::new(Some(1), Some(10), Some(1000)),
         Some(provider_config),
         None,

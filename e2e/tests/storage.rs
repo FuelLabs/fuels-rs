@@ -4,6 +4,9 @@ use fuels::{
     types::{Bits256, Bytes32},
 };
 
+mod common;
+use common::maybe_connect_to_testnet_and_get_wallet;
+
 #[tokio::test]
 async fn test_storage_initialization() -> Result<()> {
     abigen!(Contract(
@@ -11,7 +14,7 @@ async fn test_storage_initialization() -> Result<()> {
         abi = "e2e/sway/contracts/storage/out/release/storage-abi.json"
     ));
 
-    let wallet = launch_provider_and_get_wallet().await?;
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
 
     let key = Bytes32::from([1u8; 32]);
     let value = Bytes32::from([2u8; 32]);
@@ -21,7 +24,9 @@ async fn test_storage_initialization() -> Result<()> {
 
     let contract_id = Contract::load_from(
         "sway/contracts/storage/out/release/storage.bin",
-        LoadConfiguration::default().with_storage_configuration(storage_configuration),
+        LoadConfiguration::default()
+            .with_storage_configuration(storage_configuration)
+            .with_salt(rand::random::<Salt>()),
     )?
     .deploy(&wallet, TxPolicies::default())
     .await?;
@@ -46,11 +51,11 @@ async fn test_init_storage_automatically() -> Result<()> {
         abi = "e2e/sway/contracts/storage/out/release/storage-abi.json"
     ));
 
-    let wallet = launch_provider_and_get_wallet().await?;
+    let wallet = maybe_connect_to_testnet_and_get_wallet().await?;
 
     let contract_id = Contract::load_from(
         "sway/contracts/storage/out/release/storage.bin",
-        LoadConfiguration::default(),
+        LoadConfiguration::default().with_salt(rand::random::<Salt>()),
     )?
     .deploy(&wallet, TxPolicies::default())
     .await?;
