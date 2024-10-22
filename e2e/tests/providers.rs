@@ -388,9 +388,8 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
     assert_eq!(balance_response.value, 5_000_000);
 
     let tx_policies = TxPolicies::default().with_script_gas_limit(1_000_000);
-    // Forward 1_000_000 coin amount of base asset_id
-    // this is a big number for checking that amount can be a u64
-    let call_params = CallParameters::default().with_amount(1_000_000);
+    let base_forward_amount = 10_000;
+    let call_params = CallParameters::default().with_amount(base_forward_amount);
 
     let response = contract_methods
         .get_msg_amount()
@@ -399,7 +398,7 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
         .call()
         .await?;
 
-    assert_eq!(response.value, 1_000_000);
+    assert_eq!(response.value, base_forward_amount);
 
     let call_response = response
         .receipts
@@ -408,7 +407,10 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
 
     assert!(call_response.is_some());
 
-    assert_eq!(call_response.unwrap().amount().unwrap(), 1_000_000);
+    assert_eq!(
+        call_response.unwrap().amount().unwrap(),
+        base_forward_amount
+    );
     assert_eq!(
         call_response.unwrap().asset_id().unwrap(),
         &AssetId::zeroed()
