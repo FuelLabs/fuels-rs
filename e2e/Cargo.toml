@@ -25,6 +25,8 @@ tempfile = { workspace = true }
 tokio = { workspace = true, features = ["test-util"] }
 # TODO: segfault remove
 fuel-abi-types = { workspace = true }
+# TODO: segfault remove
+itertools = { workspace = true, features = ["use_std"] }
 
 [build-dependencies]
 anyhow = { workspace = true, features = ["std"] }
