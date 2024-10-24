@@ -237,17 +237,18 @@ of <code>COMMAND(ARG...)...</code></p>
         Deploy(
             name = &quot;lib_contract_instance&quot;,
             contract = &quot;LibContract&quot;,
-            wallet = &quot;wallet&quot;
+            wallet = &quot;wallet&quot;,
+            random_salt = false,
         ),
         Deploy(
             name = &quot;contract_caller_instance&quot;,
             contract = &quot;LibContractCaller&quot;,
-            wallet = &quot;wallet&quot;
+            wallet = &quot;wallet&quot;,
         ),
         Deploy(
             name = &quot;contract_caller_instance2&quot;,
             contract = &quot;LibContractCaller&quot;,
-            wallet = &quot;wallet&quot;
+            wallet = &quot;wallet&quot;,
         ),
     );
     let lib_contract_id = lib_contract_instance.contract_id();
@@ -294,7 +295,8 @@ of <code>COMMAND(ARG...)...</code></p>
         Deploy(
             name = &quot;contract_instance&quot;,
             contract = &quot;TestContract&quot;,
-            wallet = &quot;wallet&quot;
+            wallet = &quot;wallet&quot;,
+            random_salt = false,
         ),
     );
 </code></pre>

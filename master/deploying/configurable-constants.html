@@ -214,7 +214,7 @@ impl TestContract for Contract {
         &quot;sway/contracts/configurables/out/release/configurables.bin&quot;,
         LoadConfiguration::default().with_configurables(configurables),
     )?
-    .deploy(&amp;wallet, TxPolicies::default())
+    .deploy_if_not_exists(&amp;wallet, TxPolicies::default())
     .await?;
 
     let contract_instance = MyContract::new(contract_id, wallet.clone());
