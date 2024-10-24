@@ -230,7 +230,7 @@ async fn pay_with_predicate() -> Result<()> {
         "sway/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(&predicate, TxPolicies::default())
+    .deploy_if_not_exists(&predicate, TxPolicies::default())
     .await?;
 
     let contract_methods = MyContract::new(contract_id.clone(), predicate.clone()).methods();
@@ -299,7 +299,7 @@ async fn pay_with_predicate_vector_data() -> Result<()> {
         "sway/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(&predicate, TxPolicies::default())
+    .deploy_if_not_exists(&predicate, TxPolicies::default())
     .await?;
 
     let contract_methods = MyContract::new(contract_id.clone(), predicate.clone()).methods();
@@ -361,7 +361,7 @@ async fn predicate_contract_transfer() -> Result<()> {
         "sway/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(&predicate, TxPolicies::default())
+    .deploy_if_not_exists(&predicate, TxPolicies::default())
     .await?;
 
     let contract_balances = provider.get_contract_balances(&contract_id).await?;
@@ -550,7 +550,7 @@ async fn contract_tx_and_call_params_with_predicate() -> Result<()> {
         "./sway/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(&predicate, TxPolicies::default())
+    .deploy_if_not_exists(&predicate, TxPolicies::default())
     .await?;
     println!("Contract deployed @ {contract_id}");
 
@@ -630,7 +630,7 @@ async fn diff_asset_predicate_payment() -> Result<()> {
         "./sway/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(&predicate, TxPolicies::default())
+    .deploy_if_not_exists(&predicate, TxPolicies::default())
     .await?;
 
     let contract_methods = MyContract::new(contract_id.clone(), predicate.clone()).methods();
