@@ -56,6 +56,7 @@ fuel-abi-types = "0.7.0"
 futures = "0.3.29"
 hex = { version = "0.4.3", default-features = false }
 itertools = "0.12.0"
+path-clean = "1.0.1"
 portpicker = "0.1.1"
 pretty_assertions = { version = "1.4", default-features = false }
 proc-macro2 = "1.0.70"

@@ -1,4 +1,8 @@
-use std::{default::Default, fmt::Debug, path::Path};
+use std::{
+    default::Default,
+    fmt::Debug,
+    path::{self, Path},
+};
 
 use fuel_tx::{Bytes32, ContractId, Salt, StorageSlot};
 use fuels_accounts::Account;
@@ -99,17 +103,20 @@ impl Contract<Regular> {
         binary_filepath: impl AsRef<Path>,
         config: LoadConfiguration,
     ) -> Result<Contract<Regular>> {
-        let binary_filepath = binary_filepath.as_ref();
-        validate_path_and_extension(binary_filepath, "bin")?;
+        let clean_file_path = path::absolute(&binary_filepath)
+            .map(path_clean::clean)
+            .unwrap_or_else(|_| binary_filepath.as_ref().to_path_buf());
+        validate_path_and_extension(&clean_file_path, "bin")?;
 
-        let binary = std::fs::read(binary_filepath).map_err(|e| {
+        let binary = std::fs::read(&binary_filepath).map_err(|e| {
             std::io::Error::new(
                 e.kind(),
-                format!("failed to read binary: {binary_filepath:?}: {e}"),
+                format!("failed to read binary: {clean_file_path:?}: {e}"),
             )
         })?;
 
-        let storage_slots = super::determine_storage_slots(config.storage, binary_filepath)?;
+        let storage_slots =
+            super::determine_storage_slots(config.storage, binary_filepath.as_ref())?;
 
         Ok(Contract {
             code: Regular::new(binary, config.configurables),

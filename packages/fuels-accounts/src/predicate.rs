@@ -1,4 +1,4 @@
-use std::{fmt::Debug, fs};
+use std::{fmt::Debug, fs, path};
 
 #[cfg(feature = "std")]
 use fuels_core::types::{coin_type_id::CoinTypeId, input::Input, AssetId};
@@ -41,10 +41,16 @@ impl Predicate {
 
     pub fn load_from(file_path: &str) -> Result<Self> {
         let code = fs::read(file_path).map_err(|e| {
-            error!(
-                IO,
-                "could not read predicate binary {file_path:?}. Reason: {e}"
-            )
+            match path::absolute(file_path).map(path_clean::clean) {
+                Ok(clean_file_path) => error!(
+                    IO,
+                    "could not read predicate binary {clean_file_path:?}. Reason: {e}",
+                ),
+                Err(e) => error!(
+                    IO,
+                    "failed to make path absolute: {file_path:?}. Reason: {e}"
+                ),
+            }
         })?;
         Ok(Self::from_code(code))
     }

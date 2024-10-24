@@ -1,3 +1,4 @@
+use std::fs;
 use std::time::Duration;
 
 use fuel_tx::{
@@ -1116,8 +1117,9 @@ async fn test_add_custom_assets() -> Result<()> {
 #[tokio::test]
 async fn contract_load_error_messages() {
     {
-        let binary_path = "sway/contracts/contract_test/out/release/no_file_on_path.bin";
-        let expected_error = format!("io: file \"{binary_path}\" does not exist");
+        let binary_path = "sway/../sway/contracts/contract_test/out/release/no_file_on_path.bin";
+        let manifest_dir = env!("CARGO_MANIFEST_DIR");
+        let expected_error = format!("io: file \"{manifest_dir}/sway/contracts/contract_test/out/release/no_file_on_path.bin\" does not exist");
 
         let error = Contract::load_from(binary_path, LoadConfiguration::default())
             .expect_err("should have failed");
@@ -1125,8 +1127,13 @@ async fn contract_load_error_messages() {
         assert_eq!(error.to_string(), expected_error);
     }
     {
-        let binary_path = "sway/contracts/contract_test/out/release/contract_test-abi.json";
-        let expected_error = format!("expected \"{binary_path}\" to have '.bin' extension");
+        let binary_path =
+            fs::canonicalize("sway/contracts/contract_test/out/release/contract_test-abi.json")
+                .unwrap();
+        let expected_error = format!(
+            "expected \"{}\" to have '.bin' extension",
+            binary_path.display()
+        );
 
         let error = Contract::load_from(binary_path, LoadConfiguration::default())
             .expect_err("should have failed");
