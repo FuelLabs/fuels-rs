@@ -187,6 +187,115 @@ fn extract_data_offset(binary: &[u8]) -> Result<usize> {
     Ok(u64::from_be_bytes(data_offset) as usize)
 }
 
+type NoDataSectionLoaderInstructions = [Instruction; 8];
+pub(crate) fn loader_instructions_no_data_section() -> NoDataSectionLoaderInstructions {
+    const BLOB_ID_SIZE: u16 = 32;
+    const REG_ADDRESS_OF_DATA_AFTER_CODE: u8 = 0x10;
+    const REG_START_OF_LOADED_CODE: u8 = 0x11;
+    const REG_GENERAL_USE: u8 = 0x12;
+
+    // extract the lenght of the NoDataSectionLoaderInstructions type
+    const NUM_OF_INSTRUCTIONS: u16 = (std::mem::size_of::<NoDataSectionLoaderInstructions>()
+        / std::mem::size_of::<Instruction>()) as u16;
+    // There are 2 main steps:
+    // 1. Load the blob content into memory
+    // 2. Jump to the beginning of the memory where the blob was loaded
+    [
+        // 1. Load the blob content into memory
+        // Find the start of the hardcoded blob ID, which is located after the loader code ends.
+        op::move_(REG_ADDRESS_OF_DATA_AFTER_CODE, RegId::PC),
+        // hold the address of the blob ID.
+        op::addi(
+            REG_ADDRESS_OF_DATA_AFTER_CODE,
+            REG_ADDRESS_OF_DATA_AFTER_CODE,
+            NUM_OF_INSTRUCTIONS * Instruction::SIZE as u16,
+        ),
+        // The code is going to be loaded from the current value of SP onwards, save
+        // the location into REG_START_OF_LOADED_CODE so we can jump into it at the end.
+        op::move_(REG_START_OF_LOADED_CODE, RegId::SP),
+        // REG_GENERAL_USE to hold the size of the blob.
+        op::bsiz(REG_GENERAL_USE, REG_ADDRESS_OF_DATA_AFTER_CODE),
+        // Push the blob contents onto the stack.
+        op::ldc(REG_ADDRESS_OF_DATA_AFTER_CODE, 0, REG_GENERAL_USE, 1),
+        // Jump into the memory where the contract is loaded.
+        // What follows is called _jmp_mem by the sway compiler.
+        // Subtract the address contained in IS because jmp will add it back.
+        op::sub(
+            REG_START_OF_LOADED_CODE,
+            REG_START_OF_LOADED_CODE,
+            RegId::IS,
+        ),
+        // jmp will multiply by 4, so we need to divide to cancel that out.
+        op::divi(REG_START_OF_LOADED_CODE, REG_START_OF_LOADED_CODE, 4),
+        // Jump to the start of the contract we loaded.
+        op::jmp(REG_START_OF_LOADED_CODE),
+    ]
+}
+
+type LoaderInstructions = [Instruction; 12];
+pub(crate) fn loader_instructions() -> LoaderInstructions {
+    const BLOB_ID_SIZE: u16 = 32;
+    const REG_ADDRESS_OF_DATA_AFTER_CODE: u8 = 0x10;
+    const REG_START_OF_LOADED_CODE: u8 = 0x11;
+    const REG_GENERAL_USE: u8 = 0x12;
+
+    // extract the lenght of the NoDataSectionLoaderInstructions type
+    const NUM_OF_INSTRUCTIONS: u16 = (std::mem::size_of::<NoDataSectionLoaderInstructions>()
+        / std::mem::size_of::<Instruction>()) as u16;
+
+    // There are 3 main steps:
+    // 1. Load the blob content into memory
+    // 2. Load the data section right after the blob
+    // 3. Jump to the beginning of the memory where the blob was loaded
+    [
+        // 1. Load the blob content into memory
+        // Find the start of the hardcoded blob ID, which is located after the loader code ends.
+        op::move_(REG_ADDRESS_OF_DATA_AFTER_CODE, RegId::PC),
+        // hold the address of the blob ID.
+        op::addi(
+            REG_ADDRESS_OF_DATA_AFTER_CODE,
+            REG_ADDRESS_OF_DATA_AFTER_CODE,
+            NUM_OF_INSTRUCTIONS * Instruction::SIZE as u16,
+        ),
+        // The code is going to be loaded from the current value of SP onwards, save
+        // the location into REG_START_OF_LOADED_CODE so we can jump into it at the end.
+        op::move_(REG_START_OF_LOADED_CODE, RegId::SP),
+        // REG_GENERAL_USE to hold the size of the blob.
+        op::bsiz(REG_GENERAL_USE, REG_ADDRESS_OF_DATA_AFTER_CODE),
+        // Push the blob contents onto the stack.
+        op::ldc(REG_ADDRESS_OF_DATA_AFTER_CODE, 0, REG_GENERAL_USE, 1),
+        // Move on to the data section length
+        op::addi(
+            REG_ADDRESS_OF_DATA_AFTER_CODE,
+            REG_ADDRESS_OF_DATA_AFTER_CODE,
+            BLOB_ID_SIZE,
+        ),
+        // load the size of the data section into REG_GENERAL_USE
+        op::lw(REG_GENERAL_USE, REG_ADDRESS_OF_DATA_AFTER_CODE, 0),
+        // after we have read the length of the data section, we move the pointer to the actual
+        // data by skipping WORD_SIZE B.
+        op::addi(
+            REG_ADDRESS_OF_DATA_AFTER_CODE,
+            REG_ADDRESS_OF_DATA_AFTER_CODE,
+            WORD_SIZE as u16,
+        ),
+        // load the data section of the executable
+        op::ldc(REG_ADDRESS_OF_DATA_AFTER_CODE, 0, REG_GENERAL_USE, 2),
+        // Jump into the memory where the contract is loaded.
+        // What follows is called _jmp_mem by the sway compiler.
+        // Subtract the address contained in IS because jmp will add it back.
+        op::sub(
+            REG_START_OF_LOADED_CODE,
+            REG_START_OF_LOADED_CODE,
+            RegId::IS,
+        ),
+        // jmp will multiply by 4, so we need to divide to cancel that out.
+        op::divi(REG_START_OF_LOADED_CODE, REG_START_OF_LOADED_CODE, 4),
+        // Jump to the start of the contract we loaded.
+        op::jmp(REG_START_OF_LOADED_CODE),
+    ]
+}
+
 fn transform_into_configurable_loader(
     binary: Vec<u8>,
     blob_id: &BlobId,
@@ -196,100 +305,6 @@ fn transform_into_configurable_loader(
     // 2. blob id
     // 3. length_of_data_section
     // 4. the data_section (updated with configurables as needed)
-    const BLOB_ID_SIZE: u16 = 32;
-    const REG_ADDRESS_OF_DATA_AFTER_CODE: u8 = 0x10;
-    const REG_START_OF_LOADED_CODE: u8 = 0x11;
-    const REG_GENERAL_USE: u8 = 0x12;
-    let get_instructions = |num_of_instructions| {
-        // There are 3 main steps:
-        // 1. Load the blob content into memory
-        // 2. Load the data section right after the blob
-        // 3. Jump to the beginning of the memory where the blob was loaded
-        [
-            // 1. Load the blob content into memory
-            // Find the start of the hardcoded blob ID, which is located after the loader code ends.
-            op::move_(REG_ADDRESS_OF_DATA_AFTER_CODE, RegId::PC),
-            // hold the address of the blob ID.
-            op::addi(
-                REG_ADDRESS_OF_DATA_AFTER_CODE,
-                REG_ADDRESS_OF_DATA_AFTER_CODE,
-                num_of_instructions * Instruction::SIZE as u16,
-            ),
-            // The code is going to be loaded from the current value of SP onwards, save
-            // the location into REG_START_OF_LOADED_CODE so we can jump into it at the end.
-            op::move_(REG_START_OF_LOADED_CODE, RegId::SP),
-            // REG_GENERAL_USE to hold the size of the blob.
-            op::bsiz(REG_GENERAL_USE, REG_ADDRESS_OF_DATA_AFTER_CODE),
-            // Push the blob contents onto the stack.
-            op::ldc(REG_ADDRESS_OF_DATA_AFTER_CODE, 0, REG_GENERAL_USE, 1),
-            // Move on to the data section length
-            op::addi(
-                REG_ADDRESS_OF_DATA_AFTER_CODE,
-                REG_ADDRESS_OF_DATA_AFTER_CODE,
-                BLOB_ID_SIZE,
-            ),
-            // load the size of the data section into REG_GENERAL_USE
-            op::lw(REG_GENERAL_USE, REG_ADDRESS_OF_DATA_AFTER_CODE, 0),
-            // after we have read the length of the data section, we move the pointer to the actual
-            // data by skipping WORD_SIZE B.
-            op::addi(
-                REG_ADDRESS_OF_DATA_AFTER_CODE,
-                REG_ADDRESS_OF_DATA_AFTER_CODE,
-                WORD_SIZE as u16,
-            ),
-            // load the data section of the executable
-            op::ldc(REG_ADDRESS_OF_DATA_AFTER_CODE, 0, REG_GENERAL_USE, 2),
-            // Jump into the memory where the contract is loaded.
-            // What follows is called _jmp_mem by the sway compiler.
-            // Subtract the address contained in IS because jmp will add it back.
-            op::sub(
-                REG_START_OF_LOADED_CODE,
-                REG_START_OF_LOADED_CODE,
-                RegId::IS,
-            ),
-            // jmp will multiply by 4, so we need to divide to cancel that out.
-            op::divi(REG_START_OF_LOADED_CODE, REG_START_OF_LOADED_CODE, 4),
-            // Jump to the start of the contract we loaded.
-            op::jmp(REG_START_OF_LOADED_CODE),
-        ]
-    };
-
-    let get_instructions_no_data_section = |num_of_instructions| {
-        // There are 2 main steps:
-        // 1. Load the blob content into memory
-        // 2. Jump to the beginning of the memory where the blob was loaded
-        [
-            // 1. Load the blob content into memory
-            // Find the start of the hardcoded blob ID, which is located after the loader code ends.
-            op::move_(REG_ADDRESS_OF_DATA_AFTER_CODE, RegId::PC),
-            // hold the address of the blob ID.
-            op::addi(
-                REG_ADDRESS_OF_DATA_AFTER_CODE,
-                REG_ADDRESS_OF_DATA_AFTER_CODE,
-                num_of_instructions * Instruction::SIZE as u16,
-            ),
-            // The code is going to be loaded from the current value of SP onwards, save
-            // the location into REG_START_OF_LOADED_CODE so we can jump into it at the end.
-            op::move_(REG_START_OF_LOADED_CODE, RegId::SP),
-            // REG_GENERAL_USE to hold the size of the blob.
-            op::bsiz(REG_GENERAL_USE, REG_ADDRESS_OF_DATA_AFTER_CODE),
-            // Push the blob contents onto the stack.
-            op::ldc(REG_ADDRESS_OF_DATA_AFTER_CODE, 0, REG_GENERAL_USE, 1),
-            // Jump into the memory where the contract is loaded.
-            // What follows is called _jmp_mem by the sway compiler.
-            // Subtract the address contained in IS because jmp will add it back.
-            op::sub(
-                REG_START_OF_LOADED_CODE,
-                REG_START_OF_LOADED_CODE,
-                RegId::IS,
-            ),
-            // jmp will multiply by 4, so we need to divide to cancel that out.
-            op::divi(REG_START_OF_LOADED_CODE, REG_START_OF_LOADED_CODE, 4),
-            // Jump to the start of the contract we loaded.
-            op::jmp(REG_START_OF_LOADED_CODE),
-        ]
-    };
-
     let offset = extract_data_offset(&binary)?;
 
     if binary.len() < offset {
@@ -303,10 +318,7 @@ fn transform_into_configurable_loader(
     let data_section = binary[offset..].to_vec();
 
     if !data_section.is_empty() {
-        let num_of_instructions = u16::try_from(get_instructions(0).len())
-            .expect("to never have more than u16::MAX instructions");
-
-        let instruction_bytes = get_instructions(num_of_instructions)
+        let instruction_bytes = loader_instructions()
             .into_iter()
             .flat_map(|instruction| instruction.to_bytes())
             .collect_vec();
@@ -331,10 +343,7 @@ fn transform_into_configurable_loader(
 
         Ok((code, new_data_section_offset))
     } else {
-        let num_of_instructions = u16::try_from(get_instructions_no_data_section(0).len())
-            .expect("to never have more than u16::MAX instructions");
-
-        let instruction_bytes = get_instructions_no_data_section(num_of_instructions)
+        let instruction_bytes = loader_instructions_no_data_section()
             .into_iter()
             .flat_map(|instruction| instruction.to_bytes());
 
