@@ -146,7 +146,8 @@ impl ContractCallInstructions {
                 u64::from_be_bytes(bytes.try_into().expect("will have exactly 8 bytes")) as usize
             };
             let raw_fn_selector_bytes = data.consume(fn_selector_len, "function selector")?;
-            String::from_utf8(raw_fn_selector_bytes.to_vec()).unwrap()
+            String::from_utf8(raw_fn_selector_bytes.to_vec())
+                .map_err(|e| error!(Other, "while decoding function selector: {}", e.to_string()))?
         };
 
         let (encoded_args, gas_forwarded) = if self.has_gas_forwarding_instructions() {
@@ -461,7 +462,7 @@ mod tests {
     #[test_case(20, "function selector lenght")]
     #[test_case(12, "function selector")]
     #[test_case(8, "forwarded gas")]
-    fn complains_if_data_missing(amount_of_data_to_steal: usize, expected_msg: &str) {
+    fn catches_missing_data(amount_of_data_to_steal: usize, expected_msg: &str) {
         // given
         let script = get_single_call_instructions(&CallOpcodeParamsOffset {
             call_data_offset: 0,
@@ -487,5 +488,39 @@ mod tests {
         msg.truncate(expected_msg.len());
 
         assert_eq!(expected_msg, msg);
+    }
+
+    #[test]
+    fn handles_invalid_utf8_fn_selector() {
+        // given
+        let script = get_single_call_instructions(&CallOpcodeParamsOffset {
+            call_data_offset: 0,
+            amount_offset: 0,
+            asset_id_offset: 0,
+            gas_forwarded_offset: Some(1),
+        })
+        .unwrap();
+
+        let invalid_utf8 = {
+            let invalid_data = [0x80, 0xBF, 0xC0, 0xAF, 0xFF];
+            assert!(String::from_utf8(invalid_data.to_vec()).is_err());
+            invalid_data
+        };
+
+        let mut ok_data = example_contract_call_data(false, true);
+        ok_data[8 + 32 * 2 + 2 * 8 + 8..][..5].copy_from_slice(&invalid_utf8);
+
+        // when
+        let err = parse_script(&script, &ok_data).unwrap_err();
+
+        // then
+        let Error::Other(err) = err else {
+            panic!("expected Error::Other");
+        };
+
+        assert_eq!(
+            "while decoding contract call: while decoding function selector: invalid utf-8 sequence of 1 bytes from index 0",
+            err
+        );
     }
 }
