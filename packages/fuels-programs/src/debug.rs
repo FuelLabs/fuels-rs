@@ -1,12 +1,18 @@
+use std::os::linux::raw;
+
 use fuel_asm::{Instruction, Opcode};
 use fuel_tx::{AssetId, ContractId};
 use fuels_core::{
     constants::WORD_SIZE,
-    types::{errors::Result, transaction_builders::BlobId},
+    error,
+    types::{
+        errors::{Error, Result},
+        transaction_builders::BlobId,
+    },
 };
 use itertools::Itertools;
 
-use crate::executable::loader_instructions;
+use crate::{executable::loader_instructions, utils::prepend_msg};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ContractCallDescription {
@@ -23,6 +29,39 @@ pub struct ScriptDescription {
     pub code: Vec<u8>,
     pub data_section_offset: Option<u64>,
     pub data: Vec<u8>,
+}
+
+struct WasmFriendlyCursor<'a> {
+    data: &'a [u8],
+}
+
+impl<'a> WasmFriendlyCursor<'a> {
+    pub fn new(data: &'a [u8]) -> Self {
+        Self { data }
+    }
+
+    pub fn consume(&mut self, amount: usize, ctx: &'static str) -> Result<&'a [u8]> {
+        if self.data.len() < amount {
+            Err(error!(
+                Other,
+                "while decoding {ctx}: not enough data, available: {}, requested: {}",
+                self.data.len(),
+                amount
+            ))
+        } else {
+            let data = &self.data[..amount];
+            self.data = &self.data[amount..];
+            Ok(data)
+        }
+    }
+
+    pub fn consume_all(&self) -> &'a [u8] {
+        self.data
+    }
+
+    pub fn unconsumed(&self) -> usize {
+        self.data.len()
+    }
 }
 
 impl ScriptDescription {
@@ -77,37 +116,53 @@ impl ContractCallInstructions {
     }
 
     fn describe_contract_call(&self, script_data: &[u8]) -> Result<ContractCallDescription> {
-        let amount = u64::from_be_bytes(script_data[..8].try_into().unwrap());
-        let data = &script_data[8..];
+        let mut data = WasmFriendlyCursor::new(script_data);
 
-        let asset_id = AssetId::new(data[..32].try_into().unwrap());
-        let data = &data[32..];
+        let amount = u64::from_be_bytes(
+            data.consume(8, "amount")?
+                .try_into()
+                .expect("will have exactly 8 bytes"),
+        );
 
-        let contract_id = ContractId::new(data[..32].try_into().unwrap());
-        let data = &data[32..];
+        let asset_id = AssetId::new(
+            data.consume(32, "asset id")?
+                .try_into()
+                .expect("will have exactly 32 bytes"),
+        );
 
-        let _fn_selector_offset = &data[..8];
-        let data = &data[8..];
+        let contract_id = ContractId::new(
+            data.consume(32, "contract id")?
+                .try_into()
+                .expect("will have exactly 32 bytes"),
+        );
 
-        let _encoded_args_offset = &data[..8];
-        let data = &data[8..];
+        let _ = data.consume(8, "function selector offset")?;
 
-        let fn_selector_len = u64::from_be_bytes(data[..8].try_into().unwrap()) as usize;
-        let data = &data[8..];
+        let _ = data.consume(8, "encoded args offset")?;
 
-        let fn_selector = String::from_utf8(data[..fn_selector_len].to_vec()).unwrap();
-        let data = &data[fn_selector_len..];
-
-        let encoded_args = if self.has_gas_forwarding_instructions() {
-            data[..data.len() - WORD_SIZE].to_vec()
-        } else {
-            data.to_vec()
+        let fn_selector = {
+            let fn_selector_len = {
+                let bytes = data.consume(8, "function selector lenght")?;
+                u64::from_be_bytes(bytes.try_into().expect("will have exactly 8 bytes")) as usize
+            };
+            let raw_fn_selector_bytes = data.consume(fn_selector_len, "function selector")?;
+            String::from_utf8(raw_fn_selector_bytes.to_vec()).unwrap()
         };
-        let data = &data[encoded_args.len()..];
 
-        let gas_forwarded = self
-            .has_gas_forwarding_instructions()
-            .then(|| u64::from_be_bytes(data[..WORD_SIZE].try_into().unwrap()));
+        let (encoded_args, gas_forwarded) = if self.has_gas_forwarding_instructions() {
+            let encoded_args = data
+                .consume(data.unconsumed().saturating_sub(WORD_SIZE), "encoded_args")?
+                .to_vec();
+
+            let gas_fwd = {
+                let gas_fwd_bytes = data.consume(WORD_SIZE, "forwarded gas")?;
+                u64::from_be_bytes(gas_fwd_bytes.try_into().expect("exactly 8 bytes"))
+            };
+
+            (encoded_args, Some(gas_fwd))
+        } else {
+            (data.consume_all().to_vec(), None)
+        };
 
         Ok(ContractCallDescription {
             amount,
@@ -223,8 +278,10 @@ fn parse_contract_calls(
             script_data.len()
         };
 
-        let contract_call_description =
-            current_call_instructions.describe_contract_call(&script_data[data_start..data_end])?;
+        let contract_call_description = current_call_instructions
+            .describe_contract_call(&script_data[data_start..data_end])
+            .map_err(prepend_msg("while decoding contract call"))?;
+
         descriptions.push(contract_call_description);
     }
 
@@ -301,9 +358,9 @@ fn parse_loader_script(script: &[u8], data: &[u8]) -> Option<(ScriptDescription,
 
 #[cfg(test)]
 mod tests {
-    use fuel_asm::RegId;
     use fuels_core::types::errors::Error;
     use rand::{RngCore, SeedableRng};
+    use test_case::test_case;
 
     use crate::calls::utils::{get_single_call_instructions, CallOpcodeParamsOffset};
 
@@ -378,39 +435,7 @@ mod tests {
         );
     }
 
-    fn example_contract_call_data(gas_fwd: bool) -> Vec<u8> {
-        // let amount = u64::from_be_bytes(script_data[..8].try_into().unwrap());
-        // let data = &script_data[8..];
-        //
-        // let asset_id = AssetId::new(data[..32].try_into().unwrap());
-        // let data = &data[32..];
-        //
-        // let contract_id = ContractId::new(data[..32].try_into().unwrap());
-        // let data = &data[32..];
-        //
-        // let _fn_selector_offset = &data[..8];
-        // let data = &data[8..];
-        //
-        // let _encoded_args_offset = &data[..8];
-        // let data = &data[8..];
-        //
-        // let fn_selector_len = u64::from_be_bytes(data[..8].try_into().unwrap()) as usize;
-        // let data = &data[8..];
-        //
-        // let fn_selector = String::from_utf8(data[..fn_selector_len].to_vec()).unwrap();
-        // let data = &data[fn_selector_len..];
-        //
-        // let encoded_args = if self.has_gas_forwarding_instructions() {
-        //     data[..data.len() - WORD_SIZE].to_vec()
-        // } else {
-        //     data.to_vec()
-        // };
-        // let data = &data[encoded_args.len()..];
-        //
-        // let gas_forwarded = self
-        //     .has_gas_forwarding_instructions()
-        //     .then(|| u64::from_be_bytes(data[..WORD_SIZE].try_into().unwrap()));
-        //
+    fn example_contract_call_data(has_args: bool, gas_fwd: bool) -> Vec<u8> {
         let mut data = vec![];
         data.extend_from_slice(&100u64.to_be_bytes());
         data.extend_from_slice(&[0; 32]);
@@ -419,35 +444,48 @@ mod tests {
         data.extend_from_slice(&[0; 8]);
         data.extend_from_slice(&"test".len().to_be_bytes());
         data.extend_from_slice("test".as_bytes());
-        data.extend_from_slice(&[0; 8]);
+        if has_args {
+            data.extend_from_slice(&[0; 8]);
+        }
         if gas_fwd {
             data.extend_from_slice(&[0; 8]);
         }
         data
     }
 
-    #[test]
-    fn contract_call_but_not_enough_data() {
+    #[test_case(108, "amount")]
+    #[test_case(100, "asset id")]
+    #[test_case(68, "contract id")]
+    #[test_case(36, "function selector offset")]
+    #[test_case(28, "encoded args offset")]
+    #[test_case(20, "function selector lenght")]
+    #[test_case(12, "function selector")]
+    #[test_case(8, "forwarded gas")]
+    fn complains_if_data_missing(amount_of_data_to_steal: usize, expected_msg: &str) {
         // given
         let script = get_single_call_instructions(&CallOpcodeParamsOffset {
             call_data_offset: 0,
             amount_offset: 0,
             asset_id_offset: 0,
-            gas_forwarded_offset: None,
+            gas_forwarded_offset: Some(1),
         })
         .unwrap();
 
-        let ok_data = example_contract_call_data(false);
-        let not_enough_data = ok_data[..ok_data.len() - 32].to_vec();
+        let ok_data = example_contract_call_data(false, true);
+        let not_enough_data = ok_data[..ok_data.len() - amount_of_data_to_steal].to_vec();
 
         // when
         let err = parse_script(&script, &not_enough_data).unwrap_err();
 
         // then
-        let Error::Other(msg) = err else {
+        let Error::Other(mut msg) = err else {
             panic!("expected Error::Other");
         };
 
-        assert_eq!(msg, "not enough data for contract call");
+        let expected_msg =
+            format!("while decoding contract call: while decoding {expected_msg}: not enough data");
+        msg.truncate(expected_msg.len());
+
+        assert_eq!(expected_msg, msg);
     }
 }
