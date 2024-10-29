@@ -8,6 +8,7 @@ use itertools::Itertools;
 
 use crate::executable::loader_instructions;
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ContractCallDescription {
     pub amount: u64,
     pub asset_id: AssetId,
@@ -17,6 +18,7 @@ pub struct ContractCallDescription {
     pub gas_forwarded: Option<u64>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ScriptDescription {
     pub code: Vec<u8>,
     pub data_section_offset: Option<u64>,
@@ -32,6 +34,7 @@ impl ScriptDescription {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ScriptType {
     ContractCall(Vec<ContractCallDescription>),
     Loader(ScriptDescription, BlobId),
@@ -73,7 +76,7 @@ impl ContractCallInstructions {
         movi.imm18().into()
     }
 
-    fn describe_contract_call(&self, script_data: &[u8]) -> ContractCallDescription {
+    fn describe_contract_call(&self, script_data: &[u8]) -> Result<ContractCallDescription> {
         let amount = u64::from_be_bytes(script_data[..8].try_into().unwrap());
         let data = &script_data[8..];
 
@@ -106,14 +109,14 @@ impl ContractCallInstructions {
             .has_gas_forwarding_instructions()
             .then(|| u64::from_be_bytes(data[..WORD_SIZE].try_into().unwrap()));
 
-        ContractCallDescription {
+        Ok(ContractCallDescription {
             amount,
             asset_id,
             contract_id,
             fn_selector,
             encoded_args,
             gas_forwarded,
-        }
+        })
     }
 
     fn has_gas_forwarding_instructions(&self) -> bool {
@@ -154,12 +157,15 @@ impl ContractCallInstructions {
 }
 
 fn parse_script_call(script: &[u8], script_data: &[u8]) -> Option<ScriptDescription> {
-    // TODO: test empty script
-    let data_offset = u64::from_be_bytes(script[8..16].try_into().unwrap());
-    let data_section_offset = if data_offset as usize >= script.len() {
-        None
+    let data_section_offset = if script.len() >= 16 {
+        let data_offset = u64::from_be_bytes(script[8..16].try_into().unwrap());
+        if data_offset as usize >= script.len() {
+            None
+        } else {
+            Some(data_offset)
+        }
     } else {
-        Some(data_offset)
+        None
     };
 
     Some(ScriptDescription {
@@ -169,9 +175,16 @@ fn parse_script_call(script: &[u8], script_data: &[u8]) -> Option<ScriptDescript
     })
 }
 
-fn parse_contract_calls(script: &[u8], script_data: &[u8]) -> Option<Vec<ContractCallDescription>> {
-    let instructions: Vec<Instruction> =
-        fuel_asm::from_bytes(script.to_vec()).try_collect().ok()?;
+fn parse_contract_calls(
+    script: &[u8],
+    script_data: &[u8],
+) -> Result<Option<Vec<ContractCallDescription>>> {
+    let instructions: std::result::Result<Vec<Instruction>, _> =
+        fuel_asm::from_bytes(script.to_vec()).try_collect();
+
+    let Ok(instructions) = instructions else {
+        return Ok(None);
+    };
 
     let mut instructions = instructions.as_slice();
 
@@ -183,16 +196,18 @@ fn parse_contract_calls(script: &[u8], script_data: &[u8]) -> Option<Vec<Contrac
             _ => {}
         }
 
-        let (parsed_instructions, amount_read) =
-            ContractCallInstructions::new(instructions).unwrap();
+        let Some((parsed_instructions, amount_read)) = ContractCallInstructions::new(instructions)
+        else {
+            break;
+        };
         instructions = &instructions[amount_read..];
         call_instructions.push(parsed_instructions);
     }
 
-    let minimum_call_offset = call_instructions
-        .iter()
-        .map(|i| i.call_data_offset())
-        .min()?;
+    let Some(minimum_call_offset) = call_instructions.iter().map(|i| i.call_data_offset()).min()
+    else {
+        return Ok(None);
+    };
 
     let mut descriptions = vec![];
     let num_calls = call_instructions.len();
@@ -200,7 +215,6 @@ fn parse_contract_calls(script: &[u8], script_data: &[u8]) -> Option<Vec<Contrac
     for (idx, current_call_instructions) in call_instructions.iter().enumerate() {
         let data_start =
             (current_call_instructions.call_data_offset() - minimum_call_offset) as usize;
-        eprintln!("the offset is {data_start}");
 
         let data_end = if idx + 1 < num_calls {
             (call_instructions[idx + 1].call_data_offset()
@@ -209,18 +223,16 @@ fn parse_contract_calls(script: &[u8], script_data: &[u8]) -> Option<Vec<Contrac
             script_data.len()
         };
 
-        eprintln!("the end is {data_end}");
-
         let contract_call_description =
-            current_call_instructions.describe_contract_call(&script_data[data_start..data_end]);
+            current_call_instructions.describe_contract_call(&script_data[data_start..data_end])?;
         descriptions.push(contract_call_description);
     }
 
-    Some(descriptions)
+    Ok(Some(descriptions))
 }
 
 pub fn parse_script(script: &[u8], data: &[u8]) -> Result<ScriptType> {
-    if let Some(contract_calls) = parse_contract_calls(script, data) {
+    if let Some(contract_calls) = parse_contract_calls(script, data)? {
         return Ok(ScriptType::ContractCall(contract_calls));
     }
 
@@ -238,6 +250,11 @@ pub fn parse_script(script: &[u8], data: &[u8]) -> Result<ScriptType> {
 fn parse_loader_script(script: &[u8], data: &[u8]) -> Option<(ScriptDescription, [u8; 32])> {
     // TODO: handle no data section
     let expected_loader_instructions = loader_instructions();
+
+    // replace with split_at_checked when we move to msrv 1.80.0
+    if script.len() < expected_loader_instructions.len() * Instruction::SIZE {
+        return None;
+    }
 
     let (instructions_part, remaining) =
         script.split_at(expected_loader_instructions.len() * Instruction::SIZE);
@@ -280,4 +297,157 @@ fn parse_loader_script(script: &[u8], data: &[u8]) -> Option<(ScriptDescription,
         },
         blob_id,
     ))
+}
+
+#[cfg(test)]
+mod tests {
+    use fuel_asm::RegId;
+    use fuels_core::types::errors::Error;
+    use rand::{RngCore, SeedableRng};
+
+    use crate::calls::utils::{get_single_call_instructions, CallOpcodeParamsOffset};
+
+    use super::*;
+
+    #[test]
+    fn can_handle_empty_scripts() {
+        // given
+        let empty_script = [];
+
+        // when
+        let res = parse_script(&empty_script, &[]).unwrap();
+
+        // then
+        assert_eq!(
+            res,
+            ScriptType::Other(ScriptDescription {
+                code: vec![],
+                data_section_offset: None,
+                data: vec![]
+            })
+        )
+    }
+
+    #[test]
+    fn is_fine_with_malformed_scripts() {
+        // given
+        let mut script = vec![0; 100 * Instruction::SIZE];
+        let mut rng = rand::rngs::StdRng::from_seed([0; 32]);
+        rng.fill_bytes(&mut script);
+
+        // when
+        let script_type = parse_script(&script, &[]).unwrap();
+
+        // then
+        assert_eq!(
+            script_type,
+            ScriptType::Other(ScriptDescription {
+                code: script,
+                data_section_offset: None,
+                data: vec![]
+            })
+        );
+    }
+
+    // Mostly to do with the script binary not having the script data offset in the second word
+    #[test]
+    fn is_fine_with_handwritten_scripts() {
+        // given
+        let handwritten_script = [
+            fuel_asm::op::movi(0x10, 100),
+            fuel_asm::op::movi(0x10, 100),
+            fuel_asm::op::movi(0x10, 100),
+            fuel_asm::op::movi(0x10, 100),
+            fuel_asm::op::movi(0x10, 100),
+        ]
+        .iter()
+        .flat_map(|i| i.to_bytes())
+        .collect::<Vec<_>>();
+
+        // when
+        let script_type = parse_script(&handwritten_script, &[]).unwrap();
+
+        // then
+        assert_eq!(
+            script_type,
+            ScriptType::Other(ScriptDescription {
+                code: handwritten_script.to_vec(),
+                data_section_offset: None,
+                data: vec![]
+            })
+        );
+    }
+
+    fn example_contract_call_data(gas_fwd: bool) -> Vec<u8> {
+        // let amount = u64::from_be_bytes(script_data[..8].try_into().unwrap());
+        // let data = &script_data[8..];
+        //
+        // let asset_id = AssetId::new(data[..32].try_into().unwrap());
+        // let data = &data[32..];
+        //
+        // let contract_id = ContractId::new(data[..32].try_into().unwrap());
+        // let data = &data[32..];
+        //
+        // let _fn_selector_offset = &data[..8];
+        // let data = &data[8..];
+        //
+        // let _encoded_args_offset = &data[..8];
+        // let data = &data[8..];
+        //
+        // let fn_selector_len = u64::from_be_bytes(data[..8].try_into().unwrap()) as usize;
+        // let data = &data[8..];
+        //
+        // let fn_selector = String::from_utf8(data[..fn_selector_len].to_vec()).unwrap();
+        // let data = &data[fn_selector_len..];
+        //
+        // let encoded_args = if self.has_gas_forwarding_instructions() {
+        //     data[..data.len() - WORD_SIZE].to_vec()
+        // } else {
+        //     data.to_vec()
+        // };
+        // let data = &data[encoded_args.len()..];
+        //
+        // let gas_forwarded = self
+        //     .has_gas_forwarding_instructions()
+        //     .then(|| u64::from_be_bytes(data[..WORD_SIZE].try_into().unwrap()));
+        //
+        let mut data = vec![];
+        data.extend_from_slice(&100u64.to_be_bytes());
+        data.extend_from_slice(&[0; 32]);
+        data.extend_from_slice(&[1; 32]);
+        data.extend_from_slice(&[0; 8]);
+        data.extend_from_slice(&[0; 8]);
+        data.extend_from_slice(&"test".len().to_be_bytes());
+        data.extend_from_slice("test".as_bytes());
+        data.extend_from_slice(&[0; 8]);
+        if gas_fwd {
+            data.extend_from_slice(&[0; 8]);
+        }
+        data
+    }
+
+    #[test]
+    fn contract_call_but_not_enough_data() {
+        // given
+        let script = get_single_call_instructions(&CallOpcodeParamsOffset {
+            call_data_offset: 0,
+            amount_offset: 0,
+            asset_id_offset: 0,
+            gas_forwarded_offset: None,
+        })
+        .unwrap();
+
+        let ok_data = example_contract_call_data(false);
+        let not_enough_data = ok_data[..ok_data.len() - 32].to_vec();
+
+        // when
+        let err = parse_script(&script, &not_enough_data).unwrap_err();
+
+        // then
+        let Error::Other(msg) = err else {
+            panic!("expected Error::Other");
+        };
+
+        assert_eq!(msg, "not enough data for contract call");
+    }
 }

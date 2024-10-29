@@ -7,7 +7,6 @@ use fuel_tx::{
 use fuels::{
     core::codec::{calldata, encode_fn_selector, DecoderConfig, EncoderConfig},
     prelude::*,
-    programs::calls::ContractCall,
     tx::ContractParameters,
     types::{errors::transaction::Reason, input::Input, Bits256, Identity},
 };

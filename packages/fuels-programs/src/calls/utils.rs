@@ -13,7 +13,6 @@ use fuels_core::{
         bech32::{Bech32Address, Bech32ContractId},
         errors::Result,
         input::Input,
-        param_types::ParamType,
         transaction::{ScriptTransaction, TxPolicies},
         transaction_builders::{
             BuildableTransaction, ScriptTransactionBuilder, TransactionBuilder,
@@ -53,7 +52,7 @@ pub(crate) async fn transaction_builder_from_contract_calls(
 
     let (script_data, call_param_offsets) =
         build_script_data_from_contract_calls(calls, data_offset, *provider.base_asset_id())?;
-    let script = get_instructions(calls, call_param_offsets)?;
+    let script = get_instructions(call_param_offsets)?;
 
     let required_asset_amounts = calculate_required_asset_amounts(calls, *provider.base_asset_id());
 
@@ -128,8 +127,7 @@ fn compute_calls_instructions_len(calls: &[ContractCall]) -> Result<usize> {
                 call_opcode_params.gas_forwarded_offset = Some(0);
             }
 
-            get_single_call_instructions(&call_opcode_params, &c.output_param)
-                .map(|instructions| instructions.len())
+            get_single_call_instructions(&call_opcode_params).map(|instructions| instructions.len())
         })
         .process_results(|c| c.sum())
 }
@@ -183,14 +181,10 @@ fn sum_up_amounts_for_each_asset_id(
 }
 
 /// Given a list of contract calls, create the actual opcodes used to call the contract
-pub(crate) fn get_instructions(
-    calls: &[ContractCall],
-    offsets: Vec<CallOpcodeParamsOffset>,
-) -> Result<Vec<u8>> {
-    calls
+pub(crate) fn get_instructions(offsets: Vec<CallOpcodeParamsOffset>) -> Result<Vec<u8>> {
+    offsets
         .iter()
-        .zip(&offsets)
-        .map(|(call, offset)| get_single_call_instructions(offset, &call.output_param))
+        .map(get_single_call_instructions)
         .process_results(|iter| iter.flatten().collect::<Vec<_>>())
         .map(|mut bytes| {
             bytes.extend(op::ret(RegId::ONE).to_bytes());
@@ -273,10 +267,7 @@ pub(crate) fn build_script_data_from_contract_calls(
 ///
 /// Note that these are soft rules as we're picking this addresses simply because they
 /// non-reserved register.
-pub(crate) fn get_single_call_instructions(
-    offsets: &CallOpcodeParamsOffset,
-    _output_param_type: &ParamType,
-) -> Result<Vec<u8>> {
+pub(crate) fn get_single_call_instructions(offsets: &CallOpcodeParamsOffset) -> Result<Vec<u8>> {
     let call_data_offset = offsets
         .call_data_offset
         .try_into()
@@ -453,6 +444,7 @@ mod test {
     use fuels_core::types::{
         coin::{Coin, CoinStatus},
         coin_type::CoinType,
+        param_types::ParamType,
     };
     use rand::Rng;
 
