@@ -279,9 +279,8 @@ fn parse_contract_calls(
             script_data.len()
         };
 
-        let contract_call_description = current_call_instructions
-            .describe_contract_call(&script_data[data_start..data_end])
-            .map_err(prepend_msg("while decoding contract call"))?;
+        let contract_call_description =
+            current_call_instructions.describe_contract_call(&script_data[data_start..data_end])?;
 
         descriptions.push(contract_call_description);
     }
@@ -290,11 +289,15 @@ fn parse_contract_calls(
 }
 
 pub fn parse_script(script: &[u8], data: &[u8]) -> Result<ScriptType> {
-    if let Some(contract_calls) = parse_contract_calls(script, data)? {
+    if let Some(contract_calls) =
+        parse_contract_calls(script, data).map_err(prepend_msg("while decoding contract call"))?
+    {
         return Ok(ScriptType::ContractCall(contract_calls));
     }
 
-    if let Some((script, blob_id)) = parse_loader_script(script, data) {
+    if let Some((script, blob_id)) =
+        parse_loader_script(script, data).map_err(prepend_msg("while decoding loader script"))?
+    {
         return Ok(ScriptType::Loader(script, blob_id));
     }
 
@@ -305,56 +308,58 @@ pub fn parse_script(script: &[u8], data: &[u8]) -> Result<ScriptType> {
     unimplemented!()
 }
 
-fn parse_loader_script(script: &[u8], data: &[u8]) -> Option<(ScriptDescription, [u8; 32])> {
+fn parse_loader_script(
+    script: &[u8],
+    data: &[u8],
+) -> Result<Option<(ScriptDescription, [u8; 32])>> {
     // TODO: handle no data section
     let expected_loader_instructions = loader_instructions();
+    let loader_instructions_byte_size = expected_loader_instructions.len() * Instruction::SIZE;
+
+    let mut script_cursor = WasmFriendlyCursor::new(script);
 
     // replace with split_at_checked when we move to msrv 1.80.0
-    if script.len() < expected_loader_instructions.len() * Instruction::SIZE {
-        return None;
+    if script_cursor.unconsumed() < loader_instructions_byte_size {
+        return Ok(None);
     }
 
-    let (instructions_part, remaining) =
-        script.split_at(expected_loader_instructions.len() * Instruction::SIZE);
+    let instructions: std::result::Result<Vec<Instruction>, _> = fuel_asm::from_bytes(
+        script_cursor
+            .consume(loader_instructions_byte_size, "loader instructions")
+            .expect("will have enough bytes")
+            .to_vec(),
+    )
+    .try_collect();
 
-    if instructions_part.len() < expected_loader_instructions.len() * Instruction::SIZE {
-        return None;
-    }
-
-    let instructions: Vec<Instruction> = fuel_asm::from_bytes(instructions_part.to_vec())
-        .try_collect()
-        .ok()?;
+    let Ok(instructions) = instructions else {
+        return Ok(None);
+    };
 
     if instructions
         .iter()
         .zip(expected_loader_instructions.iter())
         .any(|(actual, expected)| actual != expected)
     {
-        return None;
+        return Ok(None);
     }
 
-    // Should have enough for the blob id
-    if remaining.len() < 32 {
-        return None;
-    }
+    let blob_id = script_cursor
+        .consume(32, "blob id")?
+        .try_into()
+        .expect("will have exactly 32 bytes");
 
-    let blob_id = remaining[..32].try_into().unwrap();
-    let remaining = &remaining[32..];
+    let _data_section_len = script_cursor.consume(WORD_SIZE, "data section len")?;
 
-    // Should have enough for the data section len
-    if remaining.len() < WORD_SIZE {
-        return None;
-    }
-    let remaining = &remaining[WORD_SIZE..];
-
-    Some((
+    Ok(Some((
         ScriptDescription {
             code: script.to_vec(),
             data: data.to_vec(),
-            data_section_offset: Some(script.len().saturating_sub(remaining.len()) as u64),
+            data_section_offset: Some(
+                script.len().saturating_sub(script_cursor.unconsumed()) as u64
+            ),
         },
         blob_id,
-    ))
+    )))
 }
 
 #[cfg(test)]
@@ -508,7 +513,7 @@ mod tests {
         };
 
         let mut ok_data = example_contract_call_data(false, true);
-        ok_data[8 + 32 * 2 + 2 * 8 + 8..][..5].copy_from_slice(&invalid_utf8);
+        ok_data[96..101].copy_from_slice(&invalid_utf8);
 
         // when
         let err = parse_script(&script, &ok_data).unwrap_err();
@@ -521,6 +526,27 @@ mod tests {
         assert_eq!(
             "while decoding contract call: while decoding function selector: invalid utf-8 sequence of 1 bytes from index 0",
             err
+        );
+    }
+
+    #[test]
+    fn loader_script_without_a_blob() {
+        // given
+        let script = loader_instructions()
+            .iter()
+            .flat_map(|i| i.to_bytes())
+            .collect::<Vec<_>>();
+
+        // when
+        let err = parse_script(&script, &[]).unwrap_err();
+
+        // then
+        let Error::Other(msg) = err else {
+            panic!("expected Error::Other");
+        };
+        assert_eq!(
+            "while decoding loader script: while decoding blob id: not enough data, available: 0, requested: 32",
+            msg
         );
     }
 }
