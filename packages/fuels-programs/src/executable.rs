@@ -187,20 +187,17 @@ fn extract_data_offset(binary: &[u8]) -> Result<usize> {
     Ok(u64::from_be_bytes(data_offset) as usize)
 }
 
-type NoDataSectionLoaderInstructions = [Instruction; 8];
-pub(crate) fn loader_instructions_no_data_section() -> NoDataSectionLoaderInstructions {
-    const BLOB_ID_SIZE: u16 = 32;
+pub(crate) fn loader_instructions_no_data_section() -> [Instruction; 8] {
     const REG_ADDRESS_OF_DATA_AFTER_CODE: u8 = 0x10;
     const REG_START_OF_LOADED_CODE: u8 = 0x11;
     const REG_GENERAL_USE: u8 = 0x12;
 
-    // extract the lenght of the NoDataSectionLoaderInstructions type
-    const NUM_OF_INSTRUCTIONS: u16 = (std::mem::size_of::<NoDataSectionLoaderInstructions>()
-        / std::mem::size_of::<Instruction>()) as u16;
+    const NUM_OF_INSTRUCTIONS: u16 = 8;
+
     // There are 2 main steps:
     // 1. Load the blob content into memory
     // 2. Jump to the beginning of the memory where the blob was loaded
-    [
+    let instructions = [
         // 1. Load the blob content into memory
         // Find the start of the hardcoded blob ID, which is located after the loader code ends.
         op::move_(REG_ADDRESS_OF_DATA_AFTER_CODE, RegId::PC),
@@ -229,25 +226,27 @@ pub(crate) fn loader_instructions_no_data_section() -> NoDataSectionLoaderInstru
         op::divi(REG_START_OF_LOADED_CODE, REG_START_OF_LOADED_CODE, 4),
         // Jump to the start of the contract we loaded.
         op::jmp(REG_START_OF_LOADED_CODE),
-    ]
+    ];
+
+    debug_assert_eq!(instructions.len(), NUM_OF_INSTRUCTIONS as usize);
+
+    instructions
 }
 
-type LoaderInstructions = [Instruction; 12];
-pub(crate) fn loader_instructions() -> LoaderInstructions {
+pub(crate) fn loader_instructions() -> [Instruction; 12] {
     const BLOB_ID_SIZE: u16 = 32;
     const REG_ADDRESS_OF_DATA_AFTER_CODE: u8 = 0x10;
     const REG_START_OF_LOADED_CODE: u8 = 0x11;
     const REG_GENERAL_USE: u8 = 0x12;
 
     // extract the lenght of the NoDataSectionLoaderInstructions type
-    const NUM_OF_INSTRUCTIONS: u16 = (std::mem::size_of::<NoDataSectionLoaderInstructions>()
-        / std::mem::size_of::<Instruction>()) as u16;
+    const NUM_OF_INSTRUCTIONS: u16 = 12;
 
     // There are 3 main steps:
     // 1. Load the blob content into memory
     // 2. Load the data section right after the blob
     // 3. Jump to the beginning of the memory where the blob was loaded
-    [
+    let instructions = [
         // 1. Load the blob content into memory
         // Find the start of the hardcoded blob ID, which is located after the loader code ends.
         op::move_(REG_ADDRESS_OF_DATA_AFTER_CODE, RegId::PC),
@@ -293,7 +292,11 @@ pub(crate) fn loader_instructions() -> LoaderInstructions {
         op::divi(REG_START_OF_LOADED_CODE, REG_START_OF_LOADED_CODE, 4),
         // Jump to the start of the contract we loaded.
         op::jmp(REG_START_OF_LOADED_CODE),
-    ]
+    ];
+
+    debug_assert_eq!(instructions.len(), NUM_OF_INSTRUCTIONS as usize);
+
+    instructions
 }
 
 fn transform_into_configurable_loader(

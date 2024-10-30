@@ -465,8 +465,6 @@ async fn test_large_return_data() -> Result<()> {
     let contract_methods = contract_instance.methods();
     let res = contract_methods.get_id().call().await?;
 
-    panic!("{:?}", res.receipts);
-
     assert_eq!(
         res.value.0,
         [

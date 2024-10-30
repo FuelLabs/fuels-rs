@@ -1,14 +1,9 @@
-use std::os::linux::raw;
-
 use fuel_asm::{Instruction, Opcode};
 use fuel_tx::{AssetId, ContractId};
 use fuels_core::{
     constants::WORD_SIZE,
     error,
-    types::{
-        errors::{Error, Result},
-        transaction_builders::BlobId,
-    },
+    types::{errors::Result, transaction_builders::BlobId},
 };
 use itertools::Itertools;
 
@@ -198,6 +193,10 @@ impl ContractCallInstructions {
     ];
 
     fn check_normal_variant(instructions: &[Instruction]) -> bool {
+        if instructions.len() < Self::NO_GAS_FWD_OPCODES.len() {
+            return false;
+        }
+
         Self::NO_GAS_FWD_OPCODES
             .iter()
             .zip(instructions.iter())
@@ -205,6 +204,10 @@ impl ContractCallInstructions {
     }
 
     fn check_gas_fwd_variant(instructions: &[Instruction]) -> bool {
+        if instructions.len() < Self::GAS_FWD_OPCODES.len() {
+            return false;
+        }
+
         Self::GAS_FWD_OPCODES
             .iter()
             .zip(instructions.iter())
@@ -246,18 +249,22 @@ fn parse_contract_calls(
 
     let mut call_instructions = vec![];
 
-    while !instructions.is_empty() {
-        match instructions {
-            [single_instruction] if single_instruction.opcode() == Opcode::RET => break,
-            _ => {}
-        }
-
-        let Some((parsed_instructions, amount_read)) = ContractCallInstructions::new(instructions)
-        else {
-            break;
-        };
+    while let Some((parsed_instructions, amount_read)) = ContractCallInstructions::new(instructions)
+    {
+        debug_assert!(amount_read > 0);
         instructions = &instructions[amount_read..];
         call_instructions.push(parsed_instructions);
+    }
+
+    if !instructions.is_empty() {
+        match instructions {
+            [single_instruction] if single_instruction.opcode() == Opcode::RET => {
+                eprintln!("Single instruction is a RET, that's fine")
+            }
+            _ => {
+                return Ok(None);
+            }
+        }
     }
 
     let Some(minimum_call_offset) = call_instructions.iter().map(|i| i.call_data_offset()).min()
@@ -278,6 +285,15 @@ fn parse_contract_calls(
         } else {
             script_data.len()
         };
+
+        if data_start > script_data.len() || data_end > script_data.len() {
+            return Err(error!(
+                Other,
+                "call data offset requires data section of length {}, but data section is only {} bytes long",
+                data_end,
+                script_data.len()
+            ));
+        }
 
         let contract_call_description =
             current_call_instructions.describe_contract_call(&script_data[data_start..data_end])?;
@@ -364,6 +380,7 @@ fn parse_loader_script(
 
 #[cfg(test)]
 mod tests {
+    use fuel_asm::RegId;
     use fuels_core::types::errors::Error;
     use rand::{RngCore, SeedableRng};
     use test_case::test_case;
@@ -546,6 +563,101 @@ mod tests {
         };
         assert_eq!(
             "while decoding loader script: while decoding blob id: not enough data, available: 0, requested: 32",
+            msg
+        );
+    }
+
+    #[test]
+    fn loader_script_with_almost_matching_instructions() {
+        // given
+        let mut loader_instructions = loader_instructions().to_vec();
+
+        loader_instructions.insert(
+            loader_instructions.len() - 2,
+            fuel_asm::op::movi(RegId::ZERO, 0),
+        );
+        let script = loader_instructions
+            .iter()
+            .flat_map(|i| i.to_bytes())
+            .collect::<Vec<_>>();
+
+        // when
+        let script_type = parse_script(&script, &[]).unwrap();
+
+        // then
+        assert_eq!(
+            script_type,
+            ScriptType::Other(ScriptDescription {
+                code: script,
+                data_section_offset: None,
+                data: vec![]
+            })
+        );
+    }
+
+    #[test]
+    fn extra_instructions_in_contract_calling_scripts_not_tolerated() {
+        // given
+        let mut contract_call_script = get_single_call_instructions(&CallOpcodeParamsOffset {
+            call_data_offset: 0,
+            amount_offset: 0,
+            asset_id_offset: 0,
+            gas_forwarded_offset: Some(1),
+        })
+        .unwrap();
+        contract_call_script.extend(fuel_asm::op::movi(RegId::ZERO, 10).to_bytes());
+        let script_data = example_contract_call_data(false, true);
+
+        // when
+        let script_type = parse_script(&contract_call_script, &script_data).unwrap();
+
+        // then
+        assert_eq!(
+            script_type,
+            ScriptType::Other(ScriptDescription {
+                code: contract_call_script,
+                data_section_offset: None,
+                data: script_data
+            })
+        );
+    }
+
+    #[test]
+    fn handles_invalid_call_data_offset() {
+        // given
+        let contract_call_1 = get_single_call_instructions(&CallOpcodeParamsOffset {
+            call_data_offset: 0,
+            amount_offset: 0,
+            asset_id_offset: 0,
+            gas_forwarded_offset: Some(1),
+        })
+        .unwrap();
+
+        let contract_call_2 = get_single_call_instructions(&CallOpcodeParamsOffset {
+            call_data_offset: u16::MAX as usize,
+            amount_offset: 0,
+            asset_id_offset: 0,
+            gas_forwarded_offset: Some(1),
+        })
+        .unwrap();
+
+        let data_only_for_one_call = example_contract_call_data(false, true);
+
+        let together = [&contract_call_1, &contract_call_2]
+            .iter()
+            .flat_map(|i| i.iter().cloned())
+            .collect::<Vec<_>>();
+
+        // when
+        let err = parse_script(&together, &data_only_for_one_call).unwrap_err();
+
+        // then
+        let Error::Other(msg) = err else {
+            panic!("expected Error::Other");
+        };
+
+        assert_eq!(
+            "while decoding contract call: call data offset requires data section of length 65535, but data section is only 108 bytes long",
             msg
         );
     }
