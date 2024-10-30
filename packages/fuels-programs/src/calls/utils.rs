@@ -3,11 +3,8 @@ use std::{collections::HashSet, iter, vec};
 use fuel_abi_types::error_codes::FAILED_TRANSFER_TO_ADDRESS_SIGNAL;
 use fuel_asm::{op, RegId};
 use fuel_tx::{AssetId, Bytes32, ContractId, Output, PanicReason, Receipt, TxPointer, UtxoId};
-use fuel_types::Word;
 use fuels_accounts::Account;
 use fuels_core::{
-    constants::WORD_SIZE,
-    error,
     offsets::call_script_data_offset,
     types::{
         bech32::{Bech32Address, Bech32ContractId},
@@ -192,68 +189,23 @@ pub(crate) fn get_instructions(offsets: Vec<CallOpcodeParamsOffset>) -> Result<V
         })
 }
 
-/// Returns script data, consisting of the following items in the given order:
-/// 1. Amount to be forwarded `(1 * `[`WORD_SIZE`]`)`
-/// 2. Asset ID to be forwarded ([`AssetId::LEN`])
-/// 3. Contract ID ([`ContractId::LEN`]);
-/// 4. Function selector offset `(1 * `[`WORD_SIZE`]`)`
-/// 5. Calldata offset `(1 * `[`WORD_SIZE`]`)`
-/// 6. Encoded function selector - method name
-/// 7. Encoded arguments
-/// 8. Gas to be forwarded `(1 * `[`WORD_SIZE`]`)` - Optional
 pub(crate) fn build_script_data_from_contract_calls(
     calls: &[ContractCall],
     data_offset: usize,
     base_asset_id: AssetId,
 ) -> Result<(Vec<u8>, Vec<CallOpcodeParamsOffset>)> {
-    let mut script_data = vec![];
-    let mut param_offsets = vec![];
+    calls.iter().try_fold(
+        (vec![], vec![]),
+        |(mut script_data, mut param_offsets), call| {
+            let segment_offset = data_offset + script_data.len();
+            let offset = call
+                .data(base_asset_id)?
+                .encode(segment_offset, &mut script_data);
 
-    // The data for each call is ordered into segments
-    let mut segment_offset = data_offset;
-
-    for call in calls {
-        let amount_offset = segment_offset;
-        let asset_id_offset = amount_offset + WORD_SIZE;
-        let call_data_offset = asset_id_offset + AssetId::LEN;
-        let encoded_selector_offset = call_data_offset + ContractId::LEN + 2 * WORD_SIZE;
-        let encoded_args_offset = encoded_selector_offset + call.encoded_selector.len();
-
-        script_data.extend(call.call_parameters.amount().to_be_bytes()); // 1. Amount
-        let asset_id = call.call_parameters.asset_id().unwrap_or(base_asset_id);
-        script_data.extend(asset_id.iter()); // 2. Asset ID
-        script_data.extend(call.contract_id.hash().as_ref()); // 3. Contract ID
-        script_data.extend((encoded_selector_offset as Word).to_be_bytes()); // 4. Fun. selector offset
-        script_data.extend((encoded_args_offset as Word).to_be_bytes()); // 5. Calldata offset
-        script_data.extend(call.encoded_selector.clone()); // 6. Encoded function selector
-
-        let encoded_args = call
-            .encoded_args
-            .as_ref()
-            .map_err(|e| error!(Codec, "cannot encode contract call arguments: {e}"))?;
-        let encoded_args_len = encoded_args.len();
-
-        script_data.extend(encoded_args); // 7. Encoded arguments
-
-        let gas_forwarded_offset = call.call_parameters.gas_forwarded().map(|gf| {
-            script_data.extend((gf as Word).to_be_bytes()); // 8. Gas to be forwarded - Optional
-
-            encoded_args_offset + encoded_args_len
-        });
-
-        param_offsets.push(CallOpcodeParamsOffset {
-            amount_offset,
-            asset_id_offset,
-            gas_forwarded_offset,
-            call_data_offset,
-        });
-
-        // the data segment that holds the parameters for the next call
-        // begins at the original offset + the data we added so far
-        segment_offset = data_offset + script_data.len();
-    }
-
-    Ok((script_data, param_offsets))
+            param_offsets.push(offset);
+            Ok((script_data, param_offsets))
+        },
+    )
 }
 
 /// Returns the VM instructions for calling a contract method

@@ -7,17 +7,7 @@ use fuels_core::{
 };
 use itertools::Itertools;
 
-use crate::{executable::loader_instructions, utils::prepend_msg};
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ContractCallDescription {
-    pub amount: u64,
-    pub asset_id: AssetId,
-    pub contract_id: ContractId,
-    pub fn_selector: String,
-    pub encoded_args: Vec<u8>,
-    pub gas_forwarded: Option<u64>,
-}
+use crate::{calls::ContractCallData, executable::loader_instructions, utils::prepend_msg};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ScriptDescription {
@@ -70,7 +60,7 @@ impl ScriptDescription {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ScriptType {
-    ContractCall(Vec<ContractCallDescription>),
+    ContractCall(Vec<ContractCallData>),
     Loader(ScriptDescription, BlobId),
     Other(ScriptDescription),
 }
@@ -110,7 +100,7 @@ impl ContractCallInstructions {
         movi.imm18().into()
     }
 
-    fn describe_contract_call(&self, script_data: &[u8]) -> Result<ContractCallDescription> {
+    fn describe_contract_call(&self, script_data: &[u8]) -> Result<ContractCallData> {
         let mut data = WasmFriendlyCursor::new(script_data);
 
         let amount = u64::from_be_bytes(
@@ -140,9 +130,7 @@ impl ContractCallInstructions {
                 let bytes = data.consume(8, "function selector lenght")?;
                 u64::from_be_bytes(bytes.try_into().expect("will have exactly 8 bytes")) as usize
             };
-            let raw_fn_selector_bytes = data.consume(fn_selector_len, "function selector")?;
-            String::from_utf8(raw_fn_selector_bytes.to_vec())
-                .map_err(|e| error!(Other, "while decoding function selector: {}", e.to_string()))?
+            data.consume(fn_selector_len, "function selector")?.to_vec()
         };
 
         let (encoded_args, gas_forwarded) = if self.has_gas_forwarding_instructions() {
@@ -160,11 +148,11 @@ impl ContractCallInstructions {
             (data.consume_all().to_vec(), None)
         };
 
-        Ok(ContractCallDescription {
+        Ok(ContractCallData {
             amount,
             asset_id,
             contract_id,
-            fn_selector,
+            fn_selector_encoded: fn_selector,
             encoded_args,
             gas_forwarded,
         })
@@ -237,7 +225,7 @@ fn parse_script_call(script: &[u8], script_data: &[u8]) -> Option<ScriptDescript
 fn parse_contract_calls(
     script: &[u8],
     script_data: &[u8],
-) -> Result<Option<Vec<ContractCallDescription>>> {
+) -> Result<Option<Vec<ContractCallData>>> {
     let instructions: std::result::Result<Vec<Instruction>, _> =
         fuel_asm::from_bytes(script.to_vec()).try_collect();
 
@@ -533,16 +521,19 @@ mod tests {
         ok_data[96..101].copy_from_slice(&invalid_utf8);
 
         // when
-        let err = parse_script(&script, &ok_data).unwrap_err();
+        let script_type = parse_script(&script, &ok_data).unwrap();
 
         // then
-        let Error::Other(err) = err else {
-            panic!("expected Error::Other");
+        let ScriptType::ContractCall(datas) = script_type else {
+            panic!("expected ScriptType::Other");
+        };
+        let Error::Codec(err) = datas[0].decode_fn_selector().unwrap_err() else {
+            panic!("expected Error::Codec");
         };
 
         assert_eq!(
-            "while decoding contract call: while decoding function selector: invalid utf-8 sequence of 1 bytes from index 0",
-            err
+            err,
+            "cannot decode function selector: invalid utf-8 sequence of 1 bytes from index 0"
         );
     }
 

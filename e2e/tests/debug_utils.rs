@@ -1,16 +1,9 @@
-use std::{any::Any, collections::HashMap, str::FromStr};
 
-use fuel_abi_types::abi::{full_program::FullProgramABI, unified_program::UnifiedProgramABI};
-use fuel_asm::{
-    op::{self, MOVI},
-    Instruction, Opcode,
-};
 use fuel_tx::field::ScriptData;
 use fuels::{
     core::{
         codec::{
-            runtime_decoder::{self, RuntimeDecoder},
-            ABIDecoder, ABIEncoder,
+            runtime_decoder::{RuntimeDecoder}, ABIEncoder,
         },
         traits::Tokenizable,
     },
@@ -19,7 +12,6 @@ use fuels::{
         debug::{parse_script, ScriptType},
         executable::Executable,
     },
-    types::{param_types::ParamType, Bits256, EvmAddress, Identity, SizedAsciiString, B512, U256},
 };
 
 #[tokio::test]
@@ -76,12 +68,15 @@ async fn can_debug_single_call_tx() -> Result<()> {
         assert_eq!(call_description.contract_id, contract_id);
         assert_eq!(call_description.amount, 10);
         assert_eq!(call_description.asset_id, AssetId::default());
-        assert_eq!(call_description.fn_selector, "check_struct_integrity");
+        assert_eq!(
+            call_description.decode_fn_selector().unwrap(),
+            "check_struct_integrity"
+        );
         assert!(call_description.gas_forwarded.is_none());
 
         assert_eq!(
             decoder.decode_fn_args(
-                &call_description.fn_selector,
+                &call_description.decode_fn_selector().unwrap(),
                 &call_description.encoded_args
             )?,
             vec!["AllStruct { some_struct: SomeStruct { field: 2, field_2: true } }"]
@@ -116,12 +111,15 @@ async fn can_debug_single_call_tx() -> Result<()> {
         assert_eq!(call_description.contract_id, contract_id);
         assert_eq!(call_description.amount, 10);
         assert_eq!(call_description.asset_id, AssetId::default());
-        assert_eq!(call_description.fn_selector, "check_struct_integrity");
+        assert_eq!(
+            call_description.decode_fn_selector().unwrap(),
+            "check_struct_integrity"
+        );
         assert_eq!(call_description.gas_forwarded, Some(20));
 
         assert_eq!(
             decoder.decode_fn_args(
-                &call_description.fn_selector,
+                &call_description.decode_fn_selector().unwrap(),
                 &call_description.encoded_args
             )?,
             vec!["AllStruct { some_struct: SomeStruct { field: 2, field_2: true } }"]
@@ -211,12 +209,15 @@ async fn can_debug_multi_call_tx() -> Result<()> {
         assert_eq!(call_description.contract_id, contract_id);
         assert_eq!(call_description.amount, 10);
         assert_eq!(call_description.asset_id, AssetId::default());
-        assert_eq!(call_description.fn_selector, "check_struct_integrity");
+        assert_eq!(
+            call_description.decode_fn_selector().unwrap(),
+            "check_struct_integrity"
+        );
         assert!(call_description.gas_forwarded.is_none());
 
         assert_eq!(
             decoder.decode_fn_args(
-                &call_description.fn_selector,
+                &call_description.decode_fn_selector().unwrap(),
                 &call_description.encoded_args
             )?,
             vec!["AllStruct { some_struct: SomeStruct { field: 2, field_2: true } }"]
@@ -227,11 +228,14 @@ async fn can_debug_multi_call_tx() -> Result<()> {
         assert_eq!(call_description.contract_id, contract_id);
         assert_eq!(call_description.amount, 20);
         assert_eq!(call_description.asset_id, AssetId::default());
-        assert_eq!(call_description.fn_selector, "i_am_called_differently");
+        assert_eq!(
+            call_description.decode_fn_selector().unwrap(),
+            "i_am_called_differently"
+        );
         assert!(call_description.gas_forwarded.is_none());
 
         assert_eq!(
-            decoder.decode_fn_args(&call_description.fn_selector, &call_description.encoded_args)?,
+            decoder.decode_fn_args(&call_description.decode_fn_selector().unwrap(), &call_description.encoded_args)?,
             vec!["AllStruct { some_struct: SomeStruct { field: 2, field_2: true } }", "MemoryAddress { contract_id: std::contract_id::ContractId { bits: Bits256([30, 98, 236, 170, 92, 50, 241, 229, 25, 84, 244, 97, 73, 213, 229, 66, 71, 43, 219, 164, 88, 56, 25, 148, 6, 70, 74, 244, 106, 177, 71, 237]) }, function_selector: 123, function_data: 456 }"]
         );
     }
@@ -278,12 +282,15 @@ async fn can_debug_multi_call_tx() -> Result<()> {
         assert_eq!(call_description.contract_id, contract_id);
         assert_eq!(call_description.amount, 10);
         assert_eq!(call_description.asset_id, AssetId::default());
-        assert_eq!(call_description.fn_selector, "check_struct_integrity");
+        assert_eq!(
+            call_description.decode_fn_selector().unwrap(),
+            "check_struct_integrity"
+        );
         assert_eq!(call_description.gas_forwarded, Some(15));
 
         assert_eq!(
             decoder.decode_fn_args(
-                &call_description.fn_selector,
+                &call_description.decode_fn_selector().unwrap(),
                 &call_description.encoded_args
             )?,
             vec!["AllStruct { some_struct: SomeStruct { field: 2, field_2: true } }"]
@@ -294,11 +301,14 @@ async fn can_debug_multi_call_tx() -> Result<()> {
         assert_eq!(call_description.contract_id, contract_id);
         assert_eq!(call_description.amount, 20);
         assert_eq!(call_description.asset_id, AssetId::default());
-        assert_eq!(call_description.fn_selector, "i_am_called_differently");
+        assert_eq!(
+            call_description.decode_fn_selector().unwrap(),
+            "i_am_called_differently"
+        );
         assert_eq!(call_description.gas_forwarded, Some(25));
 
         assert_eq!(
-            decoder.decode_fn_args(&call_description.fn_selector, &call_description.encoded_args)?,
+            decoder.decode_fn_args(&call_description.decode_fn_selector().unwrap(), &call_description.encoded_args)?,
             vec!["AllStruct { some_struct: SomeStruct { field: 2, field_2: true } }", "MemoryAddress { contract_id: std::contract_id::ContractId { bits: Bits256([30, 98, 236, 170, 92, 50, 241, 229, 25, 84, 244, 97, 73, 213, 229, 66, 71, 43, 219, 164, 88, 56, 25, 148, 6, 70, 74, 244, 106, 177, 71, 237]) }, function_selector: 123, function_data: 456 }"]
         );
     }

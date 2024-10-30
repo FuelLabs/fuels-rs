@@ -1,15 +1,8 @@
-use std::{any::Any, collections::HashMap, str::FromStr};
+use std::str::FromStr;
 
-use fuel_abi_types::abi::{full_program::FullProgramABI, unified_program::UnifiedProgramABI};
-use fuel_asm::{
-    op::{self, MOVI},
-    Instruction, Opcode,
-};
-use fuel_tx::field::ScriptData;
 use fuels::{
-    core::{codec::ABIDecoder, traits::Tokenizable},
     prelude::*,
-    types::{param_types::ParamType, Bits256, EvmAddress, Identity, SizedAsciiString, B512, U256},
+    types::{Bits256, EvmAddress, Identity, SizedAsciiString, B512, U256},
 };
 
 pub fn null_contract_id() -> Bech32ContractId {
