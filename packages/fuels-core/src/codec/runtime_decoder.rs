@@ -2,13 +2,10 @@ use std::collections::HashMap;
 
 use fuel_abi_types::abi::unified_program::UnifiedProgramABI;
 
-use crate::{types::param_types::ParamType, Result};
+use crate::{error, types::param_types::ParamType, Result};
 
 use super::{ABIDecoder, DecoderConfig};
 
-pub struct ScriptArgsDecoder {
-    decoder: RuntimeDecoder,
-}
 struct AbiConfigurable {
     name: String,
     param_type: ParamType,
@@ -16,14 +13,9 @@ struct AbiConfigurable {
 }
 
 pub struct RuntimeDecoder {
-    functions: HashMap<String, Function>,
+    functions: HashMap<String, Vec<ParamType>>,
     configurables: Vec<AbiConfigurable>,
     decoder: ABIDecoder,
-}
-
-struct Function {
-    name: String,
-    args: Vec<ParamType>,
 }
 
 impl RuntimeDecoder {
@@ -36,15 +28,14 @@ impl RuntimeDecoder {
         self
     }
 
-    pub fn from_json_abi(abi: impl AsRef<str>) -> Result<Self> {
-        let parsed_abi = UnifiedProgramABI::from_json_abi(abi.as_ref())?;
-        let functions = parsed_abi
+    pub fn from_abi(abi: UnifiedProgramABI) -> Result<Self> {
+        let functions = abi
             .functions
             .iter()
             .map(|fun| (fun.name.clone(), fun.clone()))
             .collect::<HashMap<_, _>>();
 
-        let type_lookup = parsed_abi
+        let type_lookup = abi
             .types
             .iter()
             .map(|decl| (decl.type_id, decl.clone()))
@@ -59,27 +50,26 @@ impl RuntimeDecoder {
                     .map(|type_application| {
                         ParamType::try_from_type_application(type_application, &type_lookup)
                     })
-                    .collect::<Result<Vec<_>>>()
-                    .unwrap();
-                (name.clone(), Function { name, args })
+                    .collect::<Result<Vec<_>>>()?;
+                Ok((name.clone(), args))
             })
-            .collect::<HashMap<_, _>>();
+            .collect::<Result<HashMap<_, _>>>()?;
 
-        let mut configurables: Vec<_> = parsed_abi
+        let mut configurables = abi
             .configurables
             .into_iter()
             .flatten()
             .map(|c| {
                 let param_type =
-                    ParamType::try_from_type_application(&c.application, &type_lookup).unwrap();
+                    ParamType::try_from_type_application(&c.application, &type_lookup)?;
 
-                AbiConfigurable {
+                Ok(AbiConfigurable {
                     name: c.name,
                     param_type,
                     offset: c.offset,
-                }
+                })
             })
-            .collect();
+            .collect::<Result<Vec<_>>>()?;
 
         let min_offset = configurables.iter().map(|c| c.offset).min().unwrap_or(0);
 
@@ -96,9 +86,18 @@ impl RuntimeDecoder {
         })
     }
 
+    pub fn from_json_abi(abi: impl AsRef<str>) -> Result<Self> {
+        let parsed_abi = UnifiedProgramABI::from_json_abi(abi.as_ref())?;
+        Self::from_abi(parsed_abi)
+    }
+
     pub fn decode_fn_args(&self, fn_name: &str, data: &[u8]) -> Result<Vec<String>> {
-        let fun = self.functions.get(fn_name).unwrap();
-        self.decoder.decode_multiple_as_debug_str(&fun.args, data)
+        let args = self
+            .functions
+            .get(fn_name)
+            .ok_or_else(|| error!(Codec, "Function '{}' not found in the ABI", fn_name))?;
+
+        self.decoder.decode_multiple_as_debug_str(args, data)
     }
 
     pub fn decode_configurables(&self, configurable_data: &[u8]) -> Result<Vec<(String, String)>> {
@@ -114,5 +113,28 @@ impl RuntimeDecoder {
             .zip(self.configurables.iter())
             .map(|(value, c)| Ok((c.name.clone(), value)))
             .collect()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::types::errors::Error;
+
+    use super::*;
+
+    #[test]
+    fn gracefully_handles_missing_fn() {
+        // given
+        let decoder = RuntimeDecoder::from_abi(UnifiedProgramABI::default()).unwrap();
+
+        // when
+        let err = decoder.decode_fn_args("non_existent_fn", &[]).unwrap_err();
+
+        // then
+        let Error::Codec(err) = err else {
+            panic!("Expected Codec error, got {:?}", err);
+        };
+
+        assert_eq!(err, "Function 'non_existent_fn' not found in the ABI");
     }
 }

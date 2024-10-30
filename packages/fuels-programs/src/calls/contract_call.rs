@@ -17,6 +17,39 @@ use crate::calls::utils::sealed;
 
 use super::utils::CallOpcodeParamsOffset;
 
+pub(crate) struct WasmFriendlyCursor<'a> {
+    data: &'a [u8],
+}
+
+impl<'a> WasmFriendlyCursor<'a> {
+    pub fn new(data: &'a [u8]) -> Self {
+        Self { data }
+    }
+
+    pub fn consume(&mut self, amount: usize, ctx: &'static str) -> Result<&'a [u8]> {
+        if self.data.len() < amount {
+            Err(error!(
+                Other,
+                "while decoding {ctx}: not enough data, available: {}, requested: {}",
+                self.data.len(),
+                amount
+            ))
+        } else {
+            let data = &self.data[..amount];
+            self.data = &self.data[amount..];
+            Ok(data)
+        }
+    }
+
+    pub fn consume_all(&self) -> &'a [u8] {
+        self.data
+    }
+
+    pub fn unconsumed(&self) -> usize {
+        self.data.len()
+    }
+}
+
 #[derive(Debug, Clone)]
 /// Contains all data relevant to a single contract call
 pub struct ContractCall {
@@ -95,6 +128,64 @@ impl ContractCallData {
             gas_forwarded_offset,
             call_data_offset,
         }
+    }
+
+    pub fn decode(data: &[u8], gas_fwd: bool) -> Result<Self> {
+        let mut data = WasmFriendlyCursor::new(data);
+
+        let amount = u64::from_be_bytes(
+            data.consume(8, "amount")?
+                .try_into()
+                .expect("will have exactly 8 bytes"),
+        );
+
+        let asset_id = AssetId::new(
+            data.consume(32, "asset id")?
+                .try_into()
+                .expect("will have exactly 32 bytes"),
+        );
+
+        let contract_id = ContractId::new(
+            data.consume(32, "contract id")?
+                .try_into()
+                .expect("will have exactly 32 bytes"),
+        );
+
+        let _ = data.consume(8, "function selector offset")?;
+
+        let _ = data.consume(8, "encoded args offset")?;
+
+        let fn_selector = {
+            let fn_selector_len = {
+                let bytes = data.consume(8, "function selector lenght")?;
+                u64::from_be_bytes(bytes.try_into().expect("will have exactly 8 bytes")) as usize
+            };
+            data.consume(fn_selector_len, "function selector")?.to_vec()
+        };
+
+        let (encoded_args, gas_forwarded) = if gas_fwd {
+            let encoded_args = data
+                .consume(data.unconsumed().saturating_sub(WORD_SIZE), "encoded_args")?
+                .to_vec();
+
+            let gas_fwd = {
+                let gas_fwd_bytes = data.consume(WORD_SIZE, "forwarded gas")?;
+                u64::from_be_bytes(gas_fwd_bytes.try_into().expect("exactly 8 bytes"))
+            };
+
+            (encoded_args, Some(gas_fwd))
+        } else {
+            (data.consume_all().to_vec(), None)
+        };
+
+        Ok(ContractCallData {
+            amount,
+            asset_id,
+            contract_id,
+            fn_selector_encoded: fn_selector,
+            encoded_args,
+            gas_forwarded,
+        })
     }
 }
 
