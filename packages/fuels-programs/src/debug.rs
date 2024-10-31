@@ -7,7 +7,7 @@ use fuels_core::{
 use itertools::Itertools;
 
 use crate::{
-    calls::{ContractCallData, WasmFriendlyCursor},
+    calls::{utils::ContractCallInstructions, ContractCallData, WasmFriendlyCursor},
     executable::loader_instructions,
     utils::prepend_msg,
 };
@@ -35,92 +35,7 @@ pub enum ScriptType {
     Other(ScriptCallData),
 }
 
-struct ContractCallInstructions {
-    instructions: Vec<Instruction>,
-}
-
-impl ContractCallInstructions {
-    pub fn new(instructions: &[Instruction]) -> Option<(Self, usize)> {
-        let gas_fwd = Self::check_gas_fwd_variant(instructions);
-        let normal = Self::check_normal_variant(instructions);
-        if gas_fwd || normal {
-            let num_instructions = if gas_fwd {
-                Self::GAS_FWD_OPCODES.len()
-            } else {
-                Self::NO_GAS_FWD_OPCODES.len()
-            };
-
-            let instructions: Vec<_> = instructions
-                .iter()
-                .take(num_instructions)
-                .cloned()
-                .collect();
-            let num_instructions_taken = instructions.len();
-
-            Some((Self { instructions }, num_instructions_taken))
-        } else {
-            None
-        }
-    }
-
-    fn call_data_offset(&self) -> u32 {
-        let Instruction::MOVI(movi) = self.instructions[0] else {
-            panic!("should have validated the first instruction is a MOVI");
-        };
-
-        movi.imm18().into()
-    }
-
-    fn decode_contract_call_data(&self, script_data: &[u8]) -> Result<ContractCallData> {
-        ContractCallData::decode(script_data, self.has_gas_forwarding_instructions())
-    }
-
-    fn has_gas_forwarding_instructions(&self) -> bool {
-        Self::check_gas_fwd_variant(&self.instructions)
-    }
-
-    const NO_GAS_FWD_OPCODES: [Opcode; 5] = [
-        Opcode::MOVI,
-        Opcode::MOVI,
-        Opcode::LW,
-        Opcode::MOVI,
-        Opcode::CALL,
-    ];
-
-    const GAS_FWD_OPCODES: [Opcode; 7] = [
-        Opcode::MOVI,
-        Opcode::MOVI,
-        Opcode::LW,
-        Opcode::MOVI,
-        Opcode::MOVI,
-        Opcode::LW,
-        Opcode::CALL,
-    ];
-
-    fn check_normal_variant(instructions: &[Instruction]) -> bool {
-        if instructions.len() < Self::NO_GAS_FWD_OPCODES.len() {
-            return false;
-        }
-
-        Self::NO_GAS_FWD_OPCODES
-            .iter()
-            .zip(instructions.iter())
-            .all(|(expected, actual)| expected == &actual.opcode())
-    }
-
-    fn check_gas_fwd_variant(instructions: &[Instruction]) -> bool {
-        if instructions.len() < Self::GAS_FWD_OPCODES.len() {
-            return false;
-        }
-
-        Self::GAS_FWD_OPCODES
-            .iter()
-            .zip(instructions.iter())
-            .all(|(expected, actual)| expected == &actual.opcode())
-    }
-}
-
-fn parse_script_call(script: &[u8], script_data: &[u8]) -> Option<ScriptCallData> {
+fn parse_script_call(script: &[u8], script_data: &[u8]) -> ScriptCallData {
     let data_section_offset = if script.len() >= 16 {
         let data_offset = u64::from_be_bytes(script[8..16].try_into().expect("will have 8 bytes"));
         if data_offset as usize >= script.len() {
@@ -132,11 +47,11 @@ fn parse_script_call(script: &[u8], script_data: &[u8]) -> Option<ScriptCallData
         None
     };
 
-    Some(ScriptCallData {
+    ScriptCallData {
         data: script_data.to_vec(),
         data_section_offset,
         code: script.to_vec(),
-    })
+    }
 }
 
 fn parse_contract_calls(
@@ -154,11 +69,12 @@ fn parse_contract_calls(
 
     let mut call_instructions = vec![];
 
-    while let Some((parsed_instructions, amount_read)) = ContractCallInstructions::new(instructions)
-    {
-        debug_assert!(amount_read > 0);
-        instructions = &instructions[amount_read..];
-        call_instructions.push(parsed_instructions);
+    while let Some(extracted_instructions) = ContractCallInstructions::extract_from(instructions) {
+        let num_instructions = extracted_instructions.len();
+        debug_assert!(num_instructions > 0);
+
+        instructions = &instructions[num_instructions..];
+        call_instructions.push(extracted_instructions);
     }
 
     if !instructions.is_empty() {
@@ -177,10 +93,9 @@ fn parse_contract_calls(
         return Ok(None);
     };
 
-    let mut descriptions = vec![];
     let num_calls = call_instructions.len();
 
-    for (idx, current_call_instructions) in call_instructions.iter().enumerate() {
+    call_instructions.iter().enumerate().try_fold(vec![], |mut descriptions, (idx, current_call_instructions)| {
         let data_start =
             (current_call_instructions.call_data_offset() - minimum_call_offset) as usize;
 
@@ -200,13 +115,14 @@ fn parse_contract_calls(
             ));
         }
 
-        let contract_call_description = current_call_instructions
-            .decode_contract_call_data(&script_data[data_start..data_end])?;
+        let contract_call_data = ContractCallData::decode(
+            &script_data[data_start..data_end],
+            current_call_instructions.is_gas_fwd_variant(),
+        )?;
 
-        descriptions.push(contract_call_description);
-    }
-
-    Ok(Some(descriptions))
+        descriptions.push(contract_call_data);
+        Ok(descriptions)
+    }).map(Some)
 }
 
 pub fn parse_script(script: &[u8], data: &[u8]) -> Result<ScriptType> {
@@ -222,11 +138,7 @@ pub fn parse_script(script: &[u8], data: &[u8]) -> Result<ScriptType> {
         return Ok(ScriptType::Loader(script, blob_id));
     }
 
-    if let Some(script) = parse_script_call(script, data) {
-        return Ok(ScriptType::Other(script));
-    }
-
-    unimplemented!()
+    Ok(ScriptType::Other(parse_script_call(script, data)))
 }
 
 fn parse_loader_script(script: &[u8], data: &[u8]) -> Result<Option<(ScriptCallData, [u8; 32])>> {
@@ -282,12 +194,13 @@ fn parse_loader_script(script: &[u8], data: &[u8]) -> Result<Option<(ScriptCallD
 
 #[cfg(test)]
 mod tests {
+
     use fuel_asm::RegId;
     use fuels_core::types::errors::Error;
     use rand::{RngCore, SeedableRng};
     use test_case::test_case;
 
-    use crate::calls::utils::{get_single_call_instructions, CallOpcodeParamsOffset};
+    use crate::calls::utils::CallOpcodeParamsOffset;
 
     use super::*;
 
@@ -388,13 +301,14 @@ mod tests {
     #[test_case(8, "forwarded gas")]
     fn catches_missing_data(amount_of_data_to_steal: usize, expected_msg: &str) {
         // given
-        let script = get_single_call_instructions(&CallOpcodeParamsOffset {
+        let script = ContractCallInstructions::new(CallOpcodeParamsOffset {
             call_data_offset: 0,
             amount_offset: 0,
             asset_id_offset: 0,
             gas_forwarded_offset: Some(1),
         })
-        .unwrap();
+        .into_bytes()
+        .collect_vec();
 
         let ok_data = example_contract_call_data(false, true);
         let not_enough_data = ok_data[..ok_data.len() - amount_of_data_to_steal].to_vec();
@@ -417,13 +331,14 @@ mod tests {
     #[test]
     fn handles_invalid_utf8_fn_selector() {
         // given
-        let script = get_single_call_instructions(&CallOpcodeParamsOffset {
+        let script = ContractCallInstructions::new(CallOpcodeParamsOffset {
             call_data_offset: 0,
             amount_offset: 0,
             asset_id_offset: 0,
             gas_forwarded_offset: Some(1),
         })
-        .unwrap();
+        .into_bytes()
+        .collect_vec();
 
         let invalid_utf8 = {
             let invalid_data = [0x80, 0xBF, 0xC0, 0xAF, 0xFF];
@@ -503,13 +418,15 @@ mod tests {
     #[test]
     fn extra_instructions_in_contract_calling_scripts_not_tolerated() {
         // given
-        let mut contract_call_script = get_single_call_instructions(&CallOpcodeParamsOffset {
+        let mut contract_call_script = ContractCallInstructions::new(CallOpcodeParamsOffset {
             call_data_offset: 0,
             amount_offset: 0,
             asset_id_offset: 0,
             gas_forwarded_offset: Some(1),
         })
-        .unwrap();
+        .into_bytes()
+        .collect_vec();
+
         contract_call_script.extend(fuel_asm::op::movi(RegId::ZERO, 10).to_bytes());
         let script_data = example_contract_call_data(false, true);
 
@@ -530,28 +447,25 @@ mod tests {
     #[test]
     fn handles_invalid_call_data_offset() {
         // given
-        let contract_call_1 = get_single_call_instructions(&CallOpcodeParamsOffset {
+        let contract_call_1 = ContractCallInstructions::new(CallOpcodeParamsOffset {
             call_data_offset: 0,
             amount_offset: 0,
             asset_id_offset: 0,
             gas_forwarded_offset: Some(1),
         })
-        .unwrap();
+        .into_bytes();
 
-        let contract_call_2 = get_single_call_instructions(&CallOpcodeParamsOffset {
+        let contract_call_2 = ContractCallInstructions::new(CallOpcodeParamsOffset {
             call_data_offset: u16::MAX as usize,
             amount_offset: 0,
             asset_id_offset: 0,
             gas_forwarded_offset: Some(1),
         })
-        .unwrap();
+        .into_bytes();
 
         let data_only_for_one_call = example_contract_call_data(false, true);
 
-        let together = [&contract_call_1, &contract_call_2]
-            .iter()
-            .flat_map(|i| i.iter().cloned())
-            .collect::<Vec<_>>();
+        let together = contract_call_1.chain(contract_call_2).collect_vec();
 
         // when
         let err = parse_script(&together, &data_only_for_one_call).unwrap_err();
