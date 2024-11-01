@@ -1,6 +1,11 @@
 use fuel_asm::{op, Instruction, RegId};
 use fuels_core::constants::WORD_SIZE;
 
+struct LoaderInstructions {
+    instructions: Vec<Instruction>,
+    blob_id: [u8; 32],
+}
+
 pub(crate) fn loader_instructions_no_data_section() -> [Instruction; 8] {
     const REG_ADDRESS_OF_DATA_AFTER_CODE: u8 = 0x10;
     const REG_START_OF_LOADED_CODE: u8 = 0x11;

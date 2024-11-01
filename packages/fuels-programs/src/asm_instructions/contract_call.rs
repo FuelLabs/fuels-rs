@@ -283,6 +283,7 @@ pub(crate) struct CallOpcodeParamsOffset {
     pub asset_id_offset: usize,
     pub gas_forwarded_offset: Option<usize>,
 }
+
 // Creates a contract that loads the specified blobs into memory and delegates the call to the code contained in the blobs.
 pub fn loader_contract_asm(blob_ids: &[[u8; 32]]) -> Result<Vec<u8>> {
     const BLOB_ID_SIZE: u16 = 32;
