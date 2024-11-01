@@ -2,11 +2,12 @@
 pub mod calls;
 #[cfg(feature = "std")]
 pub mod contract;
-pub mod debug;
 #[cfg(feature = "std")]
 pub mod executable;
 #[cfg(feature = "std")]
 pub mod responses;
+
+pub mod debug;
 
 pub(crate) mod asm_scripts;
 

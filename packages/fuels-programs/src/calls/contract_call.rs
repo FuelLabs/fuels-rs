@@ -14,7 +14,7 @@ use fuels_core::{
 };
 
 use crate::{
-    asm_scripts::{cursor::WasmFriendlyCursor, ContractCallData},
+    asm_scripts::{contract_call::ContractCallData, cursor::WasmFriendlyCursor},
     calls::utils::sealed,
 };
 

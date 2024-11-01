@@ -4,7 +4,9 @@ use itertools::Itertools;
 
 use crate::{
     asm_scripts::{
-        cursor::WasmFriendlyCursor, loader_instructions, ContractCallData, ContractCallInstructions,
+        contract_call::{ContractCallData, ContractCallInstructions},
+        cursor::WasmFriendlyCursor,
+        script_and_predicate_loader::loader_instructions,
     },
     utils::prepend_msg,
 };
@@ -145,20 +147,18 @@ fn parse_loader_script(script: &[u8], data: &[u8]) -> Result<Option<(ScriptCallD
 
     let mut script_cursor = WasmFriendlyCursor::new(script);
 
-    // replace with split_at_checked when we move to msrv 1.80.0
-    if script_cursor.unconsumed() < loader_instructions_byte_size {
-        return Ok(None);
-    }
-
-    let instructions: std::result::Result<Vec<Instruction>, _> = fuel_asm::from_bytes(
-        script_cursor
-            .consume(loader_instructions_byte_size, "loader instructions")
-            .expect("will have enough bytes")
-            .to_vec(),
-    )
-    .try_collect();
-
-    let Ok(instructions) = instructions else {
+    // we give up if we don't have enough instructions or if they cannot be decoded. Undecodable
+    // "instructions"" are present in a standard sway script in the form of the data offset in the
+    // second word of the binary
+    let Some(instructions) = script_cursor
+        .consume(loader_instructions_byte_size, "loader instructions")
+        .ok()
+        .and_then(|b| {
+            fuel_asm::from_bytes(b.to_vec())
+                .collect::<std::result::Result<Vec<Instruction>, _>>()
+                .ok()
+        })
+    else {
         return Ok(None);
     };
 
@@ -197,7 +197,10 @@ mod tests {
     use rand::{RngCore, SeedableRng};
     use test_case::test_case;
 
-    use crate::asm_scripts::CallOpcodeParamsOffset;
+    use crate::asm_scripts::{
+        contract_call::{CallOpcodeParamsOffset, ContractCallInstructions},
+        script_and_predicate_loader::loader_instructions,
+    };
 
     use super::*;
 

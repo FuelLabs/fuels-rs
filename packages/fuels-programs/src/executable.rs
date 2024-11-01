@@ -7,7 +7,9 @@ use fuels_core::{
 };
 use itertools::Itertools;
 
-use crate::asm_scripts::{loader_instructions, loader_instructions_no_data_section};
+use crate::asm_scripts::script_and_predicate_loader::{
+    loader_instructions, loader_instructions_no_data_section,
+};
 
 /// This struct represents a standard executable with its associated bytecode and configurables.
 #[derive(Debug, Clone, PartialEq)]
