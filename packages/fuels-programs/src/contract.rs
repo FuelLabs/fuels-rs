@@ -67,7 +67,7 @@ mod tests {
     };
     use tempfile::tempdir;
 
-    use crate::asm_scripts::contract_call::loader_contract_asm;
+    use crate::asm_instructions::contract_call::loader_contract_asm;
 
     use super::*;
 

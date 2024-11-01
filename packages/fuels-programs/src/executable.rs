@@ -7,7 +7,7 @@ use fuels_core::{
 };
 use itertools::Itertools;
 
-use crate::asm_scripts::script_and_predicate_loader::{
+use crate::asm_instructions::script_and_predicate_loader::{
     loader_instructions, loader_instructions_no_data_section,
 };
 

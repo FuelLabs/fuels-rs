@@ -20,7 +20,7 @@ use fuels_core::{
 use itertools::{chain, Itertools};
 
 use crate::{
-    asm_scripts::contract_call::{CallOpcodeParamsOffset, ContractCallInstructions},
+    asm_instructions::contract_call::{CallOpcodeParamsOffset, ContractCallInstructions},
     calls::ContractCall,
 };
 
