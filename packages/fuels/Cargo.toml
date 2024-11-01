@@ -20,7 +20,7 @@ fuel-tx = { workspace = true }
 fuels-accounts = { workspace = true, default-features = false }
 fuels-core = { workspace = true }
 fuels-macros = { workspace = true }
-fuels-programs = { workspace = true, optional = true }
+fuels-programs = { workspace = true }
 fuels-test-helpers = { workspace = true, optional = true }
 
 [features]
@@ -32,10 +32,9 @@ coin-cache = ["fuels-accounts/coin-cache"]
 # used so that we don't get a new feature flag for every optional dependency.
 std = [
   "dep:fuel-core-client",
-  "dep:fuels-programs",
+  "fuels-programs/std",
   "dep:fuels-test-helpers",
   "fuels-accounts/std",
-  "fuels-programs?/std",
   "fuels-core/std",
   "fuels-test-helpers?/std",
 ]

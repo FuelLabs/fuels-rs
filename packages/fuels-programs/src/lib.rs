@@ -1,8 +1,14 @@
+#[cfg(feature = "std")]
 pub mod calls;
+#[cfg(feature = "std")]
 pub mod contract;
 pub mod debug;
+#[cfg(feature = "std")]
 pub mod executable;
+#[cfg(feature = "std")]
 pub mod responses;
+
+pub(crate) mod asm_scripts;
 
 pub(crate) mod utils {
     use fuels_core::types::errors::{error, Error};

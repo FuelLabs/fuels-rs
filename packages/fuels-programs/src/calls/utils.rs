@@ -1,7 +1,7 @@
 use std::{collections::HashSet, iter, vec};
 
 use fuel_abi_types::error_codes::FAILED_TRANSFER_TO_ADDRESS_SIGNAL;
-use fuel_asm::{op, Instruction, RegId};
+use fuel_asm::{op, RegId};
 use fuel_tx::{AssetId, Bytes32, ContractId, Output, PanicReason, Receipt, TxPointer, UtxoId};
 use fuels_accounts::Account;
 use fuels_core::{
@@ -19,17 +19,10 @@ use fuels_core::{
 };
 use itertools::{chain, Itertools};
 
-use crate::calls::ContractCall;
-
-#[derive(Default)]
-/// Specifies offsets of [`Opcode::CALL`][`fuel_asm::Opcode::CALL`] parameters stored in the script
-/// data from which they can be loaded into registers
-pub(crate) struct CallOpcodeParamsOffset {
-    pub call_data_offset: usize,
-    pub amount_offset: usize,
-    pub asset_id_offset: usize,
-    pub gas_forwarded_offset: Option<usize>,
-}
+use crate::{
+    asm_scripts::{CallOpcodeParamsOffset, ContractCallInstructions},
+    calls::ContractCall,
+};
 
 pub(crate) mod sealed {
     pub trait Sealed {}
@@ -204,193 +197,6 @@ pub(crate) fn build_script_data_from_contract_calls(
         },
     )
 }
-
-pub(crate) struct ContractCallInstructions {
-    instructions: Vec<Instruction>,
-    gas_fwd: bool,
-}
-
-impl IntoIterator for ContractCallInstructions {
-    type Item = Instruction;
-    type IntoIter = vec::IntoIter<Instruction>;
-    fn into_iter(self) -> Self::IntoIter {
-        self.instructions.into_iter()
-    }
-}
-
-impl ContractCallInstructions {
-    pub fn new(opcode_params: CallOpcodeParamsOffset) -> Self {
-        Self {
-            gas_fwd: opcode_params.gas_forwarded_offset.is_some(),
-            instructions: Self::generate_instructions(opcode_params),
-        }
-    }
-
-    pub fn into_bytes(self) -> impl Iterator<Item = u8> {
-        self.instructions
-            .into_iter()
-            .flat_map(|instruction| instruction.to_bytes())
-    }
-
-    fn generate_instructions(offsets: CallOpcodeParamsOffset) -> Vec<Instruction> {
-        let call_data_offset = offsets
-            .call_data_offset
-            .try_into()
-            .expect("call_data_offset out of range");
-        let amount_offset = offsets
-            .amount_offset
-            .try_into()
-            .expect("amount_offset out of range");
-        let asset_id_offset = offsets
-            .asset_id_offset
-            .try_into()
-            .expect("asset_id_offset out of range");
-
-        let mut instructions = [
-            op::movi(0x10, call_data_offset),
-            op::movi(0x11, amount_offset),
-            op::lw(0x11, 0x11, 0),
-            op::movi(0x12, asset_id_offset),
-        ]
-        .to_vec();
-
-        match offsets.gas_forwarded_offset {
-            Some(gas_forwarded_offset) => {
-                let gas_forwarded_offset = gas_forwarded_offset
-                    .try_into()
-                    .expect("gas_forwarded_offset out of range");
-
-                instructions.extend(&[
-                    op::movi(0x13, gas_forwarded_offset),
-                    op::lw(0x13, 0x13, 0),
-                    op::call(0x10, 0x11, 0x12, 0x13),
-                ]);
-            }
-            // if `gas_forwarded` was not set use `REG_CGAS`
-            None => instructions.push(op::call(0x10, 0x11, 0x12, RegId::CGAS)),
-        };
-
-        instructions
-    }
-
-    fn extract_normal_variant(instructions: &[Instruction]) -> Option<&[Instruction]> {
-        let normal_instructions = Self::generate_instructions(CallOpcodeParamsOffset {
-            call_data_offset: 0,
-            amount_offset: 0,
-            asset_id_offset: 0,
-            gas_forwarded_offset: None,
-        });
-        Self::extract_if_match(instructions, &normal_instructions)
-    }
-
-    fn extract_gas_fwd_variant(instructions: &[Instruction]) -> Option<&[Instruction]> {
-        let gas_fwd_instructions = Self::generate_instructions(CallOpcodeParamsOffset {
-            call_data_offset: 0,
-            amount_offset: 0,
-            asset_id_offset: 0,
-            gas_forwarded_offset: Some(0),
-        });
-        Self::extract_if_match(instructions, &gas_fwd_instructions)
-    }
-
-    pub(crate) fn extract_from(instructions: &[Instruction]) -> Option<Self> {
-        if let Some(instructions) = Self::extract_normal_variant(instructions) {
-            return Some(Self {
-                instructions: instructions.to_vec(),
-                gas_fwd: false,
-            });
-        }
-
-        Self::extract_gas_fwd_variant(instructions).map(|instructions| Self {
-            instructions: instructions.to_vec(),
-            gas_fwd: true,
-        })
-    }
-
-    pub fn len(&self) -> usize {
-        self.instructions.len()
-    }
-
-    pub fn call_data_offset(&self) -> u32 {
-        let Instruction::MOVI(movi) = self.instructions[0] else {
-            panic!("should have validated the first instruction is a MOVI");
-        };
-
-        movi.imm18().into()
-    }
-
-    pub(crate) fn is_gas_fwd_variant(&self) -> bool {
-        self.gas_fwd
-    }
-
-    fn extract_if_match<'a>(
-        unknown: &'a [Instruction],
-        correct: &[Instruction],
-    ) -> Option<&'a [Instruction]> {
-        if unknown.len() < correct.len() {
-            return None;
-        }
-
-        unknown
-            .iter()
-            .zip(correct)
-            .all(|(expected, actual)| expected.opcode() == actual.opcode())
-            .then(|| &unknown[..correct.len()])
-    }
-}
-
-/// Returns the VM instructions for calling a contract method
-/// We use the [`Opcode`] to call a contract: [`CALL`](Opcode::CALL)
-/// pointing at the following registers:
-///
-/// 0x10 Script data offset
-/// 0x11 Coin amount
-/// 0x12 Asset ID
-/// 0x13 Gas forwarded
-///
-/// Note that these are soft rules as we're picking this addresses simply because they
-/// non-reserved register.
-// pub(crate) fn get_single_call_instructions(offsets: &CallOpcodeParamsOffset) -> Result<Vec<u8>> {
-//     let call_data_offset = offsets
-//         .call_data_offset
-//         .try_into()
-//         .expect("call_data_offset out of range");
-//     let amount_offset = offsets
-//         .amount_offset
-//         .try_into()
-//         .expect("amount_offset out of range");
-//     let asset_id_offset = offsets
-//         .asset_id_offset
-//         .try_into()
-//         .expect("asset_id_offset out of range");
-//
-//     let mut instructions = [
-//         op::movi(0x10, call_data_offset),
-//         op::movi(0x11, amount_offset),
-//         op::lw(0x11, 0x11, 0),
-//         op::movi(0x12, asset_id_offset),
-//     ]
-//     .to_vec();
-//
-//     match offsets.gas_forwarded_offset {
-//         Some(gas_forwarded_offset) => {
-//             let gas_forwarded_offset = gas_forwarded_offset
-//                 .try_into()
-//                 .expect("gas_forwarded_offset out of range");
-//
-//             instructions.extend(&[
-//                 op::movi(0x13, gas_forwarded_offset),
-//                 op::lw(0x13, 0x13, 0),
-//                 op::call(0x10, 0x11, 0x12, 0x13),
-//             ]);
-//         }
-//         // if `gas_forwarded` was not set use `REG_CGAS`
-//         None => instructions.push(op::call(0x10, 0x11, 0x12, RegId::CGAS)),
-//     };
-//
-//     #[allow(clippy::iter_cloned_collect)]
-//     Ok(instructions.into_iter().collect::<Vec<u8>>())
-// }
 
 /// Returns the assets and contracts that will be consumed ([`Input`]s)
 /// and created ([`Output`]s) by the transaction

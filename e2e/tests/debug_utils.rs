@@ -1,10 +1,6 @@
-
-use fuel_tx::field::ScriptData;
 use fuels::{
     core::{
-        codec::{
-            runtime_decoder::{RuntimeDecoder}, ABIEncoder,
-        },
+        codec::{runtime_decoder::RuntimeDecoder, ABIEncoder},
         traits::Tokenizable,
     },
     prelude::*,
@@ -402,7 +398,7 @@ async fn debugs_sway_script_with_no_configurables() -> Result<()> {
 
     assert_eq!(
         decoder
-            .decode_configurables(&desc.data_section().unwrap())
+            .decode_configurables(desc.data_section().unwrap())
             .unwrap(),
         vec![]
     );

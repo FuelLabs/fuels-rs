@@ -1,14 +1,11 @@
 use fuel_asm::{Instruction, Opcode};
-use fuels_core::{
-    constants::WORD_SIZE,
-    error,
-    types::{errors::Result, transaction_builders::BlobId},
-};
+use fuels_core::{constants::WORD_SIZE, error, types::errors::Result};
 use itertools::Itertools;
 
 use crate::{
-    calls::{utils::ContractCallInstructions, ContractCallData, WasmFriendlyCursor},
-    executable::loader_instructions,
+    asm_scripts::{
+        cursor::WasmFriendlyCursor, loader_instructions, ContractCallData, ContractCallInstructions,
+    },
     utils::prepend_msg,
 };
 
@@ -31,7 +28,7 @@ impl ScriptCallData {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ScriptType {
     ContractCall(Vec<ContractCallData>),
-    Loader(ScriptCallData, BlobId),
+    Loader(ScriptCallData, [u8; 32]),
     Other(ScriptCallData),
 }
 
@@ -200,7 +197,7 @@ mod tests {
     use rand::{RngCore, SeedableRng};
     use test_case::test_case;
 
-    use crate::calls::utils::CallOpcodeParamsOffset;
+    use crate::asm_scripts::CallOpcodeParamsOffset;
 
     use super::*;
 

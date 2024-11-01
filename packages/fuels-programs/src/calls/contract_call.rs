@@ -13,42 +13,10 @@ use fuels_core::{
     },
 };
 
-use crate::calls::utils::sealed;
-
-use super::utils::CallOpcodeParamsOffset;
-
-pub(crate) struct WasmFriendlyCursor<'a> {
-    data: &'a [u8],
-}
-
-impl<'a> WasmFriendlyCursor<'a> {
-    pub fn new(data: &'a [u8]) -> Self {
-        Self { data }
-    }
-
-    pub fn consume(&mut self, amount: usize, ctx: &'static str) -> Result<&'a [u8]> {
-        if self.data.len() < amount {
-            Err(error!(
-                Other,
-                "while decoding {ctx}: not enough data, available: {}, requested: {}",
-                self.data.len(),
-                amount
-            ))
-        } else {
-            let data = &self.data[..amount];
-            self.data = &self.data[amount..];
-            Ok(data)
-        }
-    }
-
-    pub fn consume_all(&self) -> &'a [u8] {
-        self.data
-    }
-
-    pub fn unconsumed(&self) -> usize {
-        self.data.len()
-    }
-}
+use crate::{
+    asm_scripts::{cursor::WasmFriendlyCursor, ContractCallData},
+    calls::utils::sealed,
+};
 
 #[derive(Debug, Clone)]
 /// Contains all data relevant to a single contract call
@@ -61,132 +29,6 @@ pub struct ContractCall {
     pub output_param: ParamType,
     pub is_payable: bool,
     pub custom_assets: HashMap<(AssetId, Option<Bech32Address>), u64>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ContractCallData {
-    pub amount: u64,
-    pub asset_id: AssetId,
-    pub contract_id: ContractId,
-    pub fn_selector_encoded: Vec<u8>,
-    pub encoded_args: Vec<u8>,
-    pub gas_forwarded: Option<u64>,
-}
-
-impl ContractCallData {
-    pub fn decode_fn_selector(&self) -> Result<String> {
-        String::from_utf8(self.fn_selector_encoded.clone())
-            .map_err(|e| error!(Codec, "cannot decode function selector: {}", e))
-    }
-
-    /// Encodes as script data, consisting of the following items in the given order:
-    /// 1. Amount to be forwarded `(1 * `[`WORD_SIZE`]`)`
-    /// 2. Asset ID to be forwarded ([`AssetId::LEN`])
-    /// 3. Contract ID ([`ContractId::LEN`]);
-    /// 4. Function selector offset `(1 * `[`WORD_SIZE`]`)`
-    /// 5. Calldata offset `(1 * `[`WORD_SIZE`]`)`
-    /// 6. Encoded function selector - method name
-    /// 7. Encoded arguments
-    /// 8. Gas to be forwarded `(1 * `[`WORD_SIZE`]`)` - Optional
-    pub(crate) fn encode(
-        &self,
-        memory_offset: usize,
-        buffer: &mut Vec<u8>,
-    ) -> CallOpcodeParamsOffset {
-        let amount_offset = memory_offset;
-        let asset_id_offset = amount_offset + WORD_SIZE;
-        let call_data_offset = asset_id_offset + AssetId::LEN;
-        let encoded_selector_offset = call_data_offset + ContractId::LEN + 2 * WORD_SIZE;
-        let encoded_args_offset = encoded_selector_offset + self.fn_selector_encoded.len();
-
-        buffer.extend(self.amount.to_be_bytes()); // 1. Amount
-
-        let asset_id = self.asset_id;
-        buffer.extend(asset_id.iter()); // 2. Asset ID
-
-        buffer.extend(self.contract_id.as_ref()); // 3. Contract ID
-
-        buffer.extend((encoded_selector_offset as Word).to_be_bytes()); // 4. Fun. selector offset
-
-        buffer.extend((encoded_args_offset as Word).to_be_bytes()); // 5. Calldata offset
-
-        buffer.extend(&self.fn_selector_encoded); // 6. Encoded function selector
-
-        let encoded_args_len = self.encoded_args.len();
-
-        buffer.extend(&self.encoded_args); // 7. Encoded arguments
-
-        let gas_forwarded_offset = self.gas_forwarded.map(|gf| {
-            buffer.extend((gf as Word).to_be_bytes()); // 8. Gas to be forwarded - Optional
-
-            encoded_args_offset + encoded_args_len
-        });
-
-        CallOpcodeParamsOffset {
-            amount_offset,
-            asset_id_offset,
-            gas_forwarded_offset,
-            call_data_offset,
-        }
-    }
-
-    pub fn decode(data: &[u8], gas_fwd: bool) -> Result<Self> {
-        let mut data = WasmFriendlyCursor::new(data);
-
-        let amount = u64::from_be_bytes(
-            data.consume(8, "amount")?
-                .try_into()
-                .expect("will have exactly 8 bytes"),
-        );
-
-        let asset_id = AssetId::new(
-            data.consume(32, "asset id")?
-                .try_into()
-                .expect("will have exactly 32 bytes"),
-        );
-
-        let contract_id = ContractId::new(
-            data.consume(32, "contract id")?
-                .try_into()
-                .expect("will have exactly 32 bytes"),
-        );
-
-        let _ = data.consume(8, "function selector offset")?;
-
-        let _ = data.consume(8, "encoded args offset")?;
-
-        let fn_selector = {
-            let fn_selector_len = {
-                let bytes = data.consume(8, "function selector lenght")?;
-                u64::from_be_bytes(bytes.try_into().expect("will have exactly 8 bytes")) as usize
-            };
-            data.consume(fn_selector_len, "function selector")?.to_vec()
-        };
-
-        let (encoded_args, gas_forwarded) = if gas_fwd {
-            let encoded_args = data
-                .consume(data.unconsumed().saturating_sub(WORD_SIZE), "encoded_args")?
-                .to_vec();
-
-            let gas_fwd = {
-                let gas_fwd_bytes = data.consume(WORD_SIZE, "forwarded gas")?;
-                u64::from_be_bytes(gas_fwd_bytes.try_into().expect("exactly 8 bytes"))
-            };
-
-            (encoded_args, Some(gas_fwd))
-        } else {
-            (data.consume_all().to_vec(), None)
-        };
-
-        Ok(ContractCallData {
-            amount,
-            asset_id,
-            contract_id,
-            fn_selector_encoded: fn_selector,
-            encoded_args,
-            gas_forwarded,
-        })
-    }
 }
 
 impl ContractCall {
