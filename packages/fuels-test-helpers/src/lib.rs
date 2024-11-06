@@ -157,6 +157,10 @@ pub async fn setup_test_provider(
 fn testnet_chain_config() -> ChainConfig {
     let mut consensus_parameters = ConsensusParameters::default();
     let tx_params = TxParameters::default().with_max_size(10_000_000);
+    // on a best effort basis, if we're given an old core we won't fail only because we couldn't
+    // set the limit here
+    let _ = consensus_parameters.set_block_transaction_size_limit(10_000_000);
+
     let contract_params = ContractParameters::default().with_contract_max_size(1_000_000);
     consensus_parameters.set_tx_params(tx_params);
     consensus_parameters.set_contract_params(contract_params);

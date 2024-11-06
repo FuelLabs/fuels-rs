@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use fuel_tx::{
     consensus_parameters::{ConsensusParametersV1, FeeParametersV1},
     ConsensusParameters, FeeParameters,
@@ -21,7 +23,8 @@ async fn test_multiple_args() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -58,17 +61,20 @@ async fn test_contract_calling_contract() -> Result<()> {
         Deploy(
             name = "lib_contract_instance",
             contract = "LibContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
         Deploy(
             name = "lib_contract_instance2",
             contract = "LibContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
         Deploy(
             name = "contract_caller_instance",
             contract = "LibContractCaller",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     let lib_contract_id = lib_contract_instance.contract_id();
@@ -124,7 +130,8 @@ async fn test_reverting_transaction() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "RevertContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -153,7 +160,8 @@ async fn test_multiple_read_calls() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "MultiReadContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -189,7 +197,8 @@ async fn test_multi_call_beginner() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -220,7 +229,8 @@ async fn test_multi_call_pro() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -273,7 +283,8 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -310,7 +321,8 @@ async fn contract_call_has_same_estimated_and_used_gas() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     let contract_methods = contract_instance.methods();
@@ -345,7 +357,8 @@ async fn mult_call_has_same_estimated_and_used_gas() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -381,7 +394,8 @@ async fn contract_method_call_respects_maturity() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "BlockHeightContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -416,7 +430,8 @@ async fn test_auth_msg_sender_from_sdk() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "AuthContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -442,7 +457,8 @@ async fn test_large_return_data() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -499,7 +515,8 @@ async fn can_handle_function_called_new() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -527,17 +544,18 @@ async fn test_contract_setup_macro_deploy_with_salt() -> Result<()> {
         Deploy(
             name = "lib_contract_instance",
             contract = "LibContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
         Deploy(
             name = "contract_caller_instance",
             contract = "LibContractCaller",
-            wallet = "wallet"
+            wallet = "wallet",
         ),
         Deploy(
             name = "contract_caller_instance2",
             contract = "LibContractCaller",
-            wallet = "wallet"
+            wallet = "wallet",
         ),
     );
     let lib_contract_id = lib_contract_instance.contract_id();
@@ -583,7 +601,8 @@ async fn test_wallet_getter() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -610,7 +629,8 @@ async fn test_connect_wallet() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     // ANCHOR_END: contract_setup_macro_manual_wallet
@@ -662,7 +682,7 @@ async fn setup_output_variable_estimation_test() -> Result<(
         "sway/contracts/token_ops/out/release/token_ops.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(&wallets[0], TxPolicies::default())
+    .deploy_if_not_exists(&wallets[0], TxPolicies::default())
     .await?;
 
     let mint_asset_id = contract_id.asset_id(&Bits256::zeroed());
@@ -786,7 +806,8 @@ async fn test_contract_instance_get_balances() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     let contract_id = contract_instance.contract_id();
@@ -830,7 +851,8 @@ async fn contract_call_futures_implement_send() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -862,12 +884,14 @@ async fn test_contract_set_estimation() -> Result<()> {
         Deploy(
             name = "lib_contract_instance",
             contract = "LibContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
         Deploy(
             name = "contract_caller_instance",
             contract = "LibContractCaller",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     let lib_contract_id = lib_contract_instance.contract_id();
@@ -922,17 +946,20 @@ async fn test_output_variable_contract_id_estimation_multicall() -> Result<()> {
         Deploy(
             name = "lib_contract_instance",
             contract = "LibContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
         Deploy(
             name = "contract_caller_instance",
             contract = "LibContractCaller",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
         Deploy(
             name = "contract_test_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -1005,7 +1032,8 @@ async fn test_contract_call_with_non_default_max_input() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -1055,7 +1083,8 @@ async fn test_add_custom_assets() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "MyContract",
-            wallet = "wallet_1"
+            wallet = "wallet_1",
+            random_salt = false,
         ),
     );
 
@@ -1117,7 +1146,8 @@ async fn test_payable_annotation() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -1201,12 +1231,14 @@ async fn low_level_call() -> Result<()> {
         Deploy(
             name = "caller_contract_instance",
             contract = "MyCallerContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
         Deploy(
             name = "target_contract_instance",
             contract = "MyTargetContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -1408,7 +1440,8 @@ async fn can_configure_decoding_of_contract_return() -> Result<()> {
         Deploy(
             contract = "MyContract",
             name = "contract_instance",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         )
     );
 
@@ -1469,13 +1502,15 @@ async fn test_contract_submit_and_response() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
     let contract_methods = contract_instance.methods();
 
     let submitted_tx = contract_methods.get(1, 2).submit().await?;
+    tokio::time::sleep(Duration::from_millis(500)).await;
     let value = submitted_tx.response().await?.value;
 
     assert_eq!(value, 3);
@@ -1489,6 +1524,7 @@ async fn test_contract_submit_and_response() -> Result<()> {
         .add_call(call_handler_2);
 
     let handle = multi_call_handler.submit().await?;
+    tokio::time::sleep(Duration::from_millis(500)).await;
     let (val_1, val_2): (u64, u64) = handle.response().await?.value;
 
     assert_eq!(val_1, 7);
@@ -1514,12 +1550,14 @@ async fn test_heap_type_multicall() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "VectorOutputContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
         Deploy(
             name = "contract_instance_2",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -1577,7 +1615,7 @@ async fn heap_types_correctly_offset_in_create_transactions_w_storage_slots() ->
         "sway/contracts/storage/out/release/storage.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(&predicate, TxPolicies::default())
+    .deploy_if_not_exists(&predicate, TxPolicies::default())
     .await?;
 
     Ok(())
@@ -1600,12 +1638,14 @@ async fn test_arguments_with_gas_forwarded() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
         Deploy(
             name = "contract_instance_2",
             contract = "VectorOutputContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -1656,7 +1696,8 @@ async fn contract_custom_call_no_signatures_strategy() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     let provider = wallet.try_provider()?;
@@ -1683,6 +1724,8 @@ async fn contract_custom_call_no_signatures_strategy() -> Result<()> {
     // ANCHOR_END: tb_no_signatures_strategy
 
     let tx_id = provider.send_transaction(tx).await?;
+    tokio::time::sleep(Duration::from_millis(500)).await;
+
     let tx_status = provider.tx_status(&tx_id).await?;
 
     let response = call_handler.get_response_from(tx_status)?;
@@ -1705,7 +1748,7 @@ async fn contract_encoder_config_is_applied() -> Result<()> {
         "sway/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(&wallet, TxPolicies::default())
+    .deploy_if_not_exists(&wallet, TxPolicies::default())
     .await?;
 
     let instance = TestContract::new(contract_id.clone(), wallet.clone());
@@ -1763,7 +1806,8 @@ async fn test_reentrant_calls() -> Result<()> {
         Deploy(
             name = "contract_caller_instance",
             contract = "LibContractCaller",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -1804,7 +1848,8 @@ async fn msg_sender_gas_estimation_issue() {
         Deploy(
             contract = "MyContract",
             name = "contract_instance",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         )
     );
 
@@ -1837,7 +1882,8 @@ async fn variable_output_estimation_is_optimized() -> Result<()> {
         Deploy(
             contract = "MyContract",
             name = "contract_instance",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         )
     );
 
@@ -1904,7 +1950,7 @@ async fn simulations_can_be_made_without_coins() -> Result<()> {
         "sway/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(wallet, TxPolicies::default())
+    .deploy_if_not_exists(wallet, TxPolicies::default())
     .await?;
 
     let provider = wallet.provider().cloned();
@@ -1935,7 +1981,7 @@ async fn simulations_can_be_made_without_coins_multicall() -> Result<()> {
         "sway/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(wallet, TxPolicies::default())
+    .deploy_if_not_exists(wallet, TxPolicies::default())
     .await?;
 
     let provider = wallet.provider().cloned();
@@ -1994,7 +2040,7 @@ async fn contract_call_with_non_zero_base_asset_id_and_tip() -> Result<()> {
         "sway/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(wallet, TxPolicies::default())
+    .deploy_if_not_exists(wallet, TxPolicies::default())
     .await?;
 
     let contract_instance = MyContract::new(contract_id, wallet.clone());
@@ -2037,7 +2083,8 @@ async fn max_fee_estimation_respects_tolerance() -> Result<()> {
         Deploy(
             name = "contract_instance",
             wallet = "deploy_wallet",
-            contract = "MyContract"
+            contract = "MyContract",
+            random_salt = false,
         )
     );
     let contract_instance = contract_instance.with_account(call_wallet.clone());
@@ -2172,7 +2219,7 @@ async fn blob_contract_deployment() -> Result<()> {
 
     let contract_id = contract
         .convert_to_loader(100_000)?
-        .deploy(&wallets[0], TxPolicies::default())
+        .deploy_if_not_exists(&wallets[0], TxPolicies::default())
         .await?;
 
     let contract_instance = MyContract::new(contract_id, wallets[0].clone());
@@ -2199,7 +2246,7 @@ async fn regular_contract_can_be_deployed() -> Result<()> {
 
     // when
     let contract_id = Contract::load_from(contract_binary, LoadConfiguration::default())?
-        .deploy(&wallet, TxPolicies::default())
+        .deploy_if_not_exists(&wallet, TxPolicies::default())
         .await?;
 
     // then
@@ -2231,7 +2278,7 @@ async fn unuploaded_loader_can_be_deployed_directly() -> Result<()> {
 
     let contract_id = Contract::load_from(contract_binary, LoadConfiguration::default())?
         .convert_to_loader(1024)?
-        .deploy(&wallet, TxPolicies::default())
+        .deploy_if_not_exists(&wallet, TxPolicies::default())
         .await?;
 
     let contract_instance = MyContract::new(contract_id, wallet);
@@ -2270,7 +2317,7 @@ async fn unuploaded_loader_can_upload_blobs_separately_then_deploy() -> Result<(
         contract.salt(),
         contract.storage_slots().to_vec(),
     )?
-    .deploy(&wallet, TxPolicies::default())
+    .deploy_if_not_exists(&wallet, TxPolicies::default())
     .await?;
 
     let contract_instance = MyContract::new(contract_id, wallet);
@@ -2301,7 +2348,9 @@ async fn loader_blob_already_uploaded_not_an_issue() -> Result<()> {
         .await?;
 
     // this will try to upload the blobs but skip upon encountering an error
-    let contract_id = contract.deploy(&wallet, TxPolicies::default()).await?;
+    let contract_id = contract
+        .deploy_if_not_exists(&wallet, TxPolicies::default())
+        .await?;
 
     let contract_instance = MyContract::new(contract_id, wallet);
     let response = contract_instance.methods().something().call().await?.value;
@@ -2331,13 +2380,13 @@ async fn loader_works_via_proxy() -> Result<()> {
 
     let contract_id = contract
         .convert_to_loader(100)?
-        .deploy(&wallet, TxPolicies::default())
+        .deploy_if_not_exists(&wallet, TxPolicies::default())
         .await?;
 
     let contract_binary = "sway/contracts/proxy/out/release/proxy.bin";
 
     let proxy_id = Contract::load_from(contract_binary, LoadConfiguration::default())?
-        .deploy(&wallet, TxPolicies::default())
+        .deploy_if_not_exists(&wallet, TxPolicies::default())
         .await?;
 
     let proxy = MyProxy::new(proxy_id, wallet.clone());
@@ -2356,6 +2405,78 @@ async fn loader_works_via_proxy() -> Result<()> {
         .value;
 
     assert_eq!(response, 1001);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn loader_storage_works_via_proxy() -> Result<()> {
+    let wallet = launch_provider_and_get_wallet().await?;
+
+    abigen!(
+        Contract(
+            name = "MyContract",
+            abi = "e2e/sway/contracts/huge_contract/out/release/huge_contract-abi.json"
+        ),
+        Contract(
+            name = "MyProxy",
+            abi = "e2e/sway/contracts/proxy/out/release/proxy-abi.json"
+        )
+    );
+
+    let contract_binary = "sway/contracts/huge_contract/out/release/huge_contract.bin";
+
+    let contract = Contract::load_from(contract_binary, LoadConfiguration::default())?;
+    let contract_storage_slots = contract.storage_slots().to_vec();
+
+    let contract_id = contract
+        .convert_to_loader(100)?
+        .deploy_if_not_exists(&wallet, TxPolicies::default())
+        .await?;
+
+    let contract_binary = "sway/contracts/proxy/out/release/proxy.bin";
+    let proxy_contract = Contract::load_from(contract_binary, LoadConfiguration::default())?;
+
+    let combined_storage_slots = [&contract_storage_slots, proxy_contract.storage_slots()].concat();
+
+    let proxy_id = proxy_contract
+        .with_storage_slots(combined_storage_slots)
+        .deploy_if_not_exists(&wallet, TxPolicies::default())
+        .await?;
+
+    let proxy = MyProxy::new(proxy_id, wallet.clone());
+    proxy
+        .methods()
+        .set_target_contract(contract_id.clone())
+        .call()
+        .await?;
+
+    let response = proxy
+        .methods()
+        .read_some_u64()
+        .with_contract_ids(&[contract_id.clone()])
+        .call()
+        .await?
+        .value;
+
+    assert_eq!(response, 42);
+
+    let _res = proxy
+        .methods()
+        .write_some_u64(36)
+        .with_contract_ids(&[contract_id.clone()])
+        .call()
+        .await?;
+
+    let response = proxy
+        .methods()
+        .read_some_u64()
+        .with_contract_ids(&[contract_id])
+        .call()
+        .await?
+        .value;
+
+    assert_eq!(response, 36);
 
     Ok(())
 }

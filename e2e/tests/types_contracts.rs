@@ -22,7 +22,8 @@ async fn test_methods_typeless_argument() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -48,7 +49,8 @@ async fn call_with_empty_return() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -78,7 +80,7 @@ async fn call_with_structs() -> Result<()> {
         "sway/types/contracts/complex_types_contract/out/release/complex_types_contract.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(&wallet, TxPolicies::default())
+    .deploy_if_not_exists(&wallet, TxPolicies::default())
     .await?;
 
     let contract_methods = MyContract::new(contract_id, wallet).methods();
@@ -108,7 +110,8 @@ async fn abigen_different_structs_same_arg_name() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -137,7 +140,8 @@ async fn nested_structs() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -197,7 +201,8 @@ async fn calls_with_empty_struct() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     let contract_methods = contract_instance.methods();
@@ -260,7 +265,8 @@ async fn test_tuples() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     let contract_methods = contract_instance.methods();
@@ -334,7 +340,8 @@ async fn test_evm_address() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -401,7 +408,8 @@ async fn test_array() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -428,7 +436,8 @@ async fn test_arrays_with_custom_types() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -470,7 +479,8 @@ async fn str_in_array() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -510,7 +520,8 @@ async fn test_enum_inside_struct() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -552,7 +563,8 @@ async fn native_types_support() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -590,7 +602,8 @@ async fn enum_coding_w_variable_width_variants() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -631,7 +644,8 @@ async fn enum_coding_w_unit_enums() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -670,7 +684,8 @@ async fn enum_as_input() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -746,7 +761,8 @@ async fn type_inside_enum() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -810,7 +826,8 @@ async fn test_rust_option_can_be_decoded() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     let contract_methods = contract_instance.methods();
@@ -862,7 +879,8 @@ async fn test_rust_option_can_be_encoded() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     let contract_methods = contract_instance.methods();
@@ -916,7 +934,8 @@ async fn test_rust_result_can_be_decoded() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     let contract_methods = contract_instance.methods();
@@ -968,7 +987,8 @@ async fn test_rust_result_can_be_encoded() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     let contract_methods = contract_instance.methods();
@@ -1003,7 +1023,8 @@ async fn test_identity_can_be_decoded() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     let contract_methods = contract_instance.methods();
@@ -1048,7 +1069,8 @@ async fn test_identity_can_be_encoded() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     let contract_methods = contract_instance.methods();
@@ -1096,12 +1118,14 @@ async fn test_identity_with_two_contracts() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
         Deploy(
             name = "contract_instance2",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -1141,7 +1165,8 @@ async fn generics_test() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     let contract_methods = contract_instance.methods();
@@ -1298,7 +1323,8 @@ async fn contract_vectors() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     let methods = contract_instance.methods();
@@ -1385,7 +1411,8 @@ async fn test_b256() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -1423,7 +1450,8 @@ async fn test_b512() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     let contract_methods = contract_instance.methods();
@@ -1471,7 +1499,8 @@ async fn test_u128() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     let contract_methods = contract_instance.methods();
@@ -1523,7 +1552,8 @@ async fn test_u256() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     let contract_methods = contract_instance.methods();
@@ -1560,7 +1590,8 @@ async fn test_base_type_in_vec_output() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "VectorOutputContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     let contract_methods = contract_instance.methods();
@@ -1599,7 +1630,8 @@ async fn test_composite_types_in_vec_output() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "VectorOutputContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     let contract_methods = contract_instance.methods();
@@ -1668,7 +1700,8 @@ async fn test_bytes_output() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "BytesOutputContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -1691,7 +1724,8 @@ async fn test_bytes_as_input() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "BytesInputContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     let contract_methods = contract_instance.methods();
@@ -1727,7 +1761,8 @@ async fn contract_raw_slice() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "RawSliceContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -1772,7 +1807,8 @@ async fn contract_string_slice() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "StringSliceContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -1798,7 +1834,8 @@ async fn contract_std_lib_string() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "StdLibString",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     let contract_methods = contract_instance.methods();
@@ -1836,7 +1873,8 @@ async fn test_heap_type_in_enums() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "HeapTypeInEnum",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     let contract_methods = contract_instance.methods();
@@ -1948,7 +1986,8 @@ async fn nested_heap_types() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "HeapTypeInEnum",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 

@@ -17,7 +17,7 @@ async fn contract_default_configurables() -> Result<()> {
         "sway/contracts/configurables/out/release/configurables.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(&wallet, TxPolicies::default())
+    .deploy_if_not_exists(&wallet, TxPolicies::default())
     .await?;
 
     let contract_instance = MyContract::new(contract_id, wallet.clone());
@@ -65,6 +65,9 @@ async fn script_default_configurables() -> Result<()> {
             wallet = "wallet"
         )
     );
+
+    let mut script_instance = script_instance;
+    script_instance.convert_into_loader().await?;
 
     let response = script_instance.main().call().await?;
 
@@ -126,7 +129,7 @@ async fn contract_configurables() -> Result<()> {
         "sway/contracts/configurables/out/release/configurables.bin",
         LoadConfiguration::default().with_configurables(configurables),
     )?
-    .deploy(&wallet, TxPolicies::default())
+    .deploy_if_not_exists(&wallet, TxPolicies::default())
     .await?;
 
     let contract_instance = MyContract::new(contract_id, wallet.clone());
@@ -194,7 +197,7 @@ async fn contract_manual_configurables() -> Result<()> {
         LoadConfiguration::default(),
     )?
     .with_configurables(configurables)
-    .deploy(&wallet, TxPolicies::default())
+    .deploy_if_not_exists(&wallet, TxPolicies::default())
     .await?;
 
     let contract_instance = MyContract::new(contract_id, wallet.clone());
