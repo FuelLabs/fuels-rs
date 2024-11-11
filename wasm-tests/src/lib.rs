@@ -12,7 +12,7 @@ mod tests {
         programs::debug::{parse_script, ScriptType},
         types::{bech32::Bech32Address, errors::Result, AssetId, ContractId},
     };
-    use fuels_core::codec::runtime_decoder::{self, RuntimeDecoder};
+    use fuels_core::codec::abi_formatter::{self, ABIFormatter};
     use wasm_bindgen_test::wasm_bindgen_test;
 
     #[wasm_bindgen_test]
@@ -398,7 +398,7 @@ mod tests {
             "configurables": []
         }"#;
 
-        let decoder = RuntimeDecoder::from_json_abi(abi)?;
+        let decoder = ABIFormatter::from_json_abi(abi)?;
 
         // when
         let script_type = parse_script(&script, &script_data)?;

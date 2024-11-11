@@ -1,6 +1,6 @@
 use fuels::{
     core::{
-        codec::{runtime_decoder::RuntimeDecoder, ABIEncoder},
+        codec::{abi_formatter::ABIFormatter, ABIEncoder},
         traits::Tokenizable,
     },
     prelude::*,
@@ -38,7 +38,7 @@ async fn can_debug_single_call_tx() -> Result<()> {
         "./sway/types/contracts/nested_structs/out/release/nested_structs-abi.json",
     )
     .unwrap();
-    let decoder = RuntimeDecoder::from_json_abi(&abi)?;
+    let decoder = ABIFormatter::from_json_abi(&abi)?;
 
     // without gas forwarding
     {
@@ -169,7 +169,7 @@ async fn can_debug_multi_call_tx() -> Result<()> {
         "./sway/types/contracts/nested_structs/out/release/nested_structs-abi.json",
     )
     .unwrap();
-    let decoder = RuntimeDecoder::from_json_abi(&abi)?;
+    let decoder = ABIFormatter::from_json_abi(&abi)?;
 
     // without gas forwarding
     {
@@ -339,7 +339,7 @@ async fn can_debug_sway_script() -> Result<()> {
     let abi =
         std::fs::read_to_string("./sway/scripts/script_struct/out/release/script_struct-abi.json")?;
 
-    let decoder = RuntimeDecoder::from_json_abi(&abi)?;
+    let decoder = ABIFormatter::from_json_abi(&abi)?;
 
     let ScriptType::Other(desc) = parse_script(&tb.script, &tb.script_data).unwrap() else {
         panic!("expected a script")
@@ -390,7 +390,7 @@ async fn debugs_sway_script_with_no_configurables() -> Result<()> {
     let abi =
         std::fs::read_to_string("./sway/scripts/basic_script/out/release/basic_script-abi.json")?;
 
-    let decoder = RuntimeDecoder::from_json_abi(&abi)?;
+    let decoder = ABIFormatter::from_json_abi(&abi)?;
 
     let ScriptType::Other(desc) = parse_script(&tb.script, &tb.script_data).unwrap() else {
         panic!("expected a script")
@@ -450,7 +450,7 @@ async fn can_detect_a_loader_script() -> Result<()> {
 
     assert_eq!(blob_id, expected_blob_id);
 
-    let decoder = RuntimeDecoder::from_json_abi(std::fs::read_to_string(
+    let decoder = ABIFormatter::from_json_abi(std::fs::read_to_string(
         "./sway/scripts/script_struct/out/release/script_struct-abi.json",
     )?)?;
 

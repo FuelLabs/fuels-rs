@@ -12,13 +12,13 @@ struct AbiConfigurable {
     offset: u64,
 }
 
-pub struct RuntimeDecoder {
+pub struct ABIFormatter {
     functions: HashMap<String, Vec<ParamType>>,
     configurables: Vec<AbiConfigurable>,
     decoder: ABIDecoder,
 }
 
-impl RuntimeDecoder {
+impl ABIFormatter {
     pub fn has_fn(&self, fn_name: &str) -> bool {
         self.functions.contains_key(fn_name)
     }
@@ -125,7 +125,7 @@ mod tests {
     #[test]
     fn gracefully_handles_missing_fn() {
         // given
-        let decoder = RuntimeDecoder::from_abi(UnifiedProgramABI::default()).unwrap();
+        let decoder = ABIFormatter::from_abi(UnifiedProgramABI::default()).unwrap();
 
         // when
         let err = decoder.decode_fn_args("non_existent_fn", &[]).unwrap_err();
