@@ -1,20 +1,15 @@
 use std::collections::HashMap;
 
 use fuel_abi_types::abi::unified_program::UnifiedProgramABI;
+use itertools::Itertools;
 
 use crate::{error, types::param_types::ParamType, Result};
 
 use super::{ABIDecoder, DecoderConfig};
 
-struct AbiConfigurable {
-    name: String,
-    param_type: ParamType,
-    offset: u64,
-}
-
 pub struct ABIFormatter {
     functions: HashMap<String, Vec<ParamType>>,
-    configurables: Vec<AbiConfigurable>,
+    configurables: Vec<(String, ParamType)>,
     decoder: ABIDecoder,
 }
 
@@ -55,29 +50,18 @@ impl ABIFormatter {
             })
             .collect::<Result<HashMap<_, _>>>()?;
 
-        let mut configurables = abi
+        let configurables = abi
             .configurables
             .into_iter()
             .flatten()
+            .sorted_by_key(|c| c.offset)
             .map(|c| {
                 let param_type =
                     ParamType::try_from_type_application(&c.application, &type_lookup)?;
 
-                Ok(AbiConfigurable {
-                    name: c.name,
-                    param_type,
-                    offset: c.offset,
-                })
+                Ok((c.name, param_type))
             })
             .collect::<Result<Vec<_>>>()?;
-
-        let min_offset = configurables.iter().map(|c| c.offset).min().unwrap_or(0);
-
-        configurables
-            .iter_mut()
-            .for_each(|c| c.offset -= min_offset);
-
-        configurables.sort_by_key(|c| c.offset);
 
         Ok(Self {
             functions,
@@ -101,18 +85,22 @@ impl ABIFormatter {
     }
 
     pub fn decode_configurables(&self, configurable_data: &[u8]) -> Result<Vec<(String, String)>> {
-        eprintln!("configurable_data: {:?}", configurable_data);
         let param_types = self
             .configurables
             .iter()
-            .map(|c| c.param_type.clone())
+            .map(|(_, param_type)| param_type)
+            .cloned()
             .collect::<Vec<_>>();
-        self.decoder
+
+        let decoded = self
+            .decoder
             .decode_multiple_as_debug_str(&param_types, configurable_data)?
             .into_iter()
-            .zip(self.configurables.iter())
-            .map(|(value, c)| Ok((c.name.clone(), value)))
-            .collect()
+            .zip(&self.configurables)
+            .map(|(value, (name, _))| (name.clone(), value))
+            .collect();
+
+        Ok(decoded)
     }
 }
 
