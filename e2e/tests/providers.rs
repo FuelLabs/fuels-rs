@@ -40,7 +40,7 @@ async fn test_provider_launch_and_connect() -> Result<()> {
         "sway/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(&wallet, TxPolicies::default())
+    .deploy_if_not_exists(&wallet, TxPolicies::default())
     .await?;
 
     let contract_instance_connected = MyContract::new(contract_id.clone(), wallet.clone());
@@ -88,7 +88,7 @@ async fn test_network_error() -> Result<()> {
         "sway/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(&wallet, TxPolicies::default())
+    .deploy_if_not_exists(&wallet, TxPolicies::default())
     .await;
 
     assert!(matches!(response, Err(Error::Provider(_))));
@@ -132,7 +132,8 @@ async fn test_input_message() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -179,7 +180,7 @@ async fn test_input_message_pays_fee() -> Result<()> {
         "sway/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(&wallet, TxPolicies::default())
+    .deploy_if_not_exists(&wallet, TxPolicies::default())
     .await?;
 
     let contract_instance = MyContract::new(contract_id, wallet.clone());
@@ -293,7 +294,8 @@ async fn contract_deployment_respects_maturity() -> Result<()> {
             LoadConfiguration::default(),
         )
         .map(|loaded_contract| {
-            loaded_contract.deploy(wallet, TxPolicies::default().with_maturity(maturity))
+            loaded_contract
+                .deploy_if_not_exists(wallet, TxPolicies::default().with_maturity(maturity))
         })
     };
 
@@ -325,7 +327,8 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -363,7 +366,8 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TokenContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     let contract_id = contract_instance.contract_id();
@@ -474,7 +478,8 @@ async fn test_gas_errors() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -526,7 +531,8 @@ async fn test_call_param_gas_errors() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -568,7 +574,8 @@ async fn test_get_gas_used() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -715,7 +722,8 @@ async fn test_sway_timestamp() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -876,7 +884,8 @@ async fn can_fetch_mint_transactions() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -960,6 +969,7 @@ async fn can_produce_blocks_with_trig_never() -> Result<()> {
     provider.send_transaction(tx).await?;
     provider.produce_blocks(1, None).await?;
 
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
     let status = provider.tx_status(&tx_id).await?;
     assert!(matches!(status, TxStatus::Success { .. }));
 
@@ -1026,7 +1036,8 @@ async fn tx_respects_policies() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -1189,7 +1200,7 @@ async fn contract_call_with_impersonation() -> Result<()> {
         "sway/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(&wallet, TxPolicies::default())
+    .deploy_if_not_exists(&wallet, TxPolicies::default())
     .await?;
 
     let contract_instance = MyContract::new(contract_id, impersonator.clone());
@@ -1200,6 +1211,73 @@ async fn contract_call_with_impersonation() -> Result<()> {
         .initialize_counter(42)
         .call()
         .await?;
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn is_account_query_test() -> Result<()> {
+    {
+        let wallet = launch_provider_and_get_wallet().await?;
+        let provider = wallet.provider().unwrap().clone();
+
+        let blob = Blob::new(vec![1; 100]);
+        let blob_id = blob.id();
+
+        let is_account = provider.is_user_account(blob_id).await?;
+        assert!(is_account);
+
+        let mut tb = BlobTransactionBuilder::default().with_blob(blob);
+        wallet.adjust_for_fee(&mut tb, 0).await?;
+        wallet.add_witnesses(&mut tb)?;
+        let tx = tb.build(provider.clone()).await?;
+
+        provider
+            .send_transaction_and_await_commit(tx)
+            .await?
+            .check(None)?;
+
+        let is_account = provider.is_user_account(blob_id).await?;
+        assert!(!is_account);
+    }
+    {
+        let wallet = launch_provider_and_get_wallet().await?;
+        let provider = wallet.provider().unwrap().clone();
+
+        let contract = Contract::load_from(
+            "sway/contracts/contract_test/out/release/contract_test.bin",
+            LoadConfiguration::default(),
+        )?;
+        let contract_id = contract.contract_id();
+
+        let is_account = provider.is_user_account(*contract_id).await?;
+        assert!(is_account);
+
+        contract.deploy(&wallet, TxPolicies::default()).await?;
+
+        let is_account = provider.is_user_account(*contract_id).await?;
+        assert!(!is_account);
+    }
+    {
+        let wallet = launch_provider_and_get_wallet().await?;
+        let provider = wallet.provider().unwrap().clone();
+
+        let mut tb = ScriptTransactionBuilder::default();
+        wallet.adjust_for_fee(&mut tb, 0).await?;
+        wallet.add_witnesses(&mut tb)?;
+        let tx = tb.build(provider.clone()).await?;
+
+        let tx_id = tx.id(provider.chain_id());
+        let is_account = provider.is_user_account(tx_id).await?;
+        assert!(is_account);
+
+        provider
+            .send_transaction_and_await_commit(tx)
+            .await?
+            .check(None)?;
+        let is_account = provider.is_user_account(tx_id).await?;
+        assert!(!is_account);
+    }
 
     Ok(())
 }

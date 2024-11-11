@@ -22,7 +22,7 @@ use itertools::Itertools;
 use script_tx_estimator::ScriptTxEstimator;
 
 use crate::{
-    constants::{SIGNATURE_WITNESS_SIZE, WORD_SIZE},
+    constants::{DEFAULT_GAS_ESTIMATION_BLOCK_HORIZON, SIGNATURE_WITNESS_SIZE, WORD_SIZE},
     traits::Signer,
     types::{
         bech32::Bech32Address,
@@ -45,7 +45,7 @@ mod script_tx_estimator;
 
 pub use blob::*;
 
-const GAS_ESTIMATION_BLOCK_HORIZON: u32 = 1;
+const GAS_ESTIMATION_BLOCK_HORIZON: u32 = DEFAULT_GAS_ESTIMATION_BLOCK_HORIZON;
 
 #[derive(Debug, Clone, Default)]
 struct UnresolvedWitnessIndexes {
