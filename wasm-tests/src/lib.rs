@@ -1,6 +1,7 @@
 extern crate alloc;
 
 // #[cfg(all(test, target_arch = "wasm32"))]
+#[cfg(test)]
 mod tests {
     use std::{default::Default, str::FromStr};
 

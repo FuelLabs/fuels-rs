@@ -24,6 +24,16 @@ impl<'a> WasmFriendlyCursor<'a> {
         }
     }
 
+    pub fn consume_fixed<const AMOUNT: usize>(
+        &mut self,
+        ctx: &'static str,
+    ) -> Result<[u8; AMOUNT]> {
+        Ok(self
+            .consume(AMOUNT, ctx)?
+            .try_into()
+            .expect("should have failed if not enough data"))
+    }
+
     pub fn consume_all(&self) -> &'a [u8] {
         self.data
     }

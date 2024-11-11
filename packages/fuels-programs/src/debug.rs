@@ -170,10 +170,7 @@ fn parse_loader_script(script: &[u8], data: &[u8]) -> Result<Option<(ScriptCallD
         return Ok(None);
     }
 
-    let blob_id = script_cursor
-        .consume(32, "blob id")?
-        .try_into()
-        .expect("will have exactly 32 bytes");
+    let blob_id = script_cursor.consume_fixed("blob id")?;
 
     let _data_section_len = script_cursor.consume(WORD_SIZE, "data section len")?;
 

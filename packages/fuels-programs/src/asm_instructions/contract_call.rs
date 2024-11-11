@@ -218,23 +218,11 @@ impl ContractCallData {
     pub fn decode(data: &[u8], gas_fwd: bool) -> Result<Self> {
         let mut data = WasmFriendlyCursor::new(data);
 
-        let amount = u64::from_be_bytes(
-            data.consume(8, "amount")?
-                .try_into()
-                .expect("will have exactly 8 bytes"),
-        );
+        let amount = u64::from_be_bytes(data.consume_fixed("amount")?);
 
-        let asset_id = AssetId::new(
-            data.consume(32, "asset id")?
-                .try_into()
-                .expect("will have exactly 32 bytes"),
-        );
+        let asset_id = AssetId::new(data.consume_fixed("asset id")?);
 
-        let contract_id = ContractId::new(
-            data.consume(32, "contract id")?
-                .try_into()
-                .expect("will have exactly 32 bytes"),
-        );
+        let contract_id = ContractId::new(data.consume_fixed("contract id")?);
 
         let _ = data.consume(8, "function selector offset")?;
 
@@ -242,8 +230,8 @@ impl ContractCallData {
 
         let fn_selector = {
             let fn_selector_len = {
-                let bytes = data.consume(8, "function selector lenght")?;
-                u64::from_be_bytes(bytes.try_into().expect("will have exactly 8 bytes")) as usize
+                let bytes = data.consume_fixed("function selector lenght")?;
+                u64::from_be_bytes(bytes) as usize
             };
             data.consume(fn_selector_len, "function selector")?.to_vec()
         };
@@ -253,10 +241,7 @@ impl ContractCallData {
                 .consume(data.unconsumed().saturating_sub(WORD_SIZE), "encoded_args")?
                 .to_vec();
 
-            let gas_fwd = {
-                let gas_fwd_bytes = data.consume(WORD_SIZE, "forwarded gas")?;
-                u64::from_be_bytes(gas_fwd_bytes.try_into().expect("exactly 8 bytes"))
-            };
+            let gas_fwd = { u64::from_be_bytes(data.consume_fixed("forwarded gas")?) };
 
             (encoded_args, Some(gas_fwd))
         } else {
