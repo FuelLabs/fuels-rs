@@ -252,7 +252,7 @@ jobs:
         if: ${{ matrix.command == 'test_wasm' }}
         uses: actions/setup-node@v3
         with:
-          node-version: 18
+          node-version: 22.8.0
 
       - name: Test WASM
         if: ${{ matrix.command == 'test_wasm' }}
