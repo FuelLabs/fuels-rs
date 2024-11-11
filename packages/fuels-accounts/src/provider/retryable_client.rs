@@ -366,7 +366,7 @@ mod custom_queries {
     #[cynic(
         graphql_type = "Query",
         variables = "IsUserAccountVariables",
-        schema_path = "./target/fuel-core-client-schema.sdl"
+        schema_path = "./src/schema/schema.sdl"
     )]
     pub struct IsUserAccountQuery {
         #[arguments(id: $blob_id)]
@@ -379,7 +379,7 @@ mod custom_queries {
 
     #[derive(cynic::QueryFragment, Clone, Debug)]
     #[cynic(
-        schema_path = "./target/fuel-core-client-schema.sdl",
+        schema_path = "./src/schema/schema.sdl",
         graphql_type = "Query",
         variables = "ContractByIdArgs"
     )]
