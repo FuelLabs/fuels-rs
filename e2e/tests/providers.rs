@@ -218,6 +218,9 @@ async fn can_increase_block_height() -> Result<()> {
     Ok(())
 }
 
+// debug builds are slower (20x for `fuel-core-lib`, 4x for a release-fuel-core-binary), makes for
+// flaky tests
+#[cfg(not(feature = "fuel-core-lib"))]
 #[tokio::test]
 async fn can_set_custom_block_time() -> Result<()> {
     // ANCHOR: use_produce_blocks_custom_time
