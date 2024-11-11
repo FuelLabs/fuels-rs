@@ -9,7 +9,6 @@ use fuels::{
     prelude::*,
     tx::Receipt,
     types::{
-        block::Block,
         coin_type::CoinType,
         message::Message,
         transaction_builders::{BuildableTransaction, ScriptTransactionBuilder},
@@ -258,7 +257,7 @@ async fn can_set_custom_block_time() -> Result<()> {
         results: 10,
         direction: PageDirection::Forward,
     };
-    let blocks: Vec<Block> = provider.get_blocks(req).await?.results;
+    let blocks: Vec<fuels::types::block::Block> = provider.get_blocks(req).await?.results;
 
     assert_eq!(blocks[1].header.time.unwrap().timestamp(), 20);
     assert_eq!(blocks[2].header.time.unwrap().timestamp(), 40);
