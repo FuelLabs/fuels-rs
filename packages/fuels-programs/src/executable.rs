@@ -1,15 +1,12 @@
 use fuels_core::{
     types::{
         errors::Result,
-        transaction_builders::{Blob, BlobId, BlobTransactionBuilder},
+        transaction_builders::{Blob, BlobTransactionBuilder},
     },
     Configurables,
 };
-use itertools::Itertools;
 
-use crate::asm_instructions::script_and_predicate_loader::{
-    loader_instructions, loader_instructions_no_data_section,
-};
+use crate::asm_instructions::script_and_predicate_loader::{extract_data_offset, LoaderCode};
 
 /// This struct represents a standard executable with its associated bytecode and configurables.
 #[derive(Debug, Clone, PartialEq)]
@@ -120,33 +117,29 @@ impl Executable<Loader> {
     }
 
     pub fn data_offset_in_code(&self) -> usize {
-        self.code_with_offset().1
+        self.loader_code().to_bytes_w_offset().1
     }
 
-    fn code_with_offset(&self) -> (Vec<u8>, usize) {
+    fn loader_code(&self) -> LoaderCode {
         let mut code = self.state.code.clone();
 
         self.state.configurables.update_constants_in(&mut code);
 
-        let blob_id = self.blob().id();
-
-        transform_into_configurable_loader(code, &blob_id)
+        LoaderCode::from_normal_binary(code)
             .expect("checked before turning into a Executable<Loader>")
     }
 
     /// Returns the code of the loader executable with configurables applied.
     pub fn code(&self) -> Vec<u8> {
-        self.code_with_offset().0
+        self.loader_code().to_bytes_w_offset().0
     }
 
     /// A Blob containing the original executable code minus the data section.
     pub fn blob(&self) -> Blob {
-        let data_section_offset = extract_data_offset(&self.state.code)
-            .expect("checked before turning into a Executable<Loader>");
-
-        let code_without_data_section = self.state.code[..data_section_offset].to_vec();
-
-        Blob::new(code_without_data_section)
+        // we don't apply configurables because they touch the data section which isn't part of the
+        // blob
+        LoaderCode::extract_blob(&self.state.code)
+            .expect("checked before turning into a Executable<Loader>")
     }
 
     /// Uploads a blob containing the original executable code minus the data section.
@@ -175,89 +168,13 @@ impl Executable<Loader> {
     }
 }
 
-fn extract_data_offset(binary: &[u8]) -> Result<usize> {
-    if binary.len() < 16 {
-        return Err(fuels_core::error!(
-            Other,
-            "given binary is too short to contain a data offset, len: {}",
-            binary.len()
-        ));
-    }
-
-    let data_offset: [u8; 8] = binary[8..16].try_into().expect("checked above");
-
-    Ok(u64::from_be_bytes(data_offset) as usize)
-}
-
-fn transform_into_configurable_loader(
-    binary: Vec<u8>,
-    blob_id: &BlobId,
-) -> Result<(Vec<u8>, usize)> {
-    // The final code is going to have this structure (if the data section is non-empty):
-    // 1. loader instructions
-    // 2. blob id
-    // 3. length_of_data_section
-    // 4. the data_section (updated with configurables as needed)
-    let offset = extract_data_offset(&binary)?;
-
-    if binary.len() < offset {
-        return Err(fuels_core::error!(
-            Other,
-            "data section offset is out of bounds, offset: {offset}, binary len: {}",
-            binary.len()
-        ));
-    }
-
-    let data_section = binary[offset..].to_vec();
-
-    if !data_section.is_empty() {
-        let instruction_bytes = loader_instructions()
-            .into_iter()
-            .flat_map(|instruction| instruction.to_bytes())
-            .collect_vec();
-
-        let blob_bytes = blob_id.iter().copied().collect_vec();
-
-        let original_data_section_len_encoded = u64::try_from(data_section.len())
-            .expect("data section to be less than u64::MAX")
-            .to_be_bytes();
-
-        // The data section is placed after all of the instructions, the BlobId, and the number representing
-        // how big the data section is.
-        let new_data_section_offset =
-            instruction_bytes.len() + blob_bytes.len() + original_data_section_len_encoded.len();
-
-        let code = instruction_bytes
-            .into_iter()
-            .chain(blob_bytes)
-            .chain(original_data_section_len_encoded)
-            .chain(data_section)
-            .collect();
-
-        Ok((code, new_data_section_offset))
-    } else {
-        let instruction_bytes = loader_instructions_no_data_section()
-            .into_iter()
-            .flat_map(|instruction| instruction.to_bytes());
-
-        let blob_bytes = blob_id.iter().copied();
-
-        let code = instruction_bytes.chain(blob_bytes).collect_vec();
-        // there is no data section, so we point the offset to the end of the file
-        let new_data_section_offset = code.len();
-
-        Ok((code, new_data_section_offset))
-    }
-}
-
 fn validate_loader_can_be_made_from_code(
     mut code: Vec<u8>,
     configurables: Configurables,
 ) -> Result<()> {
     configurables.update_constants_in(&mut code);
 
-    // BlobId currently doesn't affect our ability to produce the loader code
-    transform_into_configurable_loader(code, &Default::default())?;
+    let _ = LoaderCode::from_normal_binary(code)?;
 
     Ok(())
 }
@@ -366,11 +283,11 @@ mod tests {
         assert_eq!(blob.as_ref(), data_stripped_code);
 
         let loader_code = loader.code();
-        let blob_id = blob.id();
         assert_eq!(
             loader_code,
-            transform_into_configurable_loader(code, &blob_id)
+            LoaderCode::from_normal_binary(code)
                 .unwrap()
+                .to_bytes_w_offset()
                 .0
         )
     }

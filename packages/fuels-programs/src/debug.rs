@@ -1,12 +1,11 @@
 use fuel_asm::{Instruction, Opcode};
-use fuels_core::{constants::WORD_SIZE, error, types::errors::Result};
+use fuels_core::{error, types::errors::Result};
 use itertools::Itertools;
 
 use crate::{
     asm_instructions::{
         contract_call::{ContractCallData, ContractCallInstructions},
-        cursor::WasmFriendlyCursor,
-        script_and_predicate_loader::loader_instructions,
+        script_and_predicate_loader::LoaderCode,
     },
     utils::prepend_msg,
 };
@@ -131,59 +130,24 @@ pub fn parse_script(script: &[u8], data: &[u8]) -> Result<ScriptType> {
         return Ok(ScriptType::ContractCall(contract_calls));
     }
 
-    if let Some((script, blob_id)) =
-        parse_loader_script(script, data).map_err(prepend_msg("while decoding loader script"))?
-    {
+    if let Some((script, blob_id)) = parse_loader_script(script, data) {
         return Ok(ScriptType::Loader(script, blob_id));
     }
 
     Ok(ScriptType::Other(parse_script_call(script, data)))
 }
 
-fn parse_loader_script(script: &[u8], data: &[u8]) -> Result<Option<(ScriptCallData, [u8; 32])>> {
-    // TODO: handle no data section
-    let expected_loader_instructions = loader_instructions();
-    let loader_instructions_byte_size = expected_loader_instructions.len() * Instruction::SIZE;
+fn parse_loader_script(script: &[u8], data: &[u8]) -> Option<(ScriptCallData, [u8; 32])> {
+    let loader_code = LoaderCode::from_loader_binary(script).ok()?;
 
-    let mut script_cursor = WasmFriendlyCursor::new(script);
-
-    // we give up if we don't have enough instructions or if they cannot be decoded. Undecodable
-    // "instructions"" are present in a standard sway script in the form of the data offset in the
-    // second word of the binary
-    let Some(instructions) = script_cursor
-        .consume(loader_instructions_byte_size, "loader instructions")
-        .ok()
-        .and_then(|b| {
-            fuel_asm::from_bytes(b.to_vec())
-                .collect::<std::result::Result<Vec<Instruction>, _>>()
-                .ok()
-        })
-    else {
-        return Ok(None);
-    };
-
-    if instructions
-        .iter()
-        .zip(expected_loader_instructions.iter())
-        .any(|(actual, expected)| actual != expected)
-    {
-        return Ok(None);
-    }
-
-    let blob_id = script_cursor.consume_fixed("blob id")?;
-
-    let _data_section_len = script_cursor.consume(WORD_SIZE, "data section len")?;
-
-    Ok(Some((
+    Some((
         ScriptCallData {
             code: script.to_vec(),
             data: data.to_vec(),
-            data_section_offset: Some(
-                script.len().saturating_sub(script_cursor.unconsumed()) as u64
-            ),
+            data_section_offset: Some(loader_code.to_bytes_w_offset().1 as u64),
         },
-        blob_id,
-    )))
+        loader_code.blob_id(),
+    ))
 }
 
 #[cfg(test)]
