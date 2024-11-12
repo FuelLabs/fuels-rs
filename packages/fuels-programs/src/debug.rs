@@ -130,24 +130,28 @@ pub fn parse_script(script: &[u8], data: &[u8]) -> Result<ScriptType> {
         return Ok(ScriptType::ContractCall(contract_calls));
     }
 
-    if let Some((script, blob_id)) = parse_loader_script(script, data) {
+    if let Some((script, blob_id)) = parse_loader_script(script, data)? {
         return Ok(ScriptType::Loader(script, blob_id));
     }
 
     Ok(ScriptType::Other(parse_script_call(script, data)))
 }
 
-fn parse_loader_script(script: &[u8], data: &[u8]) -> Option<(ScriptCallData, [u8; 32])> {
-    let loader_code = LoaderCode::from_loader_binary(script).ok()?;
+fn parse_loader_script(script: &[u8], data: &[u8]) -> Result<Option<(ScriptCallData, [u8; 32])>> {
+    let Some(loader_code) = LoaderCode::from_loader_binary(script)
+        .map_err(prepend_msg("while decoding loader script"))?
+    else {
+        return Ok(None);
+    };
 
-    Some((
+    Ok(Some((
         ScriptCallData {
             code: script.to_vec(),
             data: data.to_vec(),
             data_section_offset: Some(loader_code.to_bytes_w_offset().1 as u64),
         },
         loader_code.blob_id(),
-    ))
+    )))
 }
 
 #[cfg(test)]

@@ -35,29 +35,35 @@ impl LoaderCode {
         // we give up if we don't have enough instructions or if they cannot be decoded. Undecodable
         // "instructions"" are present in a standard sway script in the form of the data offset in the
         // second word of the binary
-        let instruction_bytes =
-            script_cursor.consume(loader_instructions_byte_size, "loader instructions")?;
+        let Ok(instruction_bytes) =
+            script_cursor.consume(loader_instructions_byte_size, "loader instructions")
+        else {
+            return Ok(None);
+        };
 
-        let instructions = fuel_asm::from_bytes(instruction_bytes.to_vec())
+        let Some(instructions) = fuel_asm::from_bytes(instruction_bytes.to_vec())
             .collect::<std::result::Result<Vec<Instruction>, _>>()
-            .map_err(|_| error!(Codec, "failed to decode loader instructions"))?;
+            .ok()
+        else {
+            return Ok(None);
+        };
 
         if instructions
             .iter()
             .zip(expected_loader_instructions.iter())
             .any(|(actual, expected)| actual != expected)
         {
-            return Err(error!(Codec, "unexpected loader instructions"));
+            return Ok(None);
         }
 
         let blob_id = script_cursor.consume_fixed("blob id")?;
 
         let _data_section_len = script_cursor.consume(WORD_SIZE, "data section len")?;
 
-        Ok(Self {
+        Ok(Some(Self {
             data_section: script_cursor.consume_all().to_vec(),
             blob_id,
-        })
+        }))
     }
 
     pub fn extract_blob(binary: &[u8]) -> Result<Blob> {
