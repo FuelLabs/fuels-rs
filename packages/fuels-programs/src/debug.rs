@@ -63,8 +63,49 @@ fn parse_contract_calls(
         return Ok(None);
     };
 
-    let mut instructions = instructions.as_slice();
+    let Some(call_instructions) = extract_call_instructions(&instructions) else {
+        return Ok(None);
+    };
 
+    let Some(minimum_call_offset) = call_instructions.iter().map(|i| i.call_data_offset()).min()
+    else {
+        return Ok(None);
+    };
+
+    let num_calls = call_instructions.len();
+
+    call_instructions.iter().enumerate().map(|(idx, current_call_instructions)| {
+            let data_start =
+                (current_call_instructions.call_data_offset() - minimum_call_offset) as usize;
+
+            let data_end = if idx + 1 < num_calls {
+                (call_instructions[idx + 1].call_data_offset()
+                    - current_call_instructions.call_data_offset()) as usize
+            } else {
+                script_data.len()
+            };
+
+            if data_start > script_data.len() || data_end > script_data.len() {
+                return Err(error!(
+                    Other,
+                    "call data offset requires data section of length {}, but data section is only {} bytes long",
+                    data_end,
+                    script_data.len()
+                ));
+            }
+
+            let contract_call_data = ContractCallData::decode(
+                &script_data[data_start..data_end],
+                current_call_instructions.is_gas_fwd_variant(),
+            )?;
+
+            Ok(contract_call_data)
+        }).collect::<Result<_>>().map(Some)
+}
+
+fn extract_call_instructions(
+    mut instructions: &[Instruction],
+) -> Option<Vec<ContractCallInstructions>> {
     let mut call_instructions = vec![];
 
     while let Some(extracted_instructions) = ContractCallInstructions::extract_from(instructions) {
@@ -77,64 +118,28 @@ fn parse_contract_calls(
 
     if !instructions.is_empty() {
         match instructions {
-            [single_instruction] if single_instruction.opcode() == Opcode::RET => {
-                eprintln!("Single instruction is a RET, that's fine")
-            }
-            _ => {
-                return Ok(None);
-            }
+            [single_instruction] if single_instruction.opcode() == Opcode::RET => {}
+            _ => return None,
         }
     }
 
-    let Some(minimum_call_offset) = call_instructions.iter().map(|i| i.call_data_offset()).min()
-    else {
-        return Ok(None);
-    };
-
-    let num_calls = call_instructions.len();
-
-    call_instructions.iter().enumerate().try_fold(vec![], |mut descriptions, (idx, current_call_instructions)| {
-        let data_start =
-            (current_call_instructions.call_data_offset() - minimum_call_offset) as usize;
-
-        let data_end = if idx + 1 < num_calls {
-            (call_instructions[idx + 1].call_data_offset()
-                - current_call_instructions.call_data_offset()) as usize
-        } else {
-            script_data.len()
-        };
-
-        if data_start > script_data.len() || data_end > script_data.len() {
-            return Err(error!(
-                Other,
-                "call data offset requires data section of length {}, but data section is only {} bytes long",
-                data_end,
-                script_data.len()
-            ));
-        }
-
-        let contract_call_data = ContractCallData::decode(
-            &script_data[data_start..data_end],
-            current_call_instructions.is_gas_fwd_variant(),
-        )?;
-
-        descriptions.push(contract_call_data);
-        Ok(descriptions)
-    }).map(Some)
+    Some(call_instructions)
 }
 
-pub fn parse_script(script: &[u8], data: &[u8]) -> Result<ScriptType> {
-    if let Some(contract_calls) =
-        parse_contract_calls(script, data).map_err(prepend_msg("while decoding contract call"))?
-    {
-        return Ok(ScriptType::ContractCall(contract_calls));
-    }
+impl ScriptType {
+    pub fn detect(script: &[u8], data: &[u8]) -> Result<Self> {
+        if let Some(contract_calls) = parse_contract_calls(script, data)
+            .map_err(prepend_msg("while decoding contract call"))?
+        {
+            return Ok(Self::ContractCall(contract_calls));
+        }
 
-    if let Some((script, blob_id)) = parse_loader_script(script, data)? {
-        return Ok(ScriptType::Loader(script, blob_id));
-    }
+        if let Some((script, blob_id)) = parse_loader_script(script, data)? {
+            return Ok(Self::Loader(script, blob_id));
+        }
 
-    Ok(ScriptType::Other(parse_script_call(script, data)))
+        Ok(Self::Other(parse_script_call(script, data)))
+    }
 }
 
 fn parse_loader_script(script: &[u8], data: &[u8]) -> Result<Option<(ScriptCallData, [u8; 32])>> {
@@ -175,7 +180,7 @@ mod tests {
         let empty_script = [];
 
         // when
-        let res = parse_script(&empty_script, &[]).unwrap();
+        let res = ScriptType::detect(&empty_script, &[]).unwrap();
 
         // then
         assert_eq!(
@@ -196,7 +201,7 @@ mod tests {
         rng.fill_bytes(&mut script);
 
         // when
-        let script_type = parse_script(&script, &[]).unwrap();
+        let script_type = ScriptType::detect(&script, &[]).unwrap();
 
         // then
         assert_eq!(
@@ -225,7 +230,7 @@ mod tests {
         .collect::<Vec<_>>();
 
         // when
-        let script_type = parse_script(&handwritten_script, &[]).unwrap();
+        let script_type = ScriptType::detect(&handwritten_script, &[]).unwrap();
 
         // then
         assert_eq!(
@@ -279,7 +284,7 @@ mod tests {
         let not_enough_data = ok_data[..ok_data.len() - amount_of_data_to_steal].to_vec();
 
         // when
-        let err = parse_script(&script, &not_enough_data).unwrap_err();
+        let err = ScriptType::detect(&script, &not_enough_data).unwrap_err();
 
         // then
         let Error::Other(mut msg) = err else {
@@ -315,7 +320,7 @@ mod tests {
         ok_data[96..101].copy_from_slice(&invalid_utf8);
 
         // when
-        let script_type = parse_script(&script, &ok_data).unwrap();
+        let script_type = ScriptType::detect(&script, &ok_data).unwrap();
 
         // then
         let ScriptType::ContractCall(datas) = script_type else {
@@ -340,7 +345,7 @@ mod tests {
             .collect::<Vec<_>>();
 
         // when
-        let err = parse_script(&script, &[]).unwrap_err();
+        let err = ScriptType::detect(&script, &[]).unwrap_err();
 
         // then
         let Error::Other(msg) = err else {
@@ -367,7 +372,7 @@ mod tests {
             .collect::<Vec<_>>();
 
         // when
-        let script_type = parse_script(&script, &[]).unwrap();
+        let script_type = ScriptType::detect(&script, &[]).unwrap();
 
         // then
         assert_eq!(
@@ -396,7 +401,7 @@ mod tests {
         let script_data = example_contract_call_data(false, true);
 
         // when
-        let script_type = parse_script(&contract_call_script, &script_data).unwrap();
+        let script_type = ScriptType::detect(&contract_call_script, &script_data).unwrap();
 
         // then
         assert_eq!(
@@ -433,7 +438,7 @@ mod tests {
         let together = contract_call_1.chain(contract_call_2).collect_vec();
 
         // when
-        let err = parse_script(&together, &data_only_for_one_call).unwrap_err();
+        let err = ScriptType::detect(&together, &data_only_for_one_call).unwrap_err();
 
         // then
         let Error::Other(msg) = err else {

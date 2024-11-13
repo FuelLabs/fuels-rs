@@ -4,10 +4,7 @@ use fuels::{
         traits::Tokenizable,
     },
     prelude::*,
-    programs::{
-        debug::{parse_script, ScriptType},
-        executable::Executable,
-    },
+    programs::{debug::ScriptType, executable::Executable},
 };
 
 #[tokio::test]
@@ -53,7 +50,8 @@ async fn can_debug_single_call_tx() -> Result<()> {
         let script = tb.script;
         let script_data = tb.script_data;
 
-        let ScriptType::ContractCall(call_descriptions) = parse_script(&script, &script_data)?
+        let ScriptType::ContractCall(call_descriptions) =
+            ScriptType::detect(&script, &script_data)?
         else {
             panic!("expected a contract call")
         };
@@ -96,7 +94,8 @@ async fn can_debug_single_call_tx() -> Result<()> {
         let script = tb.script;
         let script_data = tb.script_data;
 
-        let ScriptType::ContractCall(call_descriptions) = parse_script(&script, &script_data)?
+        let ScriptType::ContractCall(call_descriptions) =
+            ScriptType::detect(&script, &script_data)?
         else {
             panic!("expected a contract call")
         };
@@ -193,7 +192,8 @@ async fn can_debug_multi_call_tx() -> Result<()> {
         let script = tb.script;
         let script_data = tb.script_data;
 
-        let ScriptType::ContractCall(call_descriptions) = parse_script(&script, &script_data)?
+        let ScriptType::ContractCall(call_descriptions) =
+            ScriptType::detect(&script, &script_data)?
         else {
             panic!("expected a contract call")
         };
@@ -266,7 +266,8 @@ async fn can_debug_multi_call_tx() -> Result<()> {
         let script = tb.script;
         let script_data = tb.script_data;
 
-        let ScriptType::ContractCall(call_descriptions) = parse_script(&script, &script_data)?
+        let ScriptType::ContractCall(call_descriptions) =
+            ScriptType::detect(&script, &script_data)?
         else {
             panic!("expected a contract call")
         };
@@ -341,7 +342,7 @@ async fn can_debug_sway_script() -> Result<()> {
 
     let decoder = ABIFormatter::from_json_abi(&abi)?;
 
-    let ScriptType::Other(desc) = parse_script(&tb.script, &tb.script_data).unwrap() else {
+    let ScriptType::Other(desc) = ScriptType::detect(&tb.script, &tb.script_data).unwrap() else {
         panic!("expected a script")
     };
 
@@ -392,7 +393,7 @@ async fn debugs_sway_script_with_no_configurables() -> Result<()> {
 
     let decoder = ABIFormatter::from_json_abi(&abi)?;
 
-    let ScriptType::Other(desc) = parse_script(&tb.script, &tb.script_data).unwrap() else {
+    let ScriptType::Other(desc) = ScriptType::detect(&tb.script, &tb.script_data).unwrap() else {
         panic!("expected a script")
     };
 
@@ -411,7 +412,7 @@ async fn data_section_offset_not_set_if_out_of_bounds() -> Result<()> {
     let mut custom_script = vec![0; 1000];
     custom_script[8..16].copy_from_slice(&u64::MAX.to_be_bytes());
 
-    let ScriptType::Other(desc) = parse_script(&custom_script, &[]).unwrap() else {
+    let ScriptType::Other(desc) = ScriptType::detect(&custom_script, &[]).unwrap() else {
         panic!("expected a script")
     };
 
@@ -444,7 +445,8 @@ async fn can_detect_a_loader_script() -> Result<()> {
     let expected_blob_id = executable.blob().id();
     let script = executable.code();
 
-    let ScriptType::Loader(desc, blob_id) = parse_script(&script, &script_data).unwrap() else {
+    let ScriptType::Loader(desc, blob_id) = ScriptType::detect(&script, &script_data).unwrap()
+    else {
         panic!("expected a loader script")
     };
 

@@ -9,10 +9,10 @@ mod tests {
         accounts::predicate::Predicate,
         core::{codec::ABIEncoder, traits::Tokenizable},
         macros::wasm_abigen,
-        programs::debug::{parse_script, ScriptType},
+        programs::debug::ScriptType,
         types::{bech32::Bech32Address, errors::Result, AssetId},
     };
-    use fuels_core::codec::abi_formatter::{ABIFormatter};
+    use fuels_core::codec::abi_formatter::ABIFormatter;
     use wasm_bindgen_test::wasm_bindgen_test;
 
     #[wasm_bindgen_test]
@@ -401,7 +401,7 @@ mod tests {
         let decoder = ABIFormatter::from_json_abi(abi)?;
 
         // when
-        let script_type = parse_script(&script, &script_data)?;
+        let script_type = ScriptType::detect(&script, &script_data)?;
 
         // then
         let ScriptType::ContractCall(call_descriptions) = script_type else {
