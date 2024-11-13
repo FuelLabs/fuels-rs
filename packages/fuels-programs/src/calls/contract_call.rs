@@ -1,9 +1,8 @@
 use std::{collections::HashMap, fmt::Debug};
 
-use fuel_asm::Word;
-use fuel_tx::{AssetId, ContractId};
+use fuel_tx::AssetId;
 use fuels_core::{
-    constants::{DEFAULT_CALL_PARAMS_AMOUNT, WORD_SIZE},
+    constants::DEFAULT_CALL_PARAMS_AMOUNT,
     error,
     types::{
         bech32::{Bech32Address, Bech32ContractId},
@@ -13,10 +12,7 @@ use fuels_core::{
     },
 };
 
-use crate::{
-    assembly::{contract_call::ContractCallData, cursor::WasmFriendlyCursor},
-    calls::utils::sealed,
-};
+use crate::{assembly::contract_call::ContractCallData, calls::utils::sealed};
 
 #[derive(Debug, Clone)]
 /// Contains all data relevant to a single contract call
@@ -32,7 +28,7 @@ pub struct ContractCall {
 }
 
 impl ContractCall {
-    pub fn data(&self, base_asset_id: AssetId) -> Result<ContractCallData> {
+    pub(crate) fn data(&self, base_asset_id: AssetId) -> Result<ContractCallData> {
         let encoded_args = self
             .encoded_args
             .as_ref()

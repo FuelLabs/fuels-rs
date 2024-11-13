@@ -10,9 +10,9 @@ mod tests {
         core::{codec::ABIEncoder, traits::Tokenizable},
         macros::wasm_abigen,
         programs::debug::{parse_script, ScriptType},
-        types::{bech32::Bech32Address, errors::Result, AssetId, ContractId},
+        types::{bech32::Bech32Address, errors::Result, AssetId},
     };
-    use fuels_core::codec::abi_formatter::{self, ABIFormatter};
+    use fuels_core::codec::abi_formatter::{ABIFormatter};
     use wasm_bindgen_test::wasm_bindgen_test;
 
     #[wasm_bindgen_test]
