@@ -41,6 +41,8 @@ mod regular;
 pub use regular::*;
 
 mod loader;
+// reexported to avoid doing a breaking change
+pub use crate::assembly::contract_call::loader_contract_asm;
 pub use loader::*;
 
 fn compute_contract_id_and_state_root(
