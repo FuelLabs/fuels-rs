@@ -21,7 +21,7 @@ impl LoaderCode {
         let (original_code, data_section) = split_at_data_offset(&binary)?;
 
         let blob_id = Blob::from(original_code.to_vec()).id();
-        let (loader_code, data_offset) = Self::to_bytes_w_offset(blob_id, data_section);
+        let (loader_code, data_offset) = Self::generate_loader_code(blob_id, data_section);
 
         Ok(Self {
             blob_id,
@@ -88,51 +88,11 @@ impl LoaderCode {
         self.data_offset
     }
 
-    fn to_bytes_w_offset(blob_id: BlobId, data_section: &[u8]) -> (Vec<u8>, usize) {
-        // The final code is going to have this structure (if the data section is non-empty):
-        // 1. loader instructions
-        // 2. blob id
-        // 3. length_of_data_section
-        // 4. the data_section (updated with configurables as needed)
-
+    fn generate_loader_code(blob_id: BlobId, data_section: &[u8]) -> (Vec<u8>, usize) {
         if !data_section.is_empty() {
-            let instruction_bytes = loader_instructions()
-                .into_iter()
-                .flat_map(|instruction| instruction.to_bytes())
-                .collect_vec();
-
-            let blob_bytes = blob_id.iter().copied().collect_vec();
-
-            let original_data_section_len_encoded = u64::try_from(data_section.len())
-                .expect("data section to be less than u64::MAX")
-                .to_be_bytes();
-
-            // The data section is placed after all of the instructions, the BlobId, and the number representing
-            // how big the data section is.
-            let new_data_section_offset = instruction_bytes.len()
-                + blob_bytes.len()
-                + original_data_section_len_encoded.len();
-
-            let code = instruction_bytes
-                .into_iter()
-                .chain(blob_bytes)
-                .chain(original_data_section_len_encoded)
-                .chain(data_section.to_vec())
-                .collect();
-
-            (code, new_data_section_offset)
+            loader_w_data_section(blob_id, data_section)
         } else {
-            let instruction_bytes = loader_instructions_no_data_section()
-                .into_iter()
-                .flat_map(|instruction| instruction.to_bytes());
-
-            let code = instruction_bytes
-                .chain(blob_id.iter().copied())
-                .collect_vec();
-            // there is no data section, so we point the offset to the end of the file
-            let new_data_section_offset = code.len();
-
-            (code, new_data_section_offset)
+            loader_wo_data_section(blob_id)
         }
     }
 
@@ -141,7 +101,54 @@ impl LoaderCode {
     }
 }
 
-pub fn loader_instructions_no_data_section() -> [Instruction; 8] {
+fn loader_wo_data_section(blob_id: [u8; 32]) -> (Vec<u8>, usize) {
+    let instruction_bytes = loader_instructions_no_data_section()
+        .into_iter()
+        .flat_map(|instruction| instruction.to_bytes());
+
+    let code = instruction_bytes
+        .chain(blob_id.iter().copied())
+        .collect_vec();
+    // there is no data section, so we point the offset to the end of the file
+    let new_data_section_offset = code.len();
+
+    (code, new_data_section_offset)
+}
+
+fn loader_w_data_section(blob_id: [u8; 32], data_section: &[u8]) -> (Vec<u8>, usize) {
+    // The final code is going to have this structure:
+    // 1. loader instructions
+    // 2. blob id
+    // 3. length_of_data_section
+    // 4. the data_section (updated with configurables as needed)
+
+    let instruction_bytes = loader_instructions()
+        .into_iter()
+        .flat_map(|instruction| instruction.to_bytes())
+        .collect_vec();
+
+    let blob_bytes = blob_id.iter().copied().collect_vec();
+
+    let original_data_section_len_encoded = u64::try_from(data_section.len())
+        .expect("data section to be less than u64::MAX")
+        .to_be_bytes();
+
+    // The data section is placed after all of the instructions, the BlobId, and the number representing
+    // how big the data section is.
+    let new_data_section_offset =
+        instruction_bytes.len() + blob_bytes.len() + original_data_section_len_encoded.len();
+
+    let code = instruction_bytes
+        .into_iter()
+        .chain(blob_bytes)
+        .chain(original_data_section_len_encoded)
+        .chain(data_section.to_vec())
+        .collect();
+
+    (code, new_data_section_offset)
+}
+
+fn loader_instructions_no_data_section() -> [Instruction; 8] {
     const REG_ADDRESS_OF_DATA_AFTER_CODE: u8 = 0x10;
     const REG_START_OF_LOADED_CODE: u8 = 0x11;
     const REG_GENERAL_USE: u8 = 0x12;
