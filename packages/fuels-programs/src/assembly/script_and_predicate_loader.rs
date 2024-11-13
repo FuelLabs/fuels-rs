@@ -1,26 +1,24 @@
 use fuel_asm::{op, Instruction, RegId};
-use fuels_core::{
-    constants::WORD_SIZE,
-    types::{
-        errors::Result,
-        transaction_builders::{Blob, BlobId},
-    },
-};
+use fuels_core::{constants::WORD_SIZE, types::errors::Result};
 use itertools::Itertools;
 
 use crate::assembly::cursor::WasmFriendlyCursor;
 
 pub struct LoaderCode {
-    blob_id: BlobId,
+    blob_id: [u8; 32],
     code: Vec<u8>,
     data_offset: usize,
 }
 
 impl LoaderCode {
+    // std gated because of Blob usage which is in transaction_builders which are currently not
+    // nostd friendly
+    #[cfg(feature = "std")]
     pub fn from_normal_binary(binary: Vec<u8>) -> Result<Self> {
         let (original_code, data_section) = split_at_data_offset(&binary)?;
 
-        let blob_id = Blob::from(original_code.to_vec()).id();
+        let blob_id =
+            fuels_core::types::transaction_builders::Blob::from(original_code.to_vec()).id();
         let (loader_code, data_offset) = Self::generate_loader_code(blob_id, data_section);
 
         Ok(Self {
@@ -75,9 +73,10 @@ impl LoaderCode {
         }))
     }
 
-    pub fn extract_blob(binary: &[u8]) -> Result<Blob> {
+    #[cfg(feature = "std")]
+    pub fn extract_blob(binary: &[u8]) -> Result<fuels_core::types::transaction_builders::Blob> {
         let (code, _) = split_at_data_offset(binary)?;
-        Ok(Blob::from(code.to_vec()))
+        Ok(code.to_vec().into())
     }
 
     pub fn as_bytes(&self) -> &[u8] {
@@ -88,7 +87,7 @@ impl LoaderCode {
         self.data_offset
     }
 
-    fn generate_loader_code(blob_id: BlobId, data_section: &[u8]) -> (Vec<u8>, usize) {
+    fn generate_loader_code(blob_id: [u8; 32], data_section: &[u8]) -> (Vec<u8>, usize) {
         if !data_section.is_empty() {
             generate_loader_w_data_section(blob_id, data_section)
         } else {
