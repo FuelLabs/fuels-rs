@@ -31,7 +31,7 @@ impl LoaderCode {
     }
 
     pub fn from_loader_binary(binary: &[u8]) -> Result<Option<Self>> {
-        let expected_loader_instructions = loader_instructions();
+        let expected_loader_instructions = loader_instructions_w_data_section();
         let loader_instructions_byte_size = expected_loader_instructions.len() * Instruction::SIZE;
 
         let mut script_cursor = WasmFriendlyCursor::new(binary);
@@ -90,9 +90,9 @@ impl LoaderCode {
 
     fn generate_loader_code(blob_id: BlobId, data_section: &[u8]) -> (Vec<u8>, usize) {
         if !data_section.is_empty() {
-            loader_w_data_section(blob_id, data_section)
+            generate_loader_w_data_section(blob_id, data_section)
         } else {
-            loader_wo_data_section(blob_id)
+            generate_loader_wo_data_section(blob_id)
         }
     }
 
@@ -101,7 +101,7 @@ impl LoaderCode {
     }
 }
 
-fn loader_wo_data_section(blob_id: [u8; 32]) -> (Vec<u8>, usize) {
+fn generate_loader_wo_data_section(blob_id: [u8; 32]) -> (Vec<u8>, usize) {
     let instruction_bytes = loader_instructions_no_data_section()
         .into_iter()
         .flat_map(|instruction| instruction.to_bytes());
@@ -115,14 +115,14 @@ fn loader_wo_data_section(blob_id: [u8; 32]) -> (Vec<u8>, usize) {
     (code, new_data_section_offset)
 }
 
-fn loader_w_data_section(blob_id: [u8; 32], data_section: &[u8]) -> (Vec<u8>, usize) {
+fn generate_loader_w_data_section(blob_id: [u8; 32], data_section: &[u8]) -> (Vec<u8>, usize) {
     // The final code is going to have this structure:
     // 1. loader instructions
     // 2. blob id
     // 3. length_of_data_section
     // 4. the data_section (updated with configurables as needed)
 
-    let instruction_bytes = loader_instructions()
+    let instruction_bytes = loader_instructions_w_data_section()
         .into_iter()
         .flat_map(|instruction| instruction.to_bytes())
         .collect_vec();
@@ -194,7 +194,7 @@ fn loader_instructions_no_data_section() -> [Instruction; 8] {
     instructions
 }
 
-pub fn loader_instructions() -> [Instruction; 12] {
+pub fn loader_instructions_w_data_section() -> [Instruction; 12] {
     const BLOB_ID_SIZE: u16 = 32;
     const REG_ADDRESS_OF_DATA_AFTER_CODE: u8 = 0x10;
     const REG_START_OF_LOADED_CODE: u8 = 0x11;

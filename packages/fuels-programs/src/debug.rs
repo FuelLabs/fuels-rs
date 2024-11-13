@@ -164,7 +164,7 @@ mod tests {
 
     use crate::assembly::{
         contract_call::{CallOpcodeParamsOffset, ContractCallInstructions},
-        script_and_predicate_loader::loader_instructions,
+        script_and_predicate_loader::loader_instructions_w_data_section,
     };
 
     use super::*;
@@ -334,7 +334,7 @@ mod tests {
     #[test]
     fn loader_script_without_a_blob() {
         // given
-        let script = loader_instructions()
+        let script = loader_instructions_w_data_section()
             .iter()
             .flat_map(|i| i.to_bytes())
             .collect::<Vec<_>>();
@@ -355,7 +355,7 @@ mod tests {
     #[test]
     fn loader_script_with_almost_matching_instructions() {
         // given
-        let mut loader_instructions = loader_instructions().to_vec();
+        let mut loader_instructions = loader_instructions_w_data_section().to_vec();
 
         loader_instructions.insert(
             loader_instructions.len() - 2,
