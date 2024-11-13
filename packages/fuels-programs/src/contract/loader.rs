@@ -12,7 +12,7 @@ use fuels_core::{
     },
 };
 
-use crate::asm_instructions::contract_call::loader_contract_asm;
+use crate::assembly::contract_call::loader_contract_asm;
 
 use super::{compute_contract_id_and_state_root, Contract, Regular};
 

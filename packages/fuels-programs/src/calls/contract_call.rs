@@ -14,7 +14,7 @@ use fuels_core::{
 };
 
 use crate::{
-    asm_instructions::{contract_call::ContractCallData, cursor::WasmFriendlyCursor},
+    assembly::{contract_call::ContractCallData, cursor::WasmFriendlyCursor},
     calls::utils::sealed,
 };
 

@@ -6,7 +6,7 @@ use fuels_core::{
     Configurables,
 };
 
-use crate::asm_instructions::script_and_predicate_loader::{extract_data_offset, LoaderCode};
+use crate::assembly::script_and_predicate_loader::{extract_data_offset, LoaderCode};
 
 /// This struct represents a standard executable with its associated bytecode and configurables.
 #[derive(Debug, Clone, PartialEq)]

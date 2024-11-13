@@ -3,7 +3,7 @@ use fuels_core::{error, types::errors::Result};
 use itertools::Itertools;
 
 use crate::{
-    asm_instructions::{
+    assembly::{
         contract_call::{ContractCallData, ContractCallInstructions},
         script_and_predicate_loader::LoaderCode,
     },
@@ -162,7 +162,7 @@ mod tests {
     use rand::{RngCore, SeedableRng};
     use test_case::test_case;
 
-    use crate::asm_instructions::{
+    use crate::assembly::{
         contract_call::{CallOpcodeParamsOffset, ContractCallInstructions},
         script_and_predicate_loader::loader_instructions,
     };

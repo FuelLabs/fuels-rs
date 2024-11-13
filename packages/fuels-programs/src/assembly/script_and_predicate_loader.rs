@@ -10,7 +10,7 @@ use fuels_core::{
 };
 use itertools::Itertools;
 
-use crate::asm_instructions::cursor::WasmFriendlyCursor;
+use crate::assembly::cursor::WasmFriendlyCursor;
 
 pub struct LoaderCode {
     data_section: Vec<u8>,

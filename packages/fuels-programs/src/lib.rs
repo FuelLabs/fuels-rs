@@ -9,7 +9,7 @@ pub mod responses;
 
 pub mod debug;
 
-pub(crate) mod asm_instructions;
+pub(crate) mod assembly;
 
 pub(crate) mod utils {
     use fuels_core::types::errors::{error, Error};
