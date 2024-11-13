@@ -29,7 +29,10 @@ impl ScriptCallData {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ScriptType {
     ContractCall(Vec<ContractCallData>),
-    Loader(ScriptCallData, [u8; 32]),
+    Loader {
+        script: ScriptCallData,
+        blob_id: [u8; 32],
+    },
     Other(ScriptCallData),
 }
 
@@ -135,7 +138,7 @@ impl ScriptType {
         }
 
         if let Some((script, blob_id)) = parse_loader_script(script, data)? {
-            return Ok(Self::Loader(script, blob_id));
+            return Ok(Self::Loader { script, blob_id });
         }
 
         Ok(Self::Other(parse_script_call(script, data)))

@@ -445,7 +445,7 @@ async fn can_detect_a_loader_script() -> Result<()> {
     let expected_blob_id = executable.blob().id();
     let script = executable.code();
 
-    let ScriptType::Loader(desc, blob_id) = ScriptType::detect(&script, &script_data).unwrap()
+    let ScriptType::Loader { script, blob_id } = ScriptType::detect(&script, &script_data).unwrap()
     else {
         panic!("expected a loader script")
     };
@@ -457,13 +457,13 @@ async fn can_detect_a_loader_script() -> Result<()> {
     )?)?;
 
     assert_eq!(
-        decoder.decode_fn_args("main", &desc.data)?,
+        decoder.decode_fn_args("main", &call.data)?,
         vec!["MyStruct { number: 10, boolean: false }"]
     );
 
     assert_eq!(
         decoder
-            .decode_configurables(desc.data_section().unwrap())
+            .decode_configurables(call.data_section().unwrap())
             .unwrap(),
         vec![
             ("A_NUMBER".to_owned(), "11".to_owned()),
