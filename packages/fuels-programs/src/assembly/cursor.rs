@@ -1,7 +1,7 @@
 use fuels_core::{error, types::errors::Result};
 
-pub(crate) struct WasmFriendlyCursor<'a> {
-    pub(crate) data: &'a [u8],
+pub struct WasmFriendlyCursor<'a> {
+    data: &'a [u8],
 }
 
 impl<'a> WasmFriendlyCursor<'a> {

@@ -1,5 +1,3 @@
-use fuels_core::error;
-
 use fuel_asm::{op, Instruction, RegId};
 use fuels_core::{
     constants::WORD_SIZE,
@@ -124,7 +122,7 @@ impl LoaderCode {
     }
 }
 
-pub(crate) fn loader_instructions_no_data_section() -> [Instruction; 8] {
+pub fn loader_instructions_no_data_section() -> [Instruction; 8] {
     const REG_ADDRESS_OF_DATA_AFTER_CODE: u8 = 0x10;
     const REG_START_OF_LOADED_CODE: u8 = 0x11;
     const REG_GENERAL_USE: u8 = 0x12;
@@ -170,7 +168,7 @@ pub(crate) fn loader_instructions_no_data_section() -> [Instruction; 8] {
     instructions
 }
 
-pub(crate) fn loader_instructions() -> [Instruction; 12] {
+pub fn loader_instructions() -> [Instruction; 12] {
     const BLOB_ID_SIZE: u16 = 32;
     const REG_ADDRESS_OF_DATA_AFTER_CODE: u8 = 0x10;
     const REG_START_OF_LOADED_CODE: u8 = 0x11;
@@ -236,7 +234,7 @@ pub(crate) fn loader_instructions() -> [Instruction; 12] {
     instructions
 }
 
-pub(crate) fn extract_data_offset(binary: &[u8]) -> Result<usize> {
+pub fn extract_data_offset(binary: &[u8]) -> Result<usize> {
     if binary.len() < 16 {
         return Err(fuels_core::error!(
             Other,
@@ -250,7 +248,7 @@ pub(crate) fn extract_data_offset(binary: &[u8]) -> Result<usize> {
     Ok(u64::from_be_bytes(data_offset) as usize)
 }
 
-pub(crate) fn split_at_data_offset(binary: &[u8]) -> Result<(&[u8], &[u8])> {
+pub fn split_at_data_offset(binary: &[u8]) -> Result<(&[u8], &[u8])> {
     let offset = extract_data_offset(binary)?;
     if binary.len() < offset {
         return Err(fuels_core::error!(

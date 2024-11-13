@@ -3,7 +3,7 @@ use fuel_tx::{AssetId, ContractId};
 use fuels_core::{constants::WORD_SIZE, error, types::errors::Result};
 
 use super::cursor::WasmFriendlyCursor;
-pub(crate) struct ContractCallInstructions {
+pub struct ContractCallInstructions {
     instructions: Vec<Instruction>,
     gas_fwd: bool,
 }
@@ -102,7 +102,7 @@ impl ContractCallInstructions {
         Self::extract_if_match(instructions, &gas_fwd_instructions)
     }
 
-    pub(crate) fn extract_from(instructions: &[Instruction]) -> Option<Self> {
+    pub fn extract_from(instructions: &[Instruction]) -> Option<Self> {
         if let Some(instructions) = Self::extract_normal_variant(instructions) {
             return Some(Self {
                 instructions: instructions.to_vec(),
@@ -128,7 +128,7 @@ impl ContractCallInstructions {
         movi.imm18().into()
     }
 
-    pub(crate) fn is_gas_fwd_variant(&self) -> bool {
+    pub fn is_gas_fwd_variant(&self) -> bool {
         self.gas_fwd
     }
 
@@ -173,11 +173,7 @@ impl ContractCallData {
     /// 6. Encoded function selector - method name
     /// 7. Encoded arguments
     /// 8. Gas to be forwarded `(1 * `[`WORD_SIZE`]`)` - Optional
-    pub(crate) fn encode(
-        &self,
-        memory_offset: usize,
-        buffer: &mut Vec<u8>,
-    ) -> CallOpcodeParamsOffset {
+    pub fn encode(&self, memory_offset: usize, buffer: &mut Vec<u8>) -> CallOpcodeParamsOffset {
         let amount_offset = memory_offset;
         let asset_id_offset = amount_offset + WORD_SIZE;
         let call_data_offset = asset_id_offset + AssetId::LEN;
@@ -262,7 +258,7 @@ impl ContractCallData {
 #[derive(Default)]
 /// Specifies offsets of [`Opcode::CALL`][`fuel_asm::Opcode::CALL`] parameters stored in the script
 /// data from which they can be loaded into registers
-pub(crate) struct CallOpcodeParamsOffset {
+pub struct CallOpcodeParamsOffset {
     pub call_data_offset: usize,
     pub amount_offset: usize,
     pub asset_id_offset: usize,
