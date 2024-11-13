@@ -11,16 +11,22 @@ use itertools::Itertools;
 use crate::assembly::cursor::WasmFriendlyCursor;
 
 pub struct LoaderCode {
-    data_section: Vec<u8>,
     blob_id: BlobId,
+    code: Vec<u8>,
+    data_offset: usize,
 }
 
 impl LoaderCode {
     pub fn from_normal_binary(binary: Vec<u8>) -> Result<Self> {
-        let (code, data_section) = split_at_data_offset(&binary)?;
+        let (original_code, data_section) = split_at_data_offset(&binary)?;
+
+        let blob_id = Blob::from(original_code.to_vec()).id();
+        let (loader_code, data_offset) = Self::to_bytes_w_offset(blob_id, data_section);
+
         Ok(Self {
-            data_section: data_section.to_owned(),
-            blob_id: Blob::from(code.to_vec()).id(),
+            blob_id,
+            code: loader_code,
+            data_offset,
         })
     }
 
@@ -57,9 +63,14 @@ impl LoaderCode {
         let blob_id = script_cursor.consume_fixed("blob id")?;
 
         let _data_section_len = script_cursor.consume(WORD_SIZE, "data section len")?;
+        let data_section_offset = binary
+            .len()
+            .checked_sub(script_cursor.unconsumed())
+            .expect("must be less or eq");
 
         Ok(Some(Self {
-            data_section: script_cursor.consume_all().to_vec(),
+            data_offset: data_section_offset,
+            code: binary.to_vec(),
             blob_id,
         }))
     }
@@ -69,22 +80,30 @@ impl LoaderCode {
         Ok(Blob::from(code.to_vec()))
     }
 
-    pub fn to_bytes_w_offset(&self) -> (Vec<u8>, usize) {
+    pub fn as_bytes(&self) -> &[u8] {
+        &self.code
+    }
+
+    pub fn data_section_offset(&self) -> usize {
+        self.data_offset
+    }
+
+    fn to_bytes_w_offset(blob_id: BlobId, data_section: &[u8]) -> (Vec<u8>, usize) {
         // The final code is going to have this structure (if the data section is non-empty):
         // 1. loader instructions
         // 2. blob id
         // 3. length_of_data_section
         // 4. the data_section (updated with configurables as needed)
 
-        if !self.data_section.is_empty() {
+        if !data_section.is_empty() {
             let instruction_bytes = loader_instructions()
                 .into_iter()
                 .flat_map(|instruction| instruction.to_bytes())
                 .collect_vec();
 
-            let blob_bytes = self.blob_id.iter().copied().collect_vec();
+            let blob_bytes = blob_id.iter().copied().collect_vec();
 
-            let original_data_section_len_encoded = u64::try_from(self.data_section.len())
+            let original_data_section_len_encoded = u64::try_from(data_section.len())
                 .expect("data section to be less than u64::MAX")
                 .to_be_bytes();
 
@@ -98,7 +117,7 @@ impl LoaderCode {
                 .into_iter()
                 .chain(blob_bytes)
                 .chain(original_data_section_len_encoded)
-                .chain(self.data_section.clone())
+                .chain(data_section.to_vec())
                 .collect();
 
             (code, new_data_section_offset)
@@ -108,7 +127,7 @@ impl LoaderCode {
                 .flat_map(|instruction| instruction.to_bytes());
 
             let code = instruction_bytes
-                .chain(self.blob_id.iter().copied())
+                .chain(blob_id.iter().copied())
                 .collect_vec();
             // there is no data section, so we point the offset to the end of the file
             let new_data_section_offset = code.len();

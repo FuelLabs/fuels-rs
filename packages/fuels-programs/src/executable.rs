@@ -117,7 +117,7 @@ impl Executable<Loader> {
     }
 
     pub fn data_offset_in_code(&self) -> usize {
-        self.loader_code().to_bytes_w_offset().1
+        self.loader_code().data_section_offset()
     }
 
     fn loader_code(&self) -> LoaderCode {
@@ -131,7 +131,7 @@ impl Executable<Loader> {
 
     /// Returns the code of the loader executable with configurables applied.
     pub fn code(&self) -> Vec<u8> {
-        self.loader_code().to_bytes_w_offset().0
+        self.loader_code().as_bytes().to_vec()
     }
 
     /// A Blob containing the original executable code minus the data section.
@@ -285,10 +285,7 @@ mod tests {
         let loader_code = loader.code();
         assert_eq!(
             loader_code,
-            LoaderCode::from_normal_binary(code)
-                .unwrap()
-                .to_bytes_w_offset()
-                .0
+            LoaderCode::from_normal_binary(code).unwrap().as_bytes()
         )
     }
 

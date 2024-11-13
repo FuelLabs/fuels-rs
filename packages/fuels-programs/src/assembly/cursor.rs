@@ -28,14 +28,20 @@ impl<'a> WasmFriendlyCursor<'a> {
         &mut self,
         ctx: &'static str,
     ) -> Result<[u8; AMOUNT]> {
-        Ok(self
+        let data = self
             .consume(AMOUNT, ctx)?
             .try_into()
-            .expect("should have failed if not enough data"))
+            .expect("should have failed if not enough data");
+
+        Ok(data)
     }
 
-    pub fn consume_all(&self) -> &'a [u8] {
-        self.data
+    pub fn consume_all(&mut self) -> &'a [u8] {
+        let data = self.data;
+
+        self.data = &[];
+
+        data
     }
 
     pub fn unconsumed(&self) -> usize {
