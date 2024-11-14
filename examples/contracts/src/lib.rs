@@ -1185,7 +1185,7 @@ mod tests {
         let json_abi = std::fs::read_to_string(
             "../../e2e/sway/contracts/contract_test/out/release/contract_test-abi.json",
         )?;
-        let abi_formatter = ABIFormatter::from_json_abi(&json_abi)?;
+        let abi_formatter = ABIFormatter::from_json_abi(json_abi)?;
 
         let call = &calls[0];
         let fn_selector = call.decode_fn_selector()?;
