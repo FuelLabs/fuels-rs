@@ -76,6 +76,7 @@
   - [Transfer all assets](./cookbook/transfer-all-assets.md)
 - [Debugging](./debugging/index.md)
   - [The Function selector](./debugging/function-selector.md)
+  - [Decoding script transactions](./debugging/decoding-script-transactions.md)
 - [Glossary](./glossary.md)
 - [Contributing](./contributing/CONTRIBUTING.md)
   - [Integration tests structure](./contributing/tests-structure.md)
