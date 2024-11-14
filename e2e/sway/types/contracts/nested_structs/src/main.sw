@@ -28,7 +28,7 @@ abi MyContract {
     #[payable]
     fn check_struct_integrity(arg: AllStruct) -> bool;
     #[payable]
-    fn i_am_called_differently(arg1: AllStruct, arg2: MemoryAddress);
+    fn i_am_called_differently(_arg1: AllStruct, _arg2: MemoryAddress);
     fn nested_struct_with_reserved_keyword_substring(call_data: CallData) -> CallData;
 }
 
@@ -48,7 +48,7 @@ impl MyContract for Contract {
     }
 
     #[payable]
-    fn i_am_called_differently(arg1: AllStruct, arg2: MemoryAddress) {}
+    fn i_am_called_differently(_arg1: AllStruct, _arg2: MemoryAddress) {}
 
     fn nested_struct_with_reserved_keyword_substring(call_data: CallData) -> CallData {
         call_data
