@@ -1,6 +1,6 @@
 use fuels::{
     core::{
-        codec::{abi_formatter::ABIFormatter, ABIEncoder},
+        codec::{ABIEncoder, ABIFormatter},
         traits::Tokenizable,
     },
     prelude::*,
