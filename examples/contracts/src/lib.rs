@@ -8,7 +8,6 @@ mod tests {
         prelude::{LoadConfiguration, NodeConfig, StorageConfiguration},
         programs::debug::ScriptType,
         test_helpers::{ChainConfig, StateConfig},
-        tx::TxId,
         types::{
             errors::{transaction::Reason, Result},
             Bits256,
