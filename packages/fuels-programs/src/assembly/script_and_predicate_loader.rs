@@ -29,48 +29,15 @@ impl LoaderCode {
     }
 
     pub fn from_loader_binary(binary: &[u8]) -> Result<Option<Self>> {
-        let expected_loader_instructions = loader_instructions_w_data_section();
-        let loader_instructions_byte_size = expected_loader_instructions.len() * Instruction::SIZE;
-
-        let mut script_cursor = WasmFriendlyCursor::new(binary);
-
-        // we give up if we don't have enough instructions or if they cannot be decoded. Undecodable
-        // "instructions"" are present in a standard sway script in the form of the data offset in the
-        // second word of the binary
-        let Ok(instruction_bytes) =
-            script_cursor.consume(loader_instructions_byte_size, "loader instructions")
-        else {
-            return Ok(None);
-        };
-
-        let Some(instructions) = fuel_asm::from_bytes(instruction_bytes.to_vec())
-            .collect::<std::result::Result<Vec<Instruction>, _>>()
-            .ok()
-        else {
-            return Ok(None);
-        };
-
-        if instructions
-            .iter()
-            .zip(expected_loader_instructions.iter())
-            .any(|(actual, expected)| actual != expected)
-        {
-            return Ok(None);
+        if let Some((blob_id, data_section_offset)) = extract_blob_id_and_data_offset(binary)? {
+            Ok(Some(Self {
+                data_offset: data_section_offset,
+                code: binary.to_vec(),
+                blob_id,
+            }))
+        } else {
+            Ok(None)
         }
-
-        let blob_id = script_cursor.consume_fixed("blob id")?;
-
-        let _data_section_len = script_cursor.consume(WORD_SIZE, "data section len")?;
-        let data_section_offset = binary
-            .len()
-            .checked_sub(script_cursor.unconsumed())
-            .expect("must be less or eq");
-
-        Ok(Some(Self {
-            data_offset: data_section_offset,
-            code: binary.to_vec(),
-            blob_id,
-        }))
     }
 
     #[cfg(feature = "std")]
@@ -98,6 +65,78 @@ impl LoaderCode {
     pub fn blob_id(&self) -> [u8; 32] {
         self.blob_id
     }
+}
+
+fn extract_blob_id_and_data_offset(binary: &[u8]) -> Result<Option<([u8; 32], usize)>> {
+    if let Some(ret) = data_section_present(binary)? {
+        Ok(Some(ret))
+    } else if let Some(ret) = data_section_not_present(binary)? {
+        Ok(Some(ret))
+    } else {
+        Ok(None)
+    }
+}
+
+fn data_section_present(binary: &[u8]) -> Result<Option<([u8; 32], usize)>> {
+    let expected_loader_instructions = loader_instructions_w_data_section();
+    let loader_instructions_byte_size = expected_loader_instructions.len() * Instruction::SIZE;
+    let mut script_cursor = WasmFriendlyCursor::new(binary);
+    let Ok(instruction_bytes) =
+        script_cursor.consume(loader_instructions_byte_size, "loader instructions")
+    else {
+        return Ok(None);
+    };
+    let Some(instructions) = fuel_asm::from_bytes(instruction_bytes.to_vec())
+        .collect::<std::result::Result<Vec<Instruction>, _>>()
+        .ok()
+    else {
+        return Ok(None);
+    };
+    if instructions
+        .iter()
+        .zip(expected_loader_instructions.iter())
+        .any(|(actual, expected)| actual != expected)
+    {
+        return Ok(None);
+    }
+    let blob_id = script_cursor.consume_fixed("blob id")?;
+    let _data_section_len = script_cursor.consume(WORD_SIZE, "data section len")?;
+    let data_section_offset = binary
+        .len()
+        .checked_sub(script_cursor.unconsumed())
+        .expect("must be less or eq");
+    Ok(Some((blob_id, data_section_offset)))
+}
+
+fn data_section_not_present(binary: &[u8]) -> Result<Option<([u8; 32], usize)>> {
+    let expected_loader_instructions = loader_instructions_no_data_section();
+    let loader_instructions_byte_size = expected_loader_instructions.len() * Instruction::SIZE;
+    let mut script_cursor = WasmFriendlyCursor::new(binary);
+    let Ok(instruction_bytes) =
+        script_cursor.consume(loader_instructions_byte_size, "loader instructions")
+    else {
+        return Ok(None);
+    };
+    let Some(instructions) = fuel_asm::from_bytes(instruction_bytes.to_vec())
+        .collect::<std::result::Result<Vec<Instruction>, _>>()
+        .ok()
+    else {
+        return Ok(None);
+    };
+    if instructions
+        .iter()
+        .zip(expected_loader_instructions.iter())
+        .any(|(actual, expected)| actual != expected)
+    {
+        return Ok(None);
+    }
+    let blob_id = script_cursor.consume_fixed("blob id")?;
+    let data_section_offset = binary
+        .len()
+        .checked_sub(script_cursor.unconsumed())
+        .expect("must be less or eq");
+
+    Ok(Some((blob_id, data_section_offset)))
 }
 
 fn generate_loader_wo_data_section(blob_id: [u8; 32]) -> (Vec<u8>, usize) {

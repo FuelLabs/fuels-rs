@@ -422,7 +422,7 @@ async fn data_section_offset_not_set_if_out_of_bounds() -> Result<()> {
 }
 
 #[tokio::test]
-async fn can_detect_a_loader_script() -> Result<()> {
+async fn can_detect_a_loader_script_w_data_section() -> Result<()> {
     setup_program_test!(Abigen(Script(
         name = "MyScript",
         project = "e2e/sway/scripts/script_struct"
@@ -473,6 +473,30 @@ async fn can_detect_a_loader_script() -> Result<()> {
             ),
         ]
     );
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn can_detect_a_loader_script_wo_data_section() -> Result<()> {
+    setup_program_test!(Abigen(Script(
+        name = "MyScript",
+        project = "e2e/sway/scripts/empty"
+    )));
+
+    let executable = Executable::load_from("sway/scripts/empty/out/release/empty.bin")
+        .unwrap()
+        .convert_to_loader()
+        .unwrap();
+
+    let expected_blob_id = executable.blob().id();
+    let script = executable.code();
+
+    let ScriptType::Loader { blob_id, .. } = ScriptType::detect(&script, &[]).unwrap() else {
+        panic!("expected a loader script")
+    };
+
+    assert_eq!(blob_id, expected_blob_id);
 
     Ok(())
 }
