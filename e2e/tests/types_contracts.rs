@@ -1824,6 +1824,40 @@ async fn contract_string_slice() -> Result<()> {
 }
 
 #[tokio::test]
+async fn test_struct_with_array_of_enums() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Contract(
+            name = "TypesContract",
+            project = "e2e/sway/types/contracts/struct_with_array_of_enums"
+        )),
+        Deploy(
+            name = "contract_instance",
+            contract = "TypesContract",
+            wallet = "wallet",
+            random_salt = false,
+        ),
+    );
+
+    let input = StructWithEnumArray {
+        a: [EnumWithNative::Checked, EnumWithNative::Checked, EnumWithNative::Checked],
+    };
+    let expected = StructWithEnumArray {
+        a: [EnumWithNative::Pending, EnumWithNative::Pending, EnumWithNative::Pending],
+    };
+
+    let contract_methods = contract_instance.methods();
+    let response = contract_methods
+        .return_struct_with_enum_array(input)
+        .call()
+        .await?;
+
+    assert_eq!(response.value, expected);
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn contract_std_lib_string() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),

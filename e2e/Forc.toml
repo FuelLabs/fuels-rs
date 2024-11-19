@@ -80,6 +80,7 @@ members = [
   'sway/types/contracts/std_lib_string',
   'sway/types/contracts/str_in_array',
   'sway/types/contracts/string_slice',
+  'sway/types/contracts/struct_with_array_of_enums',
   'sway/types/contracts/tuples',
   'sway/types/contracts/two_structs',
   'sway/types/contracts/type_inside_enum',
