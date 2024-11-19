@@ -226,7 +226,7 @@ impl ContractCallData {
 
         let fn_selector = {
             let fn_selector_len = {
-                let bytes = data.consume_fixed("function selector lenght")?;
+                let bytes = data.consume_fixed("function selector length")?;
                 u64::from_be_bytes(bytes) as usize
             };
             data.consume(fn_selector_len, "function selector")?.to_vec()

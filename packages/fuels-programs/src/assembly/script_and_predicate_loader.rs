@@ -213,7 +213,7 @@ pub fn loader_instructions_w_data_section() -> [Instruction; 12] {
     const REG_START_OF_LOADED_CODE: u8 = 0x11;
     const REG_GENERAL_USE: u8 = 0x12;
 
-    // extract the lenght of the NoDataSectionLoaderInstructions type
+    // extract the length of the NoDataSectionLoaderInstructions type
     const NUM_OF_INSTRUCTIONS: u16 = 12;
 
     // There are 3 main steps:

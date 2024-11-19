@@ -269,7 +269,7 @@ mod tests {
     #[test_case(68, "contract id")]
     #[test_case(36, "function selector offset")]
     #[test_case(28, "encoded args offset")]
-    #[test_case(20, "function selector lenght")]
+    #[test_case(20, "function selector length")]
     #[test_case(12, "function selector")]
     #[test_case(8, "forwarded gas")]
     fn catches_missing_data(amount_of_data_to_steal: usize, expected_msg: &str) {
@@ -326,10 +326,10 @@ mod tests {
         let script_type = ScriptType::detect(&script, &ok_data).unwrap();
 
         // then
-        let ScriptType::ContractCall(datas) = script_type else {
+        let ScriptType::ContractCall(calls) = script_type else {
             panic!("expected ScriptType::Other");
         };
-        let Error::Codec(err) = datas[0].decode_fn_selector().unwrap_err() else {
+        let Error::Codec(err) = calls[0].decode_fn_selector().unwrap_err() else {
             panic!("expected Error::Codec");
         };
 
