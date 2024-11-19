@@ -34,10 +34,6 @@ fuel-tx = { workspace = true, features = ["test-helpers", "random"] }
 tempfile = { workspace = true }
 tokio = { workspace = true, features = ["test-util"] }
 
-[build-dependencies]
-cynic = { workspace = true, features = ["default"], optional = true }
-fuel-core-client = { workspace = true, optional = true }
-
 [features]
 default = ["std"]
 coin-cache = ["tokio?/time"]

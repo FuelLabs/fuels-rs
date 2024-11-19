@@ -16,3 +16,15 @@ pub use account::*;
 mod coin_cache;
 
 pub mod predicate;
+
+#[cfg(test)]
+mod test {
+    #[test]
+    fn sdl_is_the_same_as_from_fuel() {
+        let file_sdl = include_str!("./schema/schema.sdl");
+
+        let core_sdl = String::from_utf8(fuel_core_client::SCHEMA_SDL.to_vec()).unwrap();
+
+        assert_eq!(file_sdl, &core_sdl);
+    }
+}
