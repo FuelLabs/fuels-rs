@@ -340,7 +340,7 @@ async fn can_debug_sway_script() -> Result<()> {
     let abi =
         std::fs::read_to_string("./sway/scripts/script_struct/out/release/script_struct-abi.json")?;
 
-    let decoder = ABIFormatter::from_json_abi(&abi)?;
+    let decoder = ABIFormatter::from_json_abi(abi)?;
 
     let ScriptType::Other(desc) = ScriptType::detect(&tb.script, &tb.script_data).unwrap() else {
         panic!("expected a script")
@@ -391,7 +391,7 @@ async fn debugs_sway_script_with_no_configurables() -> Result<()> {
     let abi =
         std::fs::read_to_string("./sway/scripts/basic_script/out/release/basic_script-abi.json")?;
 
-    let decoder = ABIFormatter::from_json_abi(&abi)?;
+    let decoder = ABIFormatter::from_json_abi(abi)?;
 
     let ScriptType::Other(desc) = ScriptType::detect(&tb.script, &tb.script_data).unwrap() else {
         panic!("expected a script")
