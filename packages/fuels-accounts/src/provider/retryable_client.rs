@@ -300,7 +300,7 @@ impl RetryableClient {
         nonce: &Nonce,
         commit_block_id: Option<&BlockId>,
         commit_block_height: Option<BlockHeight>,
-    ) -> RequestResult<Option<MessageProof>> {
+    ) -> RequestResult<MessageProof> {
         self.wrap(|| {
             self.client
                 .message_proof(transaction_id, nonce, commit_block_id, commit_block_height)

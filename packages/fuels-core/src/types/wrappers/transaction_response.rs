@@ -5,6 +5,7 @@ use fuel_core_client::client::types::{
     TransactionResponse as ClientTransactionResponse, TransactionStatus as ClientTransactionStatus,
     TransactionType as ClientTxType,
 };
+use fuel_tx::Transaction;
 use fuel_types::BlockHeight;
 
 use crate::types::{transaction::TransactionType, tx_status::TxStatus};
@@ -36,12 +37,12 @@ impl From<ClientTransactionResponse> for TransactionResponse {
         };
 
         let transaction = match client_response.transaction {
-            ClientTxType::Script(tx) => TransactionType::Script(tx.into()),
-            ClientTxType::Create(tx) => TransactionType::Create(tx.into()),
-            ClientTxType::Mint(tx) => TransactionType::Mint(tx.into()),
-            ClientTxType::Upgrade(tx) => TransactionType::Upgrade(tx.into()),
-            ClientTxType::Upload(tx) => TransactionType::Upload(tx.into()),
-            ClientTxType::Blob(tx) => TransactionType::Blob(tx.into()),
+            ClientTxType::Known(Transaction::Script(tx)) => TransactionType::Script(tx.into()),
+            ClientTxType::Known(Transaction::Create(tx)) => TransactionType::Create(tx.into()),
+            ClientTxType::Known(Transaction::Mint(tx)) => TransactionType::Mint(tx.into()),
+            ClientTxType::Known(Transaction::Upgrade(tx)) => TransactionType::Upgrade(tx.into()),
+            ClientTxType::Known(Transaction::Upload(tx)) => TransactionType::Upload(tx.into()),
+            ClientTxType::Known(Transaction::Blob(tx)) => TransactionType::Blob(tx.into()),
             ClientTxType::Unknown => TransactionType::Unknown,
         };
 

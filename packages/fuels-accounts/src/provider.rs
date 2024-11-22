@@ -696,19 +696,17 @@ impl Provider {
         nonce: &Nonce,
         commit_block_id: Option<&Bytes32>,
         commit_block_height: Option<u32>,
-    ) -> Result<Option<MessageProof>> {
-        let proof = self
-            .client
+    ) -> Result<MessageProof> {
+        self.client
             .message_proof(
                 tx_id,
                 nonce,
                 commit_block_id.map(Into::into),
                 commit_block_height.map(Into::into),
             )
-            .await?
-            .map(Into::into);
-
-        Ok(proof)
+            .await
+            .map(Into::into)
+            .map_err(Into::into)
     }
 
     pub async fn is_user_account(&self, address: impl Into<Bytes32>) -> Result<bool> {
