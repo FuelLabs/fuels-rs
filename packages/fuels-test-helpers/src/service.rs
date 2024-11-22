@@ -86,6 +86,7 @@ impl FuelService {
             database_type: node_config.database_type.into(),
             #[cfg(feature = "rocksdb")]
             state_rewind_policy: Default::default(),
+            #[cfg(feature = "rocksdb")]
             max_fds: 512,
         };
         ServiceConfig {
