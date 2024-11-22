@@ -9,7 +9,6 @@ use fuels::{
     prelude::*,
     tx::Receipt,
     types::{
-        block::Block,
         coin_type::CoinType,
         message::Message,
         transaction_builders::{BuildableTransaction, ScriptTransactionBuilder},
@@ -218,6 +217,9 @@ async fn can_increase_block_height() -> Result<()> {
     Ok(())
 }
 
+// debug builds are slower (20x for `fuel-core-lib`, 4x for a release-fuel-core-binary), makes for
+// flaky tests
+#[cfg(not(feature = "fuel-core-lib"))]
 #[tokio::test]
 async fn can_set_custom_block_time() -> Result<()> {
     // ANCHOR: use_produce_blocks_custom_time
@@ -255,7 +257,7 @@ async fn can_set_custom_block_time() -> Result<()> {
         results: 10,
         direction: PageDirection::Forward,
     };
-    let blocks: Vec<Block> = provider.get_blocks(req).await?.results;
+    let blocks: Vec<fuels::types::block::Block> = provider.get_blocks(req).await?.results;
 
     assert_eq!(blocks[1].header.time.unwrap().timestamp(), 20);
     assert_eq!(blocks[2].header.time.unwrap().timestamp(), 40);
