@@ -1840,10 +1840,18 @@ async fn test_struct_with_array_of_enums() -> Result<()> {
     );
 
     let input = StructWithEnumArray {
-        a: [EnumWithNative::Checked, EnumWithNative::Checked, EnumWithNative::Checked],
+        a: [
+            EnumWithNative::Checked,
+            EnumWithNative::Checked,
+            EnumWithNative::Checked,
+        ],
     };
     let expected = StructWithEnumArray {
-        a: [EnumWithNative::Pending, EnumWithNative::Pending, EnumWithNative::Pending],
+        a: [
+            EnumWithNative::Pending,
+            EnumWithNative::Pending,
+            EnumWithNative::Pending,
+        ],
     };
 
     let contract_methods = contract_instance.methods();
