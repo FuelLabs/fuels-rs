@@ -428,8 +428,7 @@ async fn predicate_transfer_to_base_layer() -> Result<()> {
     let proof = predicate
         .try_provider()?
         .get_message_proof(&tx_id, &msg_nonce, None, Some(2))
-        .await?
-        .expect("failed to retrieve message proof");
+        .await?;
 
     assert_eq!(proof.amount, amount);
     assert_eq!(proof.recipient, base_layer_address);

@@ -3,14 +3,12 @@
 use chrono::{DateTime, Utc};
 use fuel_core_client::client::types::{
     TransactionResponse as ClientTransactionResponse, TransactionStatus as ClientTransactionStatus,
+    TransactionType as ClientTxType,
 };
 use fuel_tx::Transaction;
 use fuel_types::BlockHeight;
 
-use crate::types::{
-    transaction::{CreateTransaction, ScriptTransaction, TransactionType},
-    tx_status::TxStatus,
-};
+use crate::types::{transaction::TransactionType, tx_status::TxStatus};
 
 #[derive(Debug, Clone)]
 pub struct TransactionResponse {
@@ -39,12 +37,13 @@ impl From<ClientTransactionResponse> for TransactionResponse {
         };
 
         let transaction = match client_response.transaction {
-            Transaction::Script(tx) => TransactionType::Script(ScriptTransaction::from(tx)),
-            Transaction::Create(tx) => TransactionType::Create(CreateTransaction::from(tx)),
-            Transaction::Mint(tx) => TransactionType::Mint(tx.into()),
-            Transaction::Upgrade(tx) => TransactionType::Upgrade(tx.into()),
-            Transaction::Upload(tx) => TransactionType::Upload(tx.into()),
-            Transaction::Blob(tx) => TransactionType::Blob(tx.into()),
+            ClientTxType::Known(Transaction::Script(tx)) => TransactionType::Script(tx.into()),
+            ClientTxType::Known(Transaction::Create(tx)) => TransactionType::Create(tx.into()),
+            ClientTxType::Known(Transaction::Mint(tx)) => TransactionType::Mint(tx.into()),
+            ClientTxType::Known(Transaction::Upgrade(tx)) => TransactionType::Upgrade(tx.into()),
+            ClientTxType::Known(Transaction::Upload(tx)) => TransactionType::Upload(tx.into()),
+            ClientTxType::Known(Transaction::Blob(tx)) => TransactionType::Blob(tx.into()),
+            ClientTxType::Unknown => TransactionType::Unknown,
         };
 
         Self {

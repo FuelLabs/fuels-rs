@@ -54,11 +54,11 @@ pub fn available_base_assets_and_amount(
                         amount, asset_id, ..
                     }) if asset_id == base_asset_id => {
                         sum += amount;
-                        Some(resource.id())
+                        resource.id()
                     }
                     CoinType::Message(message) => {
                         sum += message.amount;
-                        Some(resource.id())
+                        resource.id()
                     }
                     _ => None,
                 },

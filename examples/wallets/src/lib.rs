@@ -376,8 +376,7 @@ mod tests {
         let proof = wallet
             .try_provider()?
             .get_message_proof(&tx_id, &msg_id, None, Some(2))
-            .await?
-            .expect("failed to retrieve message proof");
+            .await?;
 
         // Verify the amount and recipient
         assert_eq!(proof.amount, amount);
