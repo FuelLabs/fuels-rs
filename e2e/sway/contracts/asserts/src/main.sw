@@ -29,9 +29,14 @@ impl Eq for TestEnum {
 
 abi TestContract {
     fn assert_primitive(a: u64, b: u64);
+
     fn assert_eq_primitive(a: u64, b: u64);
     fn assert_eq_struct(test_struct: TestStruct, test_struct2: TestStruct);
     fn assert_eq_enum(test_enum: TestEnum, test_enum2: TestEnum);
+
+    fn assert_ne_primitive(a: u64, b: u64);
+    fn assert_ne_struct(test_struct: TestStruct, test_struct2: TestStruct);
+    fn assert_ne_enum(test_enum: TestEnum, test_enum2: TestEnum);
 }
 
 impl TestContract for Contract {
@@ -42,12 +47,20 @@ impl TestContract for Contract {
     fn assert_eq_primitive(a: u64, b: u64) {
         assert_eq(a, b);
     }
-
     fn assert_eq_struct(test_struct: TestStruct, test_struct2: TestStruct) {
         assert_eq(test_struct, test_struct2);
     }
-
     fn assert_eq_enum(test_enum: TestEnum, test_enum2: TestEnum) {
         assert_eq(test_enum, test_enum2);
+    }
+
+    fn assert_ne_primitive(a: u64, b: u64) {
+        assert_ne(a, b);
+    }
+    fn assert_ne_struct(test_struct: TestStruct, test_struct2: TestStruct) {
+        assert_ne(test_struct, test_struct2);
+    }
+    fn assert_ne_enum(test_enum: TestEnum, test_enum2: TestEnum) {
+        assert_ne(test_enum, test_enum2);
     }
 }
