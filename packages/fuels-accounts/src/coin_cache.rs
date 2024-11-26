@@ -41,23 +41,6 @@ impl CoinsCache {
         }
     }
 
-    pub fn find_already_inserted<'a>(
-        &mut self,
-        coin_ids: impl IntoIterator<Item = (&'a (Bech32Address, AssetId), &'a Vec<CoinTypeId>)>,
-    ) -> Option<(CoinCacheKey, CoinTypeId)> {
-        for (key, ids) in coin_ids {
-            if let Some(items) = self.items.get(key) {
-                for id in ids {
-                    if items.contains(&CoinCacheItem::new(id.clone())) {
-                        return Some((key.clone(), id.clone()));
-                    }
-                }
-            }
-        }
-
-        None
-    }
-
     pub fn get_active(&mut self, key: &CoinCacheKey) -> HashSet<CoinTypeId> {
         self.remove_expired_entries(key);
 

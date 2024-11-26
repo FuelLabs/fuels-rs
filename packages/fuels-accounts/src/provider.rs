@@ -238,15 +238,35 @@ impl Provider {
     }
 
     #[cfg(feature = "coin-cache")]
+    async fn find_in_cache<'a>(
+        &self,
+        coin_ids: impl IntoIterator<Item = (&'a (Bech32Address, AssetId), &'a Vec<CoinTypeId>)>,
+    ) -> Option<((Bech32Address, AssetId), CoinTypeId)> {
+        for (key, ids) in coin_ids {
+            let items = self.cache.lock().await.get_active(key);
+
+            if items.is_empty() {
+                continue;
+            }
+
+            for id in ids {
+                if items.contains(id) {
+                    return Some((key.clone(), id.clone()));
+                }
+            }
+        }
+
+        None
+    }
+
+    #[cfg(feature = "coin-cache")]
     async fn check_inputs_already_in_cache<'a>(
         &self,
         coin_ids: impl IntoIterator<Item = (&'a (Bech32Address, AssetId), &'a Vec<CoinTypeId>)>,
     ) -> Result<()> {
         use fuels_core::types::errors::{transaction, Error};
 
-        if let Some(((addr, asset_id), coin_type_id)) =
-            self.cache.lock().await.find_already_inserted(coin_ids)
-        {
+        if let Some(((addr, asset_id), coin_type_id)) = self.find_in_cache(coin_ids).await {
             let msg = match coin_type_id {
                 CoinTypeId::UtxoId(utxo_id) => format!("coin with utxo_id: `{utxo_id:x}`"),
                 CoinTypeId::Nonce(nonce) => format!("message with nonce: `{nonce}`"),
