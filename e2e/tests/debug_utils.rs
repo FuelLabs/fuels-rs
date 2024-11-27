@@ -139,6 +139,9 @@ async fn can_debug_multi_call_tx() -> Result<()> {
     )?
     .contract_id();
 
+    let bits: [u8; 32] = *contract_id;
+    eprintln!("{bits:?}");
+
     let call1 = MyContract::new(contract_id, wallet.clone())
         .methods()
         .check_struct_integrity(AllStruct {
@@ -220,19 +223,17 @@ async fn can_debug_multi_call_tx() -> Result<()> {
         );
 
         let call_description = &call_descriptions[1];
+        let fn_selector = call_description.decode_fn_selector().unwrap();
 
         assert_eq!(call_description.contract_id, contract_id);
         assert_eq!(call_description.amount, 20);
         assert_eq!(call_description.asset_id, AssetId::default());
-        assert_eq!(
-            call_description.decode_fn_selector().unwrap(),
-            "i_am_called_differently"
-        );
+        assert_eq!(fn_selector, "i_am_called_differently");
         assert!(call_description.gas_forwarded.is_none());
 
         assert_eq!(
-            decoder.decode_fn_args(&call_description.decode_fn_selector().unwrap(), &call_description.encoded_args)?,
-            vec!["AllStruct { some_struct: SomeStruct { field: 2, field_2: true } }", "MemoryAddress { contract_id: std::contract_id::ContractId { bits: Bits256([30, 98, 236, 170, 92, 50, 241, 229, 25, 84, 244, 97, 73, 213, 229, 66, 71, 43, 219, 164, 88, 56, 25, 148, 6, 70, 74, 244, 106, 177, 71, 237]) }, function_selector: 123, function_data: 456 }"]
+            decoder.decode_fn_args(&fn_selector, &call_description.encoded_args)?,
+            vec!["AllStruct { some_struct: SomeStruct { field: 2, field_2: true } }", "MemoryAddress { contract_id: std::contract_id::ContractId { bits: Bits256([167, 128, 223, 170, 216, 61, 224, 211, 109, 217, 239, 186, 233, 73, 135, 142, 160, 176, 38, 172, 125, 137, 86, 251, 163, 86, 185, 6, 210, 149, 11, 46]) }, function_selector: 123, function_data: 456 }"]
         );
     }
 
@@ -306,7 +307,7 @@ async fn can_debug_multi_call_tx() -> Result<()> {
 
         assert_eq!(
             decoder.decode_fn_args(&call_description.decode_fn_selector().unwrap(), &call_description.encoded_args)?,
-            vec!["AllStruct { some_struct: SomeStruct { field: 2, field_2: true } }", "MemoryAddress { contract_id: std::contract_id::ContractId { bits: Bits256([30, 98, 236, 170, 92, 50, 241, 229, 25, 84, 244, 97, 73, 213, 229, 66, 71, 43, 219, 164, 88, 56, 25, 148, 6, 70, 74, 244, 106, 177, 71, 237]) }, function_selector: 123, function_data: 456 }"]
+            vec!["AllStruct { some_struct: SomeStruct { field: 2, field_2: true } }", "MemoryAddress { contract_id: std::contract_id::ContractId { bits: Bits256([167, 128, 223, 170, 216, 61, 224, 211, 109, 217, 239, 186, 233, 73, 135, 142, 160, 176, 38, 172, 125, 137, 86, 251, 163, 86, 185, 6, 210, 149, 11, 46]) }, function_selector: 123, function_data: 456 }"]
         );
     }
 
