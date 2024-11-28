@@ -242,8 +242,10 @@ impl Provider {
         &self,
         coin_ids: impl IntoIterator<Item = (&'a (Bech32Address, AssetId), &'a Vec<CoinTypeId>)>,
     ) -> Option<((Bech32Address, AssetId), CoinTypeId)> {
+        let mut locked_cache = self.cache.lock().await;
+
         for (key, ids) in coin_ids {
-            let items = self.cache.lock().await.get_active(key);
+            let items = locked_cache.get_active(key);
 
             if items.is_empty() {
                 continue;
