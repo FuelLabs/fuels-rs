@@ -797,7 +797,9 @@ async fn transactions_with_the_same_utxo() -> Result<()> {
         err,
         Error::Transaction(transaction::Reason::Validation(..))
     ));
-    assert!(err.to_string().contains("already in cache"));
+    assert!(err
+        .to_string()
+        .contains("was submitted recently in a transaction "));
 
     Ok(())
 }

@@ -274,7 +274,7 @@ impl Provider {
                 CoinTypeId::Nonce(nonce) => format!("message with nonce: `{nonce}`"),
             };
             Err(Error::Transaction(transaction::Reason::Validation(
-                format!("{msg} already in cache. Wallet address: `{addr}`, asset id: `{asset_id}`"),
+                format!("{msg} was submitted recently in a transaction - attempting to spend it again will result in an error. Wallet address: `{addr}`, asset id: `{asset_id}`"),
             )))
         } else {
             Ok(())
