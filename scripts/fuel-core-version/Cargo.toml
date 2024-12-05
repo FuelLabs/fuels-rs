@@ -14,4 +14,4 @@ clap = { version = "4.5.3", features = ["derive"] }
 color-eyre = "0.6.2"
 fuels-accounts = { workspace = true, features = ["std"] }
 semver = { workspace = true }
-versions-replacer = { workspace = true }
+toml = { workspace = true, features = ["parse"] }
