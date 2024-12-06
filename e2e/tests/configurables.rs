@@ -5,6 +5,45 @@ use fuels::{
 };
 
 #[tokio::test]
+async fn contract_dyn_configurables() -> Result<()> {
+    abigen!(Contract(
+        name = "MyContract",
+        abi = "e2e/sway/contracts/dyn_configurables/out/release/dyn_configurables-abi.json"
+    ));
+
+    let wallet = launch_provider_and_get_wallet().await?;
+
+    let configurables = MyContractConfigurables::default()
+        .with_BOOL(false)?
+        .with_U8(6)?
+        .with_STRING_SLICE("halil".try_into()?)?
+        .with_LAST_U8(12)?;
+
+    dbg!(&configurables);
+
+    let contract_id = Contract::load_from(
+        "sway/contracts/dyn_configurables/out/release/dyn_configurables.bin",
+        LoadConfiguration::default().with_configurables(configurables),
+    )?
+    .deploy_if_not_exists(&wallet, TxPolicies::default())
+    .await?;
+
+    let contract_instance = MyContract::new(contract_id, wallet.clone());
+
+    let response = contract_instance
+        .methods()
+        .return_configurables()
+        .call()
+        .await?;
+
+    let expected_value = (true, 8, "Hello, Sway".try_into()?, 16);
+
+    assert_eq!(response.value, expected_value);
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn contract_default_configurables() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",

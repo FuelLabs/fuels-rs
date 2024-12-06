@@ -22,7 +22,7 @@ use super::{
 // In a mod so that we eliminate the footgun of getting the private `code` field without applying
 // configurables
 mod code_types {
-    use fuels_core::Configurables;
+    use fuels_core::{types::errors::Result, Configurables};
 
     #[derive(Debug, Clone, PartialEq)]
     pub struct Regular {
@@ -49,10 +49,11 @@ mod code_types {
             }
         }
 
-        pub(crate) fn code(&self) -> Vec<u8> {
+        pub(crate) fn code(&self) -> Result<Vec<u8>> {
             let mut code = self.code.clone();
-            self.configurables.update_constants_in(&mut code);
-            code
+            self.configurables.update_constants_in(&mut code)?;
+
+            Ok(code)
         }
     }
 }
@@ -74,24 +75,28 @@ impl Contract<Regular> {
         }
     }
 
-    pub fn code(&self) -> Vec<u8> {
+    pub fn code(&self) -> Result<Vec<u8>> {
         self.code.code()
     }
 
-    pub fn contract_id(&self) -> ContractId {
-        self.compute_roots().0
+    pub fn contract_id(&self) -> Result<ContractId> {
+        Ok(self.compute_roots()?.0)
     }
 
-    pub fn code_root(&self) -> Bytes32 {
-        self.compute_roots().1
+    pub fn code_root(&self) -> Result<Bytes32> {
+        Ok(self.compute_roots()?.1)
     }
 
-    pub fn state_root(&self) -> Bytes32 {
-        self.compute_roots().2
+    pub fn state_root(&self) -> Result<Bytes32> {
+        Ok(self.compute_roots()?.2)
     }
 
-    fn compute_roots(&self) -> (ContractId, Bytes32, Bytes32) {
-        compute_contract_id_and_state_root(&self.code(), &self.salt, &self.storage_slots)
+    fn compute_roots(&self) -> Result<(ContractId, Bytes32, Bytes32)> {
+        Ok(compute_contract_id_and_state_root(
+            &self.code()?,
+            &self.salt,
+            &self.storage_slots,
+        ))
     }
 
     /// Loads a contract from a binary file. Salt and storage slots are loaded as well, depending on the configuration provided.
@@ -139,13 +144,13 @@ impl Contract<Regular> {
         account: &impl Account,
         tx_policies: TxPolicies,
     ) -> Result<Bech32ContractId> {
-        let contract_id = self.contract_id();
-        let state_root = self.state_root();
+        let contract_id = self.contract_id()?;
+        let state_root = self.state_root()?;
         let salt = self.salt;
         let storage_slots = self.storage_slots;
 
         let mut tb = CreateTransactionBuilder::prepare_contract_deployment(
-            self.code.code(),
+            self.code.code()?,
             contract_id,
             state_root,
             salt,
@@ -176,7 +181,7 @@ impl Contract<Regular> {
         account: &impl Account,
         tx_policies: TxPolicies,
     ) -> Result<Bech32ContractId> {
-        let contract_id = Bech32ContractId::from(self.contract_id());
+        let contract_id = Bech32ContractId::from(self.contract_id()?);
         let provider = account.try_provider()?;
         if provider.contract_exists(&contract_id).await? {
             Ok(contract_id)
@@ -194,7 +199,7 @@ impl Contract<Regular> {
             return Err(error!(Other, "blob size must be greater than 0"));
         }
         let blobs = self
-            .code()
+            .code()?
             .chunks(max_words_per_blob.saturating_mul(WORD_SIZE))
             .map(|chunk| Blob::new(chunk.to_vec()))
             .collect();
@@ -215,7 +220,7 @@ impl Contract<Regular> {
             .contract_params()
             .contract_max_size() as usize;
 
-        if self.code().len() <= max_contract_size {
+        if self.code()?.len() <= max_contract_size {
             self.deploy(account, tx_policies).await
         } else {
             self.convert_to_loader(max_words_per_blob)?
