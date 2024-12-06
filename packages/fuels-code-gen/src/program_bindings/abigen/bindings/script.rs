@@ -82,7 +82,7 @@ pub(crate) fn script_bindings(
                 self
             }
 
-            pub fn code(&self) -> ::std::vec::Vec<u8> {
+            pub fn code(&self) -> ::fuels::types::errors::Result<::std::vec::Vec<u8>> {
                 let regular = ::fuels::programs::executable::Executable::from_bytes(self.unconfigured_binary.clone()).with_configurables(self.configurables.clone());
 
                 if self.converted_into_loader {
@@ -146,7 +146,7 @@ fn expand_fn(fn_abi: &FullABIFunction) -> Result<TokenStream> {
             let encoded_args = ::fuels::core::codec::ABIEncoder::new(self.encoder_config).encode(&#arg_tokens);
 
             ::fuels::programs::calls::CallHandler::new_script_call(
-                self.code(),
+                self.code().expect("TODO: @hal3e deal with result type"),
                 encoded_args,
                 self.account.clone(),
                 self.log_decoder.clone()

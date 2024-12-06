@@ -9,6 +9,7 @@ members = [
   'sway/contracts/auth_testing_abi',
   'sway/contracts/auth_testing_contract',
   'sway/contracts/block_timestamp',
+  'sway/contracts/dyn_configurables',
   'sway/contracts/configurables',
   'sway/contracts/contract_test',
   'sway/contracts/huge_contract',
@@ -116,3 +117,6 @@ members = [
   'sway/types/scripts/script_u256',
   'sway/types/scripts/script_vectors',
 ]
+
+[patch.'https://github.com/fuellabs/sway']
+std = { git = "https://github.com/fuellabs/sway", branch = "xunilrj/dynamic-types-configurables" }
