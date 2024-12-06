@@ -59,7 +59,7 @@ impl ReceiptParser {
         )
     }
 
-    fn extract_contract_call_data(&mut self, target_contract: ContractId) -> Option<Vec<u8>> {
+    pub fn extract_contract_call_data(&mut self, target_contract: ContractId) -> Option<Vec<u8>> {
         // If the script contains nested calls, we need to extract the data of the top-level call
         let mut nested_calls_stack = vec![];
 
