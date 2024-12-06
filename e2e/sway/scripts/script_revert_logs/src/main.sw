@@ -26,6 +26,9 @@ enum MatchEnum {
     RequireString: (),
     RequireCustomGeneric: (),
     RequireWithAdditionalLogs: (),
+    RevWLogPrimitive: (),
+    RevWLogString: (),
+    RevWLogCustomGeneric: (),
 }
 
 fn main(match_enum: MatchEnum) {
@@ -51,5 +54,23 @@ fn main(match_enum: MatchEnum) {
         log(42);
         log(__to_str_array("fuel"));
         require(false, 64);
+    } else if let MatchEnum::RevWLogPrimitive = match_enum {
+        revert_with_log(42);
+    } else if let MatchEnum::RevWLogString = match_enum {
+        revert_with_log(__to_str_array("fuel"));
+    } else if let MatchEnum::RevWLogCustomGeneric = match_enum {
+        let l: [u8; 3] = [1u8, 2u8, 3u8];
+
+        let test_enum = EnumWithGeneric::VariantOne(l);
+        let test_struct_nested = StructWithNestedGeneric {
+            field_1: test_enum,
+            field_2: 64,
+        };
+        let test_deeply_nested_generic = StructDeeplyNestedGeneric {
+            field_1: test_struct_nested,
+            field_2: 64,
+        };
+
+        revert_with_log(test_deeply_nested_generic);
     }
 }
