@@ -188,6 +188,12 @@ impl WalletUnlocked {
     pub fn address(&self) -> &Bech32Address {
         &self.address
     }
+
+    /// Returns the private key of the wallet. This method is only available when the 'test-helpers' feature is enabled.
+    #[cfg(feature = "test-helpers")]
+    pub fn secret_key(&self) -> &SecretKey {
+        &self.private_key
+    }
 }
 
 impl ViewOnlyAccount for WalletUnlocked {
