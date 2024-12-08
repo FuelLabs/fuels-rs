@@ -1,13 +1,12 @@
-use fuel_asm::{op, Instruction, RegId};
 use fuels_core::{
-    constants::WORD_SIZE,
     types::{
         errors::Result,
-        transaction_builders::{Blob, BlobId, BlobTransactionBuilder},
+        transaction_builders::{Blob, BlobTransactionBuilder},
     },
     Configurables,
 };
-use itertools::Itertools;
+
+use crate::assembly::script_and_predicate_loader::{extract_data_offset, LoaderCode};
 
 /// This struct represents a standard executable with its associated bytecode and configurables.
 #[derive(Debug, Clone, PartialEq)]
@@ -118,33 +117,29 @@ impl Executable<Loader> {
     }
 
     pub fn data_offset_in_code(&self) -> usize {
-        self.code_with_offset().1
+        self.loader_code().data_section_offset()
     }
 
-    fn code_with_offset(&self) -> (Vec<u8>, usize) {
+    fn loader_code(&self) -> LoaderCode {
         let mut code = self.state.code.clone();
 
         self.state.configurables.update_constants_in(&mut code);
 
-        let blob_id = self.blob().id();
-
-        transform_into_configurable_loader(code, &blob_id)
+        LoaderCode::from_normal_binary(code)
             .expect("checked before turning into a Executable<Loader>")
     }
 
     /// Returns the code of the loader executable with configurables applied.
     pub fn code(&self) -> Vec<u8> {
-        self.code_with_offset().0
+        self.loader_code().as_bytes().to_vec()
     }
 
     /// A Blob containing the original executable code minus the data section.
     pub fn blob(&self) -> Blob {
-        let data_section_offset = extract_data_offset(&self.state.code)
-            .expect("checked before turning into a Executable<Loader>");
-
-        let code_without_data_section = self.state.code[..data_section_offset].to_vec();
-
-        Blob::new(code_without_data_section)
+        // we don't apply configurables because they touch the data section which isn't part of the
+        // blob
+        LoaderCode::extract_blob(&self.state.code)
+            .expect("checked before turning into a Executable<Loader>")
     }
 
     /// Uploads a blob containing the original executable code minus the data section.
@@ -173,189 +168,13 @@ impl Executable<Loader> {
     }
 }
 
-fn extract_data_offset(binary: &[u8]) -> Result<usize> {
-    if binary.len() < 16 {
-        return Err(fuels_core::error!(
-            Other,
-            "given binary is too short to contain a data offset, len: {}",
-            binary.len()
-        ));
-    }
-
-    let data_offset: [u8; 8] = binary[8..16].try_into().expect("checked above");
-
-    Ok(u64::from_be_bytes(data_offset) as usize)
-}
-
-fn transform_into_configurable_loader(
-    binary: Vec<u8>,
-    blob_id: &BlobId,
-) -> Result<(Vec<u8>, usize)> {
-    // The final code is going to have this structure (if the data section is non-empty):
-    // 1. loader instructions
-    // 2. blob id
-    // 3. length_of_data_section
-    // 4. the data_section (updated with configurables as needed)
-    const BLOB_ID_SIZE: u16 = 32;
-    const REG_ADDRESS_OF_DATA_AFTER_CODE: u8 = 0x10;
-    const REG_START_OF_LOADED_CODE: u8 = 0x11;
-    const REG_GENERAL_USE: u8 = 0x12;
-    let get_instructions = |num_of_instructions| {
-        // There are 3 main steps:
-        // 1. Load the blob content into memory
-        // 2. Load the data section right after the blob
-        // 3. Jump to the beginning of the memory where the blob was loaded
-        [
-            // 1. Load the blob content into memory
-            // Find the start of the hardcoded blob ID, which is located after the loader code ends.
-            op::move_(REG_ADDRESS_OF_DATA_AFTER_CODE, RegId::PC),
-            // hold the address of the blob ID.
-            op::addi(
-                REG_ADDRESS_OF_DATA_AFTER_CODE,
-                REG_ADDRESS_OF_DATA_AFTER_CODE,
-                num_of_instructions * Instruction::SIZE as u16,
-            ),
-            // The code is going to be loaded from the current value of SP onwards, save
-            // the location into REG_START_OF_LOADED_CODE so we can jump into it at the end.
-            op::move_(REG_START_OF_LOADED_CODE, RegId::SP),
-            // REG_GENERAL_USE to hold the size of the blob.
-            op::bsiz(REG_GENERAL_USE, REG_ADDRESS_OF_DATA_AFTER_CODE),
-            // Push the blob contents onto the stack.
-            op::ldc(REG_ADDRESS_OF_DATA_AFTER_CODE, 0, REG_GENERAL_USE, 1),
-            // Move on to the data section length
-            op::addi(
-                REG_ADDRESS_OF_DATA_AFTER_CODE,
-                REG_ADDRESS_OF_DATA_AFTER_CODE,
-                BLOB_ID_SIZE,
-            ),
-            // load the size of the data section into REG_GENERAL_USE
-            op::lw(REG_GENERAL_USE, REG_ADDRESS_OF_DATA_AFTER_CODE, 0),
-            // after we have read the length of the data section, we move the pointer to the actual
-            // data by skipping WORD_SIZE B.
-            op::addi(
-                REG_ADDRESS_OF_DATA_AFTER_CODE,
-                REG_ADDRESS_OF_DATA_AFTER_CODE,
-                WORD_SIZE as u16,
-            ),
-            // load the data section of the executable
-            op::ldc(REG_ADDRESS_OF_DATA_AFTER_CODE, 0, REG_GENERAL_USE, 2),
-            // Jump into the memory where the contract is loaded.
-            // What follows is called _jmp_mem by the sway compiler.
-            // Subtract the address contained in IS because jmp will add it back.
-            op::sub(
-                REG_START_OF_LOADED_CODE,
-                REG_START_OF_LOADED_CODE,
-                RegId::IS,
-            ),
-            // jmp will multiply by 4, so we need to divide to cancel that out.
-            op::divi(REG_START_OF_LOADED_CODE, REG_START_OF_LOADED_CODE, 4),
-            // Jump to the start of the contract we loaded.
-            op::jmp(REG_START_OF_LOADED_CODE),
-        ]
-    };
-
-    let get_instructions_no_data_section = |num_of_instructions| {
-        // There are 2 main steps:
-        // 1. Load the blob content into memory
-        // 2. Jump to the beginning of the memory where the blob was loaded
-        [
-            // 1. Load the blob content into memory
-            // Find the start of the hardcoded blob ID, which is located after the loader code ends.
-            op::move_(REG_ADDRESS_OF_DATA_AFTER_CODE, RegId::PC),
-            // hold the address of the blob ID.
-            op::addi(
-                REG_ADDRESS_OF_DATA_AFTER_CODE,
-                REG_ADDRESS_OF_DATA_AFTER_CODE,
-                num_of_instructions * Instruction::SIZE as u16,
-            ),
-            // The code is going to be loaded from the current value of SP onwards, save
-            // the location into REG_START_OF_LOADED_CODE so we can jump into it at the end.
-            op::move_(REG_START_OF_LOADED_CODE, RegId::SP),
-            // REG_GENERAL_USE to hold the size of the blob.
-            op::bsiz(REG_GENERAL_USE, REG_ADDRESS_OF_DATA_AFTER_CODE),
-            // Push the blob contents onto the stack.
-            op::ldc(REG_ADDRESS_OF_DATA_AFTER_CODE, 0, REG_GENERAL_USE, 1),
-            // Jump into the memory where the contract is loaded.
-            // What follows is called _jmp_mem by the sway compiler.
-            // Subtract the address contained in IS because jmp will add it back.
-            op::sub(
-                REG_START_OF_LOADED_CODE,
-                REG_START_OF_LOADED_CODE,
-                RegId::IS,
-            ),
-            // jmp will multiply by 4, so we need to divide to cancel that out.
-            op::divi(REG_START_OF_LOADED_CODE, REG_START_OF_LOADED_CODE, 4),
-            // Jump to the start of the contract we loaded.
-            op::jmp(REG_START_OF_LOADED_CODE),
-        ]
-    };
-
-    let offset = extract_data_offset(&binary)?;
-
-    if binary.len() < offset {
-        return Err(fuels_core::error!(
-            Other,
-            "data section offset is out of bounds, offset: {offset}, binary len: {}",
-            binary.len()
-        ));
-    }
-
-    let data_section = binary[offset..].to_vec();
-
-    if !data_section.is_empty() {
-        let num_of_instructions = u16::try_from(get_instructions(0).len())
-            .expect("to never have more than u16::MAX instructions");
-
-        let instruction_bytes = get_instructions(num_of_instructions)
-            .into_iter()
-            .flat_map(|instruction| instruction.to_bytes())
-            .collect_vec();
-
-        let blob_bytes = blob_id.iter().copied().collect_vec();
-
-        let original_data_section_len_encoded = u64::try_from(data_section.len())
-            .expect("data section to be less than u64::MAX")
-            .to_be_bytes();
-
-        // The data section is placed after all of the instructions, the BlobId, and the number representing
-        // how big the data section is.
-        let new_data_section_offset =
-            instruction_bytes.len() + blob_bytes.len() + original_data_section_len_encoded.len();
-
-        let code = instruction_bytes
-            .into_iter()
-            .chain(blob_bytes)
-            .chain(original_data_section_len_encoded)
-            .chain(data_section)
-            .collect();
-
-        Ok((code, new_data_section_offset))
-    } else {
-        let num_of_instructions = u16::try_from(get_instructions_no_data_section(0).len())
-            .expect("to never have more than u16::MAX instructions");
-
-        let instruction_bytes = get_instructions_no_data_section(num_of_instructions)
-            .into_iter()
-            .flat_map(|instruction| instruction.to_bytes());
-
-        let blob_bytes = blob_id.iter().copied();
-
-        let code = instruction_bytes.chain(blob_bytes).collect_vec();
-        // there is no data section, so we point the offset to the end of the file
-        let new_data_section_offset = code.len();
-
-        Ok((code, new_data_section_offset))
-    }
-}
-
 fn validate_loader_can_be_made_from_code(
     mut code: Vec<u8>,
     configurables: Configurables,
 ) -> Result<()> {
     configurables.update_constants_in(&mut code);
 
-    // BlobId currently doesn't affect our ability to produce the loader code
-    transform_into_configurable_loader(code, &Default::default())?;
+    let _ = LoaderCode::from_normal_binary(code)?;
 
     Ok(())
 }
@@ -464,12 +283,9 @@ mod tests {
         assert_eq!(blob.as_ref(), data_stripped_code);
 
         let loader_code = loader.code();
-        let blob_id = blob.id();
         assert_eq!(
             loader_code,
-            transform_into_configurable_loader(code, &blob_id)
-                .unwrap()
-                .0
+            LoaderCode::from_normal_binary(code).unwrap().as_bytes()
         )
     }
 

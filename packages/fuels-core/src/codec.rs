@@ -1,11 +1,13 @@
 mod abi_decoder;
 mod abi_encoder;
+mod abi_formatter;
 mod function_selector;
 mod logs;
 mod utils;
 
 pub use abi_decoder::*;
 pub use abi_encoder::*;
+pub use abi_formatter::*;
 pub use function_selector::*;
 pub use logs::*;
 
