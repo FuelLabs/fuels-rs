@@ -778,6 +778,34 @@ async fn create_transfer(
 
 #[cfg(feature = "coin-cache")]
 #[tokio::test]
+async fn transactions_with_the_same_utxo() -> Result<()> {
+    use fuels::types::errors::transaction;
+
+    let wallet_1 = launch_provider_and_get_wallet().await?;
+    let provider = wallet_1.provider().unwrap();
+    let wallet_2 = WalletUnlocked::new_random(Some(provider.clone()));
+
+    let tx_1 = create_transfer(&wallet_1, 100, wallet_2.address()).await?;
+    let tx_2 = create_transfer(&wallet_1, 101, wallet_2.address()).await?;
+
+    let _tx_id = provider.send_transaction(tx_1).await?;
+    let res = provider.send_transaction(tx_2).await;
+
+    let err = res.expect_err("is error");
+
+    assert!(matches!(
+        err,
+        Error::Transaction(transaction::Reason::Validation(..))
+    ));
+    assert!(err
+        .to_string()
+        .contains("was submitted recently in a transaction "));
+
+    Ok(())
+}
+
+#[cfg(feature = "coin-cache")]
+#[tokio::test]
 async fn test_caching() -> Result<()> {
     let amount = 1000;
     let num_coins = 10;
