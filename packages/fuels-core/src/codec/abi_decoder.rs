@@ -106,6 +106,19 @@ impl ABIDecoder {
         let token = BoundedDecoder::new(self.config).decode(param_type, bytes)?;
         decode_as_debug_str(param_type, &token)
     }
+
+    pub fn decode_multiple_as_debug_str(
+        &self,
+        param_types: &[ParamType],
+        bytes: &[u8],
+    ) -> Result<Vec<String>> {
+        let token = BoundedDecoder::new(self.config).decode_multiple(param_types, bytes)?;
+        token
+            .into_iter()
+            .zip(param_types)
+            .map(|(token, param_type)| decode_as_debug_str(param_type, &token))
+            .collect()
+    }
 }
 
 #[cfg(test)]
