@@ -5,61 +5,20 @@ use fuels::{
 };
 
 #[tokio::test]
-async fn contract_dyn_configurables() -> Result<()> {
-    abigen!(Contract(
-        name = "MyContract",
-        abi = "e2e/sway/contracts/dyn_configurables/out/release/dyn_configurables-abi.json"
-    ));
-
-    let wallet = launch_provider_and_get_wallet().await?;
-
-    let configurables = MyContractConfigurables::default()
-        .with_BOOL(false)?
-        .with_U8(6)?
-        .with_STRING_SLICE("halil".try_into()?)?
-        .with_LAST_U8(12)?;
-
-    dbg!(&configurables);
-
-    let contract_id = Contract::load_from(
-        "sway/contracts/dyn_configurables/out/release/dyn_configurables.bin",
-        LoadConfiguration::default().with_configurables(configurables),
-    )?
-    .deploy_if_not_exists(&wallet, TxPolicies::default())
-    .await?;
-
-    let contract_instance = MyContract::new(contract_id, wallet.clone());
-
-    let response = contract_instance
-        .methods()
-        .return_configurables()
-        .call()
-        .await?;
-
-    let expected_value = (true, 8, "Hello, Sway".try_into()?, 16);
-
-    assert_eq!(response.value, expected_value);
-
-    Ok(())
-}
-
-#[tokio::test]
 async fn contract_default_configurables() -> Result<()> {
-    abigen!(Contract(
-        name = "MyContract",
-        abi = "e2e/sway/contracts/configurables/out/release/configurables-abi.json"
-    ));
-
-    let wallet = launch_provider_and_get_wallet().await?;
-
-    let contract_id = Contract::load_from(
-        "sway/contracts/configurables/out/release/configurables.bin",
-        LoadConfiguration::default(),
-    )?
-    .deploy_if_not_exists(&wallet, TxPolicies::default())
-    .await?;
-
-    let contract_instance = MyContract::new(contract_id, wallet.clone());
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Contract(
+            name = "MyContract",
+            project = "e2e/sway/contracts/configurables"
+        )),
+        Deploy(
+            name = "contract_instance",
+            contract = "MyContract",
+            wallet = "wallet",
+            random_salt = false,
+        ),
+    );
 
     let response = contract_instance
         .methods()
@@ -201,41 +160,28 @@ async fn contract_configurables() -> Result<()> {
 }
 
 #[tokio::test]
-async fn contract_manual_configurables() -> Result<()> {
-    setup_program_test!(
-        Abigen(Contract(
-            name = "MyContract",
-            project = "e2e/sway/contracts/configurables"
-        )),
-        Wallets("wallet")
-    );
+async fn contract_dyn_configurables() -> Result<()> {
+    abigen!(Contract(
+        name = "MyContract",
+        abi = "e2e/sway/contracts/dyn_configurables/out/release/dyn_configurables-abi.json"
+    ));
 
-    let str_4: SizedAsciiString<4> = "FUEL".try_into()?;
-    let new_struct = StructWithGeneric {
-        field_1: 16u8,
-        field_2: 32,
-    };
-    let new_enum = EnumWithGeneric::VariantTwo;
+    let wallet = launch_provider_and_get_wallet().await?;
 
     let configurables = MyContractConfigurables::default()
         .with_BOOL(false)?
-        .with_U8(7)?
-        .with_U16(15)?
-        .with_U32(31)?
-        .with_U64(63)?
-        .with_U256(U256::from(8))?
-        .with_B256(Bits256([2; 32]))?
-        .with_STR_4(str_4.clone())?
-        .with_TUPLE((7, false))?
-        .with_ARRAY([252, 253, 254])?
-        .with_STRUCT(new_struct.clone())?
-        .with_ENUM(new_enum.clone())?;
+        .with_U8(6)?
+        .with_STR("sway-sway".try_into()?)?
+        .with_STR_3("fuel-fuel".try_into()?)?
+        .with_LAST_U8(12)?;
+
+    dbg!(&configurables);
 
     let contract_id = Contract::load_from(
-        "sway/contracts/configurables/out/release/configurables.bin",
-        LoadConfiguration::default(),
+        "sway/contracts/dyn_configurables/out/release/dyn_configurables.bin",
+        LoadConfiguration::default().with_configurables(configurables),
     )?
-    .with_configurables(configurables)
+    .convert_to_loader(100)? //TODO: @hal3e add test-case for convert to loader with or without
     .deploy_if_not_exists(&wallet, TxPolicies::default())
     .await?;
 
@@ -249,17 +195,11 @@ async fn contract_manual_configurables() -> Result<()> {
 
     let expected_value = (
         false,
-        7,
-        15,
-        31,
-        63,
-        U256::from(8),
-        Bits256([2; 32]),
-        str_4,
-        (7, false),
-        [252, 253, 254],
-        new_struct,
-        new_enum,
+        6,
+        "sway-sway".try_into()?,
+        "forc".try_into()?,
+        "fuel-fuel".try_into()?,
+        12,
     );
 
     assert_eq!(response.value, expected_value);
@@ -277,7 +217,7 @@ async fn script_configurables() -> Result<()> {
 
     let wallet = launch_provider_and_get_wallet().await?;
     let bin_path = "sway/scripts/script_configurables/out/release/script_configurables.bin";
-    let instance = MyScript::new(wallet, bin_path);
+    let script_instance = MyScript::new(wallet, bin_path);
 
     let str_4: SizedAsciiString<4> = "FUEL".try_into()?;
     let new_struct = StructWithGeneric {
@@ -303,7 +243,7 @@ async fn script_configurables() -> Result<()> {
     .with_STRUCT(new_struct.clone())?
     .with_ENUM(new_enum.clone())?;
 
-    let response = instance
+    let response = script_instance
         .with_configurables(configurables)
         .main()
         .call()
@@ -323,6 +263,48 @@ async fn script_configurables() -> Result<()> {
         [252, 253, 254],
         new_struct,
         new_enum,
+    );
+
+    assert_eq!(response.value, expected_value);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn script_dyn_configurables() -> Result<()> {
+    abigen!(Script(
+        name = "MyScript",
+        abi = "e2e/sway/scripts/script_dyn_configurables/out/release/script_dyn_configurables-abi.json"
+    ));
+
+    let wallet = launch_provider_and_get_wallet().await?;
+    let bin_path = "sway/scripts/script_dyn_configurables/out/release/script_dyn_configurables.bin";
+    let script_instance = MyScript::new(wallet, bin_path);
+
+    let configurables = MyScriptConfigurables::default()
+        .with_BOOL(false)?
+        .with_U8(6)?
+        .with_STR("sway-sway".try_into()?)?
+        .with_STR_3("fuel-fuel".try_into()?)?
+        .with_LAST_U8(12)?;
+
+    dbg!(&configurables);
+
+    let response = script_instance
+        .with_configurables(configurables)
+        .convert_into_loader() //TODO: @hal3e add test-case for this
+        .await?
+        .main()
+        .call()
+        .await?;
+
+    let expected_value = (
+        false,
+        6,
+        "sway-sway".try_into()?,
+        "forc".try_into()?,
+        "fuel-fuel".try_into()?,
+        12,
     );
 
     assert_eq!(response.value, expected_value);

@@ -3,15 +3,19 @@ pub mod traits;
 pub mod types;
 mod utils;
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
+use codec::ABIEncoder;
+use itertools::{Either, Itertools};
 use offsets::{extract_data_offset, extract_offset_at};
+use traits::Tokenizable;
 pub use utils::*;
 
 use crate::types::errors::Result;
 
 #[derive(Debug, Clone)]
 pub enum Configurable {
+    //TODO:hal3e make private
     Direct {
         offset: u64,
         data: Vec<u8>,
@@ -87,21 +91,124 @@ impl Configurables {
         })
     }
 
-    pub fn update_constants_in(&self, binary: &mut [u8]) -> Result<()> {
-        let data_offset = extract_data_offset(binary)?;
-        let indirect_configurables: HashSet<u64> =
-            HashSet::from_iter(self.indirect_configurables.iter().cloned());
-        dbg!(&data_offset);
+    pub fn update_constants_in(&self, binary: &mut Vec<u8>) -> Result<()> {
+        let indirect_configurables_sorted = self
+            .indirect_configurables
+            .iter()
+            .cloned()
+            .sorted_unstable()
+            .collect_vec();
 
-        for (offset, data) in &self.offsets_with_data {
-            let offset = if indirect_configurables.contains(offset) {
-                dbg!("indirect");
-                extract_offset_at(binary, *offset as usize)? + data_offset
-            } else {
-                *offset as usize
-            };
-            dbg!(&offset);
-            binary[offset..offset + data.len()].copy_from_slice(data)
+        let indirect_configurables_map: HashSet<u64> =
+            HashSet::from_iter(self.indirect_configurables.iter().cloned());
+
+        let (direct_configurables, indirect_configurables): (Vec<_>, Vec<_>) = self
+            .offsets_with_data
+            .iter()
+            .partition_map(|(offset, data)| {
+                if indirect_configurables_map.contains(offset) {
+                    Either::Right((*offset, data.as_slice()))
+                } else {
+                    Either::Left((*offset, data.as_slice()))
+                }
+            });
+
+        Self::apply_direct_configurables(binary, &direct_configurables)?;
+
+        if !indirect_configurables.is_empty() {
+            let data_offset = extract_data_offset(binary)?;
+
+            let mut change_map: HashMap<u64, (usize, &[u8])> = indirect_configurables
+                .iter()
+                .map(|(offset, data)| {
+                    let dyn_offset = extract_offset_at(binary, *offset as usize)? + data_offset;
+
+                    Ok((*offset, (dyn_offset, *data)))
+                })
+                .collect::<Result<HashMap<_, _>>>()?;
+
+            let min_offset = change_map
+                .values()
+                .map(|(dyn_offset, _)| *dyn_offset)
+                .min()
+                .expect("exists");
+
+            for (offset, next_offset) in indirect_configurables_sorted //TODO: @hal3e refactor
+                .iter()
+                .circular_tuple_windows()
+            {
+                if change_map.contains_key(offset) {
+                    continue;
+                }
+
+                let dyn_offset = extract_offset_at(binary, *offset as usize)? + data_offset;
+
+                if dyn_offset < min_offset {
+                    continue;
+                }
+
+                let end_offset = if next_offset <= offset {
+                    binary.len()
+                } else {
+                    extract_offset_at(binary, *next_offset as usize)? + data_offset
+                };
+
+                Self::check_binary_len(binary, dyn_offset)?;
+                Self::check_binary_len(binary, end_offset)?;
+
+                let data = &binary[dyn_offset..end_offset];
+
+                change_map.insert(*offset, (dyn_offset, data));
+            }
+
+            let mut new_binary = binary[..min_offset].to_vec();
+            // go through the configurables and apply the changes
+            for offset in indirect_configurables_sorted {
+                if let Some((_, data)) = change_map.get(&offset) {
+                    let new_offset = new_binary.len().saturating_sub(data_offset) as u64;
+                    let new_offset_encoded =
+                        ABIEncoder::default().encode(&[new_offset.into_token()])?;
+                    Self::write(
+                        new_binary.as_mut_slice(),
+                        offset as usize,
+                        &new_offset_encoded,
+                    )?;
+
+                    new_binary.extend(*data);
+                }
+            }
+
+            *binary = new_binary;
+        }
+
+        Ok(())
+    }
+
+    fn apply_direct_configurables(binary: &mut [u8], configurables: &[(u64, &[u8])]) -> Result<()> {
+        for (offset, data) in configurables {
+            Self::write(binary, *offset as usize, data)?;
+        }
+
+        Ok(())
+    }
+
+    fn write(binary: &mut [u8], offset: usize, data: &[u8]) -> Result<()> {
+        let data_len = data.len();
+        Self::check_binary_len(binary, offset + data_len)?;
+
+        binary[offset..offset + data.len()].copy_from_slice(data);
+
+        Ok(())
+    }
+
+    fn check_binary_len(binary: &[u8], offset: usize) -> Result<()> {
+        if binary.len() < offset {
+            return Err(crate::error!(
+                Other,
+                "configurables: given binary with len: `{}` is too short for offset:`{}`",
+                binary.len(),
+                offset
+            ));
         }
 
         Ok(())

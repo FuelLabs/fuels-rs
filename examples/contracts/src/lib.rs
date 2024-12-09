@@ -117,7 +117,7 @@ mod tests {
             .await?;
         // ANCHOR_END: contract_call_cost_estimation
 
-        let expected_gas = 2669;
+        let expected_gas = 2667;
 
         assert_eq!(transaction_cost.gas_used, expected_gas);
 
@@ -632,7 +632,7 @@ mod tests {
             .await?;
         // ANCHOR_END: multi_call_cost_estimation
 
-        let expected_gas = 4168;
+        let expected_gas = 4166;
 
         assert_eq!(transaction_cost.gas_used, expected_gas);
 
@@ -1019,7 +1019,7 @@ mod tests {
             .contract_params()
             .contract_max_size();
 
-        assert!(contract.code().len() as u64 > max_allowed);
+        assert!(contract.code()?.len() as u64 > max_allowed);
         // ANCHOR_END: show_contract_is_too_big
 
         let wallet = main_wallet.clone();
@@ -1119,7 +1119,7 @@ mod tests {
             "all chunks, except the last, must be word-aligned"
         );
         let blobs = contract
-            .code()
+            .code()?
             .chunks(chunk_size)
             .map(|chunk| Blob::new(chunk.to_vec()))
             .collect();

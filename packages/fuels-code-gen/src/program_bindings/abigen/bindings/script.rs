@@ -225,7 +225,7 @@ mod tests {
                 let encoded_args=::fuels::core::codec::ABIEncoder::new(self.encoder_config)
                     .encode(&[::fuels::core::traits::Tokenizable::into_token(bimbam)]);
                  ::fuels::programs::calls::CallHandler::new_script_call(
-                    self.code(),
+                    self.code().expect("TODO: @hal3e deal with result type"),
                     encoded_args,
                     self.account.clone(),
                     self.log_decoder.clone()
