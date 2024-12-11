@@ -9,6 +9,9 @@ repository = { workspace = true }
 rust-version = { workspace = true }
 description = "Fuel Rust SDK test helpers."
 
+[package.metadata.cargo-machete]
+ignored = ["async-graphql", "async-graphql-derive"]
+
 [dependencies]
 fuel-core = { workspace = true, default-features = false, features = [
   "test-helpers",
@@ -30,9 +33,20 @@ rand = { workspace = true, default-features = false }
 tempfile = { workspace = true, default-features = false }
 tokio = { workspace = true, default-features = false }
 which = { workspace = true, default-features = false }
+# fuel-core uses these deps. We need to list them here so that we can pin them
+# to =7.0.11 even though fuel-core can accepts 7.0.11 onwards. 7.0.12 bumped the
+# MSRV and broke the sdk build for users using anything less than Rust 1.81.
+#
+# Until the SDK MSRV reaches 1.81 we need to freeze these packages to 7.0.11
+async-graphql = { workspace = true, optional = true }
+async-graphql-derive = { workspace = true, optional = true }
 
 [features]
 default = ["fuels-accounts", "std"]
 std = ["fuels-accounts?/std", "fuels-core/std", "fuel-core-chain-config/std"]
-fuel-core-lib = ["dep:fuel-core"]
+fuel-core-lib = [
+  "dep:fuel-core",
+  "dep:async-graphql",
+  "dep:async-graphql-derive",
+]
 rocksdb = ["fuel-core?/rocksdb"]
