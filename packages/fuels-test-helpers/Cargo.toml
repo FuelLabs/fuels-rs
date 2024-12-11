@@ -9,6 +9,9 @@ repository = { workspace = true }
 rust-version = { workspace = true }
 description = "Fuel Rust SDK test helpers."
 
+[package.metadata.cargo-machete]
+ignored = ["async-graphql", "async-graphql-derive"]
+
 [dependencies]
 fuel-core = { workspace = true, default-features = false, features = [
   "test-helpers",
