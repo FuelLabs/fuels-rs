@@ -33,7 +33,6 @@ pub mod macros {
     pub use fuels_macros::*;
 }
 
-#[cfg(feature = "std")]
 pub mod programs {
     pub use fuels_programs::*;
 }

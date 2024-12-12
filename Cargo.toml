@@ -50,6 +50,7 @@ bytes = { version = "1.5.0", default-features = false }
 chrono = "0.4.31"
 cynic = { version = "2.2", default-features = false }
 elliptic-curve = { version = "0.13.8", default-features = false }
+test-case = { version = "3.3", default-features = false }
 eth-keystore = "0.5.0"
 flate2 = { version = "1.0", default-features = false }
 fuel-abi-types = "0.8.0"
