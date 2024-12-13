@@ -117,3 +117,14 @@ fuels-macros = { version = "0.66.10", path = "./packages/fuels-macros", default-
 fuels-programs = { version = "0.66.10", path = "./packages/fuels-programs", default-features = false }
 fuels-test-helpers = { version = "0.66.10", path = "./packages/fuels-test-helpers", default-features = false }
 versions-replacer = { version = "0.66.10", path = "./scripts/versions-replacer", default-features = false }
+
+[patch.crates-io]
+fuel-asm = { git = "https://github.com/FuelLabs/fuel-vm", rev = "dd9ffb6365b6ef5bcc6d1dc32472ae26a4092d03" }
+fuel-crypto = { git = "https://github.com/FuelLabs/fuel-vm", rev = "dd9ffb6365b6ef5bcc6d1dc32472ae26a4092d03" }
+fuel-merkle = { git = "https://github.com/FuelLabs/fuel-vm", rev = "dd9ffb6365b6ef5bcc6d1dc32472ae26a4092d03" }
+fuel-storage = { git = "https://github.com/FuelLabs/fuel-vm", rev = "dd9ffb6365b6ef5bcc6d1dc32472ae26a4092d03" }
+fuel-tx = { git = "https://github.com/FuelLabs/fuel-vm", rev = "dd9ffb6365b6ef5bcc6d1dc32472ae26a4092d03" }
+fuel-types = { git = "https://github.com/FuelLabs/fuel-vm", rev = "dd9ffb6365b6ef5bcc6d1dc32472ae26a4092d03" }
+fuel-vm = { git = "https://github.com/FuelLabs/fuel-vm", rev = "dd9ffb6365b6ef5bcc6d1dc32472ae26a4092d03" }
+
+fuel-core = { git = "https://github.com/FuelLabs/fuel-core" }
