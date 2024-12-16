@@ -3,9 +3,10 @@ mod tests {
     use std::{collections::HashSet, time::Duration};
 
     use fuels::{
-        core::codec::{encode_fn_selector, DecoderConfig, EncoderConfig},
+        core::codec::{encode_fn_selector, ABIFormatter, DecoderConfig, EncoderConfig},
         crypto::SecretKey,
         prelude::{LoadConfiguration, NodeConfig, StorageConfiguration},
+        programs::debug::ScriptType,
         test_helpers::{ChainConfig, StateConfig},
         types::{
             errors::{transaction::Reason, Result},
@@ -1135,6 +1136,67 @@ mod tests {
             .await?;
         // ANCHOR_END: estimate_max_blob_size
 
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[allow(unused_variables)]
+    async fn decoding_script_transactions() -> Result<()> {
+        use fuels::prelude::*;
+
+        setup_program_test!(
+            Abigen(Contract(
+                name = "MyContract",
+                project = "e2e/sway/contracts/contract_test"
+            )),
+            Wallets("wallet"),
+            Deploy(
+                name = "contract_instance",
+                contract = "MyContract",
+                wallet = "wallet"
+            )
+        );
+
+        let tx_id = contract_instance
+            .methods()
+            .initialize_counter(42)
+            .call()
+            .await?
+            .tx_id
+            .unwrap();
+
+        let provider: &Provider = wallet.try_provider()?;
+
+        // ANCHOR: decoding_script_transactions
+        let TransactionType::Script(tx) = provider
+            .get_transaction_by_id(&tx_id)
+            .await?
+            .unwrap()
+            .transaction
+        else {
+            panic!("Transaction is not a script transaction");
+        };
+
+        let ScriptType::ContractCall(calls) = ScriptType::detect(tx.script(), tx.script_data())?
+        else {
+            panic!("Script is not a contract call");
+        };
+
+        let json_abi = std::fs::read_to_string(
+            "../../e2e/sway/contracts/contract_test/out/release/contract_test-abi.json",
+        )?;
+        let abi_formatter = ABIFormatter::from_json_abi(json_abi)?;
+
+        let call = &calls[0];
+        let fn_selector = call.decode_fn_selector()?;
+        let decoded_args = abi_formatter.decode_fn_args(&fn_selector, &call.encoded_args)?;
+
+        eprintln!(
+            "The script called: {fn_selector}({})",
+            decoded_args.join(", ")
+        );
+
+        // ANCHOR_END: decoding_script_transactions
         Ok(())
     }
 }
