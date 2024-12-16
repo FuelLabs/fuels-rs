@@ -405,10 +405,11 @@ mod tests {
                 1,
                 Default::default(),
             );
+            let change = Output::change(wallet.address().into(), 0, Default::default());
 
             ScriptTransactionBuilder::prepare_transfer(
                 vec![input_coin],
-                vec![output_coin],
+                vec![output_coin, change],
                 Default::default(),
             )
         };
@@ -431,7 +432,7 @@ mod tests {
         assert_eq!(signature, tx_signature);
 
         // Check if the signature is what we expect it to be
-        assert_eq!(signature, Signature::from_str("8afd30de7039faa07aac1cf2676970a77dc8ef3f779b44c1510ad7bf58ea56f43727b23142bd7252b79ae2c832e073927f84f6b0857fedf2f6d86e9535e48fd0")?);
+        assert_eq!(signature, Signature::from_str("faa616776a1c336ef6257f7cb0cb5cd932180e2d15faba5f17481dae1cbcaf314d94617bd900216a6680bccb1ea62438e4ca93b0d5733d33788ef9d79cc24e9f")?);
 
         // Recover the address that signed the transaction
         let recovered_address = signature.recover(&message)?;
