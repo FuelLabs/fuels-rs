@@ -3,15 +3,18 @@ pub mod traits;
 pub mod types;
 mod utils;
 
-use std::collections::{HashMap, HashSet};
+use std::{collections::HashMap, iter};
 
 use codec::ABIEncoder;
-use itertools::{Either, Itertools};
+use itertools::Itertools;
 use offsets::{extract_data_offset, extract_offset_at};
 use traits::Tokenizable;
 pub use utils::*;
 
 use crate::types::errors::Result;
+
+type OffsetWithData = (u64, Vec<u8>);
+type OffsetWithSlice<'a> = (u64, &'a [u8]);
 
 #[derive(Debug, Clone)]
 pub enum Configurable {
@@ -45,15 +48,20 @@ impl Configurable {
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Configurables {
-    offsets_with_data: Vec<(u64, Vec<u8>)>,
-    indirect_configurables: Vec<u64>,
+    offsets_with_data: Vec<OffsetWithData>,
+    sorted_indirect_configurables: Vec<u64>,
 }
 
 impl Configurables {
-    pub fn new(offsets_with_data: Vec<(u64, Vec<u8>)>, indirect_configurables: Vec<u64>) -> Self {
+    pub fn new(offsets_with_data: Vec<OffsetWithData>, indirect_configurables: Vec<u64>) -> Self {
+        let sorted_indirect_configurables = indirect_configurables
+            .into_iter()
+            .sorted_unstable()
+            .collect();
+
         Self {
             offsets_with_data,
-            indirect_configurables,
+            sorted_indirect_configurables,
         }
     }
 
@@ -65,15 +73,15 @@ impl Configurables {
             .collect::<Result<Vec<_>>>()?;
 
         // TODO: @hal3e test this and thest with loader configurables
-        let new_indirect_configurables = self
-            .indirect_configurables
+        let new_sorted_indirect_configurables = self
+            .sorted_indirect_configurables
             .into_iter()
             .map(|offset| Self::shift_offset(offset, shift))
             .collect::<Result<Vec<_>>>()?;
 
         Ok(Self {
             offsets_with_data: new_offsets_with_data,
-            indirect_configurables: new_indirect_configurables,
+            sorted_indirect_configurables: new_sorted_indirect_configurables,
         })
     }
 
@@ -92,104 +100,126 @@ impl Configurables {
     }
 
     pub fn update_constants_in(&self, binary: &mut Vec<u8>) -> Result<()> {
-        let indirect_configurables_sorted = self
-            .indirect_configurables
-            .iter()
-            .cloned()
-            .sorted_unstable()
-            .collect_vec();
-
-        let indirect_configurables_map: HashSet<u64> =
-            HashSet::from_iter(self.indirect_configurables.iter().cloned());
-
-        let (direct_configurables, indirect_configurables): (Vec<_>, Vec<_>) = self
-            .offsets_with_data
-            .iter()
-            .partition_map(|(offset, data)| {
-                if indirect_configurables_map.contains(offset) {
-                    Either::Right((*offset, data.as_slice()))
-                } else {
-                    Either::Left((*offset, data.as_slice()))
-                }
-            });
+        let (direct_configurables, indirect_configurables) =
+            self.partition_direct_indirect_configurables();
 
         Self::apply_direct_configurables(binary, &direct_configurables)?;
 
         if !indirect_configurables.is_empty() {
-            let data_offset = extract_data_offset(binary)?;
-
-            let mut change_map: HashMap<u64, (usize, &[u8])> = indirect_configurables
-                .iter()
-                .map(|(offset, data)| {
-                    let dyn_offset = extract_offset_at(binary, *offset as usize)? + data_offset;
-
-                    Ok((*offset, (dyn_offset, *data)))
-                })
-                .collect::<Result<HashMap<_, _>>>()?;
-
-            let min_offset = change_map
-                .values()
-                .map(|(dyn_offset, _)| *dyn_offset)
-                .min()
-                .expect("exists");
-
-            for (offset, next_offset) in indirect_configurables_sorted //TODO: @hal3e refactor
-                .iter()
-                .circular_tuple_windows()
-            {
-                if change_map.contains_key(offset) {
-                    continue;
-                }
-
-                let dyn_offset = extract_offset_at(binary, *offset as usize)? + data_offset;
-
-                if dyn_offset < min_offset {
-                    continue;
-                }
-
-                let end_offset = if next_offset <= offset {
-                    binary.len()
-                } else {
-                    extract_offset_at(binary, *next_offset as usize)? + data_offset
-                };
-
-                Self::check_binary_len(binary, dyn_offset)?;
-                Self::check_binary_len(binary, end_offset)?;
-
-                let data = &binary[dyn_offset..end_offset];
-
-                change_map.insert(*offset, (dyn_offset, data));
-            }
-
-            let mut new_binary = binary[..min_offset].to_vec();
-            // go through the configurables and apply the changes
-            for offset in indirect_configurables_sorted {
-                if let Some((_, data)) = change_map.get(&offset) {
-                    let new_offset = new_binary.len().saturating_sub(data_offset) as u64;
-                    let new_offset_encoded =
-                        ABIEncoder::default().encode(&[new_offset.into_token()])?;
-                    Self::write(
-                        new_binary.as_mut_slice(),
-                        offset as usize,
-                        &new_offset_encoded,
-                    )?;
-
-                    new_binary.extend(*data);
-                }
-            }
-
-            *binary = new_binary;
+            self.apply_indirect_configurables(binary, &indirect_configurables)?;
         }
 
         Ok(())
     }
 
-    fn apply_direct_configurables(binary: &mut [u8], configurables: &[(u64, &[u8])]) -> Result<()> {
-        for (offset, data) in configurables {
+    fn partition_direct_indirect_configurables(
+        &self,
+    ) -> (Vec<OffsetWithSlice>, Vec<OffsetWithSlice>) {
+        self.offsets_with_data
+            .iter()
+            .map(|(offset, data)| (*offset, data.as_slice()))
+            .partition(|(offset, _)| {
+                self.sorted_indirect_configurables
+                    .binary_search(offset)
+                    .is_err()
+            })
+    }
+
+    fn apply_direct_configurables(
+        binary: &mut [u8],
+        direct_configurables: &[OffsetWithSlice],
+    ) -> Result<()> {
+        for (offset, data) in direct_configurables {
             Self::write(binary, *offset as usize, data)?;
         }
 
         Ok(())
+    }
+
+    fn apply_indirect_configurables(
+        &self,
+        binary: &mut Vec<u8>,
+        indirect_configurables: &[OffsetWithSlice],
+    ) -> Result<()> {
+        let data_offset = extract_data_offset(binary)?;
+
+        let mut change_map: HashMap<u64, (usize, &[u8])> = indirect_configurables
+            .iter()
+            .map(|(offset, data)| {
+                let dyn_offset = extract_offset_at(binary, *offset as usize)? + data_offset;
+
+                Ok((*offset, (dyn_offset, *data)))
+            })
+            .collect::<Result<HashMap<_, _>>>()?;
+
+        let min_offset = change_map
+            .values()
+            .map(|(dyn_offset, _)| *dyn_offset)
+            .min()
+            .expect("exists");
+
+        let sorted_dyn_offsets = self.extract_sorted_dyn_offsets(binary, data_offset)?;
+
+        for offset in &self.sorted_indirect_configurables {
+            if change_map.contains_key(offset) {
+                continue;
+            }
+
+            let dyn_offset = extract_offset_at(binary, *offset as usize)? + data_offset;
+
+            if dyn_offset < min_offset {
+                continue;
+            }
+
+            // use the next dyn offset to know where the data ends
+            let idx = sorted_dyn_offsets
+                .binary_search(&dyn_offset)
+                .expect("is there as we created the sorted vec");
+            let end_offset = sorted_dyn_offsets[idx + 1]; // is there as we created the sorted vec
+
+            Self::check_binary_len(binary, dyn_offset)?;
+            Self::check_binary_len(binary, end_offset)?;
+
+            let data = &binary[dyn_offset..end_offset];
+
+            change_map.insert(*offset, (dyn_offset, data));
+        }
+
+        // cut old binary and append the updated dynamic data
+        let mut new_binary = binary[..min_offset].to_vec();
+
+        for offset in &self.sorted_indirect_configurables {
+            if let Some((_, data)) = change_map.get(offset) {
+                let new_offset = new_binary.len().saturating_sub(data_offset) as u64;
+                let new_offset_encoded =
+                    ABIEncoder::default().encode(&[new_offset.into_token()])?;
+
+                Self::write(
+                    new_binary.as_mut_slice(),
+                    *offset as usize,
+                    &new_offset_encoded,
+                )?;
+
+                new_binary.extend(*data);
+            }
+        }
+
+        *binary = new_binary;
+
+        Ok(())
+    }
+
+    fn extract_sorted_dyn_offsets(&self, binary: &[u8], data_offset: usize) -> Result<Vec<usize>> {
+        Ok(self
+            .sorted_indirect_configurables
+            .iter()
+            .cloned()
+            .map(|offset| Ok(extract_offset_at(binary, offset as usize)? + data_offset))
+            .collect::<Result<Vec<_>>>()?
+            .into_iter()
+            .chain(iter::once(binary.len()))
+            .sorted_unstable()
+            .collect())
     }
 
     fn write(binary: &mut [u8], offset: usize, data: &[u8]) -> Result<()> {

@@ -1199,4 +1199,73 @@ mod tests {
         // ANCHOR_END: decoding_script_transactions
         Ok(())
     }
+
+    #[tokio::test]
+    async fn contract_configurables() -> Result<()> {
+        use fuels::prelude::*;
+
+        // ANCHOR: contract_configurables
+        abigen!(Contract(
+            name = "MyContract",
+            abi = "e2e/sway/contracts/configurables/out/release/configurables-abi.json"
+        ));
+
+        let wallet = launch_provider_and_get_wallet().await?;
+
+        let str_4: fuels::types::SizedAsciiString<4> = "FUEL".try_into()?;
+        let new_struct = StructWithGeneric {
+            field_1: 16u8,
+            field_2: 32,
+        };
+        let new_enum = EnumWithGeneric::VariantTwo;
+
+        let configurables = MyContractConfigurables::default()
+            .with_BOOL(false)?
+            .with_U8(7)?
+            .with_U16(15)?
+            .with_U32(31)?
+            .with_U64(63)?
+            .with_U256(fuels::types::U256::from(8))?
+            .with_B256(Bits256([2; 32]))?
+            .with_STR_4(str_4.clone())?
+            .with_TUPLE((7, false))?
+            .with_ARRAY([252, 253, 254])?
+            .with_STRUCT(new_struct.clone())?
+            .with_ENUM(new_enum.clone())?;
+
+        let contract_id = Contract::load_from(
+            "../../e2e/sway/contracts/configurables/out/release/configurables.bin",
+            LoadConfiguration::default().with_configurables(configurables),
+        )?
+        .deploy_if_not_exists(&wallet, TxPolicies::default())
+        .await?;
+
+        let contract_instance = MyContract::new(contract_id, wallet.clone());
+        // ANCHOR_END: contract_configurables
+
+        let response = contract_instance
+            .methods()
+            .return_configurables()
+            .call()
+            .await?;
+
+        let expected_value = (
+            false,
+            7,
+            15,
+            31,
+            63,
+            fuels::types::U256::from(8),
+            Bits256([2; 32]),
+            str_4,
+            (7, false),
+            [252, 253, 254],
+            new_struct,
+            new_enum,
+        );
+
+        assert_eq!(response.value, expected_value);
+
+        Ok(())
+    }
 }
