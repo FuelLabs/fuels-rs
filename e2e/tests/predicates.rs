@@ -9,6 +9,7 @@ use fuels::{
     programs::executable::Executable,
     types::{coin::Coin, coin_type::CoinType, input::Input, message::Message, output::Output},
 };
+use test_case::test_case;
 
 async fn assert_address_balance(
     address: &Bech32Address,
@@ -776,8 +777,10 @@ async fn predicate_configurables() -> Result<()> {
     Ok(())
 }
 
+#[test_case(true ; "regular")]
+#[test_case(false ; "use loader")]
 #[tokio::test]
-async fn predicate_dyn_configurables() -> Result<()> {
+async fn predicate_dyn_configurables(is_regular: bool) -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
         abi = "e2e/sway/predicates/predicate_dyn_configurables/out/release/predicate_dyn_configurables-abi.json"
@@ -799,17 +802,31 @@ async fn predicate_dyn_configurables() -> Result<()> {
         12,
     )?;
 
-    let mut predicate: Predicate = Predicate::load_from(
+    let executable = Executable::load_from(
         "sway/predicates/predicate_dyn_configurables/out/release/predicate_dyn_configurables.bin",
     )?
-    .with_data(predicate_data)
-    .with_configurables(configurables)?;
+    .with_configurables(configurables);
+
+    let (maybe_loader, code) = if is_regular {
+        (None, executable.code()?)
+    } else {
+        let loader = executable.convert_to_loader()?;
+        let code = loader.code()?;
+
+        (Some(loader), code)
+    };
+
+    let mut predicate: Predicate = Predicate::from_code(code).with_data(predicate_data);
 
     let num_coins = 4;
     let num_messages = 8;
     let amount = 16;
-    let (provider, predicate_balance, receiver, receiver_balance, asset_id, _) =
+    let (provider, predicate_balance, receiver, receiver_balance, asset_id, extra_wallet) =
         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
+
+    if let Some(loader) = maybe_loader {
+        loader.upload_blob(extra_wallet).await?;
+    }
 
     predicate.set_provider(provider.clone());
 

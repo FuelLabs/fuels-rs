@@ -549,7 +549,6 @@ async fn test_call_param_gas_errors() -> Result<()> {
         .expect_err("should error");
 
     let expected = "transaction reverted: OutOfGas";
-    dbg!(&response.to_string());
     assert!(response.to_string().starts_with(expected));
 
     // Call params gas_forwarded exceeds transaction limit

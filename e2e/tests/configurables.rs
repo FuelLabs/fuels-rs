@@ -3,22 +3,36 @@ use fuels::{
     prelude::*,
     types::{Bits256, SizedAsciiString, U256},
 };
+use test_case::test_case;
 
+#[test_case(true ; "regular")]
+#[test_case(false ; "use loader")]
 #[tokio::test]
-async fn contract_default_configurables() -> Result<()> {
-    setup_program_test!(
-        Wallets("wallet"),
-        Abigen(Contract(
-            name = "MyContract",
-            project = "e2e/sway/contracts/configurables"
-        )),
-        Deploy(
-            name = "contract_instance",
-            contract = "MyContract",
-            wallet = "wallet",
-            random_salt = false,
-        ),
-    );
+async fn contract_default_configurables(is_regular: bool) -> Result<()> {
+    abigen!(Contract(
+        name = "MyContract",
+        abi = "e2e/sway/contracts/configurables/out/release/configurables-abi.json"
+    ));
+
+    let wallet = launch_provider_and_get_wallet().await?;
+
+    let contract = Contract::load_from(
+        "sway/contracts/configurables/out/release/configurables.bin",
+        LoadConfiguration::default(),
+    )?;
+
+    let contract_id = if is_regular {
+        contract
+            .deploy_if_not_exists(&wallet, TxPolicies::default())
+            .await?
+    } else {
+        contract
+            .convert_to_loader(124)?
+            .deploy_if_not_exists(&wallet, TxPolicies::default())
+            .await?
+    };
+
+    let contract_instance = MyContract::new(contract_id, wallet.clone());
 
     let response = contract_instance
         .methods()
@@ -49,25 +63,29 @@ async fn contract_default_configurables() -> Result<()> {
     Ok(())
 }
 
+#[test_case(true ; "regular")]
+#[test_case(false ; "use loader")]
 #[tokio::test]
-async fn script_default_configurables() -> Result<()> {
-    setup_program_test!(
-        Wallets("wallet"),
-        Abigen(Script(
-            name = "MyScript",
-            project = "e2e/sway/scripts/script_configurables"
-        )),
-        LoadScript(
-            name = "script_instance",
-            script = "MyScript",
-            wallet = "wallet"
-        )
-    );
+async fn script_default_configurables(is_regular: bool) -> Result<()> {
+    abigen!(Script(
+        name = "MyScript",
+        abi = "e2e/sway/scripts/script_configurables/out/release/script_configurables-abi.json"
+    ));
 
-    let mut script_instance = script_instance;
-    script_instance.convert_into_loader().await?;
+    let wallet = launch_provider_and_get_wallet().await?;
+    let bin_path = "sway/scripts/script_configurables/out/release/script_configurables.bin";
+    let mut script_instance = MyScript::new(wallet, bin_path);
 
-    let response = script_instance.main().call().await?;
+    let response = if is_regular {
+        script_instance.main().call().await?
+    } else {
+        script_instance
+            .convert_into_loader()
+            .await?
+            .main()
+            .call()
+            .await?
+    };
 
     let expected_value = (
         true,
@@ -92,9 +110,10 @@ async fn script_default_configurables() -> Result<()> {
     Ok(())
 }
 
+#[test_case(true ; "regular")]
+#[test_case(false ; "use loader")]
 #[tokio::test]
-async fn contract_configurables() -> Result<()> {
-    // ANCHOR: contract_configurables
+async fn contract_configurables(is_regular: bool) -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
         abi = "e2e/sway/contracts/configurables/out/release/configurables-abi.json"
@@ -123,15 +142,23 @@ async fn contract_configurables() -> Result<()> {
         .with_STRUCT(new_struct.clone())?
         .with_ENUM(new_enum.clone())?;
 
-    let contract_id = Contract::load_from(
+    let contract = Contract::load_from(
         "sway/contracts/configurables/out/release/configurables.bin",
         LoadConfiguration::default().with_configurables(configurables),
-    )?
-    .deploy_if_not_exists(&wallet, TxPolicies::default())
-    .await?;
+    )?;
+
+    let contract_id = if is_regular {
+        contract
+            .deploy_if_not_exists(&wallet, TxPolicies::default())
+            .await?
+    } else {
+        contract
+            .convert_to_loader(124)?
+            .deploy_if_not_exists(&wallet, TxPolicies::default())
+            .await?
+    };
 
     let contract_instance = MyContract::new(contract_id, wallet.clone());
-    // ANCHOR_END: contract_configurables
 
     let response = contract_instance
         .methods()
@@ -159,8 +186,10 @@ async fn contract_configurables() -> Result<()> {
     Ok(())
 }
 
+#[test_case(true ; "regular")]
+#[test_case(false ; "use loader")]
 #[tokio::test]
-async fn contract_dyn_configurables() -> Result<()> {
+async fn contract_dyn_configurables(is_regular: bool) -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
         abi = "e2e/sway/contracts/dyn_configurables/out/release/dyn_configurables-abi.json"
@@ -175,15 +204,21 @@ async fn contract_dyn_configurables() -> Result<()> {
         .with_STR_3("fuel-fuel".try_into()?)?
         .with_LAST_U8(12)?;
 
-    dbg!(&configurables);
-
-    let contract_id = Contract::load_from(
+    let contract = Contract::load_from(
         "sway/contracts/dyn_configurables/out/release/dyn_configurables.bin",
         LoadConfiguration::default().with_configurables(configurables),
-    )?
-    .convert_to_loader(100)? //TODO: @hal3e add test-case for convert to loader with or without
-    .deploy_if_not_exists(&wallet, TxPolicies::default())
-    .await?;
+    )?;
+
+    let contract_id = if is_regular {
+        contract
+            .deploy_if_not_exists(&wallet, TxPolicies::default())
+            .await?
+    } else {
+        contract
+            .convert_to_loader(124)?
+            .deploy_if_not_exists(&wallet, TxPolicies::default())
+            .await?
+    };
 
     let contract_instance = MyContract::new(contract_id, wallet.clone());
 
@@ -207,9 +242,10 @@ async fn contract_dyn_configurables() -> Result<()> {
     Ok(())
 }
 
+#[test_case(true ; "regular")]
+#[test_case(false ; "use loader")]
 #[tokio::test]
-async fn script_configurables() -> Result<()> {
-    // ANCHOR: script_configurables
+async fn script_configurables(is_regular: bool) -> Result<()> {
     abigen!(Script(
         name = "MyScript",
         abi = "e2e/sway/scripts/script_configurables/out/release/script_configurables-abi.json"
@@ -243,12 +279,18 @@ async fn script_configurables() -> Result<()> {
     .with_STRUCT(new_struct.clone())?
     .with_ENUM(new_enum.clone())?;
 
-    let response = script_instance
-        .with_configurables(configurables)
-        .main()
-        .call()
-        .await?;
-    // ANCHOR_END: script_configurables
+    let mut script_instance = script_instance.with_configurables(configurables);
+
+    let response = if is_regular {
+        script_instance.main().call().await?
+    } else {
+        script_instance
+            .convert_into_loader()
+            .await?
+            .main()
+            .call()
+            .await?
+    };
 
     let expected_value = (
         false,
@@ -270,8 +312,10 @@ async fn script_configurables() -> Result<()> {
     Ok(())
 }
 
+#[test_case(true ; "regular")]
+#[test_case(false ; "use loader")]
 #[tokio::test]
-async fn script_dyn_configurables() -> Result<()> {
+async fn script_dyn_configurables(is_regular: bool) -> Result<()> {
     abigen!(Script(
         name = "MyScript",
         abi = "e2e/sway/scripts/script_dyn_configurables/out/release/script_dyn_configurables-abi.json"
@@ -288,15 +332,18 @@ async fn script_dyn_configurables() -> Result<()> {
         .with_STR_3("fuel-fuel".try_into()?)?
         .with_LAST_U8(12)?;
 
-    dbg!(&configurables);
+    let mut script_instance = script_instance.with_configurables(configurables);
 
-    let response = script_instance
-        .with_configurables(configurables)
-        .convert_into_loader() //TODO: @hal3e add test-case for this
-        .await?
-        .main()
-        .call()
-        .await?;
+    let response = if is_regular {
+        script_instance.main().call().await?
+    } else {
+        script_instance
+            .convert_into_loader()
+            .await?
+            .main()
+            .call()
+            .await?
+    };
 
     let expected_value = (
         false,
