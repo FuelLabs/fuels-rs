@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use fuel_tx::{
     consensus_parameters::{ConsensusParametersV1, FeeParametersV1},
-    ConsensusParameters, FeeParameters,
+    ConsensusParameters, FeeParameters, Output,
 };
 use fuels::{
     core::codec::{calldata, encode_fn_selector, DecoderConfig, EncoderConfig},
@@ -1712,6 +1712,11 @@ async fn contract_custom_call_no_signatures_strategy() -> Result<()> {
         .get_asset_inputs_for_amount(*provider.base_asset_id(), amount, None)
         .await?;
     tb.inputs_mut().extend(new_base_inputs);
+    tb.outputs_mut().push(Output::change(
+        wallet.address().into(),
+        0,
+        *provider.base_asset_id(),
+    ));
 
     // ANCHOR: tb_no_signatures_strategy
     let mut tx = tb

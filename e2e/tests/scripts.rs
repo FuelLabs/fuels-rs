@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+use fuel_tx::Output;
 use fuels::{
     core::{
         codec::{DecoderConfig, EncoderConfig},
@@ -132,8 +133,10 @@ async fn test_output_variable_estimation() -> Result<()> {
     let inputs = wallet
         .get_asset_inputs_for_amount(asset_id, amount, None)
         .await?;
+    let output = Output::change(wallet.address().into(), 0, asset_id);
     let _ = script_call
         .with_inputs(inputs)
+        .with_outputs(vec![output])
         .with_variable_output_policy(VariableOutputPolicy::EstimateMinimum)
         .call()
         .await?;

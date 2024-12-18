@@ -97,6 +97,7 @@ pub struct BlobTransactionBuilder {
     pub blob: Blob,
     unresolved_witness_indexes: UnresolvedWitnessIndexes,
     unresolved_signers: Vec<Box<dyn Signer + Send + Sync>>,
+    enable_burn: bool,
 }
 
 impl Default for BlobTransactionBuilder {
@@ -112,6 +113,7 @@ impl Default for BlobTransactionBuilder {
             blob: Default::default(),
             unresolved_witness_indexes: Default::default(),
             unresolved_signers: Default::default(),
+            enable_burn: false,
         }
     }
 }
@@ -137,6 +139,8 @@ impl BlobTransactionBuilder {
     }
 
     pub async fn build(mut self, provider: impl DryRunner) -> Result<BlobTransaction> {
+        self.intercept_burn()?;
+
         let is_using_predicates = self.is_using_predicates();
 
         let tx = match self.build_strategy {
@@ -166,6 +170,7 @@ impl BlobTransactionBuilder {
             max_fee_estimation_tolerance: self.max_fee_estimation_tolerance,
             build_strategy: self.build_strategy.clone(),
             blob: self.blob.clone(),
+            enable_burn: self.enable_burn,
         }
     }
 
