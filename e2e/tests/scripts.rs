@@ -438,7 +438,7 @@ async fn can_be_run_in_blobs_builder() -> Result<()> {
     let data = encoder.encode(&[token])?;
 
     let mut tb = ScriptTransactionBuilder::default()
-        .with_script(loader.code())
+        .with_script(loader.code()?)
         .with_script_data(data);
 
     wallet.adjust_for_fee(&mut tb, 0).await?;
@@ -590,14 +590,14 @@ async fn loader_can_be_presented_as_a_normal_script_with_shifted_configurables()
     let shifted_configurables = configurables
         .with_shifted_offsets(-(regular.data_offset_in_code().unwrap() as i64))
         .unwrap()
-        .with_shifted_offsets(loader.data_offset_in_code() as i64)
+        .with_shifted_offsets(loader.data_offset_in_code()? as i64)
         .unwrap();
 
     let loader_posing_as_normal_script =
-        Executable::from_bytes(loader.code()).with_configurables(shifted_configurables);
+        Executable::from_bytes(loader.code()?).with_configurables(shifted_configurables);
 
     let mut tb = ScriptTransactionBuilder::default()
-        .with_script(loader_posing_as_normal_script.code())
+        .with_script(loader_posing_as_normal_script.code()?)
         .with_script_data(data);
 
     wallet.adjust_for_fee(&mut tb, 0).await?;

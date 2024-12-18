@@ -549,7 +549,6 @@ async fn test_call_param_gas_errors() -> Result<()> {
         .expect_err("should error");
 
     let expected = "transaction reverted: OutOfGas";
-    dbg!(&response.to_string());
     assert!(response.to_string().starts_with(expected));
 
     // Call params gas_forwarded exceeds transaction limit
@@ -1278,7 +1277,7 @@ async fn is_account_query_test() -> Result<()> {
             "sway/contracts/contract_test/out/release/contract_test.bin",
             LoadConfiguration::default(),
         )?;
-        let contract_id = contract.contract_id();
+        let contract_id = contract.contract_id()?;
 
         let is_account = provider.is_user_account(*contract_id).await?;
         assert!(is_account);
