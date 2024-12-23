@@ -368,7 +368,8 @@ macro_rules! impl_tx_builder_trait {
                     return Err(error_transaction!(
                         Builder,
                         "the following assets have no change outputs and may be burned unintentionally: {:?}. \
-                        To explicitly allow asset burning and suppress this error, call `.enable_burn(true)` on the transaction builder.",
+                        To resolve this, either add the necessary change outputs manually or explicitly allow asset burning \
+                        by calling `.enable_burn(true)` on the transaction builder.",
                         diff
                     ));
                 }
@@ -1734,18 +1735,17 @@ mod tests {
     async fn build_w_enable_burn() -> Result<()> {
         let num_inputs = 3;
 
-        let tb = ScriptTransactionBuilder::default()
-            .with_inputs(given_inputs(num_inputs));
+        let tb = ScriptTransactionBuilder::default().with_inputs(given_inputs(num_inputs));
 
         let err = tb
             .with_build_strategy(ScriptBuildStrategy::NoSignatures)
             .build(&MockDryRunner::default())
-            .await.expect_err("should fail because of missing change outputs");
+            .await
+            .expect_err("should fail because of missing change outputs");
 
         assert!(err.to_string().contains("no change outputs"));
 
-        let tb = ScriptTransactionBuilder::default()
-            .with_inputs(given_inputs(num_inputs));
+        let tb = ScriptTransactionBuilder::default().with_inputs(given_inputs(num_inputs));
         let _tx = tb
             .with_build_strategy(ScriptBuildStrategy::NoSignatures)
             .enable_burn(true)
