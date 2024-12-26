@@ -489,7 +489,10 @@ impl Provider {
                      owner: _,
                      amount,
                      asset_id,
-                 }| (asset_id.to_string(), amount),
+                 }| {
+                    // TODO: Handle `u128` balances
+                    (asset_id.to_string(), u64::try_from(amount).unwrap_or(u64::MAX))
+                },
             )
             .collect();
         Ok(balances)
