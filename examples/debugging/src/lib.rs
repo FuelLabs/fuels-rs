@@ -67,7 +67,7 @@ mod tests {
 
             assert_eq!(
                 format!("{expected_struct:?}"),
-                decoder.decode_as_debug_str(&param_type, &[0, 0, 0, 0, 0, 0, 0, 123])?
+                decoder.decode_as_debug_str(&param_type, [0, 0, 0, 0, 0, 0, 0, 123].as_slice())?
             );
         }
         {
@@ -83,7 +83,7 @@ mod tests {
 
             assert_eq!(
                 format!("{expected_struct:?}"),
-                decoder.decode_as_debug_str(&param_type, &[97, 98, 99])?
+                decoder.decode_as_debug_str(&param_type, [97, 98, 99].as_slice())?
             );
         }
         {
@@ -97,7 +97,7 @@ mod tests {
                 format!("{expected_enum:?}"),
                 decoder.decode_as_debug_str(
                     &param_type,
-                    &[0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 10]
+                    [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 10].as_slice()
                 )?
             );
         }
@@ -117,7 +117,7 @@ mod tests {
 
             assert_eq!(
                 format!("{expected_u8}"),
-                decoder.decode_as_debug_str(&param_type, &[1])?
+                decoder.decode_as_debug_str(&param_type, [1].as_slice())?
             );
         }
 
