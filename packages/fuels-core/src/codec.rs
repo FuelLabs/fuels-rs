@@ -19,7 +19,7 @@ use crate::{
 };
 
 /// Decodes `bytes` into type `T` following the schema defined by T's `Parameterize` impl
-pub fn try_from_bytes<T, R: Read>(bytes: R, decoder_config: DecoderConfig) -> Result<T>
+pub fn try_from_bytes<T>(bytes: impl Read, decoder_config: DecoderConfig) -> Result<T>
 where
     T: Parameterize + Tokenizable,
 {
@@ -43,13 +43,13 @@ mod tests {
         macro_rules! test_decode {
             ($($for_type: ident),*) => {
                 $(assert_eq!(
-                        try_from_bytes::<$for_type, _>(bytes.as_slice(), DecoderConfig::default())?,
+                        try_from_bytes::<$for_type>(bytes.as_slice(), DecoderConfig::default())?,
                         $for_type::MAX
                 );)*
             };
         }
 
-        assert!(try_from_bytes::<bool, _>(
+        assert!(try_from_bytes::<bool>(
             bytes.as_slice(),
             DecoderConfig::default()
         )?);
@@ -78,7 +78,7 @@ mod tests {
         macro_rules! test_decode {
             ($($for_type: ident),*) => {
                 $(assert_eq!(
-                        try_from_bytes::<$for_type, _>(bytes.as_slice(), DecoderConfig::default())?,
+                        try_from_bytes::<$for_type>(bytes.as_slice(), DecoderConfig::default())?,
                         $for_type::new(bytes.as_slice().try_into()?)
                 );)*
             };
@@ -115,8 +115,7 @@ mod tests {
             .unwrap();
 
         // when
-        let decoded =
-            try_from_bytes::<Test, _>(encoded.as_slice(), DecoderConfig::default()).unwrap();
+        let decoded = try_from_bytes::<Test>(encoded.as_slice(), DecoderConfig::default()).unwrap();
 
         // then
         assert_eq!(decoded, input);
