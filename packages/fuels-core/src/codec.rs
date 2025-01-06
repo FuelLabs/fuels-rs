@@ -49,7 +49,10 @@ mod tests {
             };
         }
 
-        assert!(try_from_bytes::<bool, _>(bytes.as_slice(), DecoderConfig::default())?);
+        assert!(try_from_bytes::<bool, _>(
+            bytes.as_slice(),
+            DecoderConfig::default()
+        )?);
 
         test_decode!(u8, u16, u32, u64);
 
@@ -60,7 +63,8 @@ mod tests {
     fn convert_bytes_into_tuple() -> Result<()> {
         let tuple_in_bytes = [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 2];
 
-        let the_tuple: (u64, u32) = try_from_bytes(tuple_in_bytes.as_slice(), DecoderConfig::default())?;
+        let the_tuple: (u64, u32) =
+            try_from_bytes(tuple_in_bytes.as_slice(), DecoderConfig::default())?;
 
         assert_eq!(the_tuple, (1, 2));
 
@@ -111,7 +115,8 @@ mod tests {
             .unwrap();
 
         // when
-        let decoded = try_from_bytes::<Test, _>(encoded.as_slice(), DecoderConfig::default()).unwrap();
+        let decoded =
+            try_from_bytes::<Test, _>(encoded.as_slice(), DecoderConfig::default()).unwrap();
 
         // then
         assert_eq!(decoded, input);

@@ -1189,7 +1189,8 @@ mod tests {
 
         let call = &calls[0];
         let fn_selector = call.decode_fn_selector()?;
-        let decoded_args = abi_formatter.decode_fn_args(&fn_selector, call.encoded_args.as_slice())?;
+        let decoded_args =
+            abi_formatter.decode_fn_args(&fn_selector, call.encoded_args.as_slice())?;
 
         eprintln!(
             "The script called: {fn_selector}({})",

@@ -119,7 +119,9 @@ mod tests {
         let decoder = ABIFormatter::from_abi(UnifiedProgramABI::default()).unwrap();
 
         // when
-        let err = decoder.decode_fn_args("non_existent_fn", [].as_slice()).unwrap_err();
+        let err = decoder
+            .decode_fn_args("non_existent_fn", [].as_slice())
+            .unwrap_err();
 
         // then
         let Error::Codec(err) = err else {

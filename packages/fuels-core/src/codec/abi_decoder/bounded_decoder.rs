@@ -1,4 +1,4 @@
-use std::{io::Read, iter::repeat, marker::PhantomData, str};
+use std::{io::Read, iter::repeat, str};
 
 use crate::{
     codec::{
@@ -14,14 +14,12 @@ use crate::{
 
 /// Is used to decode bytes into `Token`s from which types implementing `Tokenizable` can be
 /// instantiated. Implements decoding limits to control resource usage.
-pub(crate) struct BoundedDecoder<R> {
+pub(crate) struct BoundedDecoder {
     depth_tracker: CounterWithLimit,
     token_tracker: CounterWithLimit,
-    /// We use a struct-level generic type to avoid https://github.com/rust-lang/rust/issues/50043
-    _read: PhantomData<R>,
 }
 
-impl<R: Read> BoundedDecoder<R> {
+impl BoundedDecoder {
     pub(crate) fn new(config: DecoderConfig) -> Self {
         let depth_tracker =
             CounterWithLimit::new(config.max_depth, "depth", CodecDirection::Decoding);
@@ -30,15 +28,18 @@ impl<R: Read> BoundedDecoder<R> {
         Self {
             depth_tracker,
             token_tracker,
-            _read: PhantomData,
         }
     }
 
-    pub(crate) fn decode(&mut self, param_type: &ParamType, bytes: &mut R) -> Result<Token> {
+    pub(crate) fn decode<R: Read>(
+        &mut self,
+        param_type: &ParamType,
+        bytes: &mut R,
+    ) -> Result<Token> {
         self.decode_param(param_type, bytes)
     }
 
-    pub(crate) fn decode_multiple(
+    pub(crate) fn decode_multiple<R: Read>(
         &mut self,
         param_types: &[ParamType],
         bytes: &mut R,
@@ -57,7 +58,7 @@ impl<R: Read> BoundedDecoder<R> {
         res
     }
 
-    fn decode_param(&mut self, param_type: &ParamType, bytes: &mut R) -> Result<Token> {
+    fn decode_param<R: Read>(&mut self, param_type: &ParamType, bytes: &mut R) -> Result<Token> {
         self.token_tracker.increase()?;
         match param_type {
             ParamType::Unit => Ok(Token::Unit),
@@ -93,13 +94,13 @@ impl<R: Read> BoundedDecoder<R> {
         }
     }
 
-    fn decode_std_string(bytes: &mut R) -> Result<Token> {
+    fn decode_std_string<R: Read>(bytes: &mut R) -> Result<Token> {
         let data = decode_slice(bytes)?;
         let string = str::from_utf8(&data)?.to_string();
         Ok(Token::String(string))
     }
 
-    fn decode_string_array(bytes: &mut R, length: usize) -> Result<Token> {
+    fn decode_string_array<R: Read>(bytes: &mut R, length: usize) -> Result<Token> {
         let data = decode_sized(bytes, length)?;
         let decoded = str::from_utf8(&data)?.to_string();
         Ok(Token::StringArray(StaticStringToken::new(
@@ -108,17 +109,17 @@ impl<R: Read> BoundedDecoder<R> {
         )))
     }
 
-    fn decode_string_slice(bytes: &mut R) -> Result<Token> {
+    fn decode_string_slice<R: Read>(bytes: &mut R) -> Result<Token> {
         let data = decode_slice(bytes)?;
         let decoded = str::from_utf8(&data)?.to_string();
         Ok(Token::StringSlice(StaticStringToken::new(decoded, None)))
     }
 
-    fn decode_tuple(&mut self, param_types: &[ParamType], bytes: &mut R) -> Result<Token> {
+    fn decode_tuple<R: Read>(&mut self, param_types: &[ParamType], bytes: &mut R) -> Result<Token> {
         Ok(Token::Tuple(self.decode_params(param_types, bytes)?))
     }
 
-    fn decode_array(
+    fn decode_array<R: Read>(
         &mut self,
         param_type: &ParamType,
         bytes: &mut R,
@@ -129,20 +130,24 @@ impl<R: Read> BoundedDecoder<R> {
         ))
     }
 
-    fn decode_vector(&mut self, param_type: &ParamType, bytes: &mut R) -> Result<Token> {
+    fn decode_vector<R: Read>(&mut self, param_type: &ParamType, bytes: &mut R) -> Result<Token> {
         let length = decode_len(bytes)?;
         Ok(Token::Vector(
             self.decode_params(repeat(param_type).take(length), bytes)?,
         ))
     }
 
-    fn decode_struct(&mut self, fields: &[NamedParamType], bytes: &mut R) -> Result<Token> {
+    fn decode_struct<R: Read>(
+        &mut self,
+        fields: &[NamedParamType],
+        bytes: &mut R,
+    ) -> Result<Token> {
         Ok(Token::Struct(
             self.decode_params(fields.iter().map(|(_, pt)| pt), bytes)?,
         ))
     }
 
-    fn decode_enum(
+    fn decode_enum<R: Read>(
         &mut self,
         enum_variants: &EnumVariants,
         bytes: &mut R,
@@ -159,7 +164,7 @@ impl<R: Read> BoundedDecoder<R> {
         ))))
     }
 
-    fn decode_params<'a>(
+    fn decode_params<'a, R: Read>(
         &mut self,
         param_types: impl IntoIterator<Item = &'a ParamType>,
         bytes: &mut R,

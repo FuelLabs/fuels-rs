@@ -108,7 +108,11 @@ impl ABIDecoder {
     ///
     /// assert_eq!(debug_string, format!("{expected_value}"));
     /// ```
-    pub fn decode_as_debug_str(&self, param_type: &ParamType, mut bytes: impl Read) -> Result<String> {
+    pub fn decode_as_debug_str(
+        &self,
+        param_type: &ParamType,
+        mut bytes: impl Read,
+    ) -> Result<String> {
         let token = BoundedDecoder::new(self.config).decode(param_type, &mut bytes)?;
         decode_as_debug_str(param_type, &token)
     }
@@ -653,7 +657,9 @@ mod tests {
                 }
             })
             .for_each(|param_type| {
-                ABIDecoder::new(config).decode(&param_type, data.as_slice()).unwrap();
+                ABIDecoder::new(config)
+                    .decode(&param_type, data.as_slice())
+                    .unwrap();
             })
     }
 
