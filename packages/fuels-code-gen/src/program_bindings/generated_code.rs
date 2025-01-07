@@ -61,6 +61,7 @@ impl GeneratedCode {
                 let code = generated_code.code();
                 quote! {
                     #[allow(clippy::too_many_arguments)]
+                    #[allow(clippy::disallowed_names)]
                     #[no_implicit_prelude]
                     pub mod #mod_name {
                         #prelude
