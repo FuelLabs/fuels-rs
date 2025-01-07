@@ -624,6 +624,7 @@ mod tests {
         // then
         let expected_code = quote! {
             #[allow(clippy::too_many_arguments)]
+            #[allow(clippy::disallowed_names)]
             #[no_implicit_prelude]
             pub mod some_shared_lib {
                 use ::core::{
