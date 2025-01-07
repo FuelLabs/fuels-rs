@@ -38,7 +38,7 @@ homepage = "https://fuel.network/"
 readme = "README.md"
 license = "Apache-2.0"
 repository = "https://github.com/FuelLabs/fuels-rs"
-rust-version = "1.79.0"
+rust-version = "1.81.0"
 version = "0.66.10"
 
 [workspace.dependencies]
@@ -86,8 +86,6 @@ zeroize = "1.7.0"
 octocrab = { version = "0.39", default-features = false }
 dotenv = { version = "0.15", default-features = false }
 toml = { version = "0.8", default-features = false }
-async-graphql = { version = "=7.0.11", default-features = false }
-async-graphql-derive = { version = "=7.0.11", default-features = false }
 
 # Dependencies from the `fuel-core` repository:
 fuel-core = { version = "0.40.1", default-features = false, features = [
