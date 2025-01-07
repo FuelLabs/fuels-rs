@@ -33,6 +33,9 @@ enum MatchEnum {
     AssertEqPrimitive: (u64, u64),
     AssertEqStruct: (TestStruct, TestStruct),
     AssertEqEnum: (TestEnum, TestEnum),
+    AssertNePrimitive: (u64, u64),
+    AssertNeStruct: (TestStruct, TestStruct),
+    AssertNeEnum: (TestEnum, TestEnum),
 }
 
 fn main(match_enum: MatchEnum) {
@@ -46,5 +49,13 @@ fn main(match_enum: MatchEnum) {
     } else if let MatchEnum::AssertEqEnum((test_enum, test_enum2)) = match_enum
     {
         assert_eq(test_enum, test_enum2);
+    } else if let MatchEnum::AssertNePrimitive((a, b)) = match_enum {
+        assert_ne(a, b);
+    } else if let MatchEnum::AssertNeStruct((test_struct, test_struct2)) = match_enum
+    {
+        assert_ne(test_struct, test_struct2);
+    } else if let MatchEnum::AssertNeEnum((test_enum, test_enum2)) = match_enum
+    {
+        assert_ne(test_enum, test_enum2);
     }
 }

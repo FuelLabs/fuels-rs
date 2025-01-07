@@ -165,6 +165,10 @@ impl Provider {
         &self,
         tx: T,
     ) -> Result<TxStatus> {
+        #[cfg(feature = "coin-cache")]
+        self.check_inputs_already_in_cache(&tx.used_coins(self.base_asset_id()))
+            .await?;
+
         let tx = self.prepare_transaction_for_sending(tx).await?;
         let tx_status = self
             .client
@@ -234,8 +238,54 @@ impl Provider {
     }
 
     #[cfg(feature = "coin-cache")]
+    async fn find_in_cache<'a>(
+        &self,
+        coin_ids: impl IntoIterator<Item = (&'a (Bech32Address, AssetId), &'a Vec<CoinTypeId>)>,
+    ) -> Option<((Bech32Address, AssetId), CoinTypeId)> {
+        let mut locked_cache = self.cache.lock().await;
+
+        for (key, ids) in coin_ids {
+            let items = locked_cache.get_active(key);
+
+            if items.is_empty() {
+                continue;
+            }
+
+            for id in ids {
+                if items.contains(id) {
+                    return Some((key.clone(), id.clone()));
+                }
+            }
+        }
+
+        None
+    }
+
+    #[cfg(feature = "coin-cache")]
+    async fn check_inputs_already_in_cache<'a>(
+        &self,
+        coin_ids: impl IntoIterator<Item = (&'a (Bech32Address, AssetId), &'a Vec<CoinTypeId>)>,
+    ) -> Result<()> {
+        use fuels_core::types::errors::{transaction, Error};
+
+        if let Some(((addr, asset_id), coin_type_id)) = self.find_in_cache(coin_ids).await {
+            let msg = match coin_type_id {
+                CoinTypeId::UtxoId(utxo_id) => format!("coin with utxo_id: `{utxo_id:x}`"),
+                CoinTypeId::Nonce(nonce) => format!("message with nonce: `{nonce}`"),
+            };
+            Err(Error::Transaction(transaction::Reason::Validation(
+                format!("{msg} was submitted recently in a transaction - attempting to spend it again will result in an error. Wallet address: `{addr}`, asset id: `{asset_id}`"),
+            )))
+        } else {
+            Ok(())
+        }
+    }
+
+    #[cfg(feature = "coin-cache")]
     async fn submit<T: Transaction>(&self, tx: T) -> Result<TxId> {
         let used_utxos = tx.used_coins(self.base_asset_id());
+        self.check_inputs_already_in_cache(&used_utxos).await?;
+
         let tx_id = self.client.submit(&tx.into()).await?;
         self.cache.lock().await.insert_multiple(used_utxos);
 

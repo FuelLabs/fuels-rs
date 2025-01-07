@@ -1,4 +1,4 @@
-use std::{fmt::Debug, marker::PhantomData};
+use core::{fmt::Debug, marker::PhantomData};
 
 use fuel_tx::{AssetId, Bytes32, Receipt};
 use fuels_accounts::{provider::TransactionCost, Account};

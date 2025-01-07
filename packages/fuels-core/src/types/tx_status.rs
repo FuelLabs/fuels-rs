@@ -1,6 +1,6 @@
 use fuel_abi_types::error_codes::{
-    FAILED_ASSERT_EQ_SIGNAL, FAILED_ASSERT_SIGNAL, FAILED_REQUIRE_SIGNAL,
-    FAILED_SEND_MESSAGE_SIGNAL, FAILED_TRANSFER_TO_ADDRESS_SIGNAL,
+    FAILED_ASSERT_EQ_SIGNAL, FAILED_ASSERT_NE_SIGNAL, FAILED_ASSERT_SIGNAL, FAILED_REQUIRE_SIGNAL,
+    FAILED_SEND_MESSAGE_SIGNAL, FAILED_TRANSFER_TO_ADDRESS_SIGNAL, REVERT_WITH_LOG_SIGNAL,
 };
 #[cfg(feature = "std")]
 use fuel_core_client::client::types::TransactionStatus as ClientTransactionStatus;
@@ -56,10 +56,23 @@ impl TxStatus {
             (FAILED_REQUIRE_SIGNAL, Some(log_decoder)) => log_decoder
                 .decode_last_log(receipts)
                 .unwrap_or_else(|err| format!("failed to decode log from require revert: {err}")),
+            (REVERT_WITH_LOG_SIGNAL, Some(log_decoder)) => log_decoder
+                .decode_last_log(receipts)
+                .unwrap_or_else(|err| format!("failed to decode log from revert_with_log: {err}")),
             (FAILED_ASSERT_EQ_SIGNAL, Some(log_decoder)) => {
                 match log_decoder.decode_last_two_logs(receipts) {
                     Ok((lhs, rhs)) => format!(
                         "assertion failed: `(left == right)`\n left: `{lhs:?}`\n right: `{rhs:?}`"
+                    ),
+                    Err(err) => {
+                        format!("failed to decode log from assert_eq revert: {err}")
+                    }
+                }
+            }
+            (FAILED_ASSERT_NE_SIGNAL, Some(log_decoder)) => {
+                match log_decoder.decode_last_two_logs(receipts) {
+                    Ok((lhs, rhs)) => format!(
+                        "assertion failed: `(left != right)`\n left: `{lhs:?}`\n right: `{rhs:?}`"
                     ),
                     Err(err) => {
                         format!("failed to decode log from assert_eq revert: {err}")
