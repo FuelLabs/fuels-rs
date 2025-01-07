@@ -38,7 +38,7 @@ pub mod programs {
 }
 
 pub mod core {
-    pub use fuels_core::{codec, constants, offsets, traits, Configurable, Configurables};
+    pub use fuels_core::{codec, constants, offsets, traits, Configurables, ConfigurablesReader};
 }
 
 pub mod crypto {

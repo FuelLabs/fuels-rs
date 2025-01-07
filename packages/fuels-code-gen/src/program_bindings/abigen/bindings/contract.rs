@@ -9,7 +9,7 @@ use crate::{
         abigen::{
             bindings::function_generator::FunctionGenerator,
             configurables::{
-                generate_code_for_configurable_constants, generate_code_for_configurable_constants2,
+                generate_code_for_configurable_constants, generate_code_for_configurable_reader,
             },
             logs::log_formatters_instantiation_code,
         },
@@ -38,9 +38,9 @@ pub(crate) fn contract_bindings(
     let constant_configuration_code =
         generate_code_for_configurable_constants(&configuration_struct_name, &abi.configurables)?;
 
-    let configuration_struct_name2 = ident(&format!("{name}Configurables2"));
+    let configuration_struct_name2 = ident(&format!("{name}ConfigurablesReader"));
     let constant_configuration_code2 =
-        generate_code_for_configurable_constants2(&configuration_struct_name2, &abi.configurables)?;
+        generate_code_for_configurable_reader(&configuration_struct_name2, &abi.configurables)?;
 
     let code = quote! {
         #[derive(Debug, Clone)]

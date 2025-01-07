@@ -3,12 +3,12 @@ pub mod traits;
 pub mod types;
 mod utils;
 
-use std::{collections::HashMap, iter};
+use std::{collections::HashMap, iter, path::Path};
 
-use codec::ABIEncoder;
+use codec::{try_from_bytes, ABIEncoder, DecoderConfig};
 use itertools::Itertools;
 use offsets::{extract_data_offset, extract_offset_at};
-use traits::Tokenizable;
+use traits::{Parameterize, Tokenizable};
 pub use utils::*;
 
 use crate::types::errors::Result;
@@ -16,33 +16,58 @@ use crate::types::errors::Result;
 type OffsetWithData = (u64, Vec<u8>);
 type OffsetWithSlice<'a> = (u64, &'a [u8]);
 
-#[derive(Debug, Clone)]
-pub enum Configurable {
-    //TODO:hal3e make private
-    Direct {
-        offset: u64,
-        data: Vec<u8>,
-    },
-    Indirect {
-        offset: u64,
-        data_offset: u64,
-        data: Vec<u8>,
-    },
+#[derive(Debug, Clone)] //TODO: hal3e test this
+pub struct ConfigurablesReader {
+    binary: Vec<u8>,
+    decoder_config: DecoderConfig,
 }
 
-impl Configurable {
-    pub fn data(&self) -> &[u8] {
-        match self {
-            Configurable::Direct { data, .. } => data,
-            Configurable::Indirect { data, .. } => data,
+impl ConfigurablesReader {
+    pub fn load(binary: Vec<u8>) -> Self {
+        Self {
+            binary,
+            decoder_config: DecoderConfig::default(),
         }
     }
 
-    pub fn set_data(&mut self, new_data: Vec<u8>) {
-        match self {
-            Configurable::Direct { data, .. } => *data = new_data,
-            Configurable::Indirect { data, .. } => *data = new_data,
-        }
+    pub fn load_from(binary_filepath: impl AsRef<Path>) -> Result<Self> {
+        let binary_filepath = binary_filepath.as_ref();
+
+        let binary = std::fs::read(binary_filepath).map_err(|e| {
+            std::io::Error::new(
+                e.kind(),
+                format!("failed to read binary: {binary_filepath:?}: {e}"),
+            )
+        })?;
+
+        Ok(Self {
+            binary,
+            decoder_config: DecoderConfig::default(),
+        })
+    }
+
+    pub fn with_decoder_config(mut self, decoder_config: DecoderConfig) -> Self {
+        self.decoder_config = decoder_config;
+
+        self
+    }
+
+    pub fn decode_direct<T: Tokenizable + Parameterize>(&self, offset: usize) -> Result<T> {
+        check_binary_len(&self.binary, offset)?;
+
+        try_from_bytes(&self.binary[offset..], self.decoder_config)
+    }
+
+    pub fn decode_indirect<T: Tokenizable + Parameterize>(&self, offset: usize) -> Result<T> {
+        let data_offset = extract_data_offset(&self.binary)?;
+        let dyn_offset = extract_offset_at(&self.binary, offset)?;
+
+        check_binary_len(&self.binary, data_offset + dyn_offset)?;
+
+        try_from_bytes(
+            &self.binary[data_offset + dyn_offset..],
+            self.decoder_config,
+        )
     }
 }
 
@@ -177,8 +202,8 @@ impl Configurables {
                 .expect("is there as we created the sorted vec");
             let end_offset = sorted_dyn_offsets[idx + 1]; // is there as we created the sorted vec
 
-            Self::check_binary_len(binary, dyn_offset)?;
-            Self::check_binary_len(binary, end_offset)?;
+            check_binary_len(binary, dyn_offset)?;
+            check_binary_len(binary, end_offset)?;
 
             let data = &binary[dyn_offset..end_offset];
 
@@ -224,25 +249,25 @@ impl Configurables {
 
     fn write(binary: &mut [u8], offset: usize, data: &[u8]) -> Result<()> {
         let data_len = data.len();
-        Self::check_binary_len(binary, offset + data_len)?;
+        check_binary_len(binary, offset + data_len)?;
 
         binary[offset..offset + data.len()].copy_from_slice(data);
 
         Ok(())
     }
+}
 
-    fn check_binary_len(binary: &[u8], offset: usize) -> Result<()> {
-        if binary.len() < offset {
-            return Err(crate::error!(
-                Other,
-                "configurables: given binary with len: `{}` is too short for offset:`{}`",
-                binary.len(),
-                offset
-            ));
-        }
-
-        Ok(())
+fn check_binary_len(binary: &[u8], offset: usize) -> Result<()> {
+    if binary.len() < offset {
+        return Err(crate::error!(
+            Other,
+            "configurables: given binary with len: `{}` is too short for offset:`{}`",
+            binary.len(),
+            offset
+        ));
     }
+
+    Ok(())
 }
 
 #[cfg(test)]

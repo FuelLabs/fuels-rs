@@ -1,7 +1,7 @@
 use fuels::{
-    core::codec::EncoderConfig,
+    core::{codec::EncoderConfig, ConfigurablesReader},
     prelude::*,
-    types::{Bits256, SizedAsciiString, U256},
+    types::{AsciiString, Bits256, SizedAsciiString, U256},
 };
 use test_case::test_case;
 
@@ -391,4 +391,67 @@ async fn configurable_encoder_config_is_applied() {
             .to_string()
             .contains("token limit `1` reached while encoding. Try increasing it"),)
     }
+}
+
+#[tokio::test]
+async fn contract_configurables_reader() -> Result<()> {
+    abigen!(Contract(
+        name = "MyContract",
+        abi = "e2e/sway/contracts/dyn_configurables/out/release/dyn_configurables-abi.json"
+    ));
+
+    let configurables_reader = MyContractConfigurablesReader::load_from(
+        "sway/contracts/dyn_configurables/out/release/dyn_configurables.bin",
+    )?;
+
+    let some_bool = configurables_reader.BOOL()?;
+    let some_u8 = configurables_reader.U8()?;
+    let some_str = configurables_reader.STR()?;
+    let some_str2 = configurables_reader.STR_2()?;
+    let some_str3 = configurables_reader.STR_3()?;
+    let some_last_u8 = configurables_reader.LAST_U8()?;
+
+    assert!(some_bool);
+    assert_eq!(some_u8, 8);
+    assert_eq!(some_str, "sway");
+    assert_eq!(some_str2, "forc");
+    assert_eq!(some_str3, "fuel");
+    assert_eq!(some_last_u8, 16);
+
+    // let offset = 2555;
+    // let some_u8: u8 = fuels::core::ConfigurablesReader::load_from(
+    //     "sway/contracts/dyn_configurables/out/release/dyn_configurables.bin",
+    // )?
+    // .decode_direct(offset)?;
+
+    // let offset = 2555;
+    // let some_str: fuels::types::AsciiString = fuels::core::ConfigurablesReader::load_from(
+    //     "sway/contracts/dyn_configurables/out/release/dyn_configurables.bin",
+    // )?
+    // .decode_indirect(offset)?;
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn contract_configurables_reader_manual() -> Result<()> {
+    let configurables_reader = ConfigurablesReader::load_from(
+        "sway/contracts/dyn_configurables/out/release/dyn_configurables.bin",
+    )?;
+
+    let some_bool: bool = configurables_reader.decode_direct(3264)?;
+    let some_u8: u8 = configurables_reader.decode_direct(3304)?;
+    let some_str: AsciiString = configurables_reader.decode_indirect(3280)?;
+    let some_str2: AsciiString = configurables_reader.decode_indirect(3288)?;
+    let some_str3: AsciiString = configurables_reader.decode_indirect(3296)?;
+    let some_last_u8: u8 = configurables_reader.decode_direct(3272)?;
+
+    assert!(some_bool);
+    assert_eq!(some_u8, 8);
+    assert_eq!(some_str, "sway");
+    assert_eq!(some_str2, "forc");
+    assert_eq!(some_str3, "fuel");
+    assert_eq!(some_last_u8, 16);
+
+    Ok(())
 }
