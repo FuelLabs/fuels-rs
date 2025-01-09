@@ -1,6 +1,6 @@
 #[cfg(feature = "coin-cache")]
 use std::sync::Arc;
-use std::{collections::HashMap, fmt::Debug, net::SocketAddr, time::Duration};
+use std::{collections::HashMap, fmt::Debug, net::SocketAddr};
 
 mod cache;
 mod retry_util;

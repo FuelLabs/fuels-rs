@@ -1701,11 +1701,6 @@ async fn contract_custom_call_no_signatures_strategy() -> Result<()> {
         ),
     );
     let provider = wallet.try_provider()?;
-    let mut provider = provider.clone();
-    provider.set_cache_ttl(TtlConfig {
-        consensus_parameters: Duration::from_secs(5),
-    });
-    provider.clear_cache().await;
 
     let counter = 42;
     let call_handler = contract_instance.methods().initialize_counter(counter);
