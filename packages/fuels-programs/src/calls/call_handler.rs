@@ -166,7 +166,9 @@ where
         let tx = self.build_tx().await?;
         let provider = self.account.try_provider()?;
 
-        self.cached_tx_id = Some(tx.id(provider.chain_id()));
+        let consensus_parameters = provider.consensus_parameters().await?;
+        let chain_id = consensus_parameters.chain_id();
+        self.cached_tx_id = Some(tx.id(chain_id));
 
         let tx_status = provider.send_transaction_and_await_commit(tx).await?;
 
@@ -425,8 +427,10 @@ where
         let tx = self.build_tx().await?;
 
         let provider = self.account.try_provider()?;
+        let consensus_parameters = provider.consensus_parameters().await?;
+        let chain_id = consensus_parameters.chain_id();
 
-        self.cached_tx_id = Some(tx.id(provider.chain_id()));
+        self.cached_tx_id = Some(tx.id(chain_id));
 
         let tx_status = provider.send_transaction_and_await_commit(tx).await?;
 

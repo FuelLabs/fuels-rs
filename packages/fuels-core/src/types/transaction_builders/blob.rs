@@ -130,8 +130,14 @@ impl BlobTransactionBuilder {
             .await?;
 
         let current_tx_size = tx.size();
-        let max_tx_size = usize::try_from(provider.consensus_parameters().tx_params().max_size())
-            .unwrap_or(usize::MAX);
+        let max_tx_size = usize::try_from(
+            provider
+                .consensus_parameters()
+                .await?
+                .tx_params()
+                .max_size(),
+        )
+        .unwrap_or(usize::MAX);
 
         Ok(max_tx_size.saturating_sub(current_tx_size))
     }
@@ -170,7 +176,7 @@ impl BlobTransactionBuilder {
     }
 
     async fn resolve_fuel_tx(mut self, provider: &impl DryRunner) -> Result<fuel_tx::Blob> {
-        let chain_id = provider.consensus_parameters().chain_id();
+        let chain_id = provider.consensus_parameters().await?.chain_id();
 
         let free_witness_index = self.num_witnesses()?;
         let body = self.blob.as_blob_body(free_witness_index);

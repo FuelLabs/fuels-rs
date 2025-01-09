@@ -116,7 +116,7 @@ fn compare_inputs(inputs: &[Input], expected_inputs: &mut Vec<Input>) -> bool {
         return false;
     }
 
-    return comparison_results.iter().all(|&r| r);
+    comparison_results.iter().all(|&r| r)
 }
 
 fn base_asset_wallet_config(num_wallets: u64) -> WalletsConfig {
@@ -348,7 +348,10 @@ async fn test_wallet_get_coins() -> Result<()> {
     let provider = setup_test_provider(coins, vec![], None, None).await?;
     wallet.set_provider(provider.clone());
 
-    let wallet_initial_coins = wallet.get_coins(*provider.base_asset_id()).await?;
+    let consensus_parameters = provider.consensus_parameters().await?;
+    let wallet_initial_coins = wallet
+        .get_coins(*consensus_parameters.base_asset_id())
+        .await?;
     let total_amount: u64 = wallet_initial_coins.iter().map(|c| c.amount).sum();
 
     assert_eq!(wallet_initial_coins.len(), NUM_COINS as usize);
@@ -445,10 +448,15 @@ async fn test_transfer_with_multiple_signatures() -> Result<()> {
     let amount_to_transfer = 20;
 
     let mut inputs = vec![];
+    let consensus_parameters = provider.consensus_parameters().await?;
     for wallet in &wallets {
         inputs.extend(
             wallet
-                .get_asset_inputs_for_amount(*provider.base_asset_id(), amount_to_transfer, None)
+                .get_asset_inputs_for_amount(
+                    *consensus_parameters.base_asset_id(),
+                    amount_to_transfer,
+                    None,
+                )
                 .await?,
         );
     }
@@ -458,7 +466,7 @@ async fn test_transfer_with_multiple_signatures() -> Result<()> {
     // all change goes to the first wallet
     let outputs = wallets[0].get_asset_outputs_for_amount(
         receiver.address(),
-        *provider.base_asset_id(),
+        *consensus_parameters.base_asset_id(),
         amount_to_receive,
     );
 
@@ -472,7 +480,9 @@ async fn test_transfer_with_multiple_signatures() -> Result<()> {
     provider.send_transaction_and_await_commit(tx).await?;
 
     assert_eq!(
-        receiver.get_asset_balance(provider.base_asset_id()).await?,
+        receiver
+            .get_asset_balance(consensus_parameters.base_asset_id())
+            .await?,
         amount_to_receive,
     );
 

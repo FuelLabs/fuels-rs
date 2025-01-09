@@ -212,6 +212,7 @@ impl Contract<Regular> {
         let provider = account.try_provider()?;
         let max_contract_size = provider
             .consensus_parameters()
+            .await?
             .contract_params()
             .contract_max_size() as usize;
 
