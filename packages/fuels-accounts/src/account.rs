@@ -126,15 +126,16 @@ pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync + Clone {
         used_base_amount: u64,
     ) -> Result<()> {
         let provider = self.try_provider()?;
+        let consensus_parameters = provider.consensus_parameters().await?;
         let (base_assets, base_amount) =
-            available_base_assets_and_amount(tb, provider.base_asset_id());
+            available_base_assets_and_amount(tb, consensus_parameters.base_asset_id());
         let missing_base_amount =
             calculate_missing_base_amount(tb, base_amount, used_base_amount, provider).await?;
 
         if missing_base_amount > 0 {
             let new_base_inputs = self
                 .get_asset_inputs_for_amount(
-                    *provider.base_asset_id(),
+                    *consensus_parameters.base_asset_id(),
                     missing_base_amount,
                     Some(base_assets),
                 )
@@ -144,7 +145,7 @@ pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync + Clone {
                 tb,
                 new_base_inputs,
                 self.address(),
-                provider.base_asset_id(),
+                consensus_parameters.base_asset_id(),
             );
         };
 
@@ -181,7 +182,8 @@ pub trait Account: ViewOnlyAccount {
 
         self.add_witnesses(&mut tx_builder)?;
 
-        let used_base_amount = if asset_id == *provider.base_asset_id() {
+        let consensus_parameters = provider.consensus_parameters().await?;
+        let used_base_amount = if asset_id == *consensus_parameters.base_asset_id() {
             amount
         } else {
             0
@@ -190,7 +192,7 @@ pub trait Account: ViewOnlyAccount {
             .await?;
 
         let tx = tx_builder.build(provider).await?;
-        let tx_id = tx.id(provider.chain_id());
+        let tx_id = tx.id(consensus_parameters.chain_id());
 
         let tx_status = provider.send_transaction_and_await_commit(tx).await?;
 
@@ -253,7 +255,8 @@ pub trait Account: ViewOnlyAccount {
 
         let tx = tb.build(provider).await?;
 
-        let tx_id = tx.id(provider.chain_id());
+        let consensus_parameters = provider.consensus_parameters().await?;
+        let tx_id = tx.id(consensus_parameters.chain_id());
         let tx_status = provider.send_transaction_and_await_commit(tx).await?;
 
         let receipts = tx_status.take_receipts_checked(None)?;
@@ -271,9 +274,10 @@ pub trait Account: ViewOnlyAccount {
         tx_policies: TxPolicies,
     ) -> Result<(TxId, Nonce, Vec<Receipt>)> {
         let provider = self.try_provider()?;
+        let consensus_parameters = provider.consensus_parameters().await?;
 
         let inputs = self
-            .get_asset_inputs_for_amount(*provider.base_asset_id(), amount, None)
+            .get_asset_inputs_for_amount(*consensus_parameters.base_asset_id(), amount, None)
             .await?;
 
         let mut tb = ScriptTransactionBuilder::prepare_message_to_output(
@@ -281,7 +285,7 @@ pub trait Account: ViewOnlyAccount {
             amount,
             inputs,
             tx_policies,
-            *provider.base_asset_id(),
+            *consensus_parameters.base_asset_id(),
         );
 
         self.add_witnesses(&mut tb)?;
@@ -289,7 +293,7 @@ pub trait Account: ViewOnlyAccount {
 
         let tx = tb.build(provider).await?;
 
-        let tx_id = tx.id(provider.chain_id());
+        let tx_id = tx.id(consensus_parameters.chain_id());
         let tx_status = provider.send_transaction_and_await_commit(tx).await?;
 
         let receipts = tx_status.take_receipts_checked(None)?;
@@ -361,8 +365,8 @@ mod tests {
             })
         }
 
-        fn consensus_parameters(&self) -> &ConsensusParameters {
-            &self.c_param
+        async fn consensus_parameters(&self) -> Result<ConsensusParameters> {
+            Ok(self.c_param.clone())
         }
 
         async fn estimate_gas_price(&self, _block_header: u32) -> Result<u64> {

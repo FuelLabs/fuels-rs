@@ -227,7 +227,7 @@ macro_rules! impl_tx_builder_trait {
                     tx.estimate_predicates(&provider, None).await?;
                 }
 
-                let consensus_parameters = provider.consensus_parameters();
+                let consensus_parameters = provider.consensus_parameters().await?;
 
                 let gas_price = provider
                     .estimate_gas_price(self.gas_price_estimation_block_horizon)
@@ -237,7 +237,7 @@ macro_rules! impl_tx_builder_trait {
                     tx.tx,
                     self.max_fee_estimation_tolerance,
                     gas_price,
-                    consensus_parameters,
+                    &consensus_parameters,
                 )
             }
 
@@ -415,13 +415,13 @@ macro_rules! impl_tx_builder_trait {
                 }
 
                 let gas_price = provider.estimate_gas_price(block_horizon).await?;
-                let consensus_parameters = provider.consensus_parameters();
+                let consensus_parameters = provider.consensus_parameters().await?;
 
                 let max_fee = $crate::types::transaction_builders::estimate_max_fee_w_tolerance(
                     wrapper_tx.tx,
                     max_fee_estimation_tolerance,
                     gas_price,
-                    consensus_parameters,
+                    &consensus_parameters,
                 )?;
 
                 tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
@@ -761,14 +761,16 @@ impl ScriptTransactionBuilder {
             .await?;
         }
 
-        script_tx_estimator.prepare_for_estimation(&mut tx, should_saturate_variable_outputs);
+        script_tx_estimator
+            .prepare_for_estimation(&mut tx, should_saturate_variable_outputs)
+            .await?;
 
         Ok(tx)
     }
 
     async fn set_witnesses(self, tx: &mut fuel_tx::Script, provider: impl DryRunner) -> Result<()> {
         let missing_witnesses = generate_missing_witnesses(
-            tx.id(&provider.consensus_parameters().chain_id()),
+            tx.id(&provider.consensus_parameters().await?.chain_id()),
             &self.unresolved_signers,
         )
         .await?;
@@ -1005,7 +1007,7 @@ impl CreateTransactionBuilder {
     }
 
     async fn resolve_fuel_tx(self, provider: impl DryRunner) -> Result<Create> {
-        let chain_id = provider.consensus_parameters().chain_id();
+        let chain_id = provider.consensus_parameters().await?.chain_id();
         let num_witnesses = self.num_witnesses()?;
         let policies = self.generate_fuel_policies()?;
         let is_using_predicates = self.is_using_predicates();
@@ -1131,7 +1133,7 @@ impl UploadTransactionBuilder {
     }
 
     async fn resolve_fuel_tx(self, provider: impl DryRunner) -> Result<Upload> {
-        let chain_id = provider.consensus_parameters().chain_id();
+        let chain_id = provider.consensus_parameters().await?.chain_id();
         let num_witnesses = self.num_witnesses()?;
         let policies = self.generate_fuel_policies()?;
         let is_using_predicates = self.is_using_predicates();
@@ -1267,7 +1269,7 @@ impl UpgradeTransactionBuilder {
     }
 
     async fn resolve_fuel_tx(self, provider: impl DryRunner) -> Result<Upgrade> {
-        let chain_id = provider.consensus_parameters().chain_id();
+        let chain_id = provider.consensus_parameters().await?.chain_id();
         let num_witnesses = self.num_witnesses()?;
         let policies = self.generate_fuel_policies()?;
         let is_using_predicates = self.is_using_predicates();
@@ -1640,8 +1642,8 @@ mod tests {
             })
         }
 
-        fn consensus_parameters(&self) -> &ConsensusParameters {
-            &self.c_param
+        async fn consensus_parameters(&self) -> Result<ConsensusParameters> {
+            Ok(self.c_param.clone())
         }
 
         async fn estimate_gas_price(&self, _block_horizon: u32) -> Result<u64> {

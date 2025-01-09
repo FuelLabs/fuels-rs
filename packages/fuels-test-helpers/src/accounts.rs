@@ -105,11 +105,14 @@ mod tests {
 
         let wallets = launch_custom_provider_and_get_wallets(config, None, None).await?;
         let provider = wallets.first().unwrap().try_provider()?;
+        let consensus_parameters = provider.consensus_parameters().await?;
 
         assert_eq!(wallets.len(), num_wallets as usize);
 
         for wallet in &wallets {
-            let coins = wallet.get_coins(*provider.base_asset_id()).await?;
+            let coins = wallet
+                .get_coins(*consensus_parameters.base_asset_id())
+                .await?;
 
             assert_eq!(coins.len(), num_coins as usize);
 
@@ -224,6 +227,7 @@ mod tests {
                 wallet
                     .try_provider()?
                     .consensus_parameters()
+                    .await?
                     .tx_params()
                     .max_gas_per_tx(),
                 max_gas_per_tx
