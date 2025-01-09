@@ -1,10 +1,15 @@
-use std::{collections::HashMap, fmt::Debug, net::SocketAddr, sync::Arc, time::Duration};
+#[cfg(feature = "coin-cache")]
+use std::sync::Arc;
+use std::{collections::HashMap, fmt::Debug, net::SocketAddr, time::Duration};
 
+mod cache;
 mod retry_util;
 mod retryable_client;
 mod supported_fuel_core_version;
 mod supported_versions;
 
+use crate::provider::cache::CacheableRpcs;
+use cache::{CachedClient, SystemClock, TtlConfig};
 use chrono::{DateTime, Utc};
 use fuel_core_client::client::{
     pagination::{PageDirection, PaginatedResult, PaginationRequest},
@@ -45,7 +50,6 @@ pub use supported_fuel_core_version::SUPPORTED_FUEL_CORE_VERSION;
 use tai64::Tai64;
 #[cfg(feature = "coin-cache")]
 use tokio::sync::Mutex;
-use tokio::sync::RwLock;
 
 #[cfg(feature = "coin-cache")]
 use crate::coin_cache::CoinsCache;
@@ -113,23 +117,9 @@ impl ResourceFilter {
 /// of `FuelClient`, directly, which provides a broader API.
 #[derive(Debug, Clone)]
 pub struct Provider {
-    client: RetryableClient,
+    cached_client: CachedClient<RetryableClient>,
     #[cfg(feature = "coin-cache")]
-    cache: Arc<Mutex<CoinsCache>>,
-    consensus_parameters: Arc<RwLock<CachedConsensusParameters>>,
-}
-
-#[derive(Debug, Clone)]
-struct CachedConsensusParameters {
-    value: ConsensusParameters,
-    cached_at: DateTime<Utc>,
-    ttl: Duration,
-}
-
-impl CachedConsensusParameters {
-    pub fn is_stale(&self) -> bool {
-        self.cached_at + self.ttl < Utc::now()
-    }
+    coins_cache: Arc<Mutex<CoinsCache>>,
 }
 
 impl Provider {
@@ -138,49 +128,49 @@ impl Provider {
         Self::connect(format!("http://{addr}")).await
     }
 
+    fn uncached_client(&self) -> &RetryableClient {
+        self.cached_client.inner()
+    }
+
+    fn uncached_client_mut(&mut self) -> &mut RetryableClient {
+        self.cached_client.inner_mut()
+    }
+
     pub async fn healthy(&self) -> Result<bool> {
-        Ok(self.client.health().await?)
+        Ok(self.uncached_client().health().await?)
     }
 
     /// Connects to an existing node at the given address.
     pub async fn connect(url: impl AsRef<str>) -> Result<Provider> {
-        let client = RetryableClient::connect(&url, Default::default()).await?;
-
-        let consensus_parameters =
-            Arc::new(RwLock::new(Self::fetch_consensus_params(&client).await?));
+        let client = CachedClient::new(
+            RetryableClient::connect(&url, Default::default()).await?,
+            TtlConfig {
+                consensus_parameters: Duration::from_secs(5),
+            },
+            SystemClock,
+        );
 
         Ok(Self {
-            client,
-            consensus_parameters,
+            cached_client: client,
             #[cfg(feature = "coin-cache")]
-            cache: Default::default(),
-        })
-    }
-
-    async fn fetch_consensus_params(client: &RetryableClient) -> Result<CachedConsensusParameters> {
-        let consensus_parameters = client.chain_info().await?.consensus_parameters;
-
-        Ok(CachedConsensusParameters {
-            value: consensus_parameters,
-            cached_at: Utc::now(),
-            ttl: Duration::from_secs(5),
+            coins_cache: Default::default(),
         })
     }
 
     pub fn url(&self) -> &str {
-        self.client.url()
+        self.uncached_client().url()
     }
 
     pub async fn blob(&self, blob_id: BlobId) -> Result<Option<Blob>> {
         Ok(self
-            .client
+            .uncached_client()
             .blob(blob_id.into())
             .await?
             .map(|blob| Blob::new(blob.bytecode)))
     }
 
     pub async fn blob_exists(&self, blob_id: BlobId) -> Result<bool> {
-        Ok(self.client.blob_exists(blob_id.into()).await?)
+        Ok(self.uncached_client().blob_exists(blob_id.into()).await?)
     }
 
     /// Sends a transaction to the underlying Provider's client.
@@ -200,7 +190,7 @@ impl Provider {
 
         let tx = self.prepare_transaction_for_sending(tx).await?;
         let tx_status = self
-            .client
+            .uncached_client()
             .submit_and_await_commit(&tx.clone().into())
             .await?
             .into();
@@ -210,7 +200,7 @@ impl Provider {
             tx_status,
             TxStatus::SqueezedOut { .. } | TxStatus::Revert { .. }
         ) {
-            self.cache
+            self.coins_cache
                 .lock()
                 .await
                 .remove_items(tx.used_coins(&base_asset_id))
@@ -248,7 +238,11 @@ impl Provider {
     }
 
     pub async fn await_transaction_commit<T: Transaction>(&self, id: TxId) -> Result<TxStatus> {
-        Ok(self.client.await_transaction_commit(&id).await?.into())
+        Ok(self
+            .uncached_client()
+            .await_transaction_commit(&id)
+            .await?
+            .into())
     }
 
     async fn validate_transaction<T: Transaction>(&self, tx: T) -> Result<()> {
@@ -264,7 +258,7 @@ impl Provider {
 
     #[cfg(not(feature = "coin-cache"))]
     async fn submit<T: Transaction>(&self, tx: T) -> Result<TxId> {
-        Ok(self.client.submit(&tx.into()).await?)
+        Ok(self.uncached_client().submit(&tx.into()).await?)
     }
 
     #[cfg(feature = "coin-cache")]
@@ -272,7 +266,7 @@ impl Provider {
         &self,
         coin_ids: impl IntoIterator<Item = (&'a (Bech32Address, AssetId), &'a Vec<CoinTypeId>)>,
     ) -> Option<((Bech32Address, AssetId), CoinTypeId)> {
-        let mut locked_cache = self.cache.lock().await;
+        let mut locked_cache = self.coins_cache.lock().await;
 
         for (key, ids) in coin_ids {
             let items = locked_cache.get_active(key);
@@ -319,56 +313,46 @@ impl Provider {
         let used_utxos = tx.used_coins(base_asset_id);
         self.check_inputs_already_in_cache(&used_utxos).await?;
 
-        let tx_id = self.client.submit(&tx.into()).await?;
-        self.cache.lock().await.insert_multiple(used_utxos);
+        let tx_id = self.uncached_client().submit(&tx.into()).await?;
+        self.coins_cache.lock().await.insert_multiple(used_utxos);
 
         Ok(tx_id)
     }
 
     pub async fn tx_status(&self, tx_id: &TxId) -> Result<TxStatus> {
-        Ok(self.client.transaction_status(tx_id).await?.into())
+        Ok(self
+            .uncached_client()
+            .transaction_status(tx_id)
+            .await?
+            .into())
     }
 
     pub async fn chain_info(&self) -> Result<ChainInfo> {
-        Ok(self.client.chain_info().await?.into())
+        Ok(self.uncached_client().chain_info().await?.into())
     }
 
     pub async fn consensus_parameters(&self) -> Result<ConsensusParameters> {
-        {
-            let read_lock = self.consensus_parameters.read().await;
-            if !read_lock.is_stale() {
-                return Ok(read_lock.value.clone());
-            }
-        }
-
-        let mut write_lock = self.consensus_parameters.write().await;
-
-        // because it could have been updated since we last checked
-        if !write_lock.is_stale() {
-            return Ok(write_lock.value.clone());
-        }
-
-        let fresh_parameters = Self::fetch_consensus_params(&self.client).await?;
-        *write_lock = fresh_parameters;
-
-        Ok(write_lock.value.clone())
+        self.cached_client.consensus_parameters().await
     }
 
     pub async fn node_info(&self) -> Result<NodeInfo> {
-        Ok(self.client.node_info().await?.into())
+        Ok(self.uncached_client().node_info().await?.into())
     }
 
     pub async fn latest_gas_price(&self) -> Result<LatestGasPrice> {
-        Ok(self.client.latest_gas_price().await?)
+        Ok(self.uncached_client().latest_gas_price().await?)
     }
 
     pub async fn estimate_gas_price(&self, block_horizon: u32) -> Result<EstimateGasPrice> {
-        Ok(self.client.estimate_gas_price(block_horizon).await?)
+        Ok(self
+            .uncached_client()
+            .estimate_gas_price(block_horizon)
+            .await?)
     }
 
     pub async fn dry_run(&self, tx: impl Transaction) -> Result<TxStatus> {
         let [tx_status] = self
-            .client
+            .uncached_client()
             .dry_run(Transactions::new().insert(tx).as_slice())
             .await?
             .into_iter()
@@ -385,7 +369,7 @@ impl Provider {
         transactions: Transactions,
     ) -> Result<Vec<(TxId, TxStatus)>> {
         Ok(self
-            .client
+            .uncached_client()
             .dry_run(transactions.as_slice())
             .await?
             .into_iter()
@@ -400,7 +384,7 @@ impl Provider {
         gas_price: Option<u64>,
     ) -> Result<TxStatus> {
         let [tx_status] = self
-            .client
+            .uncached_client()
             .dry_run_opt(
                 Transactions::new().insert(tx).as_slice(),
                 Some(utxo_validation),
@@ -423,7 +407,7 @@ impl Provider {
         gas_price: Option<u64>,
     ) -> Result<Vec<(TxId, TxStatus)>> {
         Ok(self
-            .client
+            .uncached_client()
             .dry_run_opt(transactions.as_slice(), Some(utxo_validation), gas_price)
             .await?
             .into_iter()
@@ -439,7 +423,7 @@ impl Provider {
 
         loop {
             let res = self
-                .client
+                .uncached_client()
                 .coins(
                     &from.into(),
                     Some(&asset_id),
@@ -468,7 +452,7 @@ impl Provider {
         let base_asset_id = *consensus_parameters.base_asset_id();
 
         let res = self
-            .client
+            .uncached_client()
             .coins_to_spend(
                 &filter.owner(),
                 queries.spend_query(base_asset_id),
@@ -508,7 +492,7 @@ impl Provider {
     #[cfg(feature = "coin-cache")]
     async fn extend_filter_with_cached(&self, filter: &mut ResourceFilter) -> Result<()> {
         let consensus_parameters = self.consensus_parameters().await?;
-        let mut cache = self.cache.lock().await;
+        let mut cache = self.coins_cache.lock().await;
         let asset_id = filter
             .asset_id
             .unwrap_or(*consensus_parameters.base_asset_id());
@@ -549,7 +533,7 @@ impl Provider {
         asset_id: AssetId,
     ) -> Result<u64> {
         Ok(self
-            .client
+            .uncached_client()
             .balance(&address.into(), Some(&asset_id))
             .await?)
     }
@@ -561,7 +545,7 @@ impl Provider {
         asset_id: AssetId,
     ) -> Result<u64> {
         Ok(self
-            .client
+            .uncached_client()
             .contract_balance(&contract_id.into(), Some(&asset_id))
             .await?)
     }
@@ -578,7 +562,7 @@ impl Provider {
             direction: PageDirection::Forward,
         };
         let balances_vec = self
-            .client
+            .uncached_client()
             .balances(&address.into(), pagination)
             .await?
             .results;
@@ -609,7 +593,7 @@ impl Provider {
         let mut balances_vec = vec![];
         loop {
             let mut paginated_result = self
-                .client
+                .uncached_client()
                 .contract_balances(&contract_id.into(), pagination.clone())
                 .await?;
 
@@ -636,14 +620,18 @@ impl Provider {
     }
 
     pub async fn get_transaction_by_id(&self, tx_id: &TxId) -> Result<Option<TransactionResponse>> {
-        Ok(self.client.transaction(tx_id).await?.map(Into::into))
+        Ok(self
+            .uncached_client()
+            .transaction(tx_id)
+            .await?
+            .map(Into::into))
     }
 
     pub async fn get_transactions(
         &self,
         request: PaginationRequest<String>,
     ) -> Result<PaginatedResult<TransactionResponse, String>> {
-        let pr = self.client.transactions(request).await?;
+        let pr = self.uncached_client().transactions(request).await?;
 
         Ok(PaginatedResult {
             cursor: pr.cursor,
@@ -660,7 +648,7 @@ impl Provider {
         request: PaginationRequest<String>,
     ) -> Result<PaginatedResult<TransactionResponse, String>> {
         let pr = self
-            .client
+            .uncached_client()
             .transactions_by_owner(&owner.into(), request)
             .await?;
 
@@ -688,18 +676,26 @@ impl Provider {
         let start_time = start_time.map(|time| Tai64::from_unix(time.timestamp()).0);
 
         Ok(self
-            .client
+            .uncached_client()
             .produce_blocks(blocks_to_produce, start_time)
             .await?
             .into())
     }
 
     pub async fn block(&self, block_id: &Bytes32) -> Result<Option<Block>> {
-        Ok(self.client.block(block_id).await?.map(Into::into))
+        Ok(self
+            .uncached_client()
+            .block(block_id)
+            .await?
+            .map(Into::into))
     }
 
     pub async fn block_by_height(&self, height: BlockHeight) -> Result<Option<Block>> {
-        Ok(self.client.block_by_height(height).await?.map(Into::into))
+        Ok(self
+            .uncached_client()
+            .block_by_height(height)
+            .await?
+            .map(Into::into))
     }
 
     // - Get block(s)
@@ -707,7 +703,7 @@ impl Provider {
         &self,
         request: PaginationRequest<String>,
     ) -> Result<PaginatedResult<Block, String>> {
-        let pr = self.client.blocks(request).await?;
+        let pr = self.uncached_client().blocks(request).await?;
 
         Ok(PaginatedResult {
             cursor: pr.cursor,
@@ -781,7 +777,7 @@ impl Provider {
         };
 
         Ok(self
-            .client
+            .uncached_client()
             .messages(Some(&from.into()), pagination)
             .await?
             .results
@@ -798,7 +794,7 @@ impl Provider {
         commit_block_height: Option<u32>,
     ) -> Result<Option<MessageProof>> {
         let proof = self
-            .client
+            .uncached_client()
             .message_proof(
                 tx_id,
                 nonce,
@@ -812,17 +808,22 @@ impl Provider {
     }
 
     pub async fn is_user_account(&self, address: impl Into<Bytes32>) -> Result<bool> {
-        self.client.is_user_account(*address.into()).await
+        self.uncached_client()
+            .is_user_account(*address.into())
+            .await
     }
 
     pub fn with_retry_config(mut self, retry_config: RetryConfig) -> Self {
-        self.client.set_retry_config(retry_config);
+        self.uncached_client_mut().set_retry_config(retry_config);
 
         self
     }
 
     pub async fn contract_exists(&self, contract_id: &Bech32ContractId) -> Result<bool> {
-        Ok(self.client.contract_exists(&contract_id.into()).await?)
+        Ok(self
+            .uncached_client()
+            .contract_exists(&contract_id.into())
+            .await?)
     }
 }
 
@@ -830,7 +831,7 @@ impl Provider {
 impl DryRunner for Provider {
     async fn dry_run(&self, tx: FuelTransaction) -> Result<DryRun> {
         let [tx_execution_status] = self
-            .client
+            .uncached_client()
             .dry_run_opt(&vec![tx], Some(false), Some(0))
             .await?
             .try_into()
@@ -871,10 +872,10 @@ impl DryRunner for Provider {
     ) -> Result<Option<FuelTransaction>> {
         // We always delegate the estimation to the client because estimating locally is no longer
         // possible due to the need of blob storage
-        Ok(Some(self.client.estimate_predicates(tx).await?))
+        Ok(Some(self.uncached_client().estimate_predicates(tx).await?))
     }
 
     async fn consensus_parameters(&self) -> Result<ConsensusParameters> {
-        (*self).consensus_parameters().await
+        Provider::consensus_parameters(self).await
     }
 }
