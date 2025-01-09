@@ -33,12 +33,11 @@ impl Default for TtlConfig {
 struct Dated<T> {
     value: T,
     date: DateTime<Utc>,
-    ttl: Duration,
 }
 
 impl<T> Dated<T> {
-    fn is_stale(&self, now: DateTime<Utc>) -> bool {
-        self.date + self.ttl < now
+    fn is_stale(&self, now: DateTime<Utc>, ttl: Duration) -> bool {
+        self.date + ttl < now
     }
 }
 
@@ -68,7 +67,6 @@ impl<Client, Clock> CachedClient<Client, Clock> {
         }
     }
 
-    /// To be applied going forward
     pub fn set_ttl(&mut self, ttl: TtlConfig) {
         self.ttl_config = ttl
     }
@@ -101,7 +99,7 @@ where
         {
             let read_lock = self.cached_consensus_params.read().await;
             if let Some(entry) = read_lock.as_ref() {
-                if !entry.is_stale(self.clock.now()) {
+                if !entry.is_stale(self.clock.now(), self.ttl_config.consensus_parameters) {
                     return Ok(entry.value.clone());
                 }
             }
@@ -111,7 +109,7 @@ where
 
         // because it could have been updated since we last checked
         if let Some(entry) = write_lock.as_ref() {
-            if !entry.is_stale(self.clock.now()) {
+            if !entry.is_stale(self.clock.now(), self.ttl_config.consensus_parameters) {
                 return Ok(entry.value.clone());
             }
         }
@@ -120,7 +118,6 @@ where
         *write_lock = Some(Dated {
             value: fresh_parameters.clone(),
             date: self.clock.now(),
-            ttl: self.ttl_config.consensus_parameters,
         });
 
         Ok(fresh_parameters)
