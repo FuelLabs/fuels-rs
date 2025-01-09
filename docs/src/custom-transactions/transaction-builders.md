@@ -60,7 +60,7 @@ As we have used coins that require a signature, we have to add the signer to the
 
 > **Note** The signature is not created until the transaction is finalized with `build(&provider)`
 
-We need to do one more thing before we stop thinking about transaction inputs. Executing the transaction also incurs a fee that is paid with the base asset. Our base asset inputs need to be large enough so that the total amount covers the transaction fee and any other operations we are doing. The `Account` trait lets us use `adjust_for_fee()` for adjusting the transaction inputs if needed to cover the fee. The second argument to `adjust_for_fee()` is the total amount of the base asset that we expect our transaction to spend regardless of fees. In our case, this is the **ask_amount** we are transferring to the predicate.
+We need to do one more thing before we stop thinking about transaction inputs. Executing the transaction also incurs a fee that is paid with the base asset. Our base asset inputs need to be large enough so that the total amount covers the transaction fee and any other operations we are doing. The `ViewOnlyAccount` trait lets us use `adjust_for_fee()` for adjusting the transaction inputs if needed to cover the fee. The second argument to `adjust_for_fee()` is the total amount of the base asset that we expect our transaction to spend regardless of fees. In our case, this is the **ask_amount** we are transferring to the predicate.
 
 ```rust,ignore
 {{#include ../../../examples/cookbook/src/lib.rs:custom_tx_adjust}}

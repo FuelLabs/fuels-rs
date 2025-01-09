@@ -3,7 +3,7 @@ mod tests {
     use std::{str::FromStr, time::Duration};
 
     use fuels::{
-        accounts::{predicate::Predicate, wallet::WalletUnlocked, Account, ViewOnlyAccount},
+        accounts::{predicate::Predicate, wallet::WalletUnlocked, ViewOnlyAccount},
         prelude::Result,
         test_helpers::{setup_single_asset_coins, setup_test_provider},
         types::{
