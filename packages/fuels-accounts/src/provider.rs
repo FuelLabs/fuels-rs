@@ -129,7 +129,6 @@ impl Provider {
         Self::connect(format!("http://{addr}")).await
     }
 
-    /// To be applied to future requests, call [`clear_cache`] if you need to clear the cache.
     pub fn set_cache_ttl(&mut self, ttl: TtlConfig) {
         self.cached_client.set_ttl(ttl);
     }
