@@ -21,6 +21,14 @@ pub struct TtlConfig {
     pub consensus_parameters: Duration,
 }
 
+impl Default for TtlConfig {
+    fn default() -> Self {
+        TtlConfig {
+            consensus_parameters: Duration::from_secs(60),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 struct Dated<T> {
     value: T,
@@ -60,12 +68,26 @@ impl<Client, Clock> CachedClient<Client, Clock> {
         }
     }
 
+    /// To be applied going forward
+    pub fn set_ttl(&mut self, ttl: TtlConfig) {
+        self.ttl_config = ttl
+    }
+
     pub fn inner(&self) -> &Client {
         &self.client
     }
 
     pub fn inner_mut(&mut self) -> &mut Client {
         &mut self.client
+    }
+}
+
+impl<Client, Clk> CachedClient<Client, Clk>
+where
+    Client: CacheableRpcs,
+{
+    pub async fn clear(&self) {
+        let _ = self.cached_consensus_params.write().await.take();
     }
 }
 

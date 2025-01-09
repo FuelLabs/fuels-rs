@@ -9,7 +9,8 @@ mod supported_fuel_core_version;
 mod supported_versions;
 
 use crate::provider::cache::CacheableRpcs;
-use cache::{CachedClient, SystemClock, TtlConfig};
+pub use cache::TtlConfig;
+use cache::{CachedClient, SystemClock};
 use chrono::{DateTime, Utc};
 use fuel_core_client::client::{
     pagination::{PageDirection, PaginatedResult, PaginationRequest},
@@ -128,12 +129,13 @@ impl Provider {
         Self::connect(format!("http://{addr}")).await
     }
 
-    fn uncached_client(&self) -> &RetryableClient {
-        self.cached_client.inner()
+    /// To be applied to future requests, call [`clear_cache`] if you need to clear the cache.
+    pub fn set_cache_ttl(&mut self, ttl: TtlConfig) {
+        self.cached_client.set_ttl(ttl);
     }
 
-    fn uncached_client_mut(&mut self) -> &mut RetryableClient {
-        self.cached_client.inner_mut()
+    pub async fn clear_cache(&self) {
+        self.cached_client.clear().await;
     }
 
     pub async fn healthy(&self) -> Result<bool> {
@@ -144,9 +146,7 @@ impl Provider {
     pub async fn connect(url: impl AsRef<str>) -> Result<Provider> {
         let client = CachedClient::new(
             RetryableClient::connect(&url, Default::default()).await?,
-            TtlConfig {
-                consensus_parameters: Duration::from_secs(5),
-            },
+            TtlConfig::default(),
             SystemClock,
         );
 
@@ -824,6 +824,14 @@ impl Provider {
             .uncached_client()
             .contract_exists(&contract_id.into())
             .await?)
+    }
+
+    fn uncached_client(&self) -> &RetryableClient {
+        self.cached_client.inner()
+    }
+
+    fn uncached_client_mut(&mut self) -> &mut RetryableClient {
+        self.cached_client.inner_mut()
     }
 }
 
