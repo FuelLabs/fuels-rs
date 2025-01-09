@@ -163,6 +163,7 @@ mod tests {
         // ANCHOR: transfer_multiple_input
         let balances = wallet_1.get_balances().await?;
 
+        let consensus_parameters = provider.consensus_parameters().await?;
         let mut inputs = vec![];
         let mut outputs = vec![];
         for (id_string, amount) in balances {
@@ -174,7 +175,7 @@ mod tests {
             inputs.extend(input);
 
             // we don't transfer the full base asset so we can cover fees
-            let output = if id == *provider.base_asset_id() {
+            let output = if id == *consensus_parameters.base_asset_id() {
                 wallet_1.get_asset_outputs_for_amount(wallet_2.address(), id, amount / 2)
             } else {
                 wallet_1.get_asset_outputs_for_amount(wallet_2.address(), id, amount)
@@ -197,7 +198,7 @@ mod tests {
 
         assert_eq!(balances.len(), NUM_ASSETS as usize);
         for (id, balance) in balances {
-            if id == provider.base_asset_id().to_string() {
+            if id == *consensus_parameters.base_asset_id().to_string() {
                 assert_eq!(balance, AMOUNT / 2);
             } else {
                 assert_eq!(balance, AMOUNT);
@@ -269,12 +270,13 @@ mod tests {
         // ANCHOR_END: custom_tx
 
         // ANCHOR: custom_tx_io_base
+        let consensus_parameters = provider.consensus_parameters().await?;
         let base_inputs = hot_wallet
-            .get_asset_inputs_for_amount(*provider.base_asset_id(), ask_amount, None)
+            .get_asset_inputs_for_amount(*consensus_parameters.base_asset_id(), ask_amount, None)
             .await?;
         let base_outputs = hot_wallet.get_asset_outputs_for_amount(
             &receiver,
-            *provider.base_asset_id(),
+            *consensus_parameters.base_asset_id(),
             ask_amount,
         );
         // ANCHOR_END: custom_tx_io_base

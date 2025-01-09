@@ -1,12 +1,9 @@
-use std::{collections::HashMap, fmt::Debug, net::SocketAddr};
+use std::{collections::HashMap, fmt::Debug, net::SocketAddr, sync::Arc, time::Duration};
 
 mod retry_util;
 mod retryable_client;
 mod supported_fuel_core_version;
 mod supported_versions;
-
-#[cfg(feature = "coin-cache")]
-use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
 use fuel_core_client::client::{
@@ -21,7 +18,7 @@ use fuel_core_types::services::executor::TransactionExecutionResult;
 use fuel_tx::{
     AssetId, ConsensusParameters, Receipt, Transaction as FuelTransaction, TxId, UtxoId,
 };
-use fuel_types::{Address, BlockHeight, Bytes32, ChainId, Nonce};
+use fuel_types::{Address, BlockHeight, Bytes32, Nonce};
 #[cfg(feature = "coin-cache")]
 use fuels_core::types::coin_type_id::CoinTypeId;
 use fuels_core::{
@@ -48,6 +45,7 @@ pub use supported_fuel_core_version::SUPPORTED_FUEL_CORE_VERSION;
 use tai64::Tai64;
 #[cfg(feature = "coin-cache")]
 use tokio::sync::Mutex;
+use tokio::sync::RwLock;
 
 #[cfg(feature = "coin-cache")]
 use crate::coin_cache::CoinsCache;
@@ -116,9 +114,22 @@ impl ResourceFilter {
 #[derive(Debug, Clone)]
 pub struct Provider {
     client: RetryableClient,
-    consensus_parameters: ConsensusParameters,
     #[cfg(feature = "coin-cache")]
     cache: Arc<Mutex<CoinsCache>>,
+    consensus_parameters: Arc<RwLock<CachedConsensusParameters>>,
+}
+
+#[derive(Debug, Clone)]
+struct CachedConsensusParameters {
+    value: ConsensusParameters,
+    cached_at: DateTime<Utc>,
+    ttl: Duration,
+}
+
+impl CachedConsensusParameters {
+    pub fn is_stale(&self) -> bool {
+        self.cached_at + self.ttl < Utc::now()
+    }
 }
 
 impl Provider {
@@ -134,13 +145,25 @@ impl Provider {
     /// Connects to an existing node at the given address.
     pub async fn connect(url: impl AsRef<str>) -> Result<Provider> {
         let client = RetryableClient::connect(&url, Default::default()).await?;
-        let consensus_parameters = client.chain_info().await?.consensus_parameters;
+
+        let consensus_parameters =
+            Arc::new(RwLock::new(Self::fetch_consensus_params(&client).await?));
 
         Ok(Self {
             client,
             consensus_parameters,
             #[cfg(feature = "coin-cache")]
             cache: Default::default(),
+        })
+    }
+
+    async fn fetch_consensus_params(client: &RetryableClient) -> Result<CachedConsensusParameters> {
+        let consensus_parameters = client.chain_info().await?.consensus_parameters;
+
+        Ok(CachedConsensusParameters {
+            value: consensus_parameters,
+            cached_at: Utc::now(),
+            ttl: Duration::from_secs(5),
         })
     }
 
@@ -166,7 +189,13 @@ impl Provider {
         tx: T,
     ) -> Result<TxStatus> {
         #[cfg(feature = "coin-cache")]
-        self.check_inputs_already_in_cache(&tx.used_coins(self.base_asset_id()))
+        let base_asset_id = {
+            let consensus_parameters = self.consensus_parameters().await?;
+            *consensus_parameters.base_asset_id()
+        };
+
+        #[cfg(feature = "coin-cache")]
+        self.check_inputs_already_in_cache(&tx.used_coins(&base_asset_id))
             .await?;
 
         let tx = self.prepare_transaction_for_sending(tx).await?;
@@ -184,14 +213,15 @@ impl Provider {
             self.cache
                 .lock()
                 .await
-                .remove_items(tx.used_coins(self.base_asset_id()))
+                .remove_items(tx.used_coins(&base_asset_id))
         }
 
         Ok(tx_status)
     }
 
     async fn prepare_transaction_for_sending<T: Transaction>(&self, mut tx: T) -> Result<T> {
-        tx.precompute(&self.chain_id())?;
+        let consensus_parameters = self.consensus_parameters().await?;
+        tx.precompute(&consensus_parameters.chain_id())?;
 
         let chain_info = self.chain_info().await?;
         let Header {
@@ -204,7 +234,7 @@ impl Provider {
             tx.estimate_predicates(self, Some(latest_chain_executor_version))
                 .await?;
             tx.clone()
-                .validate_predicates(self.consensus_parameters(), latest_block_height)?;
+                .validate_predicates(&consensus_parameters, latest_block_height)?;
         }
 
         self.validate_transaction(tx.clone()).await?;
@@ -283,7 +313,10 @@ impl Provider {
 
     #[cfg(feature = "coin-cache")]
     async fn submit<T: Transaction>(&self, tx: T) -> Result<TxId> {
-        let used_utxos = tx.used_coins(self.base_asset_id());
+        let consensus_parameters = self.consensus_parameters().await?;
+        let base_asset_id = consensus_parameters.base_asset_id();
+
+        let used_utxos = tx.used_coins(base_asset_id);
         self.check_inputs_already_in_cache(&used_utxos).await?;
 
         let tx_id = self.client.submit(&tx.into()).await?;
@@ -300,16 +333,25 @@ impl Provider {
         Ok(self.client.chain_info().await?.into())
     }
 
-    pub fn consensus_parameters(&self) -> &ConsensusParameters {
-        &self.consensus_parameters
-    }
+    pub async fn consensus_parameters(&self) -> Result<ConsensusParameters> {
+        {
+            let read_lock = self.consensus_parameters.read().await;
+            if !read_lock.is_stale() {
+                return Ok(read_lock.value.clone());
+            }
+        }
 
-    pub fn base_asset_id(&self) -> &AssetId {
-        self.consensus_parameters.base_asset_id()
-    }
+        let mut write_lock = self.consensus_parameters.write().await;
 
-    pub fn chain_id(&self) -> ChainId {
-        self.consensus_parameters.chain_id()
+        // because it could have been updated since we last checked
+        if !write_lock.is_stale() {
+            return Ok(write_lock.value.clone());
+        }
+
+        let fresh_parameters = Self::fetch_consensus_params(&self.client).await?;
+        *write_lock = fresh_parameters;
+
+        Ok(write_lock.value.clone())
     }
 
     pub async fn node_info(&self) -> Result<NodeInfo> {
@@ -422,11 +464,14 @@ impl Provider {
     async fn request_coins_to_spend(&self, filter: ResourceFilter) -> Result<Vec<CoinType>> {
         let queries = filter.resource_queries();
 
+        let consensus_parameters = self.consensus_parameters().await?;
+        let base_asset_id = *consensus_parameters.base_asset_id();
+
         let res = self
             .client
             .coins_to_spend(
                 &filter.owner(),
-                queries.spend_query(*self.base_asset_id()),
+                queries.spend_query(base_asset_id),
                 queries.exclusion_query(),
             )
             .await?
@@ -455,15 +500,18 @@ impl Provider {
         &self,
         mut filter: ResourceFilter,
     ) -> Result<Vec<CoinType>> {
-        self.extend_filter_with_cached(&mut filter).await;
+        self.extend_filter_with_cached(&mut filter).await?;
 
         self.request_coins_to_spend(filter).await
     }
 
     #[cfg(feature = "coin-cache")]
-    async fn extend_filter_with_cached(&self, filter: &mut ResourceFilter) {
+    async fn extend_filter_with_cached(&self, filter: &mut ResourceFilter) -> Result<()> {
+        let consensus_parameters = self.consensus_parameters().await?;
         let mut cache = self.cache.lock().await;
-        let asset_id = filter.asset_id.unwrap_or(*self.base_asset_id());
+        let asset_id = filter
+            .asset_id
+            .unwrap_or(*consensus_parameters.base_asset_id());
         let used_coins = cache.get_active(&(filter.from.clone(), asset_id));
 
         let excluded_utxos = used_coins
@@ -488,6 +536,8 @@ impl Provider {
         filter
             .excluded_message_nonces
             .extend(excluded_message_nonces);
+
+        Ok(())
     }
 
     /// Get the balance of all spendable coins `asset_id` for address `address`. This is different
@@ -688,7 +738,7 @@ impl Provider {
 
         let transaction_fee = tx
             .clone()
-            .fee_checked_from_tx(&self.consensus_parameters, gas_price)
+            .fee_checked_from_tx(&self.consensus_parameters().await?, gas_price)
             .expect("Error calculating TransactionFee");
 
         Ok(TransactionCost {
@@ -814,10 +864,6 @@ impl DryRunner for Provider {
         Ok(self.estimate_gas_price(block_horizon).await?.gas_price)
     }
 
-    fn consensus_parameters(&self) -> &ConsensusParameters {
-        self.consensus_parameters()
-    }
-
     async fn maybe_estimate_predicates(
         &self,
         tx: &FuelTransaction,
@@ -826,5 +872,9 @@ impl DryRunner for Provider {
         // We always delegate the estimation to the client because estimating locally is no longer
         // possible due to the need of blob storage
         Ok(Some(self.client.estimate_predicates(tx).await?))
+    }
+
+    async fn consensus_parameters(&self) -> Result<ConsensusParameters> {
+        (*self).consensus_parameters().await
     }
 }
