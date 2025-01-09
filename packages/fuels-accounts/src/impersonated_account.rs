@@ -29,6 +29,7 @@ impl ImpersonatedAccount {
     }
 }
 
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 impl ViewOnlyAccount for ImpersonatedAccount {
     fn address(&self) -> &Bech32Address {
         self.address()
@@ -37,12 +38,7 @@ impl ViewOnlyAccount for ImpersonatedAccount {
     fn try_provider(&self) -> Result<&Provider> {
         self.provider.as_ref().ok_or_else(try_provider_error)
     }
-}
 
-#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
-impl Account for ImpersonatedAccount {
-    /// Returns a vector consisting of `Input::Coin`s and `Input::Message`s for the given
-    /// asset ID and amount.
     async fn get_asset_inputs_for_amount(
         &self,
         asset_id: AssetId,
@@ -56,7 +52,9 @@ impl Account for ImpersonatedAccount {
             .map(Input::resource_signed)
             .collect::<Vec<Input>>())
     }
+}
 
+impl Account for ImpersonatedAccount {
     fn add_witnesses<Tb: TransactionBuilder>(&self, tb: &mut Tb) -> Result<()> {
         tb.add_signer(self.clone())?;
 
