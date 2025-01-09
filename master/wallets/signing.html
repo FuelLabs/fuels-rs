@@ -203,7 +203,8 @@
 </code></pre>
 <h2 id="signing-a-built-transaction"><a class="header" href="#signing-a-built-transaction">Signing a built transaction</a></h2>
 <p>If you have a built transaction and want to add a signature, you can use the <code>sign_with</code> method.</p>
-<pre><code class="language-rust ignore">    tx.sign_with(&amp;wallet, provider.chain_id()).await?;
+<pre><code class="language-rust ignore">    tx.sign_with(&amp;wallet, consensus_parameters.chain_id())
+        .await?;
 </code></pre>
 
                     </main>

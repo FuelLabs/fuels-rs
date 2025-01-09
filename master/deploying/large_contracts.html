@@ -145,6 +145,7 @@
         )?;
         let max_allowed = provider
             .consensus_parameters()
+            .await?
             .contract_params()
             .contract_max_size();
 
@@ -252,12 +253,20 @@
 <ol>
 <li>The maximum size of a single transaction:</li>
 </ol>
-<pre><code class="language-rust ignore">        provider.consensus_parameters().tx_params().max_size();
+<pre><code class="language-rust ignore">        provider
+            .consensus_parameters()
+            .await?
+            .tx_params()
+            .max_size();
 </code></pre>
 <ol start="2">
 <li>The maximum gas usage for a single transaction:</li>
 </ol>
-<pre><code class="language-rust ignore">        provider.consensus_parameters().tx_params().max_gas_per_tx();
+<pre><code class="language-rust ignore">        provider
+            .consensus_parameters()
+            .await?
+            .tx_params()
+            .max_gas_per_tx();
 </code></pre>
 <ol start="3">
 <li>The maximum HTTP body size accepted by the Fuel node.</li>

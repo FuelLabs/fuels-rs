@@ -174,8 +174,9 @@
 </code></pre>
 <h2 id="get-all-coins-from-an-address"><a class="header" href="#get-all-coins-from-an-address">Get all coins from an address</a></h2>
 <p>This method returns all unspent coins (of a given asset ID) from a wallet.</p>
-<pre><code class="language-rust ignore">        let coins = provider
-            .get_coins(wallet.address(), *provider.base_asset_id())
+<pre><code class="language-rust ignore">        let consensus_parameters = provider.consensus_parameters().await?;
+        let coins = provider
+            .get_coins(wallet.address(), *consensus_parameters.base_asset_id())
             .await?;
         assert_eq!(coins.len(), 1);
 </code></pre>

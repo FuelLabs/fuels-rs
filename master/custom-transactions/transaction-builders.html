@@ -163,12 +163,13 @@
 <pre><code class="language-rust ignore">        let tb = ScriptTransactionBuilder::default();
 </code></pre>
 <p>Next, we need to define transaction inputs of the base asset that sum up to <strong>ask_amount</strong>. We also need transaction outputs that will assign those assets to the predicate address and thereby unlock it. The methods <code>get_asset_inputs_for_amount</code> and <code>get_asset_outputs_for_amount</code> can help with that. We need to specify the asset ID, the target amount, and the target address:</p>
-<pre><code class="language-rust ignore">        let base_inputs = hot_wallet
-            .get_asset_inputs_for_amount(*provider.base_asset_id(), ask_amount, None)
+<pre><code class="language-rust ignore">        let consensus_parameters = provider.consensus_parameters().await?;
+        let base_inputs = hot_wallet
+            .get_asset_inputs_for_amount(*consensus_parameters.base_asset_id(), ask_amount, None)
             .await?;
         let base_outputs = hot_wallet.get_asset_outputs_for_amount(
             &amp;receiver,
-            *provider.base_asset_id(),
+            *consensus_parameters.base_asset_id(),
             ask_amount,
         );
 </code></pre>
@@ -224,7 +225,8 @@
         .with_build_strategy(ScriptBuildStrategy::NoSignatures)
         .build(provider)
         .await?;
-    tx.sign_with(&amp;wallet, provider.chain_id()).await?;
+    tx.sign_with(&amp;wallet, consensus_parameters.chain_id())
+        .await?;
 </code></pre>
 <blockquote>
 <p><strong>Note</strong> In contrast to adding signers to a transaction builder, when signing a built transaction, you must ensure that the order of signatures matches the order of signed inputs. Multiple signed inputs with the same owner will have the same witness index.</p>

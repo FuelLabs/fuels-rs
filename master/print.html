@@ -371,8 +371,9 @@ To build these tests, run the following command:</p>
 </code></pre>
 <h2 id="get-all-coins-from-an-address"><a class="header" href="#get-all-coins-from-an-address">Get all coins from an address</a></h2>
 <p>This method returns all unspent coins (of a given asset ID) from a wallet.</p>
-<pre><code class="language-rust ignore">        let coins = provider
-            .get_coins(wallet.address(), *provider.base_asset_id())
+<pre><code class="language-rust ignore">        let consensus_parameters = provider.consensus_parameters().await?;
+        let coins = provider
+            .get_coins(wallet.address(), *consensus_parameters.base_asset_id())
             .await?;
         assert_eq!(coins.len(), 1);
 </code></pre>
@@ -957,7 +958,8 @@ coins and coin amount</p>
 </code></pre>
 <h2 id="signing-a-built-transaction"><a class="header" href="#signing-a-built-transaction">Signing a built transaction</a></h2>
 <p>If you have a built transaction and want to add a signature, you can use the <code>sign_with</code> method.</p>
-<pre><code class="language-rust ignore">    tx.sign_with(&amp;wallet, provider.chain_id()).await?;
+<pre><code class="language-rust ignore">    tx.sign_with(&amp;wallet, consensus_parameters.chain_id())
+        .await?;
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="generating-bindings-with-abigen"><a class="header" href="#generating-bindings-with-abigen">Generating bindings with abigen</a></h1>
 <p>You might have noticed this snippet in the previous sections:</p>
@@ -1622,6 +1624,7 @@ half-word   byte   op                raw           notes
         )?;
         let max_allowed = provider
             .consensus_parameters()
+            .await?
             .contract_params()
             .contract_max_size();
 
@@ -1729,12 +1732,20 @@ half-word   byte   op                raw           notes
 <ol>
 <li>The maximum size of a single transaction:</li>
 </ol>
-<pre><code class="language-rust ignore">        provider.consensus_parameters().tx_params().max_size();
+<pre><code class="language-rust ignore">        provider
+            .consensus_parameters()
+            .await?
+            .tx_params()
+            .max_size();
 </code></pre>
 <ol start="2">
 <li>The maximum gas usage for a single transaction:</li>
 </ol>
-<pre><code class="language-rust ignore">        provider.consensus_parameters().tx_params().max_gas_per_tx();
+<pre><code class="language-rust ignore">        provider
+            .consensus_parameters()
+            .await?
+            .tx_params()
+            .max_gas_per_tx();
 </code></pre>
 <ol start="3">
 <li>The maximum HTTP body size accepted by the Fuel node.</li>
@@ -2789,12 +2800,13 @@ from subsequent callers.</p>
 <pre><code class="language-rust ignore">        let tb = ScriptTransactionBuilder::default();
 </code></pre>
 <p>Next, we need to define transaction inputs of the base asset that sum up to <strong>ask_amount</strong>. We also need transaction outputs that will assign those assets to the predicate address and thereby unlock it. The methods <code>get_asset_inputs_for_amount</code> and <code>get_asset_outputs_for_amount</code> can help with that. We need to specify the asset ID, the target amount, and the target address:</p>
-<pre><code class="language-rust ignore">        let base_inputs = hot_wallet
-            .get_asset_inputs_for_amount(*provider.base_asset_id(), ask_amount, None)
+<pre><code class="language-rust ignore">        let consensus_parameters = provider.consensus_parameters().await?;
+        let base_inputs = hot_wallet
+            .get_asset_inputs_for_amount(*consensus_parameters.base_asset_id(), ask_amount, None)
             .await?;
         let base_outputs = hot_wallet.get_asset_outputs_for_amount(
             &amp;receiver,
-            *provider.base_asset_id(),
+            *consensus_parameters.base_asset_id(),
             ask_amount,
         );
 </code></pre>
@@ -2850,7 +2862,8 @@ from subsequent callers.</p>
         .with_build_strategy(ScriptBuildStrategy::NoSignatures)
         .build(provider)
         .await?;
-    tx.sign_with(&amp;wallet, provider.chain_id()).await?;
+    tx.sign_with(&amp;wallet, consensus_parameters.chain_id())
+        .await?;
 </code></pre>
 <blockquote>
 <p><strong>Note</strong> In contrast to adding signers to a transaction builder, when signing a built transaction, you must ensure that the order of signatures matches the order of signed inputs. Multiple signed inputs with the same owner will have the same witness index.</p>
@@ -4071,6 +4084,7 @@ impl LiquidityPool for Contract {
 <p>We transfer only a part of the base asset balance so that the rest can cover transaction fees:</p>
 <pre><code class="language-rust ignore">        let balances = wallet_1.get_balances().await?;
 
+        let consensus_parameters = provider.consensus_parameters().await?;
         let mut inputs = vec![];
         let mut outputs = vec![];
         for (id_string, amount) in balances {
@@ -4082,7 +4096,7 @@ impl LiquidityPool for Contract {
             inputs.extend(input);
 
             // we don't transfer the full base asset so we can cover fees
-            let output = if id == *provider.base_asset_id() {
+            let output = if id == *consensus_parameters.base_asset_id() {
                 wallet_1.get_asset_outputs_for_amount(wallet_2.address(), id, amount / 2)
             } else {
                 wallet_1.get_asset_outputs_for_amount(wallet_2.address(), id, amount)
@@ -4104,7 +4118,7 @@ impl LiquidityPool for Contract {
 
         assert_eq!(balances.len(), NUM_ASSETS as usize);
         for (id, balance) in balances {
-            if id == provider.base_asset_id().to_string() {
+            if id == *consensus_parameters.base_asset_id().to_string() {
                 assert_eq!(balance, AMOUNT / 2);
             } else {
                 assert_eq!(balance, AMOUNT);

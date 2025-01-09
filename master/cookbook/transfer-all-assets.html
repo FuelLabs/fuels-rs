@@ -159,6 +159,7 @@
 <p>We transfer only a part of the base asset balance so that the rest can cover transaction fees:</p>
 <pre><code class="language-rust ignore">        let balances = wallet_1.get_balances().await?;
 
+        let consensus_parameters = provider.consensus_parameters().await?;
         let mut inputs = vec![];
         let mut outputs = vec![];
         for (id_string, amount) in balances {
@@ -170,7 +171,7 @@
             inputs.extend(input);
 
             // we don't transfer the full base asset so we can cover fees
-            let output = if id == *provider.base_asset_id() {
+            let output = if id == *consensus_parameters.base_asset_id() {
                 wallet_1.get_asset_outputs_for_amount(wallet_2.address(), id, amount / 2)
             } else {
                 wallet_1.get_asset_outputs_for_amount(wallet_2.address(), id, amount)
@@ -192,7 +193,7 @@
 
         assert_eq!(balances.len(), NUM_ASSETS as usize);
         for (id, balance) in balances {
-            if id == provider.base_asset_id().to_string() {
+            if id == *consensus_parameters.base_asset_id().to_string() {
                 assert_eq!(balance, AMOUNT / 2);
             } else {
                 assert_eq!(balance, AMOUNT);
