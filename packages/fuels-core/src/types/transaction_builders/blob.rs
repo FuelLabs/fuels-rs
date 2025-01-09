@@ -145,7 +145,8 @@ impl BlobTransactionBuilder {
     }
 
     pub async fn build(mut self, provider: impl DryRunner) -> Result<BlobTransaction> {
-        self.intercept_burn()?;
+        let consensus_parameters = provider.consensus_parameters().await?;
+        self.intercept_burn(consensus_parameters.base_asset_id())?;
 
         let is_using_predicates = self.is_using_predicates();
 

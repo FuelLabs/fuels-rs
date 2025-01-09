@@ -337,7 +337,7 @@ macro_rules! impl_tx_builder_trait {
                     .any(|input| matches!(input, Input::ResourcePredicate { .. }))
             }
 
-            fn intercept_burn(&self) -> Result<()> {
+            fn intercept_burn(&self, base_asset_id: &$crate::types::AssetId) -> Result<()> {
                 use std::collections::HashSet;
 
                 if self.enable_burn {
@@ -357,8 +357,8 @@ macro_rules! impl_tx_builder_trait {
                     .inputs
                     .iter()
                     .filter_map(|input| match input {
-                        Input::ResourceSigned { resource } => resource.coin_asset_id(),
-                        Input::ResourcePredicate { resource, .. } => resource.coin_asset_id(),
+                        Input::ResourceSigned { resource } |
+                        Input::ResourcePredicate { resource, .. } => Some(resource.asset_id(*base_asset_id)),
                         _ => None,
                     })
                     .collect::<HashSet<_>>();
@@ -656,7 +656,8 @@ impl_tx_builder_trait!(UpgradeTransactionBuilder, UpgradeTransaction);
 
 impl ScriptTransactionBuilder {
     async fn build(mut self, provider: impl DryRunner) -> Result<ScriptTransaction> {
-        self.intercept_burn()?;
+        let consensus_parameters = provider.consensus_parameters().await?;
+        self.intercept_burn(consensus_parameters.base_asset_id())?;
 
         let is_using_predicates = self.is_using_predicates();
 
@@ -987,7 +988,8 @@ fn add_variable_outputs(tx: &mut fuel_tx::Script, variable_outputs: usize) {
 
 impl CreateTransactionBuilder {
     pub async fn build(mut self, provider: impl DryRunner) -> Result<CreateTransaction> {
-        self.intercept_burn()?;
+        let consensus_parameters = provider.consensus_parameters().await?;
+        self.intercept_burn(consensus_parameters.base_asset_id())?;
 
         let is_using_predicates = self.is_using_predicates();
 
@@ -1113,7 +1115,8 @@ impl CreateTransactionBuilder {
 
 impl UploadTransactionBuilder {
     pub async fn build(mut self, provider: impl DryRunner) -> Result<UploadTransaction> {
-        self.intercept_burn()?;
+        let consensus_parameters = provider.consensus_parameters().await?;
+        self.intercept_burn(consensus_parameters.base_asset_id())?;
 
         let is_using_predicates = self.is_using_predicates();
 
@@ -1251,7 +1254,8 @@ impl UploadTransactionBuilder {
 
 impl UpgradeTransactionBuilder {
     pub async fn build(mut self, provider: impl DryRunner) -> Result<UpgradeTransaction> {
-        self.intercept_burn()?;
+        let consensus_parameters = provider.consensus_parameters().await?;
+        self.intercept_burn(consensus_parameters.base_asset_id())?;
 
         let is_using_predicates = self.is_using_predicates();
         let tx = match self.build_strategy {
@@ -1601,16 +1605,20 @@ mod tests {
         }
     }
 
+    fn given_a_coin(tx_id: [u8; 32]) -> Coin {
+        Coin {
+            utxo_id: UtxoId::new(tx_id.into(), 0),
+            amount: 0,
+            asset_id: AssetId::zeroed(),
+            ..Default::default()
+        }
+    }
+
     fn given_inputs(num_inputs: u8) -> Vec<Input> {
         (0..num_inputs)
             .map(|i| {
-                let bytes = [i; 32];
-                let coin = CoinType::Coin(Coin {
-                    utxo_id: UtxoId::new(bytes.into(), 0),
-                    owner: Bech32Address::new("fuel", bytes),
-                    ..Default::default()
-                });
-                Input::resource_signed(coin)
+                let coin = given_a_coin([i; 32]);
+                Input::resource_signed(CoinType::Coin(coin))
             })
             .collect()
     }
@@ -1748,6 +1756,30 @@ mod tests {
         assert!(err.to_string().contains("no change outputs"));
 
         let tb = ScriptTransactionBuilder::default().with_inputs(given_inputs(num_inputs));
+        let _tx = tb
+            .with_build_strategy(ScriptBuildStrategy::NoSignatures)
+            .enable_burn(true)
+            .build(&MockDryRunner::default())
+            .await?;
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn build_w_enable_burn_messages() -> Result<()> {
+        let message_input =
+            Input::resource_signed(CoinType::Message(given_a_message(vec![1, 2, 3])));
+        let tb = ScriptTransactionBuilder::default().with_inputs(vec![message_input.clone()]);
+
+        let err = tb
+            .with_build_strategy(ScriptBuildStrategy::NoSignatures)
+            .build(&MockDryRunner::default())
+            .await
+            .expect_err("should fail because of missing change outputs");
+
+        assert!(err.to_string().contains("no change outputs"));
+
+        let tb = ScriptTransactionBuilder::default().with_inputs(vec![message_input]);
         let _tx = tb
             .with_build_strategy(ScriptBuildStrategy::NoSignatures)
             .enable_burn(true)
