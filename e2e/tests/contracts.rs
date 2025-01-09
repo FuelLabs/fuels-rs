@@ -1707,7 +1707,7 @@ async fn contract_custom_call_no_signatures_strategy() -> Result<()> {
 
     let mut tb = call_handler.transaction_builder().await?;
 
-    let base_asset_id = *provider.consensus_parameters().base_asset_id();
+    let base_asset_id = *provider.consensus_parameters().await?.base_asset_id();
 
     let amount = 10;
     let consensus_parameters = provider.consensus_parameters().await?;

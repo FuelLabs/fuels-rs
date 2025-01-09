@@ -1766,6 +1766,33 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn build_w_enable_burn_predicates() -> Result<()> {
+        let predicate = Input::resource_predicate(
+            CoinType::Coin(given_a_coin([1; 32])),
+            op::ret(1).to_bytes().to_vec(),
+            vec![],
+        );
+        let tb = ScriptTransactionBuilder::default().with_inputs(vec![predicate.clone()]);
+
+        let err = tb
+            .with_build_strategy(ScriptBuildStrategy::NoSignatures)
+            .build(&MockDryRunner::default())
+            .await
+            .expect_err("should fail because of missing change outputs");
+
+        assert!(err.to_string().contains("no change outputs"));
+
+        let tb = ScriptTransactionBuilder::default().with_inputs(vec![predicate]);
+        let _tx = tb
+            .with_build_strategy(ScriptBuildStrategy::NoSignatures)
+            .enable_burn(true)
+            .build(&MockDryRunner::default())
+            .await?;
+
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn build_w_enable_burn_messages() -> Result<()> {
         let message_input =
             Input::resource_signed(CoinType::Message(given_a_message(vec![1, 2, 3])));
