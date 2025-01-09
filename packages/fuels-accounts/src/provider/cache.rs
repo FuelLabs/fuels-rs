@@ -159,13 +159,7 @@ mod tests {
         api.expect_consensus_parameters()
             .once()
             .return_once(|| Ok(ConsensusParameters::default()));
-        let sut = CachedClient::new(
-            api,
-            TtlConfig {
-                consensus_parameters: Duration::from_secs(10),
-            },
-            TestClock::default(),
-        );
+        let sut = CachedClient::new(api, TtlConfig::default(), TestClock::default());
 
         // when
         let _consensus_params = sut.consensus_parameters().await.unwrap();
@@ -243,5 +237,44 @@ mod tests {
         // mock validates two calls made
         assert_eq!(consensus_parameters, original_consensus_params);
         assert_eq!(second_call_consensus_params, changed_consensus_params);
+    }
+
+    #[tokio::test]
+    async fn clear_cache_clears_consensus_params_cache() {
+        // given
+        let first_params = ConsensusParameters::default();
+        let second_params = {
+            let mut params = ConsensusParameters::default();
+            params.set_chain_id(ChainId::new(1234));
+            params
+        };
+
+        let api = {
+            let mut api = MockCacheableRpcs::new();
+            let first_clone = first_params.clone();
+            api.expect_consensus_parameters()
+                .times(1)
+                .return_once(move || Ok(first_clone));
+
+            let second_clone = second_params.clone();
+            api.expect_consensus_parameters()
+                .times(1)
+                .return_once(move || Ok(second_clone));
+            api
+        };
+
+        let clock = TestClock::default();
+        let sut = CachedClient::new(api, TtlConfig::default(), clock.clone());
+
+        let result1 = sut.consensus_parameters().await.unwrap();
+
+        // when
+        sut.clear().await;
+
+        // then
+        let result2 = sut.consensus_parameters().await.unwrap();
+
+        assert_eq!(result1, first_params);
+        assert_eq!(result2, second_params);
     }
 }
