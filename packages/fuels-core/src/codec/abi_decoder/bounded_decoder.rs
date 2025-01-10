@@ -69,7 +69,7 @@ impl BoundedDecoder {
             ParamType::U64 => decode(bytes, |value| Token::U64(u64::from_be_bytes(value))),
             ParamType::U128 => decode(bytes, |value| Token::U128(u128::from_be_bytes(value))),
             ParamType::U256 => decode(bytes, |value| Token::U256(U256::from(value))),
-            ParamType::B256 => decode(bytes, |value| Token::B256(value)),
+            ParamType::B256 => decode(bytes, Token::B256),
             ParamType::Bytes => Ok(Token::Bytes(decode_slice(bytes)?)),
             ParamType::String => Self::decode_std_string(bytes),
             ParamType::RawSlice => Ok(Token::RawSlice(decode_slice(bytes)?)),
@@ -152,7 +152,7 @@ impl BoundedDecoder {
         enum_variants: &EnumVariants,
         bytes: &mut R,
     ) -> Result<Token> {
-        let discriminant = decode(bytes, |value| u64::from_be_bytes(value))?;
+        let discriminant = decode(bytes, u64::from_be_bytes)?;
         let (_, selected_variant) = enum_variants.select_variant(discriminant)?;
 
         let decoded = self.decode_param(selected_variant, bytes)?;
@@ -196,7 +196,7 @@ fn decode_sized<R: Read>(bytes: &mut R, len: usize) -> Result<Vec<u8>> {
 
 /// Decodes a length prefix.
 fn decode_len<R: Read>(bytes: &mut R) -> Result<usize> {
-    let len_u64 = decode(bytes, |value| u64::from_be_bytes(value))?;
+    let len_u64 = decode(bytes, u64::from_be_bytes)?;
     let len: usize = len_u64
         .try_into()
         .map_err(|_| error!(Other, "could not convert `u64` to `usize`"))?;
