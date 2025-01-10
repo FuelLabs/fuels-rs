@@ -4,7 +4,7 @@ use fuel_crypto::Signature;
 use fuel_tx::{
     field::{Inputs, Outputs, ScriptGasLimit, WitnessLimit, Witnesses},
     input::coin::{CoinPredicate, CoinSigned},
-    AssetId, Chargeable, Input as FuelInput, TxPointer, Witness,
+    AssetId, Chargeable, ConsensusParameters, Input as FuelInput, TxPointer, Witness,
 };
 use itertools::Itertools;
 
@@ -41,22 +41,26 @@ impl<R: DryRunner> ScriptTxEstimator<R> {
         mut tx: fuel_tx::Script,
         saturate_variable_outputs: bool,
     ) -> Result<DryRun> {
-        self.prepare_for_estimation(&mut tx, saturate_variable_outputs);
+        self.prepare_for_estimation(&mut tx, saturate_variable_outputs)
+            .await?;
 
         self._run(tx).await
     }
 
-    pub fn prepare_for_estimation(
+    pub async fn prepare_for_estimation(
         &mut self,
         tx: &mut fuel_tx::Script,
         saturate_variable_outputs: bool,
-    ) {
+    ) -> Result<()> {
+        let consensus_params = self.dry_runner.consensus_parameters().await?;
         self.add_fake_witnesses(tx);
-        self.add_fake_coins(tx);
+        self.add_fake_coins(tx, &consensus_params);
         if saturate_variable_outputs {
-            self.saturate_with_variable_outputs(tx);
+            self.saturate_with_variable_outputs(tx, &consensus_params);
         }
-        self.set_script_gas_limit_to_max(tx);
+        self.set_script_gas_limit_to_max(tx, &consensus_params);
+
+        Ok(())
     }
 
     pub fn last_dry_run(&self) -> Option<DryRun> {
@@ -70,15 +74,20 @@ impl<R: DryRunner> ScriptTxEstimator<R> {
         Ok(dry_run)
     }
 
-    fn set_script_gas_limit_to_max(&self, tx: &mut fuel_tx::Script) {
-        let consensus_params = self.dry_runner.consensus_parameters();
+    fn set_script_gas_limit_to_max(
+        &self,
+        tx: &mut fuel_tx::Script,
+        consensus_params: &ConsensusParameters,
+    ) {
         let max_gas = tx.max_gas(consensus_params.gas_costs(), consensus_params.fee_params()) + 1;
         *tx.script_gas_limit_mut() = consensus_params.tx_params().max_gas_per_tx() - max_gas;
     }
 
-    fn saturate_with_variable_outputs(&self, tx: &mut fuel_tx::Script) {
-        let consensus_params = self.dry_runner.consensus_parameters();
-
+    fn saturate_with_variable_outputs(
+        &self,
+        tx: &mut fuel_tx::Script,
+        consensus_params: &ConsensusParameters,
+    ) {
         let max_outputs = usize::from(consensus_params.tx_params().max_outputs());
         let used_outputs = tx.outputs().len();
 
@@ -100,9 +109,7 @@ impl<R: DryRunner> ScriptTxEstimator<R> {
         *tx.witnesses_mut() = [self.predefined_witnesses.clone(), dry_run_witnesses].concat();
     }
 
-    fn add_fake_coins(&self, tx: &mut fuel_tx::Script) {
-        let consensus_params = self.dry_runner.consensus_parameters();
-
+    fn add_fake_coins(&self, tx: &mut fuel_tx::Script, consensus_params: &ConsensusParameters) {
         if let Some(fake_input) =
             Self::needs_fake_base_input(tx.inputs(), consensus_params.base_asset_id())
         {
