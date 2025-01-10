@@ -85,7 +85,7 @@ where
     Client: CacheableRpcs,
 {
     pub async fn clear(&self) {
-        let _ = self.cached_consensus_params.write().await.take();
+        *self.cached_consensus_params.write().await = None;
     }
 }
 
