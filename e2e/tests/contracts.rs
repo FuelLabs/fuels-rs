@@ -1712,11 +1712,11 @@ async fn contract_custom_call_no_signatures_strategy() -> Result<()> {
     let amount = 10;
     let consensus_parameters = provider.consensus_parameters().await?;
     let new_base_inputs = wallet
-        .get_asset_inputs_for_amount(*base_asset_id, amount, None)
+        .get_asset_inputs_for_amount(base_asset_id, amount, None)
         .await?;
     tb.inputs_mut().extend(new_base_inputs);
     tb.outputs_mut()
-        .push(Output::change(wallet.address().into(), 0, *base_asset_id));
+        .push(Output::change(wallet.address().into(), 0, base_asset_id));
 
     // ANCHOR: tb_no_signatures_strategy
     let mut tx = tb
