@@ -178,10 +178,7 @@ impl Provider {
         tx: T,
     ) -> Result<TxStatus> {
         #[cfg(feature = "coin-cache")]
-        let base_asset_id = {
-            let consensus_parameters = self.consensus_parameters().await?;
-            *consensus_parameters.base_asset_id()
-        };
+        let base_asset_id = *self.consensus_parameters().await?.base_asset_id();
 
         #[cfg(feature = "coin-cache")]
         self.check_inputs_already_in_cache(&tx.used_coins(&base_asset_id))
