@@ -57,7 +57,7 @@ impl ABIDecoder {
     ///
     /// let decoder = ABIDecoder::default();
     ///
-    /// let token = decoder.decode(&ParamType::U64,  &[0, 0, 0, 0, 0, 0, 0, 7]).unwrap();
+    /// let token = decoder.decode(&ParamType::U64,  [0, 0, 0, 0, 0, 0, 0, 7].as_slice()).unwrap();
     ///
     /// assert_eq!(u64::from_token(token).unwrap(), 7u64);
     /// ```
@@ -73,7 +73,7 @@ impl ABIDecoder {
     /// use fuels_core::types::Token;
     ///
     /// let decoder = ABIDecoder::default();
-    /// let data: &[u8] = &[7, 8];
+    /// let data = [7, 8];
     ///
     /// let tokens = decoder.decode_multiple(&[ParamType::U8, ParamType::U8], data.as_slice()).unwrap();
     ///
@@ -103,7 +103,7 @@ impl ABIDecoder {
     ///
     /// let decoder = ABIDecoder::default();
     ///
-    /// let debug_string = decoder.decode_as_debug_str(&ParamType::U64,  &[0, 0, 0, 0, 0, 0, 0, 7]).unwrap();
+    /// let debug_string = decoder.decode_as_debug_str(&ParamType::U64,  [0, 0, 0, 0, 0, 0, 0, 7].as_slice()).unwrap();
     /// let expected_value = 7u64;
     ///
     /// assert_eq!(debug_string, format!("{expected_value}"));
