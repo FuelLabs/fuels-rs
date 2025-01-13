@@ -1746,88 +1746,44 @@ mod tests {
 
     #[tokio::test]
     async fn build_w_enable_burn() -> Result<()> {
-        let coin = Input::resource_signed(CoinType::Coin(given_a_coin([1; 32], [2; 32], 1000)));
-
-        let tb = ScriptTransactionBuilder::default().with_inputs(vec![coin.clone()]);
-
-        let err = tb
-            .with_build_strategy(ScriptBuildStrategy::NoSignatures)
-            .build(&MockDryRunner::default())
-            .await
-            .expect_err("should fail because of missing change outputs");
-
-        assert!(err.to_string().contains("no change outputs"));
-
-        let tb = ScriptTransactionBuilder::default().with_inputs(vec![coin]);
-        let _tx = tb
-            .with_build_strategy(ScriptBuildStrategy::NoSignatures)
-            .enable_burn(true)
-            .build(&MockDryRunner::default())
-            .await?;
-
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn build_w_enable_burn_predicates_message() -> Result<()> {
-        let predicate = Input::resource_predicate(
-            CoinType::Message(given_a_message(vec![1, 2, 3])),
-            op::ret(1).to_bytes().to_vec(),
-            vec![],
-        );
-        let tb = ScriptTransactionBuilder::default().with_inputs(vec![predicate.clone()]);
-
-        let err = tb
-            .with_build_strategy(ScriptBuildStrategy::NoSignatures)
-            .build(&MockDryRunner::default())
-            .await
-            .expect_err("should fail because of missing change outputs");
-
-        assert!(err.to_string().contains("no change outputs"));
-
-        let tb = ScriptTransactionBuilder::default().with_inputs(vec![predicate]);
-        let _tx = tb
-            .with_build_strategy(ScriptBuildStrategy::NoSignatures)
-            .enable_burn(true)
-            .build(&MockDryRunner::default())
-            .await?;
-
-        Ok(())
+        let coin = CoinType::Coin(given_a_coin([1; 32], [2; 32], 1000));
+        test_enable_burn(Input::resource_signed(coin)).await
     }
 
     #[tokio::test]
     async fn build_w_enable_burn_predicates() -> Result<()> {
-        let predicate = Input::resource_predicate(
-            CoinType::Coin(given_a_coin([1; 32], [2; 32], 1000)),
+        let predicate_coin = CoinType::Coin(given_a_coin([1; 32], [2; 32], 1000));
+
+        test_enable_burn(Input::resource_predicate(
+            predicate_coin,
             op::ret(1).to_bytes().to_vec(),
             vec![],
-        );
-        let tb = ScriptTransactionBuilder::default().with_inputs(vec![predicate.clone()]);
-
-        let err = tb
-            .with_build_strategy(ScriptBuildStrategy::NoSignatures)
-            .build(&MockDryRunner::default())
-            .await
-            .expect_err("should fail because of missing change outputs");
-
-        assert!(err.to_string().contains("no change outputs"));
-
-        let tb = ScriptTransactionBuilder::default().with_inputs(vec![predicate]);
-        let _tx = tb
-            .with_build_strategy(ScriptBuildStrategy::NoSignatures)
-            .enable_burn(true)
-            .build(&MockDryRunner::default())
-            .await?;
-
-        Ok(())
+        ))
+        .await
     }
 
     #[tokio::test]
     async fn build_w_enable_burn_messages() -> Result<()> {
-        let message_input =
-            Input::resource_signed(CoinType::Message(given_a_message(vec![1, 2, 3])));
-        let tb = ScriptTransactionBuilder::default().with_inputs(vec![message_input.clone()]);
+        let message = CoinType::Message(given_a_message(vec![1, 2, 3]));
 
+        test_enable_burn(Input::resource_signed(message)).await
+    }
+
+    #[tokio::test]
+    async fn build_w_enable_burn_predicates_message() -> Result<()> {
+        let message_predicate = CoinType::Message(given_a_message(vec![1, 2, 3]));
+
+        test_enable_burn(Input::resource_predicate(
+            message_predicate,
+            op::ret(1).to_bytes().to_vec(),
+            vec![],
+        ))
+        .await
+    }
+
+    async fn test_enable_burn(input: Input) -> Result<()> {
+        // Test failure case without enable_burn
+        let tb = ScriptTransactionBuilder::default().with_inputs(vec![input.clone()]);
         let err = tb
             .with_build_strategy(ScriptBuildStrategy::NoSignatures)
             .build(&MockDryRunner::default())
@@ -1836,7 +1792,8 @@ mod tests {
 
         assert!(err.to_string().contains("no change outputs"));
 
-        let tb = ScriptTransactionBuilder::default().with_inputs(vec![message_input]);
+        // Test success case with enable_burn
+        let tb = ScriptTransactionBuilder::default().with_inputs(vec![input]);
         let _tx = tb
             .with_build_strategy(ScriptBuildStrategy::NoSignatures)
             .enable_burn(true)
