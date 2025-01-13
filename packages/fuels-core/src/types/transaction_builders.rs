@@ -217,6 +217,9 @@ macro_rules! impl_tx_builder_trait {
                     .witnesses_mut()
                     .extend(repeat(witness).take(self.unresolved_signers.len()));
 
+                // Temporarily enable burning to avoid errors when calculating the fee.
+                let fee_estimation_tb = fee_estimation_tb.enable_burn(true);
+
                 let mut tx = $crate::types::transaction_builders::BuildableTransaction::build(
                     fee_estimation_tb,
                     &provider,
@@ -1605,11 +1608,11 @@ mod tests {
         }
     }
 
-    fn given_a_coin(tx_id: [u8; 32]) -> Coin {
+    fn given_a_coin(tx_id: [u8; 32], owner: [u8; 32], amount: u64) -> Coin {
         Coin {
             utxo_id: UtxoId::new(tx_id.into(), 0),
-            amount: 0,
-            asset_id: AssetId::zeroed(),
+            owner: Bech32Address::new("fuel", owner),
+            amount,
             ..Default::default()
         }
     }
@@ -1617,7 +1620,7 @@ mod tests {
     fn given_inputs(num_inputs: u8) -> Vec<Input> {
         (0..num_inputs)
             .map(|i| {
-                let coin = given_a_coin([i; 32]);
+                let coin = given_a_coin([i; 32], [num_inputs + i; 32], 1000);
                 Input::resource_signed(CoinType::Coin(coin))
             })
             .collect()
@@ -1768,7 +1771,7 @@ mod tests {
     #[tokio::test]
     async fn build_w_enable_burn_predicates() -> Result<()> {
         let predicate = Input::resource_predicate(
-            CoinType::Coin(given_a_coin([1; 32])),
+            CoinType::Coin(given_a_coin([1; 32], [2; 32], 1000)),
             op::ret(1).to_bytes().to_vec(),
             vec![],
         );
