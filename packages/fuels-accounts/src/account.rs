@@ -19,7 +19,7 @@ use fuels_core::types::{
 
 use crate::{
     accounts_utils::{
-        adjust_inputs_outputs, available_base_assets_and_amount, calculate_missing_base_amount,
+        add_base_change_if_needed, available_base_assets_and_amount, calculate_missing_base_amount,
         extract_message_nonce, split_into_utxo_ids_and_nonces,
     },
     provider::{Provider, ResourceFilter},
@@ -117,7 +117,8 @@ pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync + Clone {
         excluded_coins: Option<Vec<CoinTypeId>>,
     ) -> Result<Vec<Input>>;
 
-    /// Add base asset inputs to the transaction to cover the estimated fee.
+    /// Add base asset inputs to the transaction to cover the estimated fee
+    /// and add a change output for the base asset if needed.
     /// Requires contract inputs to be at the start of the transactions inputs vec
     /// so that their indexes are retained
     async fn adjust_for_fee<Tb: TransactionBuilder + Sync>(
@@ -141,13 +142,10 @@ pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync + Clone {
                 )
                 .await?;
 
-            adjust_inputs_outputs(
-                tb,
-                new_base_inputs,
-                self.address(),
-                consensus_parameters.base_asset_id(),
-            );
+            tb.inputs_mut().extend(new_base_inputs);
         };
+
+        add_base_change_if_needed(tb, self.address(), consensus_parameters.base_asset_id());
 
         Ok(())
     }
