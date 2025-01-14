@@ -131,28 +131,26 @@ pub(crate) fn calculate_required_asset_amounts(
     calls: &[ContractCall],
     base_asset_id: AssetId,
 ) -> Vec<(AssetId, u64)> {
-    let call_param_assets = calls
-        .iter()
-        .map(|call| {
-            (
-                call.call_parameters.asset_id().unwrap_or(base_asset_id),
-                call.call_parameters.amount(),
-            )
-        })
-        .collect::<Vec<_>>();
+    let call_param_assets = calls.iter().map(|call| {
+        (
+            call.call_parameters.asset_id().unwrap_or(base_asset_id),
+            call.call_parameters.amount(),
+        )
+    });
 
-    let custom_assets = calls
+    let grouped_assets = calls
         .iter()
-        .flat_map(|call| call.custom_assets.iter().collect::<Vec<_>>())
-        .group_by(|custom| custom.0 .0)
+        .flat_map(|call| call.custom_assets.clone())
+        .group_by(|custom| custom.0 .0);
+
+    let custom_assets = grouped_assets
         .into_iter()
         .map(|(asset_id, groups_w_same_asset_id)| {
             let total_amount_in_group = groups_w_same_asset_id.map(|(_, amount)| amount).sum();
             (asset_id, total_amount_in_group)
-        })
-        .collect::<Vec<_>>();
+        });
 
-    let merged_assets = chain!(call_param_assets, custom_assets).collect::<Vec<_>>();
+    let merged_assets = chain!(call_param_assets, custom_assets);
 
     sum_up_amounts_for_each_asset_id(merged_assets)
 }
@@ -160,7 +158,7 @@ pub(crate) fn calculate_required_asset_amounts(
 /// Sum up the amounts required in each call for each asset ID, so you can get a total for each
 /// asset over all calls.
 fn sum_up_amounts_for_each_asset_id(
-    amounts_per_asset_id: Vec<(AssetId, u64)>,
+    amounts_per_asset_id: impl IntoIterator<Item = (AssetId, u64)>,
 ) -> Vec<(AssetId, u64)> {
     amounts_per_asset_id
         .into_iter()
