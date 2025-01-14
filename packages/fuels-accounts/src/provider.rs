@@ -869,14 +869,12 @@ impl DryRunner for Provider {
         Ok(self.estimate_gas_price(block_horizon).await?.gas_price)
     }
 
-    async fn maybe_estimate_predicates(
+    async fn estimate_predicates(
         &self,
         tx: &FuelTransaction,
         _latest_chain_executor_version: Option<u32>,
-    ) -> Result<Option<FuelTransaction>> {
-        // We always delegate the estimation to the client because estimating locally is no longer
-        // possible due to the need of blob storage
-        Ok(Some(self.uncached_client().estimate_predicates(tx).await?))
+    ) -> Result<FuelTransaction> {
+        Ok(self.uncached_client().estimate_predicates(tx).await?)
     }
 
     async fn consensus_parameters(&self) -> Result<ConsensusParameters> {

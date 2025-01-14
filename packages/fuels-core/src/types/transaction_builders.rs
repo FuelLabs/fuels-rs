@@ -1584,12 +1584,12 @@ mod tests {
             Ok(0)
         }
 
-        async fn maybe_estimate_predicates(
+        async fn estimate_predicates(
             &self,
             _tx: &FuelTransaction,
             _: Option<u32>,
-        ) -> Result<Option<FuelTransaction>> {
-            Ok(None)
+        ) -> Result<FuelTransaction> {
+            unimplemented!("")
         }
     }
 
