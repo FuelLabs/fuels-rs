@@ -69,24 +69,6 @@ Finally, `pub use` statements are inserted, so you don't have to fully qualify t
 > **Note:**
 > It is **highly** encouraged that you generate all your bindings in one `abigen!` call. Doing it in this manner will allow type sharing and avoid name collisions you'd normally get when calling `abigen!` multiple times inside the same namespace. If you choose to proceed otherwise, keep in mind the generated code overview presented above and appropriately separate the `abigen!` calls into different modules to resolve the collision.
 
-### Type paths
-
-Normally when using types from libraries in your contract, script or predicate, they'll be generated directly under the main `mod` of your program bindings, i.e. a type in a contract binding `MyContract` imported from a library `some_library` would be generated under `abigen_bindings::my_contract_mod::SomeLibraryType`.
-
-This can cause problems if you happen to have two types with the same name in different libraries of your program.
-
-This behavior can be changed to include the library path by compiling your Sway project with the following:
-
-```shell
-forc build --json-abi-with-callpaths
-```
-
-Now the type from the previous example will be generated under `abigen_bindings::my_contract_mod::some_library::SomeLibraryType`.
-
-This might only become relevant if your type isn't reexported. This can happen, as explained previously, if your type does not have a unique name across all bindings inside one `abigen!` call. You'll then need to fully qualify the access to it.
-
-Including type paths will eventually become the default and the flag will be removed.
-
 ## Using the bindings
 
 Let's look at a contract with two methods: `initialize_counter(arg: u64) -> u64` and `increment_counter(arg: u64) -> u64`, with the following JSON ABI:

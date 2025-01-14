@@ -1,15 +1,15 @@
 use std::{ops::Add, path::Path};
 
 use chrono::{DateTime, Duration, TimeZone, Utc};
+use fuel_asm::RegId;
+use fuel_tx::Witness;
 use fuels::{
-    accounts::Account,
+    accounts::{impersonated_account::ImpersonatedAccount, Account},
     client::{PageDirection, PaginationRequest},
     prelude::*,
     tx::Receipt,
     types::{
-        block::Block,
         coin_type::CoinType,
-        errors::transaction::Reason,
         message::Message,
         transaction_builders::{BuildableTransaction, ScriptTransactionBuilder},
         tx_status::TxStatus,
@@ -39,7 +39,7 @@ async fn test_provider_launch_and_connect() -> Result<()> {
         "sway/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(&wallet, TxPolicies::default())
+    .deploy_if_not_exists(&wallet, TxPolicies::default())
     .await?;
 
     let contract_instance_connected = MyContract::new(contract_id.clone(), wallet.clone());
@@ -87,7 +87,7 @@ async fn test_network_error() -> Result<()> {
         "sway/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(&wallet, TxPolicies::default())
+    .deploy_if_not_exists(&wallet, TxPolicies::default())
     .await;
 
     assert!(matches!(response, Err(Error::Provider(_))));
@@ -131,7 +131,8 @@ async fn test_input_message() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -166,7 +167,8 @@ async fn test_input_message_pays_fee() -> Result<()> {
     );
 
     let provider = setup_test_provider(vec![], vec![messages], None, None).await?;
-    let base_asset_id = *provider.base_asset_id();
+    let consensus_parameters = provider.consensus_parameters().await?;
+    let base_asset_id = consensus_parameters.base_asset_id();
     wallet.set_provider(provider);
 
     abigen!(Contract(
@@ -178,7 +180,7 @@ async fn test_input_message_pays_fee() -> Result<()> {
         "sway/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(&wallet, TxPolicies::default())
+    .deploy_if_not_exists(&wallet, TxPolicies::default())
     .await?;
 
     let contract_instance = MyContract::new(contract_id, wallet.clone());
@@ -191,9 +193,10 @@ async fn test_input_message_pays_fee() -> Result<()> {
 
     assert_eq!(42, response.value);
 
-    let balance = wallet.get_asset_balance(&base_asset_id).await?;
-    // expect the initial amount because gas cost defaults to 0
-    assert_eq!(balance, DEFAULT_COIN_AMOUNT);
+    let balance = wallet.get_asset_balance(base_asset_id).await?;
+    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
+    let expected_fee = 2;
+    assert_eq!(balance, DEFAULT_COIN_AMOUNT - expected_fee);
 
     Ok(())
 }
@@ -215,6 +218,9 @@ async fn can_increase_block_height() -> Result<()> {
     Ok(())
 }
 
+// debug builds are slower (20x for `fuel-core-lib`, 4x for a release-fuel-core-binary), makes for
+// flaky tests
+#[cfg(not(feature = "fuel-core-lib"))]
 #[tokio::test]
 async fn can_set_custom_block_time() -> Result<()> {
     // ANCHOR: use_produce_blocks_custom_time
@@ -252,7 +258,7 @@ async fn can_set_custom_block_time() -> Result<()> {
         results: 10,
         direction: PageDirection::Forward,
     };
-    let blocks: Vec<Block> = provider.get_blocks(req).await?.results;
+    let blocks: Vec<fuels::types::block::Block> = provider.get_blocks(req).await?.results;
 
     assert_eq!(blocks[1].header.time.unwrap().timestamp(), 20);
     assert_eq!(blocks[2].header.time.unwrap().timestamp(), 40);
@@ -291,7 +297,8 @@ async fn contract_deployment_respects_maturity() -> Result<()> {
             LoadConfiguration::default(),
         )
         .map(|loaded_contract| {
-            loaded_contract.deploy(wallet, TxPolicies::default().with_maturity(maturity))
+            loaded_contract
+                .deploy_if_not_exists(wallet, TxPolicies::default().with_maturity(maturity))
         })
     };
 
@@ -299,10 +306,10 @@ async fn contract_deployment_respects_maturity() -> Result<()> {
         "should not deploy contract since block height `0` is less than the requested maturity `1`",
     );
 
-    let Error::Transaction(Reason::Validation(s)) = err else {
+    let Error::Provider(s) = err else {
         panic!("expected `Validation`, got: `{err}`");
     };
-    assert_eq!(s, "TransactionMaturity");
+    assert!(s.contains("TransactionMaturity"));
 
     provider.produce_blocks(1, None).await?;
     deploy_w_maturity(1)?
@@ -323,12 +330,13 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
     // The gas used by the script to call a contract and forward remaining gas limit.
-    let gas_used_by_script = 255;
+    let gas_used_by_script = 254;
     let gas_limit = 225_883;
     let response = contract_instance
         .methods()
@@ -361,7 +369,8 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TokenContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     let contract_id = contract_instance.contract_id();
@@ -472,7 +481,8 @@ async fn test_gas_errors() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -507,7 +517,7 @@ async fn test_gas_errors() -> Result<()> {
         .await
         .expect_err("should error");
 
-    let expected = "provider: io error: Response errors; Validity(InsufficientFeeAmount";
+    let expected = "Response errors; Validity(InsufficientFeeAmount";
     assert!(response.to_string().contains(expected));
 
     Ok(())
@@ -524,7 +534,8 @@ async fn test_call_param_gas_errors() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -566,7 +577,8 @@ async fn test_get_gas_used() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -638,9 +650,14 @@ async fn test_get_spendable_with_exclusion() -> Result<()> {
     wallet.set_provider(provider.clone());
 
     let requested_amount = coin_amount_1 + coin_amount_2 + message_amount;
+    let consensus_parameters = provider.consensus_parameters().await?;
     {
         let resources = wallet
-            .get_spendable_resources(*provider.base_asset_id(), requested_amount)
+            .get_spendable_resources(
+                *consensus_parameters.base_asset_id(),
+                requested_amount,
+                None,
+            )
             .await
             .unwrap();
         assert_eq!(resources.len(), 3);
@@ -713,7 +730,8 @@ async fn test_sway_timestamp() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -751,7 +769,9 @@ async fn create_transfer(
     to: &Bech32Address,
 ) -> Result<ScriptTransaction> {
     let asset_id = AssetId::zeroed();
-    let inputs = wallet.get_asset_inputs_for_amount(asset_id, amount).await?;
+    let inputs = wallet
+        .get_asset_inputs_for_amount(asset_id, amount, None)
+        .await?;
     let outputs = wallet.get_asset_outputs_for_amount(to, asset_id, amount);
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
@@ -760,6 +780,34 @@ async fn create_transfer(
     wallet.adjust_for_fee(&mut tb, amount).await?;
 
     tb.build(wallet.try_provider()?).await
+}
+
+#[cfg(feature = "coin-cache")]
+#[tokio::test]
+async fn transactions_with_the_same_utxo() -> Result<()> {
+    use fuels::types::errors::transaction;
+
+    let wallet_1 = launch_provider_and_get_wallet().await?;
+    let provider = wallet_1.provider().unwrap();
+    let wallet_2 = WalletUnlocked::new_random(Some(provider.clone()));
+
+    let tx_1 = create_transfer(&wallet_1, 100, wallet_2.address()).await?;
+    let tx_2 = create_transfer(&wallet_1, 101, wallet_2.address()).await?;
+
+    let _tx_id = provider.send_transaction(tx_1).await?;
+    let res = provider.send_transaction(tx_2).await;
+
+    let err = res.expect_err("is error");
+
+    assert!(matches!(
+        err,
+        Error::Transaction(transaction::Reason::Validation(..))
+    ));
+    assert!(err
+        .to_string()
+        .contains("was submitted recently in a transaction "));
+
+    Ok(())
 }
 
 #[cfg(feature = "coin-cache")]
@@ -807,7 +855,9 @@ async fn create_revert_tx(wallet: &WalletUnlocked) -> Result<ScriptTransaction> 
 
     let amount = 1;
     let asset_id = AssetId::zeroed();
-    let inputs = wallet.get_asset_inputs_for_amount(asset_id, amount).await?;
+    let inputs = wallet
+        .get_asset_inputs_for_amount(asset_id, amount, None)
+        .await?;
     let outputs = wallet.get_asset_outputs_for_amount(&Bech32Address::default(), asset_id, amount);
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default())
@@ -851,8 +901,9 @@ async fn test_cache_invalidation_on_await() -> Result<()> {
 
     assert!(matches!(tx_status, TxStatus::Revert { .. }));
 
+    let consensus_parameters = provider.consensus_parameters().await?;
     let coins = wallet
-        .get_spendable_resources(*provider.base_asset_id(), 1)
+        .get_spendable_resources(*consensus_parameters.base_asset_id(), 1, None)
         .await?;
     assert_eq!(coins.len(), 1);
 
@@ -870,7 +921,8 @@ async fn can_fetch_mint_transactions() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -905,11 +957,15 @@ async fn test_build_with_provider() -> Result<()> {
 
     let receiver = WalletUnlocked::new_random(Some(provider.clone()));
 
+    let consensus_parameters = provider.consensus_parameters().await?;
     let inputs = wallet
-        .get_asset_inputs_for_amount(*provider.base_asset_id(), 100)
+        .get_asset_inputs_for_amount(*consensus_parameters.base_asset_id(), 100, None)
         .await?;
-    let outputs =
-        wallet.get_asset_outputs_for_amount(receiver.address(), *provider.base_asset_id(), 100);
+    let outputs = wallet.get_asset_outputs_for_amount(
+        receiver.address(),
+        *consensus_parameters.base_asset_id(),
+        100,
+    );
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
     tb.add_signer(wallet.clone())?;
@@ -918,7 +974,9 @@ async fn test_build_with_provider() -> Result<()> {
 
     provider.send_transaction_and_await_commit(tx).await?;
 
-    let receiver_balance = receiver.get_asset_balance(provider.base_asset_id()).await?;
+    let receiver_balance = receiver
+        .get_asset_balance(consensus_parameters.base_asset_id())
+        .await?;
 
     assert_eq!(receiver_balance, 100);
 
@@ -937,23 +995,25 @@ async fn can_produce_blocks_with_trig_never() -> Result<()> {
     let wallet = &wallets[0];
     let provider = wallet.try_provider()?;
 
+    let consensus_parameters = provider.consensus_parameters().await?;
     let inputs = wallet
-        .get_asset_inputs_for_amount(*provider.base_asset_id(), 100)
+        .get_asset_inputs_for_amount(*consensus_parameters.base_asset_id(), 100, None)
         .await?;
     let outputs = wallet.get_asset_outputs_for_amount(
         &Bech32Address::default(),
-        *provider.base_asset_id(),
+        *consensus_parameters.base_asset_id(),
         100,
     );
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
     tb.add_signer(wallet.clone())?;
     let tx = tb.build(provider).await?;
-    let tx_id = tx.id(provider.chain_id());
+    let tx_id = tx.id(consensus_parameters.chain_id());
 
     provider.send_transaction(tx).await?;
     provider.produce_blocks(1, None).await?;
 
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
     let status = provider.tx_status(&tx_id).await?;
     assert!(matches!(status, TxStatus::Success { .. }));
 
@@ -1005,6 +1065,268 @@ async fn can_upload_executor_and_trigger_upgrade() -> Result<()> {
     let tx = builder.build(provider.clone()).await?;
 
     provider.send_transaction(tx).await?;
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn tx_respects_policies() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Contract(
+            name = "TestContract",
+            project = "e2e/sway/contracts/contract_test"
+        )),
+        Deploy(
+            name = "contract_instance",
+            contract = "TestContract",
+            wallet = "wallet",
+            random_salt = false,
+        ),
+    );
+
+    let tip = 22;
+    let witness_limit = 1000;
+    let maturity = 4;
+    let max_fee = 10_000;
+    let script_gas_limit = 3000;
+    let tx_policies = TxPolicies::new(
+        Some(tip),
+        Some(witness_limit),
+        Some(maturity),
+        Some(max_fee),
+        Some(script_gas_limit),
+    );
+
+    // advance the block height to ensure the maturity is respected
+    let provider = wallet.try_provider()?;
+    provider.produce_blocks(4, None).await?;
+
+    // trigger a transaction that contains script code to verify
+    // that policies precede estimated values
+    let response = contract_instance
+        .methods()
+        .initialize_counter(42)
+        .with_tx_policies(tx_policies)
+        .call()
+        .await?;
+
+    let tx_response = provider
+        .get_transaction_by_id(&response.tx_id.unwrap())
+        .await?
+        .expect("tx should exist");
+    let script = match tx_response.transaction {
+        TransactionType::Script(tx) => tx,
+        _ => panic!("expected script transaction"),
+    };
+
+    assert_eq!(script.maturity(), maturity as u32);
+    assert_eq!(script.tip().unwrap(), tip);
+    assert_eq!(script.witness_limit().unwrap(), witness_limit);
+    assert_eq!(script.max_fee().unwrap(), max_fee);
+    assert_eq!(script.gas_limit(), script_gas_limit);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn can_setup_static_gas_price() -> Result<()> {
+    let expected_gas_price = 474;
+    let node_config = NodeConfig {
+        starting_gas_price: expected_gas_price,
+        ..Default::default()
+    };
+    let provider = setup_test_provider(vec![], vec![], Some(node_config), None).await?;
+
+    let gas_price = provider.estimate_gas_price(0).await?.gas_price;
+
+    assert_eq!(gas_price, expected_gas_price);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn tx_with_witness_data() -> Result<()> {
+    use fuel_asm::{op, GTFArgs};
+
+    let wallet = launch_provider_and_get_wallet().await?;
+    let provider = wallet.try_provider()?;
+
+    let receiver = WalletUnlocked::new_random(Some(provider.clone()));
+
+    let consensus_parameters = provider.consensus_parameters().await?;
+    let inputs = wallet
+        .get_asset_inputs_for_amount(*consensus_parameters.base_asset_id(), 10000, None)
+        .await?;
+    let outputs = wallet.get_asset_outputs_for_amount(
+        receiver.address(),
+        *consensus_parameters.base_asset_id(),
+        1,
+    );
+
+    let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
+    tb.add_signer(wallet.clone())?;
+
+    // we test that the witness data wasn't tempered with during the build (gas estimation) process
+    // if the witness data is tempered with, the estimation will be off and the transaction
+    // will error out with `OutOfGas`
+    let script: Vec<u8> = vec![
+        // load witness data into register 0x10
+        op::gtf(0x10, 0x00, GTFArgs::WitnessData.into()),
+        op::lw(0x10, 0x10, 0x00),
+        // load expected value into register 0x11
+        op::movi(0x11, 0x0f),
+        // load the offset of the revert instruction into register 0x12
+        op::movi(0x12, 0x08),
+        // compare the two values and jump to the revert instruction if they are not equal
+        op::jne(0x10, 0x11, 0x12),
+        // do some expensive operation so gas estimation is higher if comparison passes
+        op::gtf(0x13, 0x01, GTFArgs::WitnessData.into()),
+        op::gtf(0x14, 0x01, GTFArgs::WitnessDataLength.into()),
+        op::aloc(0x14),
+        op::eck1(RegId::HP, 0x13, 0x13),
+        // return the witness data
+        op::ret(0x10),
+        op::rvrt(RegId::ZERO),
+    ]
+    .into_iter()
+    .collect();
+    tb.script = script;
+
+    let expected_data = 15u64;
+    let witness = Witness::from(expected_data.to_be_bytes().to_vec());
+    tb.witnesses_mut().push(witness);
+
+    let tx = tb
+        .with_tx_policies(TxPolicies::default().with_witness_limit(1000))
+        .build(provider)
+        .await?;
+
+    let status = provider.send_transaction_and_await_commit(tx).await?;
+
+    match status {
+        TxStatus::Success { receipts } => {
+            let ret: u64 = receipts
+                .into_iter()
+                .find_map(|receipt| match receipt {
+                    Receipt::Return { val, .. } => Some(val),
+                    _ => None,
+                })
+                .expect("should have return value");
+
+            assert_eq!(ret, expected_data);
+        }
+        _ => panic!("expected success status"),
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn contract_call_with_impersonation() -> Result<()> {
+    let provider_config = NodeConfig {
+        utxo_validation: false,
+        ..NodeConfig::default()
+    };
+    let mut wallets = launch_custom_provider_and_get_wallets(
+        WalletsConfig::new(Some(1), Some(10), Some(1000)),
+        Some(provider_config),
+        None,
+    )
+    .await?;
+    let wallet = wallets.pop().unwrap();
+    let provider = wallet.try_provider()?;
+
+    let impersonator = ImpersonatedAccount::new(wallet.address().clone(), Some(provider.clone()));
+
+    abigen!(Contract(
+        name = "MyContract",
+        abi = "e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
+    ));
+
+    let contract_id = Contract::load_from(
+        "sway/contracts/contract_test/out/release/contract_test.bin",
+        LoadConfiguration::default(),
+    )?
+    .deploy_if_not_exists(&wallet, TxPolicies::default())
+    .await?;
+
+    let contract_instance = MyContract::new(contract_id, impersonator.clone());
+
+    // The gas used by the script to call a contract and forward remaining gas limit.
+    contract_instance
+        .methods()
+        .initialize_counter(42)
+        .call()
+        .await?;
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn is_account_query_test() -> Result<()> {
+    {
+        let wallet = launch_provider_and_get_wallet().await?;
+        let provider = wallet.provider().unwrap().clone();
+
+        let blob = Blob::new(vec![1; 100]);
+        let blob_id = blob.id();
+
+        let is_account = provider.is_user_account(blob_id).await?;
+        assert!(is_account);
+
+        let mut tb = BlobTransactionBuilder::default().with_blob(blob);
+        wallet.adjust_for_fee(&mut tb, 0).await?;
+        wallet.add_witnesses(&mut tb)?;
+        let tx = tb.build(provider.clone()).await?;
+
+        provider
+            .send_transaction_and_await_commit(tx)
+            .await?
+            .check(None)?;
+
+        let is_account = provider.is_user_account(blob_id).await?;
+        assert!(!is_account);
+    }
+    {
+        let wallet = launch_provider_and_get_wallet().await?;
+        let provider = wallet.provider().unwrap().clone();
+
+        let contract = Contract::load_from(
+            "sway/contracts/contract_test/out/release/contract_test.bin",
+            LoadConfiguration::default(),
+        )?;
+        let contract_id = contract.contract_id();
+
+        let is_account = provider.is_user_account(*contract_id).await?;
+        assert!(is_account);
+
+        contract.deploy(&wallet, TxPolicies::default()).await?;
+
+        let is_account = provider.is_user_account(*contract_id).await?;
+        assert!(!is_account);
+    }
+    {
+        let wallet = launch_provider_and_get_wallet().await?;
+        let provider = wallet.provider().unwrap().clone();
+
+        let mut tb = ScriptTransactionBuilder::default();
+        wallet.adjust_for_fee(&mut tb, 0).await?;
+        wallet.add_witnesses(&mut tb)?;
+        let tx = tb.build(provider.clone()).await?;
+
+        let consensus_parameters = provider.consensus_parameters().await?;
+        let tx_id = tx.id(consensus_parameters.chain_id());
+        let is_account = provider.is_user_account(tx_id).await?;
+        assert!(is_account);
+
+        provider
+            .send_transaction_and_await_commit(tx)
+            .await?
+            .check(None)?;
+        let is_account = provider.is_user_account(tx_id).await?;
+        assert!(!is_account);
+    }
 
     Ok(())
 }

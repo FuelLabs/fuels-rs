@@ -1,7 +1,7 @@
 use std::{fmt::Debug, fs};
 
 #[cfg(feature = "std")]
-use fuels_core::types::{input::Input, AssetId};
+use fuels_core::types::{coin_type_id::CoinTypeId, input::Input, AssetId};
 use fuels_core::{
     error,
     types::{bech32::Bech32Address, errors::Result},
@@ -101,6 +101,7 @@ impl Predicate {
 }
 
 #[cfg(feature = "std")]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 impl ViewOnlyAccount for Predicate {
     fn address(&self) -> &Bech32Address {
         self.address()
@@ -109,18 +110,15 @@ impl ViewOnlyAccount for Predicate {
     fn try_provider(&self) -> Result<&Provider> {
         self.provider.as_ref().ok_or_else(try_provider_error)
     }
-}
 
-#[cfg(feature = "std")]
-#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
-impl Account for Predicate {
     async fn get_asset_inputs_for_amount(
         &self,
         asset_id: AssetId,
         amount: u64,
+        excluded_coins: Option<Vec<CoinTypeId>>,
     ) -> Result<Vec<Input>> {
         Ok(self
-            .get_spendable_resources(asset_id, amount)
+            .get_spendable_resources(asset_id, amount, excluded_coins)
             .await?
             .into_iter()
             .map(|resource| {
@@ -129,3 +127,6 @@ impl Account for Predicate {
             .collect::<Vec<Input>>())
     }
 }
+
+#[cfg(feature = "std")]
+impl Account for Predicate {}

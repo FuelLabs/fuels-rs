@@ -52,6 +52,8 @@ pub struct NodeConfig {
     pub block_production: Trigger,
     pub vm_backtrace: bool,
     pub silent: bool,
+    pub starting_gas_price: u64,
+    pub graphql_request_body_bytes_limit: u64,
 }
 
 impl Default for NodeConfig {
@@ -65,6 +67,8 @@ impl Default for NodeConfig {
             block_production: Trigger::Instant,
             vm_backtrace: false,
             silent: true,
+            starting_gas_price: 1,
+            graphql_request_body_bytes_limit: u64::MAX,
         }
     }
 }

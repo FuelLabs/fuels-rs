@@ -110,7 +110,11 @@ async fn setup_predicate_test(
         receiver_amount,
     ));
 
-    let provider = setup_test_provider(coins, messages, None, None).await?;
+    let node_config = NodeConfig {
+        starting_gas_price: 0,
+        ..Default::default()
+    };
+    let provider = setup_test_provider(coins, messages, Some(node_config), None).await?;
     receiver.set_provider(provider.clone());
 
     Ok((
@@ -415,6 +419,19 @@ async fn predicate_handles_std_string() -> Result<()> {
 
     let data = MyPredicateEncoder::default().encode_data(10, 11, String::from("Hello World"))?;
     assert_predicate_spendable(data, "sway/types/predicates/predicate_std_lib_string").await?;
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn predicate_string_slice() -> Result<()> {
+    abigen!(Predicate(
+        name = "MyPredicate",
+        abi = "e2e/sway/types/predicates/predicate_string_slice/out/release/predicate_string_slice-abi.json"
+    ));
+
+    let data = MyPredicateEncoder::default().encode_data("predicate-input".try_into()?)?;
+    assert_predicate_spendable(data, "sway/types/predicates/predicate_string_slice").await?;
 
     Ok(())
 }

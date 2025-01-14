@@ -154,17 +154,6 @@ pub(crate) fn sdk_provided_custom_types_lookup() -> HashMap<TypePath, TypePath> 
             TypePath::new(provided_type_path).expect(msg),
         )
     })
-    .flat_map(|(original_type_path, provided_type_path)| {
-        // TODO: To be removed once https://github.com/FuelLabs/fuels-rs/issues/881 is unblocked.
-        let backward_compat_mapping = original_type_path
-            .ident()
-            .expect("The original type path must have at least one part")
-            .into();
-        [
-            (backward_compat_mapping, provided_type_path.clone()),
-            (original_type_path, provided_type_path),
-        ]
-    })
     .collect()
 }
 

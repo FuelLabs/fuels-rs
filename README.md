@@ -41,7 +41,7 @@ See [the `fuels-rs` book](https://fuellabs.github.io/fuels-rs/latest/)
 First, build the test projects using `forc`:
 
 ```shell
-forc build --release --path packages/fuels
+forc build --release --path e2e
 ```
 
 Then you can run the SDK tests with:
@@ -55,17 +55,23 @@ You can also run specific tests. The following example will run all integration 
 ```shell
 cargo test --test types in_vector -- --show-output
 ```
+
 ### How to run WASM tests?
+
 You need to have wasm32 as a target, if you don't already:
+
 ```shell
  rustup target add wasm32-unknown-unknown
 ```
+
 You also need `wasm-pack`, if you don't already:
+
 ```shell
 cargo install wasm-pack
 ```
 
 Navigate to `packages/wasm-tests` and run `wasm-pack test`.
+
 ### What to do if my tests are failing on `master`
 
 Before doing anything else, try all these commands:
@@ -73,7 +79,7 @@ Before doing anything else, try all these commands:
 ```shell
 cargo clean
 rm Cargo.lock
-forc build --release --path packages/fuels
+forc build --release --path e2e
 cargo test
 ```
 
@@ -89,7 +95,7 @@ Install `mdbook` by running:
 cargo install mdbook
 ```
 
-Next, navigate to the `docs` folder and run the command below to start a local server and open a new tab in you browser.
+Next, navigate to the `docs` folder and run the command below to start a local server and open a new tab in your browser.
 
 ```shell
 mdbook serve --open
@@ -100,4 +106,3 @@ You can build the book by running:
 ```shell
 mdbook build
 ```
-

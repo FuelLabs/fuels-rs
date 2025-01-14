@@ -1,982 +1,77 @@
-use std::{
-    collections::HashMap,
-    default::Default,
-    fmt::Debug,
-    fs, io,
-    marker::PhantomData,
-    path::{Path, PathBuf},
-};
+mod storage;
 
-use fuel_tx::{AssetId, Bytes32, Contract as FuelContract, ContractId, Receipt, Salt, StorageSlot};
-use fuels_accounts::{provider::TransactionCost, Account};
-use fuels_core::{
-    codec::{ABIEncoder, DecoderConfig, EncoderConfig, LogDecoder},
-    constants::DEFAULT_CALL_PARAMS_AMOUNT,
-    traits::{Parameterize, Tokenizable},
-    types::{
-        bech32::{Bech32Address, Bech32ContractId},
-        errors::{error, Result},
-        param_types::ParamType,
-        transaction::{ScriptTransaction, Transaction, TxPolicies},
-        transaction_builders::{
-            CreateTransactionBuilder, ScriptTransactionBuilder, VariableOutputPolicy,
-        },
-        tx_status::TxStatus,
-        Selector, Token,
-    },
-    Configurables,
-};
+use std::fmt::Debug;
 
-use crate::{
-    call_response::FuelCallResponse,
-    call_utils::{
-        build_tx_from_contract_calls, sealed, transaction_builder_from_contract_calls,
-        TxDependencyExtension,
-    },
-    receipt_parser::ReceiptParser,
-    submit_response::{SubmitResponse, SubmitResponseMultiple},
-};
+use fuel_tx::{Bytes32, Contract as FuelContract, ContractId, Salt, StorageSlot};
+pub use storage::*;
 
-#[derive(Debug, Clone)]
-pub struct CallParameters {
-    amount: u64,
-    asset_id: Option<AssetId>,
-    gas_forwarded: Option<u64>,
-}
-
-impl CallParameters {
-    pub fn new(amount: u64, asset_id: AssetId, gas_forwarded: u64) -> Self {
-        Self {
-            amount,
-            asset_id: Some(asset_id),
-            gas_forwarded: Some(gas_forwarded),
-        }
-    }
-
-    pub fn with_amount(mut self, amount: u64) -> Self {
-        self.amount = amount;
-        self
-    }
-
-    pub fn amount(&self) -> u64 {
-        self.amount
-    }
-
-    pub fn with_asset_id(mut self, asset_id: AssetId) -> Self {
-        self.asset_id = Some(asset_id);
-        self
-    }
-
-    pub fn asset_id(&self) -> Option<AssetId> {
-        self.asset_id
-    }
-
-    pub fn with_gas_forwarded(mut self, gas_forwarded: u64) -> Self {
-        self.gas_forwarded = Some(gas_forwarded);
-        self
-    }
-
-    pub fn gas_forwarded(&self) -> Option<u64> {
-        self.gas_forwarded
-    }
-}
-
-impl Default for CallParameters {
-    fn default() -> Self {
-        Self {
-            amount: DEFAULT_CALL_PARAMS_AMOUNT,
-            asset_id: None,
-            gas_forwarded: None,
-        }
-    }
-}
-
-// Trait implemented by contract instances so that
-// they can be passed to the `with_contracts` method
-pub trait SettableContract {
-    fn id(&self) -> Bech32ContractId;
-    fn log_decoder(&self) -> LogDecoder;
-}
-
-/// Configuration for contract storage
-#[derive(Debug, Clone)]
-pub struct StorageConfiguration {
-    autoload_storage: bool,
-    slot_overrides: StorageSlots,
-}
-
-impl Default for StorageConfiguration {
-    fn default() -> Self {
-        Self {
-            autoload_storage: true,
-            slot_overrides: Default::default(),
-        }
-    }
-}
-
-impl StorageConfiguration {
-    pub fn new(autoload_enabled: bool, slots: impl IntoIterator<Item = StorageSlot>) -> Self {
-        let config = Self {
-            autoload_storage: autoload_enabled,
-            slot_overrides: Default::default(),
-        };
-
-        config.add_slot_overrides(slots)
-    }
-
-    /// If enabled will try to automatically discover and load the storage configuration from the
-    /// storage config json file.
-    pub fn with_autoload(mut self, enabled: bool) -> Self {
-        self.autoload_storage = enabled;
-        self
-    }
-
-    pub fn autoload_enabled(&self) -> bool {
-        self.autoload_storage
-    }
-
-    /// Slots added via [`add_slot_overrides`] will override any
-    /// existing slots with matching keys.
-    pub fn add_slot_overrides(
-        mut self,
-        storage_slots: impl IntoIterator<Item = StorageSlot>,
-    ) -> Self {
-        self.slot_overrides.add_overrides(storage_slots);
-        self
-    }
-
-    /// Slots added via [`add_slot_overrides_from_file`] will override any
-    /// existing slots with matching keys.
-    ///
-    /// `path` - path to a JSON file containing the storage slots.
-    pub fn add_slot_overrides_from_file(mut self, path: impl AsRef<Path>) -> Result<Self> {
-        let slots = StorageSlots::load_from_file(path.as_ref())?;
-        self.slot_overrides.add_overrides(slots.into_iter());
-        Ok(self)
-    }
-
-    pub fn into_slots(self) -> impl Iterator<Item = StorageSlot> {
-        self.slot_overrides.into_iter()
-    }
-}
-
-#[derive(Debug, Clone, Default)]
-struct StorageSlots {
-    storage_slots: HashMap<Bytes32, StorageSlot>,
-}
-
-impl StorageSlots {
-    fn from(storage_slots: impl IntoIterator<Item = StorageSlot>) -> Self {
-        let pairs = storage_slots.into_iter().map(|slot| (*slot.key(), slot));
-        Self {
-            storage_slots: pairs.collect(),
-        }
-    }
-
-    fn add_overrides(&mut self, storage_slots: impl IntoIterator<Item = StorageSlot>) -> &mut Self {
-        let pairs = storage_slots.into_iter().map(|slot| (*slot.key(), slot));
-        self.storage_slots.extend(pairs);
-        self
-    }
-
-    fn load_from_file(storage_path: impl AsRef<Path>) -> Result<Self> {
-        let storage_path = storage_path.as_ref();
-        validate_path_and_extension(storage_path, "json")?;
-
-        let storage_json_string = std::fs::read_to_string(storage_path).map_err(|e| {
-            io::Error::new(
-                e.kind(),
-                format!("failed to read storage slots from: {storage_path:?}: {e}"),
-            )
-        })?;
-
-        let decoded_slots = serde_json::from_str::<Vec<StorageSlot>>(&storage_json_string)?;
-
-        Ok(StorageSlots::from(decoded_slots))
-    }
-
-    fn into_iter(self) -> impl Iterator<Item = StorageSlot> {
-        self.storage_slots.into_values()
-    }
-}
-
-/// Configuration for contract deployment
-#[derive(Debug, Clone, Default)]
-pub struct LoadConfiguration {
-    storage: StorageConfiguration,
-    configurables: Configurables,
+/// Represents a contract that can be deployed either directly ([`Contract::regular`]) or through a loader [`Contract::convert_to_loader`].
+/// Provides the ability to calculate the `ContractId` ([`Contract::contract_id`]) without needing to deploy the contract.
+/// This struct also manages contract code updates with `configurable`s
+/// ([`Contract::with_configurables`]) and can automatically
+/// load storage slots (via [`Contract::load_from`]).
+#[derive(Debug, Clone, PartialEq)]
+pub struct Contract<Code> {
+    code: Code,
     salt: Salt,
+    storage_slots: Vec<StorageSlot>,
 }
 
-impl LoadConfiguration {
-    pub fn new(
-        storage: StorageConfiguration,
-        configurables: impl Into<Configurables>,
-        salt: impl Into<Salt>,
-    ) -> Self {
-        Self {
-            storage,
-            configurables: configurables.into(),
-            salt: salt.into(),
-        }
-    }
-
-    pub fn with_storage_configuration(mut self, storage: StorageConfiguration) -> Self {
-        self.storage = storage;
-        self
-    }
-
-    pub fn with_configurables(mut self, configurables: impl Into<Configurables>) -> Self {
-        self.configurables = configurables.into();
-        self
+impl<T> Contract<T> {
+    pub fn salt(&self) -> Salt {
+        self.salt
     }
 
     pub fn with_salt(mut self, salt: impl Into<Salt>) -> Self {
         self.salt = salt.into();
         self
     }
-}
 
-/// [`Contract`] is a struct to interface with a contract. That includes things such as
-/// compiling, deploying, and running transactions against a contract.
-#[derive(Debug, Clone)]
-pub struct Contract {
-    binary: Vec<u8>,
-    salt: Salt,
-    storage_slots: Vec<StorageSlot>,
-    contract_id: ContractId,
-    code_root: Bytes32,
-    state_root: Bytes32,
-}
-
-impl Contract {
-    pub fn new(binary: Vec<u8>, salt: Salt, storage_slots: Vec<StorageSlot>) -> Self {
-        let (contract_id, code_root, state_root) =
-            Self::compute_contract_id_and_state_root(&binary, &salt, &storage_slots);
-
-        Self {
-            binary,
-            salt,
-            storage_slots,
-            contract_id,
-            code_root,
-            state_root,
-        }
+    pub fn storage_slots(&self) -> &[StorageSlot] {
+        &self.storage_slots
     }
 
-    fn compute_contract_id_and_state_root(
-        binary: &[u8],
-        salt: &Salt,
-        storage_slots: &[StorageSlot],
-    ) -> (ContractId, Bytes32, Bytes32) {
-        let fuel_contract = FuelContract::from(binary);
-        let code_root = fuel_contract.root();
-        let state_root = FuelContract::initial_state_root(storage_slots.iter());
-
-        let contract_id = fuel_contract.id(salt, &code_root, &state_root);
-
-        (contract_id, code_root, state_root)
-    }
-
-    pub fn with_salt(self, salt: impl Into<Salt>) -> Self {
-        Self::new(self.binary, salt.into(), self.storage_slots)
-    }
-
-    pub fn contract_id(&self) -> ContractId {
-        self.contract_id
-    }
-
-    pub fn state_root(&self) -> Bytes32 {
-        self.state_root
-    }
-
-    pub fn code_root(&self) -> Bytes32 {
-        self.code_root
-    }
-
-    /// Deploys a compiled contract to a running node
-    /// To deploy a contract, you need an account with enough assets to pay for deployment.
-    /// This account will also receive the change.
-    pub async fn deploy(
-        self,
-        account: &impl Account,
-        tx_policies: TxPolicies,
-    ) -> Result<Bech32ContractId> {
-        let mut tb = CreateTransactionBuilder::prepare_contract_deployment(
-            self.binary,
-            self.contract_id,
-            self.state_root,
-            self.salt,
-            self.storage_slots,
-            tx_policies,
-        );
-
-        account.add_witnesses(&mut tb)?;
-        account.adjust_for_fee(&mut tb, 0).await?;
-
-        let provider = account.try_provider()?;
-
-        let tx = tb.build(provider).await?;
-
-        provider
-            .send_transaction_and_await_commit(tx)
-            .await?
-            .check(None)?;
-
-        Ok(self.contract_id.into())
-    }
-
-    pub fn load_from(binary_filepath: impl AsRef<Path>, config: LoadConfiguration) -> Result<Self> {
-        let binary_filepath = binary_filepath.as_ref();
-        validate_path_and_extension(binary_filepath, "bin")?;
-
-        let mut binary = fs::read(binary_filepath).map_err(|e| {
-            std::io::Error::new(
-                e.kind(),
-                format!("failed to read binary: {binary_filepath:?}: {e}"),
-            )
-        })?;
-
-        config.configurables.update_constants_in(&mut binary);
-
-        let storage_slots = Self::determine_storage_slots(config.storage, binary_filepath)?;
-
-        Ok(Self::new(binary, config.salt, storage_slots))
-    }
-
-    fn determine_storage_slots(
-        storage_config: StorageConfiguration,
-        binary_filepath: &Path,
-    ) -> Result<Vec<StorageSlot>> {
-        let autoload_enabled = storage_config.autoload_enabled();
-        let user_overrides = storage_config.into_slots().collect::<Vec<_>>();
-        let slots = if autoload_enabled {
-            let mut slots = autoload_storage_slots(binary_filepath)?;
-            slots.add_overrides(user_overrides);
-            slots.into_iter().collect()
-        } else {
-            user_overrides
-        };
-
-        Ok(slots)
-    }
-}
-
-fn autoload_storage_slots(contract_binary: &Path) -> Result<StorageSlots> {
-    let storage_file = expected_storage_slots_filepath(contract_binary)
-        .ok_or_else(|| error!(Other, "could not determine storage slots file"))?;
-
-    StorageSlots::load_from_file(&storage_file)
-                .map_err(|_| error!(Other, "could not autoload storage slots from file: {storage_file:?}. \
-                                    Either provide the file or disable autoloading in `StorageConfiguration`"))
-}
-
-fn expected_storage_slots_filepath(contract_binary: &Path) -> Option<PathBuf> {
-    let dir = contract_binary.parent()?;
-
-    let binary_filename = contract_binary.file_stem()?.to_str()?;
-
-    Some(dir.join(format!("{binary_filename}-storage_slots.json")))
-}
-
-fn validate_path_and_extension(file_path: &Path, extension: &str) -> Result<()> {
-    if !file_path.exists() {
-        return Err(error!(IO, "file {file_path:?} does not exist"));
-    }
-
-    let path_extension = file_path
-        .extension()
-        .ok_or_else(|| error!(Other, "could not extract extension from: {file_path:?}"))?;
-
-    if extension != path_extension {
-        return Err(error!(
-            Other,
-            "expected {file_path:?} to have '.{extension}' extension"
-        ));
-    }
-
-    Ok(())
-}
-
-#[derive(Debug)]
-/// Contains all data relevant to a single contract call
-pub struct ContractCall {
-    pub contract_id: Bech32ContractId,
-    pub encoded_args: Result<Vec<u8>>,
-    pub encoded_selector: Selector,
-    pub call_parameters: CallParameters,
-    pub external_contracts: Vec<Bech32ContractId>,
-    pub output_param: ParamType,
-    pub is_payable: bool,
-    pub custom_assets: HashMap<(AssetId, Option<Bech32Address>), u64>,
-}
-
-impl ContractCall {
-    pub fn with_contract_id(self, contract_id: Bech32ContractId) -> Self {
-        ContractCall {
-            contract_id,
-            ..self
-        }
-    }
-
-    pub fn with_external_contracts(
-        self,
-        external_contracts: Vec<Bech32ContractId>,
-    ) -> ContractCall {
-        ContractCall {
-            external_contracts,
-            ..self
-        }
-    }
-
-    pub fn with_call_parameters(self, call_parameters: CallParameters) -> ContractCall {
-        ContractCall {
-            call_parameters,
-            ..self
-        }
-    }
-
-    pub fn append_external_contracts(&mut self, contract_id: Bech32ContractId) {
-        self.external_contracts.push(contract_id)
-    }
-
-    pub fn add_custom_asset(&mut self, asset_id: AssetId, amount: u64, to: Option<Bech32Address>) {
-        *self.custom_assets.entry((asset_id, to)).or_default() += amount;
-    }
-}
-
-#[derive(Debug)]
-#[must_use = "contract calls do nothing unless you `call` them"]
-/// Helper that handles submitting a call to a client and formatting the response
-pub struct ContractCallHandler<T: Account, D> {
-    pub contract_call: ContractCall,
-    pub tx_policies: TxPolicies,
-    decoder_config: DecoderConfig,
-    // Initially `None`, gets set to the right tx id after the transaction is submitted
-    cached_tx_id: Option<Bytes32>,
-    pub account: T,
-    pub datatype: PhantomData<D>,
-    pub log_decoder: LogDecoder,
-    variable_output_policy: VariableOutputPolicy,
-}
-
-impl<T, D> ContractCallHandler<T, D>
-where
-    T: Account,
-    D: Tokenizable + Parameterize + Debug,
-{
-    /// Sets external contracts as dependencies to this contract's call.
-    /// Effectively, this will be used to create [`fuel_tx::Input::Contract`]/[`fuel_tx::Output::Contract`]
-    /// pairs and set them into the transaction. Note that this is a builder
-    /// method, i.e. use it as a chain:
-    ///
-    /// ```ignore
-    /// my_contract_instance.my_method(...).with_contract_ids(&[another_contract_id]).call()
-    /// ```
-    ///
-    /// [`Input::Contract`]: fuel_tx::Input::Contract
-    /// [`Output::Contract`]: fuel_tx::Output::Contract
-    pub fn with_contract_ids(mut self, contract_ids: &[Bech32ContractId]) -> Self {
-        self.contract_call.external_contracts = contract_ids.to_vec();
-        self
-    }
-
-    /// If this method is not called, the default policy is to not add any variable outputs.
-    ///
-    /// # Parameters
-    /// - `variable_outputs`: The [`VariableOutputPolicy`] to apply for the contract call.
-    ///
-    /// # Returns
-    /// - `Self`: The updated SDK configuration.
-    pub fn with_variable_output_policy(mut self, variable_outputs: VariableOutputPolicy) -> Self {
-        self.variable_output_policy = variable_outputs;
-        self
-    }
-
-    /// Sets external contract instances as dependencies to this contract's call.
-    /// Effectively, this will be used to: merge `LogDecoder`s and create
-    /// [`fuel_tx::Input::Contract`]/[`fuel_tx::Output::Contract`] pairs and set them into the transaction.
-    /// Note that this is a builder method, i.e. use it as a chain:
-    ///
-    /// ```ignore
-    /// my_contract_instance.my_method(...).with_contracts(&[another_contract_instance]).call()
-    /// ```
-    pub fn with_contracts(mut self, contracts: &[&dyn SettableContract]) -> Self {
-        self.contract_call.external_contracts = contracts.iter().map(|c| c.id()).collect();
-        for c in contracts {
-            self.log_decoder.merge(c.log_decoder());
-        }
-        self
-    }
-
-    /// Adds a custom `asset_id` with its `amount` and an optional `address` to be used for
-    /// generating outputs to this contract's call.
-    ///
-    /// # Parameters
-    /// - `asset_id`: The unique identifier of the asset being added.
-    /// - `amount`: The amount of the asset being added.
-    /// - `address`: The optional account address that the output amount will be sent to.
-    ///              If not provided, the asset will be sent to the users account address.
-    /// Note that this is a builder method, i.e. use it as a chain:
-    ///
-    /// ```ignore
-    /// let asset_id = AssetId::from([3u8; 32]);
-    /// let amount = 5000;
-    /// my_contract_instance.my_method(...).add_custom_asset(asset_id, amount, None).call()
-    /// ```
-    pub fn add_custom_asset(
-        mut self,
-        asset_id: AssetId,
-        amount: u64,
-        to: Option<Bech32Address>,
-    ) -> Self {
-        self.contract_call.add_custom_asset(asset_id, amount, to);
-        self
-    }
-
-    pub fn is_payable(&self) -> bool {
-        self.contract_call.is_payable
-    }
-
-    /// Sets the transaction policies for a given transaction.
-    /// Note that this is a builder method, i.e. use it as a chain:
-    /// ```ignore
-    /// let tx_policies = TxPolicies::default().with_gas_price(100);
-    /// my_contract_instance.my_method(...).with_tx_policies(tx_policies).call()
-    /// ```
-    pub fn with_tx_policies(mut self, tx_policies: TxPolicies) -> Self {
-        self.tx_policies = tx_policies;
-        self
-    }
-
-    pub fn with_decoder_config(mut self, decoder_config: DecoderConfig) -> Self {
-        self.decoder_config = decoder_config;
-        self.log_decoder.set_decoder_config(decoder_config);
-        self
-    }
-
-    /// Sets the call parameters for a given contract call.
-    /// Note that this is a builder method, i.e. use it as a chain:
-    ///
-    /// ```ignore
-    /// let params = CallParameters { amount: 1, asset_id: AssetId::zeroed() };
-    /// my_contract_instance.my_method(...).call_params(params).call()
-    /// ```
-    pub fn call_params(mut self, params: CallParameters) -> Result<Self> {
-        if !self.is_payable() && params.amount > 0 {
-            return Err(error!(Other, "assets forwarded to non-payable method"));
-        }
-        self.contract_call.call_parameters = params;
-        Ok(self)
-    }
-
-    pub async fn transaction_builder(&self) -> Result<ScriptTransactionBuilder> {
-        transaction_builder_from_contract_calls(
-            std::slice::from_ref(&self.contract_call),
-            self.tx_policies,
-            &self.account,
-        )
-        .await
-    }
-
-    /// Returns the script that executes the contract call
-    pub async fn build_tx(&self) -> Result<ScriptTransaction> {
-        build_tx_from_contract_calls(
-            std::slice::from_ref(&self.contract_call),
-            self.tx_policies,
-            &self.account,
-            self.variable_output_policy,
-        )
-        .await
-    }
-
-    /// Call a contract's method on the node, in a state-modifying manner.
-    pub async fn call(mut self) -> Result<FuelCallResponse<D>> {
-        self.call_or_simulate(false).await
-    }
-
-    pub async fn submit(mut self) -> Result<SubmitResponse<T, D>> {
-        let tx = self.build_tx().await?;
-        let provider = self.account.try_provider()?;
-
-        let tx_id = provider.send_transaction(tx.clone()).await?;
-        self.cached_tx_id = Some(tx_id);
-
-        Ok(SubmitResponse::new(tx_id, self))
-    }
-
-    /// Call a contract's method on the node, in a simulated manner, meaning the state of the
-    /// blockchain is *not* modified but simulated.
-    pub async fn simulate(&mut self) -> Result<FuelCallResponse<D>> {
-        self.call_or_simulate(true).await
-    }
-
-    async fn call_or_simulate(&mut self, simulate: bool) -> Result<FuelCallResponse<D>> {
-        let tx = self.build_tx().await?;
-        let provider = self.account.try_provider()?;
-
-        self.cached_tx_id = Some(tx.id(provider.chain_id()));
-
-        let tx_status = if simulate {
-            provider.dry_run(tx).await?
-        } else {
-            provider.send_transaction_and_await_commit(tx).await?
-        };
-        let receipts = tx_status.take_receipts_checked(Some(&self.log_decoder))?;
-
-        self.get_response(receipts)
-    }
-
-    /// Get a contract's estimated cost
-    pub async fn estimate_transaction_cost(
-        &self,
-        tolerance: Option<f64>,
-        block_horizon: Option<u32>,
-    ) -> Result<TransactionCost> {
-        let script = self.build_tx().await?;
-        let provider = self.account.try_provider()?;
-
-        let transaction_cost = provider
-            .estimate_transaction_cost(script, tolerance, block_horizon)
-            .await?;
-
-        Ok(transaction_cost)
-    }
-
-    /// Create a [`FuelCallResponse`] from call receipts
-    pub fn get_response(&self, receipts: Vec<Receipt>) -> Result<FuelCallResponse<D>> {
-        let token = ReceiptParser::new(&receipts, self.decoder_config)
-            .parse_call(&self.contract_call.contract_id, &D::param_type())?;
-
-        Ok(FuelCallResponse::new(
-            D::from_token(token)?,
-            receipts,
-            self.log_decoder.clone(),
-            self.cached_tx_id,
-        ))
-    }
-
-    /// Create a [`FuelCallResponse`] from `TxStatus`
-    pub fn get_response_from(&self, tx_status: TxStatus) -> Result<FuelCallResponse<D>> {
-        let receipts = tx_status.take_receipts_checked(Some(&self.log_decoder))?;
-
-        self.get_response(receipts)
-    }
-}
-
-impl<T: Account, D> sealed::Sealed for ContractCallHandler<T, D> {}
-
-#[async_trait::async_trait]
-impl<T, D> TxDependencyExtension for ContractCallHandler<T, D>
-where
-    T: Account,
-    D: Tokenizable + Parameterize + Debug + Send + Sync,
-{
-    async fn simulate(&mut self) -> Result<()> {
-        self.simulate().await?;
-        Ok(())
-    }
-
-    fn append_contract(mut self, contract_id: Bech32ContractId) -> Self {
-        self.contract_call.append_external_contracts(contract_id);
+    pub fn with_storage_slots(mut self, storage_slots: Vec<StorageSlot>) -> Self {
+        self.storage_slots = storage_slots;
         self
     }
 }
 
-/// Creates an ABI call based on a function [selector](Selector) and
-/// the encoding of its call arguments, which is a slice of [`Token`]s.
-/// It returns a prepared [`ContractCall`] that can further be used to
-/// make the actual transaction.
-/// This method is the underlying implementation of the functions
-/// generated from an ABI JSON spec, i.e, this is what's generated:
-///
-/// ```ignore
-/// quote! {
-///     #doc
-///     pub fn #name(&self #input) -> #result {
-///         contract::method_hash(#tokenized_signature, #arg)
-///     }
-/// }
-/// ```
-///
-/// For more details see `code_gen` in `fuels-core`.
-///
-/// Note that this needs an account because the contract instance needs an account for the calls
-pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
-    contract_id: Bech32ContractId,
-    account: T,
-    encoded_selector: Selector,
-    args: &[Token],
-    log_decoder: LogDecoder,
-    is_payable: bool,
-    encoder_config: EncoderConfig,
-) -> ContractCallHandler<T, D> {
-    let contract_call = ContractCall {
-        contract_id,
-        encoded_selector,
-        encoded_args: ABIEncoder::new(encoder_config).encode(args),
-        call_parameters: CallParameters::default(),
-        external_contracts: vec![],
-        output_param: D::param_type(),
-        is_payable,
-        custom_assets: Default::default(),
-    };
+mod regular;
+pub use regular::*;
 
-    ContractCallHandler {
-        contract_call,
-        tx_policies: TxPolicies::default(),
-        cached_tx_id: None,
-        account,
-        datatype: PhantomData,
-        log_decoder,
-        decoder_config: DecoderConfig::default(),
-        variable_output_policy: VariableOutputPolicy::default(),
-    }
-}
+mod loader;
+// reexported to avoid doing a breaking change
+pub use crate::assembly::contract_call::loader_contract_asm;
+pub use loader::*;
 
-#[derive(Debug)]
-#[must_use = "contract calls do nothing unless you `call` them"]
-/// Helper that handles bundling multiple calls into a single transaction
-pub struct MultiContractCallHandler<T: Account> {
-    pub contract_calls: Vec<ContractCall>,
-    pub log_decoder: LogDecoder,
-    pub tx_policies: TxPolicies,
-    // Initially `None`, gets set to the right tx id after the transaction is submitted
-    cached_tx_id: Option<Bytes32>,
-    decoder_config: DecoderConfig,
-    pub account: T,
-    variable_output_policy: VariableOutputPolicy,
-}
+fn compute_contract_id_and_state_root(
+    binary: &[u8],
+    salt: &Salt,
+    storage_slots: &[StorageSlot],
+) -> (ContractId, Bytes32, Bytes32) {
+    let fuel_contract = FuelContract::from(binary);
+    let code_root = fuel_contract.root();
+    let state_root = FuelContract::initial_state_root(storage_slots.iter());
 
-impl<T: Account> MultiContractCallHandler<T> {
-    pub fn new(account: T) -> Self {
-        Self {
-            contract_calls: vec![],
-            tx_policies: TxPolicies::default(),
-            cached_tx_id: None,
-            account,
-            log_decoder: LogDecoder::new(Default::default()),
-            decoder_config: DecoderConfig::default(),
-            variable_output_policy: VariableOutputPolicy::default(),
-        }
-    }
+    let contract_id = fuel_contract.id(salt, &code_root, &state_root);
 
-    pub fn with_decoder_config(&mut self, decoder_config: DecoderConfig) -> &mut Self {
-        self.decoder_config = decoder_config;
-        self.log_decoder.set_decoder_config(decoder_config);
-        self
-    }
-
-    /// Adds a contract call to be bundled in the transaction
-    /// Note that this is a builder method
-    pub fn add_call(
-        &mut self,
-        call_handler: ContractCallHandler<impl Account, impl Tokenizable>,
-    ) -> &mut Self {
-        self.log_decoder.merge(call_handler.log_decoder);
-        self.contract_calls.push(call_handler.contract_call);
-        self
-    }
-
-    /// Sets the transaction policies for a given transaction.
-    /// Note that this is a builder method
-    pub fn with_tx_policies(mut self, tx_policies: TxPolicies) -> Self {
-        self.tx_policies = tx_policies;
-        self
-    }
-
-    /// If this method is not called, the default policy is to not add any variable outputs.
-    ///
-    /// # Parameters
-    /// - `variable_outputs`: The [`VariableOutputPolicy`] to apply for the contract multi-call.
-    ///
-    /// # Returns
-    /// - `Self`: The updated SDK configuration.
-    pub fn with_variable_output_policy(mut self, variable_outputs: VariableOutputPolicy) -> Self {
-        self.variable_output_policy = variable_outputs;
-        self
-    }
-
-    fn validate_contract_calls(&self) -> Result<()> {
-        if self.contract_calls.is_empty() {
-            return Err(error!(
-                Other,
-                "no calls added. Have you used '.add_calls()'?"
-            ));
-        }
-
-        Ok(())
-    }
-
-    pub async fn transaction_builder(&self) -> Result<ScriptTransactionBuilder> {
-        self.validate_contract_calls()?;
-
-        transaction_builder_from_contract_calls(
-            &self.contract_calls,
-            self.tx_policies,
-            &self.account,
-        )
-        .await
-    }
-
-    /// Returns the script that executes the contract calls
-    pub async fn build_tx(&self) -> Result<ScriptTransaction> {
-        self.validate_contract_calls()?;
-
-        build_tx_from_contract_calls(
-            &self.contract_calls,
-            self.tx_policies,
-            &self.account,
-            self.variable_output_policy,
-        )
-        .await
-    }
-
-    /// Call contract methods on the node, in a state-modifying manner.
-    pub async fn call<D: Tokenizable + Debug>(&mut self) -> Result<FuelCallResponse<D>> {
-        self.call_or_simulate(false).await
-    }
-
-    pub async fn submit(mut self) -> Result<SubmitResponseMultiple<T>> {
-        let tx = self.build_tx().await?;
-        let provider = self.account.try_provider()?;
-
-        let tx_id = provider.send_transaction(tx).await?;
-        self.cached_tx_id = Some(tx_id);
-
-        Ok(SubmitResponseMultiple::new(tx_id, self))
-    }
-
-    /// Call contract methods on the node, in a simulated manner, meaning the state of the
-    /// blockchain is *not* modified but simulated.
-    /// It is the same as the [call] method because the API is more user-friendly this way.
-    ///
-    /// [call]: Self::call
-    pub async fn simulate<D: Tokenizable + Debug>(&mut self) -> Result<FuelCallResponse<D>> {
-        self.call_or_simulate(true).await
-    }
-
-    async fn call_or_simulate<D: Tokenizable + Debug>(
-        &mut self,
-        simulate: bool,
-    ) -> Result<FuelCallResponse<D>> {
-        let tx = self.build_tx().await?;
-        let provider = self.account.try_provider()?;
-
-        self.cached_tx_id = Some(tx.id(provider.chain_id()));
-
-        let tx_status = if simulate {
-            provider.dry_run(tx).await?
-        } else {
-            provider.send_transaction_and_await_commit(tx).await?
-        };
-
-        let receipts = tx_status.take_receipts_checked(Some(&self.log_decoder))?;
-
-        self.get_response(receipts)
-    }
-
-    /// Simulates a call without needing to resolve the generic for the return type
-    async fn simulate_without_decode(&self) -> Result<()> {
-        let provider = self.account.try_provider()?;
-        let tx = self.build_tx().await?;
-
-        provider.dry_run(tx).await?.check(None)?;
-
-        Ok(())
-    }
-
-    /// Get a contract's estimated cost
-    pub async fn estimate_transaction_cost(
-        &self,
-        tolerance: Option<f64>,
-        block_horizon: Option<u32>,
-    ) -> Result<TransactionCost> {
-        let script = self.build_tx().await?;
-
-        let transaction_cost = self
-            .account
-            .try_provider()?
-            .estimate_transaction_cost(script, tolerance, block_horizon)
-            .await?;
-
-        Ok(transaction_cost)
-    }
-
-    /// Create a [`FuelCallResponse`] from call receipts
-    pub fn get_response<D: Tokenizable + Debug>(
-        &self,
-        receipts: Vec<Receipt>,
-    ) -> Result<FuelCallResponse<D>> {
-        let mut receipt_parser = ReceiptParser::new(&receipts, self.decoder_config);
-
-        let final_tokens = self
-            .contract_calls
-            .iter()
-            .map(|call| receipt_parser.parse_call(&call.contract_id, &call.output_param))
-            .collect::<Result<Vec<_>>>()?;
-
-        let tokens_as_tuple = Token::Tuple(final_tokens);
-        let response = FuelCallResponse::<D>::new(
-            D::from_token(tokens_as_tuple)?,
-            receipts,
-            self.log_decoder.clone(),
-            self.cached_tx_id,
-        );
-
-        Ok(response)
-    }
-}
-
-impl<T: Account> sealed::Sealed for MultiContractCallHandler<T> {}
-
-#[async_trait::async_trait]
-impl<T> TxDependencyExtension for MultiContractCallHandler<T>
-where
-    T: Account,
-{
-    async fn simulate(&mut self) -> Result<()> {
-        self.simulate_without_decode().await?;
-        Ok(())
-    }
-
-    fn append_contract(mut self, contract_id: Bech32ContractId) -> Self {
-        self.contract_calls
-            .iter_mut()
-            .take(1)
-            .for_each(|call| call.append_external_contracts(contract_id.clone()));
-        self
-    }
+    (contract_id, code_root, state_root)
 }
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
+    use std::path::Path;
 
-    use fuels_core::types::errors::Error;
+    use fuels_core::types::{
+        errors::{Error, Result},
+        transaction_builders::Blob,
+    };
     use tempfile::tempdir;
 
+    use crate::assembly::contract_call::loader_contract_asm;
+
     use super::*;
-
-    #[test]
-    fn merging_overrides_storage_slots() {
-        // given
-        let make_slot = |id, value| StorageSlot::new([id; 32].into(), [value; 32].into());
-
-        let slots = (1..3).map(|id| make_slot(id, 100));
-        let original_config = StorageConfiguration::new(false, slots);
-
-        let overlapping_slots = (2..4).map(|id| make_slot(id, 200));
-
-        // when
-        let original_config = original_config.add_slot_overrides(overlapping_slots);
-
-        // then
-        assert_eq!(
-            HashSet::from_iter(original_config.slot_overrides.into_iter()),
-            HashSet::from([make_slot(1, 100), make_slot(2, 200), make_slot(3, 200)])
-        );
-    }
 
     #[test]
     fn autoload_storage_slots() {
@@ -1028,5 +123,237 @@ mod tests {
             serde_json::to_string::<Vec<StorageSlot>>(slots).unwrap(),
         )
         .unwrap()
+    }
+
+    #[test]
+    fn blob_size_must_be_greater_than_zero() {
+        // given
+        let contract = Contract::regular(vec![0x00], Salt::zeroed(), vec![]);
+
+        // when
+        let err = contract
+            .convert_to_loader(0)
+            .expect_err("should have failed because blob size is 0");
+
+        // then
+        assert_eq!(
+            err.to_string(),
+            "blob size must be greater than 0".to_string()
+        );
+    }
+
+    #[test]
+    fn contract_with_no_code_cannot_be_turned_into_a_loader() {
+        // given
+        let contract = Contract::regular(vec![], Salt::zeroed(), vec![]);
+
+        // when
+        let err = contract
+            .convert_to_loader(100)
+            .expect_err("should have failed because there is no code");
+
+        // then
+        assert_eq!(
+            err.to_string(),
+            "must provide at least one blob".to_string()
+        );
+    }
+
+    #[test]
+    fn loader_needs_at_least_one_blob() {
+        // given
+        let no_blobs = vec![];
+
+        // when
+        let err = Contract::loader_from_blobs(no_blobs, Salt::default(), vec![])
+            .expect_err("should have failed because there are no blobs");
+
+        // then
+        assert_eq!(
+            err.to_string(),
+            "must provide at least one blob".to_string()
+        );
+    }
+
+    #[test]
+    fn loader_requires_all_except_the_last_blob_to_be_word_sized() {
+        // given
+        let blobs = [vec![0; 9], vec![0; 8]].map(Blob::new).to_vec();
+
+        // when
+        let err = Contract::loader_from_blobs(blobs, Salt::default(), vec![])
+            .expect_err("should have failed because the first blob is not word-sized");
+
+        // then
+        assert_eq!(
+            err.to_string(),
+            "blob 1/2 has a size of 9 bytes, which is not a multiple of 8".to_string()
+        );
+    }
+
+    #[test]
+    fn last_blob_in_loader_can_be_unaligned() {
+        // given
+        let blobs = [vec![0; 8], vec![0; 9]].map(Blob::new).to_vec();
+
+        // when
+        let result = Contract::loader_from_blobs(blobs, Salt::default(), vec![]);
+
+        // then
+        let _ = result.unwrap();
+    }
+
+    #[test]
+    fn can_load_regular_contract() -> Result<()> {
+        // given
+        let tmp_dir = tempfile::tempdir()?;
+        let code_file = tmp_dir.path().join("contract.bin");
+        let code = b"some fake contract code";
+        std::fs::write(&code_file, code)?;
+
+        // when
+        let contract = Contract::load_from(
+            code_file,
+            LoadConfiguration::default()
+                .with_storage_configuration(StorageConfiguration::default().with_autoload(false)),
+        )?;
+
+        // then
+        assert_eq!(contract.code(), code);
+
+        Ok(())
+    }
+
+    #[test]
+    fn can_manually_create_regular_contract() -> Result<()> {
+        // given
+        let binary = b"some fake contract code";
+
+        // when
+        let contract = Contract::regular(binary.to_vec(), Salt::zeroed(), vec![]);
+
+        // then
+        assert_eq!(contract.code(), binary);
+
+        Ok(())
+    }
+
+    macro_rules! getters_work {
+        ($contract: ident, $contract_id: expr, $state_root: expr, $code_root: expr, $salt: expr, $code: expr) => {
+            assert_eq!($contract.contract_id(), $contract_id);
+            assert_eq!($contract.state_root(), $state_root);
+            assert_eq!($contract.code_root(), $code_root);
+            assert_eq!($contract.salt(), $salt);
+            assert_eq!($contract.code(), $code);
+        };
+    }
+
+    #[test]
+    fn regular_contract_has_expected_getters() -> Result<()> {
+        let contract_binary = b"some fake contract code";
+        let storage_slots = vec![StorageSlot::new([2; 32].into(), [1; 32].into())];
+        let contract = Contract::regular(contract_binary.to_vec(), Salt::zeroed(), storage_slots);
+
+        let expected_contract_id =
+            "93c9f1e61efb25458e3c56fdcfee62acb61c0533364eeec7ba61cb2957aa657b".parse()?;
+        let expected_state_root =
+            "852b7b7527124dbcd44302e52453b864dc6f4d9544851c729da666a430b84c97".parse()?;
+        let expected_code_root =
+            "69ca130191e9e469f1580229760b327a0729237f1aff65cf1d076b2dd8360031".parse()?;
+        let expected_salt = Salt::zeroed();
+
+        getters_work!(
+            contract,
+            expected_contract_id,
+            expected_state_root,
+            expected_code_root,
+            expected_salt,
+            contract_binary
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn regular_can_be_turned_into_loader_and_back() -> Result<()> {
+        let contract_binary = b"some fake contract code";
+
+        let contract_original = Contract::regular(contract_binary.to_vec(), Salt::zeroed(), vec![]);
+
+        let loader_contract = contract_original.clone().convert_to_loader(1)?;
+
+        let regular_recreated = loader_contract.clone().revert_to_regular();
+
+        assert_eq!(regular_recreated, contract_original);
+
+        Ok(())
+    }
+
+    #[test]
+    fn unuploaded_loader_contract_has_expected_getters() -> Result<()> {
+        let contract_binary = b"some fake contract code";
+
+        let storage_slots = vec![StorageSlot::new([2; 32].into(), [1; 32].into())];
+        let original = Contract::regular(contract_binary.to_vec(), Salt::zeroed(), storage_slots);
+        let loader = original.clone().convert_to_loader(1024)?;
+
+        let loader_asm = loader_contract_asm(&loader.blob_ids()).unwrap();
+        let manual_loader = original.with_code(loader_asm);
+
+        getters_work!(
+            loader,
+            manual_loader.contract_id(),
+            manual_loader.state_root(),
+            manual_loader.code_root(),
+            manual_loader.salt(),
+            manual_loader.code()
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn unuploaded_loader_requires_at_least_one_blob() -> Result<()> {
+        // given
+        let no_blob_ids = vec![];
+
+        // when
+        let loader = Contract::loader_from_blob_ids(no_blob_ids, Salt::default(), vec![])
+            .expect_err("should have failed because there are no blobs");
+
+        // then
+        assert_eq!(
+            loader.to_string(),
+            "must provide at least one blob".to_string()
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn uploaded_loader_has_expected_getters() -> Result<()> {
+        let contract_binary = b"some fake contract code";
+        let original_contract = Contract::regular(contract_binary.to_vec(), Salt::zeroed(), vec![]);
+
+        let blob_ids = original_contract
+            .clone()
+            .convert_to_loader(1024)?
+            .blob_ids();
+
+        // we pretend we uploaded the blobs
+        let loader = Contract::loader_from_blob_ids(blob_ids.clone(), Salt::default(), vec![])?;
+
+        let loader_asm = loader_contract_asm(&blob_ids).unwrap();
+        let manual_loader = original_contract.with_code(loader_asm);
+
+        getters_work!(
+            loader,
+            manual_loader.contract_id(),
+            manual_loader.state_root(),
+            manual_loader.code_root(),
+            manual_loader.salt(),
+            manual_loader.code()
+        );
+
+        Ok(())
     }
 }

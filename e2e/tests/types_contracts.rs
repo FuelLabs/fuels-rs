@@ -22,7 +22,8 @@ async fn test_methods_typeless_argument() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -48,7 +49,8 @@ async fn call_with_empty_return() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -78,7 +80,7 @@ async fn call_with_structs() -> Result<()> {
         "sway/types/contracts/complex_types_contract/out/release/complex_types_contract.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(&wallet, TxPolicies::default())
+    .deploy_if_not_exists(&wallet, TxPolicies::default())
     .await?;
 
     let contract_methods = MyContract::new(contract_id, wallet).methods();
@@ -108,7 +110,8 @@ async fn abigen_different_structs_same_arg_name() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -137,12 +140,16 @@ async fn nested_structs() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
     let expected = AllStruct {
-        some_struct: SomeStruct { par_1: 12345 },
+        some_struct: SomeStruct {
+            field: 12345,
+            field_2: true,
+        },
     };
 
     let contract_methods = contract_instance.methods();
@@ -194,7 +201,8 @@ async fn calls_with_empty_struct() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     let contract_methods = contract_instance.methods();
@@ -257,7 +265,8 @@ async fn test_tuples() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     let contract_methods = contract_instance.methods();
@@ -331,7 +340,8 @@ async fn test_evm_address() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -398,7 +408,8 @@ async fn test_array() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -425,7 +436,8 @@ async fn test_arrays_with_custom_types() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -467,7 +479,8 @@ async fn str_in_array() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -507,7 +520,8 @@ async fn test_enum_inside_struct() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -549,7 +563,8 @@ async fn native_types_support() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -587,7 +602,8 @@ async fn enum_coding_w_variable_width_variants() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -628,7 +644,8 @@ async fn enum_coding_w_unit_enums() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -667,7 +684,8 @@ async fn enum_as_input() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -743,7 +761,8 @@ async fn type_inside_enum() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -797,290 +816,6 @@ async fn type_inside_enum() -> Result<()> {
 }
 
 #[tokio::test]
-#[should_panic(expected = "failed to convert string into SizedAsciiString")]
-async fn strings_must_have_correct_length() {
-    abigen!(Contract(
-        name = "SimpleContract",
-        abi = r#"
-        {
-          "types": [
-            {
-              "typeId": 0,
-              "type": "()",
-              "components": [],
-              "typeParameters": null
-            },
-            {
-              "typeId": 1,
-              "type": "str[4]",
-              "components": null,
-              "typeParameters": null
-            }
-          ],
-          "functions": [
-            {
-              "inputs": [
-                {
-                  "name": "arg",
-                  "type": 1,
-                  "typeArguments": null
-                }
-              ],
-              "name": "takes_string",
-              "output": {
-                "name": "",
-                "type": 0,
-                "typeArguments": null
-              }
-            }
-          ]
-        }
-        "#,
-    ));
-
-    let wallet = launch_provider_and_get_wallet()
-        .await
-        .expect("Should have wallet");
-    let contract_instance = SimpleContract::new(null_contract_id(), wallet);
-
-    // ANCHOR: contract_takes_string
-    let _ = contract_instance.methods().takes_string(
-        "fuell"
-            .try_into()
-            .expect("failed to convert string into SizedAsciiString"),
-    );
-    // ANCHOR_END: contract_takes_string
-}
-
-#[tokio::test]
-#[should_panic(expected = "`SizedAsciiString` must be constructed from a `String` \
-    containing only ascii encodable characters. Got: `fueŁ`")]
-async fn strings_must_have_all_ascii_chars() {
-    abigen!(Contract(
-        name = "SimpleContract",
-        abi = r#"
-        {
-          "types": [
-            {
-              "typeId": 0,
-              "type": "()",
-              "components": [],
-              "typeParameters": null
-            },
-            {
-              "typeId": 1,
-              "type": "str[4]",
-              "components": null,
-              "typeParameters": null
-            }
-          ],
-          "functions": [
-            {
-              "inputs": [
-                {
-                  "name": "arg",
-                  "type": 1,
-                  "typeArguments": null
-                }
-              ],
-              "name": "takes_string",
-              "output": {
-                "name": "",
-                "type": 0,
-                "typeArguments": null
-              }
-            }
-          ]
-        }
-        "#,
-    ));
-
-    let wallet = launch_provider_and_get_wallet().await.unwrap();
-    let contract_instance = SimpleContract::new(null_contract_id(), wallet);
-    let _ = contract_instance
-        .methods()
-        .takes_string("fueŁ".try_into().unwrap());
-}
-
-#[tokio::test]
-#[should_panic(expected = "`SizedAsciiString<4>` must be constructed from a \
-    `String` of length 4. Got: `fuell`")]
-async fn strings_must_have_correct_length_custom_types() {
-    abigen!(Contract(
-        name = "SimpleContract",
-        abi = r#"
-        {
-          "types": [
-            {
-              "typeId": 0,
-              "type": "()",
-              "components": [],
-              "typeParameters": null
-            },
-            {
-              "typeId": 1,
-              "type": "[_; 2]",
-              "components": [
-                {
-                  "name": "__array_element",
-                  "type": 4,
-                  "typeArguments": null
-                }
-              ],
-              "typeParameters": null
-            },
-            {
-              "typeId": 2,
-              "type": "enum MyEnum",
-              "components": [
-                {
-                  "name": "Foo",
-                  "type": 1,
-                  "typeArguments": null
-                },
-                {
-                  "name": "Bar",
-                  "type": 3,
-                  "typeArguments": null
-                }
-              ],
-              "typeParameters": null
-            },
-            {
-              "typeId": 3,
-              "type": "str[4]",
-              "components": null,
-              "typeParameters": null
-            },
-            {
-              "typeId": 4,
-              "type": "u8",
-              "components": null,
-              "typeParameters": null
-            }
-          ],
-          "functions": [
-            {
-              "inputs": [
-                {
-                  "name": "value",
-                  "type": 2,
-                  "typeArguments": null
-                }
-              ],
-              "name": "takes_enum",
-              "output": {
-                "name": "",
-                "type": 0,
-                "typeArguments": null
-              }
-            }
-          ]
-        }
-        "#,
-    ));
-
-    let wallet = launch_provider_and_get_wallet().await.unwrap();
-    let contract_instance = SimpleContract::new(null_contract_id(), wallet);
-    let _ = contract_instance
-        .methods()
-        .takes_enum(MyEnum::Bar("fuell".try_into().unwrap()));
-}
-
-#[tokio::test]
-#[should_panic(expected = "`SizedAsciiString` must be constructed from a `String` \
-    containing only ascii encodable characters. Got: `fueŁ`")]
-async fn strings_must_have_all_ascii_chars_custom_types() {
-    abigen!(Contract(
-        name = "SimpleContract",
-        abi = r#"
-        {
-          "types": [
-            {
-              "typeId": 0,
-              "type": "()",
-              "components": [],
-              "typeParameters": null
-            },
-            {
-              "typeId": 1,
-              "type": "str[4]",
-              "components": null,
-              "typeParameters": null
-            },
-            {
-              "typeId": 2,
-              "type": "struct InnerStruct",
-              "components": [
-                {
-                  "name": "bar",
-                  "type": 1,
-                  "typeArguments": null
-                }
-              ],
-              "typeParameters": null
-            },
-            {
-              "typeId": 3,
-              "type": "struct MyNestedStruct",
-              "components": [
-                {
-                  "name": "x",
-                  "type": 4,
-                  "typeArguments": null
-                },
-                {
-                  "name": "foo",
-                  "type": 2,
-                  "typeArguments": null
-                }
-              ],
-              "typeParameters": null
-            },
-            {
-              "typeId": 4,
-              "type": "u16",
-              "components": null,
-              "typeParameters": null
-            }
-          ],
-          "functions": [
-            {
-              "inputs": [
-                {
-                  "name": "top_value",
-                  "type": 3,
-                  "typeArguments": null
-                }
-              ],
-              "name": "takes_nested_struct",
-              "output": {
-                "name": "",
-                "type": 0,
-                "typeArguments": null
-              }
-            }
-          ]
-        }
-        "#,
-    ));
-
-    let inner_struct = InnerStruct {
-        bar: "fueŁ".try_into().unwrap(),
-    };
-    let input = MyNestedStruct {
-        x: 10,
-        foo: inner_struct,
-    };
-
-    let wallet = launch_provider_and_get_wallet()
-        .await
-        .expect("Should have wallet");
-    let contract_instance = SimpleContract::new(null_contract_id(), wallet);
-    let _ = contract_instance.methods().takes_nested_struct(input);
-}
-
-#[tokio::test]
 async fn test_rust_option_can_be_decoded() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
@@ -1091,7 +826,8 @@ async fn test_rust_option_can_be_decoded() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     let contract_methods = contract_instance.methods();
@@ -1143,7 +879,8 @@ async fn test_rust_option_can_be_encoded() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     let contract_methods = contract_instance.methods();
@@ -1197,7 +934,8 @@ async fn test_rust_result_can_be_decoded() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     let contract_methods = contract_instance.methods();
@@ -1249,7 +987,8 @@ async fn test_rust_result_can_be_encoded() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     let contract_methods = contract_instance.methods();
@@ -1284,7 +1023,8 @@ async fn test_identity_can_be_decoded() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     let contract_methods = contract_instance.methods();
@@ -1329,7 +1069,8 @@ async fn test_identity_can_be_encoded() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     let contract_methods = contract_instance.methods();
@@ -1377,12 +1118,14 @@ async fn test_identity_with_two_contracts() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
         Deploy(
             name = "contract_instance2",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -1422,7 +1165,8 @@ async fn generics_test() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     let contract_methods = contract_instance.methods();
@@ -1472,6 +1216,32 @@ async fn generics_test() -> Result<()> {
         assert_eq!(result, arg1);
     }
     {
+        // struct that has a generic struct in an array
+        let inner = [
+            StructWTwoGenerics {
+                a: Bits256([1u8; 32]),
+                b: 1,
+            },
+            StructWTwoGenerics {
+                a: Bits256([2u8; 32]),
+                b: 2,
+            },
+            StructWTwoGenerics {
+                a: Bits256([3u8; 32]),
+                b: 3,
+            },
+        ];
+        let arg1 = StructWArrWGenericStruct { a: inner };
+
+        let result = contract_methods
+            .array_with_generic_struct(arg1.clone())
+            .call()
+            .await?
+            .value;
+
+        assert_eq!(result, arg1);
+    }
+    {
         // struct that has the generic in a tuple
         let arg1 = StructWTupleGeneric { a: (1, 2) };
 
@@ -1496,10 +1266,7 @@ async fn generics_test() -> Result<()> {
     }
     {
         contract_methods
-            .unused_generic_args(
-                StructOneUnusedGenericParam::default(),
-                EnumOneUnusedGenericParam::One,
-            )
+            .unused_generic_args(StructUnusedGeneric::new(15), EnumUnusedGeneric::One(15))
             .call()
             .await?;
 
@@ -1539,7 +1306,6 @@ async fn generics_test() -> Result<()> {
                 10u32,
             )],
         };
-
         contract_methods.complex_test(arg1.clone()).call().await?;
     }
 
@@ -1547,7 +1313,7 @@ async fn generics_test() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_vector() -> Result<()> {
+async fn contract_vectors() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
@@ -1557,7 +1323,8 @@ async fn test_vector() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     let methods = contract_instance.methods();
@@ -1644,7 +1411,8 @@ async fn test_b256() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -1682,7 +1450,8 @@ async fn test_b512() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     let contract_methods = contract_instance.methods();
@@ -1730,7 +1499,8 @@ async fn test_u128() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     let contract_methods = contract_instance.methods();
@@ -1782,7 +1552,8 @@ async fn test_u256() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TypesContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     let contract_methods = contract_instance.methods();
@@ -1819,7 +1590,8 @@ async fn test_base_type_in_vec_output() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "VectorOutputContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     let contract_methods = contract_instance.methods();
@@ -1858,7 +1630,8 @@ async fn test_composite_types_in_vec_output() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "VectorOutputContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     let contract_methods = contract_instance.methods();
@@ -1927,7 +1700,8 @@ async fn test_bytes_output() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "BytesOutputContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -1950,7 +1724,8 @@ async fn test_bytes_as_input() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "BytesInputContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     let contract_methods = contract_instance.methods();
@@ -1976,7 +1751,7 @@ async fn test_bytes_as_input() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_contract_raw_slice() -> Result<()> {
+async fn contract_raw_slice() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
@@ -1986,7 +1761,8 @@ async fn test_contract_raw_slice() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "RawSliceContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -2021,7 +1797,7 @@ async fn test_contract_raw_slice() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_contract_returning_string_slice() -> Result<()> {
+async fn contract_string_slice() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
@@ -2031,22 +1807,24 @@ async fn test_contract_returning_string_slice() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "StringSliceContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
     let contract_methods = contract_instance.methods();
 
-    {
-        let response = contract_methods.return_str().call().await?;
-        assert_eq!(response.value, "contract-return");
-    }
+    let response = contract_methods
+        .handles_str("contract-input".try_into()?)
+        .call()
+        .await?;
+    assert_eq!(response.value, "contract-return");
 
     Ok(())
 }
 
 #[tokio::test]
-async fn test_contract_std_lib_string() -> Result<()> {
+async fn contract_std_lib_string() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
@@ -2056,7 +1834,8 @@ async fn test_contract_std_lib_string() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "StdLibString",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     let contract_methods = contract_instance.methods();
@@ -2094,7 +1873,8 @@ async fn test_heap_type_in_enums() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "HeapTypeInEnum",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     let contract_methods = contract_instance.methods();
@@ -2206,7 +1986,8 @@ async fn nested_heap_types() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "HeapTypeInEnum",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 

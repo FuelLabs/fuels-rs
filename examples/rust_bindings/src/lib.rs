@@ -25,47 +25,39 @@ mod tests {
                 name = "MyContract",
                 abi = r#"
             {
-                "types": [
-                  {
-                    "typeId": 0,
-                    "type": "u64",
-                    "components": null,
-                    "typeParameters": null
-                  }
-                ],
-                "functions": [
-                  {
-                    "inputs": [
-                      {
-                        "name": "value",
-                        "type": 0,
-                        "typeArguments": null
-                      }
-                    ],
-                    "name": "initialize_counter",
-                    "output": {
-                      "name": "",
-                      "type": 0,
-                      "typeArguments": null
+              "programType": "contract",
+              "specVersion": "1",
+              "encodingVersion": "1",
+              "concreteTypes": [
+                {
+                  "concreteTypeId": "1506e6f44c1d6291cdf46395a8e573276a4fa79e8ace3fc891e092ef32d1b0a0",
+                  "type": "u64"
+                }
+              ],
+              "functions": [
+                {
+                  "inputs": [
+                    {
+                      "name": "value",
+                      "concreteTypeId": "1506e6f44c1d6291cdf46395a8e573276a4fa79e8ace3fc891e092ef32d1b0a0"
                     }
-                  },
-                  {
-                    "inputs": [
-                      {
-                        "name": "value",
-                        "type": 0,
-                        "typeArguments": null
-                      }
-                    ],
-                    "name": "increment_counter",
-                    "output": {
-                      "name": "",
-                      "type": 0,
-                      "typeArguments": null
+                  ],
+                  "name": "initialize_counter",
+                  "output": "1506e6f44c1d6291cdf46395a8e573276a4fa79e8ace3fc891e092ef32d1b0a0"
+                },
+                {
+                  "inputs": [
+                    {
+                      "name": "value",
+                      "concreteTypeId": "1506e6f44c1d6291cdf46395a8e573276a4fa79e8ace3fc891e092ef32d1b0a0"
                     }
-                  }
-                ]
-              }
+                  ],
+                  "name": "increment_counter",
+                  "output": "1506e6f44c1d6291cdf46395a8e573276a4fa79e8ace3fc891e092ef32d1b0a0"
+                }
+              ],
+              "metadataTypes": []
+            }
             "#
             ));
             // ANCHOR_END: abigen_with_string

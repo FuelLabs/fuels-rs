@@ -19,7 +19,8 @@ mod hygiene {
             Deploy(
                 name = "simple_contract_instance",
                 contract = "SimpleContract",
-                wallet = "wallet"
+                wallet = "wallet",
+                random_salt = false,
             ),
         );
     }
@@ -36,7 +37,8 @@ async fn compile_bindings_from_contract_file() {
         Deploy(
             name = "simple_contract_instance",
             contract = "SimpleContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -44,7 +46,7 @@ async fn compile_bindings_from_contract_file() {
         .methods()
         .takes_int_returns_bool(42);
 
-    let encoded_args = call_handler.contract_call.encoded_args.unwrap();
+    let encoded_args = call_handler.call.encoded_args.unwrap();
 
     assert_eq!(encoded_args, [0, 0, 0, 42]);
 }
@@ -53,39 +55,39 @@ async fn compile_bindings_from_contract_file() {
 async fn compile_bindings_from_inline_contract() -> Result<()> {
     abigen!(Contract(
         name = "SimpleContract",
+        // abi generated with: "e2e/sway/abi/simple_contract"
         abi = r#"
         {
-            "types": [
+          "programType": "contract",
+          "specVersion": "1",
+          "encodingVersion": "1",
+          "concreteTypes": [
+            {
+              "type": "bool",
+              "concreteTypeId": "b760f44fa5965c2474a3b471467a22c43185152129295af588b022ae50b50903"
+            },
+            {
+              "type": "u32",
+              "concreteTypeId": "d7649d428b9ff33d188ecbf38a7e4d8fd167fa01b2e10fe9a8f9308e52f1d7cc"
+            }
+          ],
+          "metadataTypes": [],
+          "functions": [
+            {
+              "inputs": [
                 {
-                    "typeId": 0,
-                    "type": "bool",
-                    "components": null,
-                    "typeParameters": null
-                },
-                {
-                    "typeId": 1,
-                    "type": "u32",
-                    "components": null,
-                    "typeParameters": null
+                  "name": "_arg",
+                  "concreteTypeId": "d7649d428b9ff33d188ecbf38a7e4d8fd167fa01b2e10fe9a8f9308e52f1d7cc"
                 }
-            ],
-            "functions": [
-                {
-                    "inputs": [
-                        {
-                            "name": "only_argument",
-                            "type": 1,
-                            "typeArguments": null
-                        }
-                    ],
-                    "name": "takes_ints_returns_bool",
-                    "output": {
-                        "name": "",
-                        "type": 0,
-                        "typeArguments": null
-                    }
-                }
-            ]
+              ],
+              "name": "takes_u32_returns_bool",
+              "output": "b760f44fa5965c2474a3b471467a22c43185152129295af588b022ae50b50903",
+              "attributes": null
+            }
+          ],
+          "loggedTypes": [],
+          "messagesTypes": [],
+          "configurables": []
         }
         "#,
     ));
@@ -94,8 +96,8 @@ async fn compile_bindings_from_inline_contract() -> Result<()> {
 
     let contract_instance = SimpleContract::new(null_contract_id(), wallet);
 
-    let call_handler = contract_instance.methods().takes_ints_returns_bool(42_u32);
-    let encoded_args = call_handler.contract_call.encoded_args.unwrap();
+    let call_handler = contract_instance.methods().takes_u32_returns_bool(42_u32);
+    let encoded_args = call_handler.call.encoded_args.unwrap();
 
     assert_eq!(encoded_args, [0, 0, 0, 42]);
 
@@ -119,12 +121,14 @@ async fn shared_types() -> Result<()> {
         Deploy(
             name = "contract_a",
             contract = "ContractA",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
         Deploy(
             name = "contract_b",
             contract = "ContractB",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     {
@@ -219,7 +223,6 @@ async fn shared_types() -> Result<()> {
     Ok(())
 }
 
-#[cfg(feature = "test-type-paths")]
 #[tokio::test]
 async fn type_paths_respected() -> Result<()> {
     setup_program_test!(
@@ -231,7 +234,8 @@ async fn type_paths_respected() -> Result<()> {
         Deploy(
             name = "contract_a_instance",
             contract = "ContractA",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     {

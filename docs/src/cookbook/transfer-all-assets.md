@@ -12,7 +12,7 @@ We prepare two wallets with randomized addresses. Next, we want one of our walle
 
 Transactions require us to define input and output coins. Let's assume we do not know the assets owned by `wallet_1`. We retrieve its balances, i.e. tuples consisting of a string representing the asset ID and the respective amount. This lets us use the helpers `get_asset_inputs_for_amount()`, `get_asset_outputs_for_amount()` to create the appropriate inputs and outputs.
 
-For the sake of simplicity, we avoid transferring the base asset so we don't have to worry about transaction fees:
+We transfer only a part of the base asset balance so that the rest can cover transaction fees:
 
 ```rust,ignore
 {{#include ../../../examples/cookbook/src/lib.rs:transfer_multiple_input}}

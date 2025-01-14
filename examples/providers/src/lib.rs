@@ -4,10 +4,8 @@ mod tests {
 
     use fuels::prelude::Result;
 
-    // Kept only for the anchors. The latest SDK is not compatible with `beta-5.fuel.network`
-    // (fuel-core changed the gql endpoint versioning it.).
+    #[ignore = "testnet currently not compatible with the sdk"]
     #[tokio::test]
-    #[ignore]
     async fn connect_to_fuel_node() -> Result<()> {
         // ANCHOR: connect_to_testnet
         use std::str::FromStr;
@@ -15,7 +13,7 @@ mod tests {
         use fuels::{crypto::SecretKey, prelude::*};
 
         // Create a provider pointing to the testnet.
-        let provider = Provider::connect("beta-5.fuel.network").await.unwrap();
+        let provider = Provider::connect("testnet.fuel.network").await.unwrap();
 
         // Setup a private key
         let secret = SecretKey::from_str(
@@ -73,8 +71,9 @@ mod tests {
         // ANCHOR_END: setup_test_blockchain
 
         // ANCHOR: get_coins
+        let consensus_parameters = provider.consensus_parameters().await?;
         let coins = provider
-            .get_coins(wallet.address(), *provider.base_asset_id())
+            .get_coins(wallet.address(), *consensus_parameters.base_asset_id())
             .await?;
         assert_eq!(coins.len(), 1);
         // ANCHOR_END: get_coins

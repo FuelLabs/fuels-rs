@@ -52,7 +52,7 @@ pub async fn launch_provider_and_get_wallet() -> Result<WalletUnlocked> {
 /// ```
 pub async fn launch_custom_provider_and_get_wallets(
     wallet_config: WalletsConfig,
-    provider_config: Option<NodeConfig>,
+    node_config: Option<NodeConfig>,
     chain_config: Option<ChainConfig>,
 ) -> Result<Vec<WalletUnlocked>> {
     const SIZE_SECRET_KEY: usize = size_of::<SecretKey>();
@@ -76,7 +76,7 @@ pub async fn launch_custom_provider_and_get_wallets(
         .flat_map(|wallet| setup_custom_assets_coins(wallet.address(), wallet_config.assets()))
         .collect::<Vec<_>>();
 
-    let provider = setup_test_provider(all_coins, vec![], provider_config, chain_config).await?;
+    let provider = setup_test_provider(all_coins, vec![], node_config, chain_config).await?;
 
     for wallet in &mut wallets {
         wallet.set_provider(provider.clone());
@@ -105,11 +105,14 @@ mod tests {
 
         let wallets = launch_custom_provider_and_get_wallets(config, None, None).await?;
         let provider = wallets.first().unwrap().try_provider()?;
+        let consensus_parameters = provider.consensus_parameters().await?;
 
         assert_eq!(wallets.len(), num_wallets as usize);
 
         for wallet in &wallets {
-            let coins = wallet.get_coins(*provider.base_asset_id()).await?;
+            let coins = wallet
+                .get_coins(*consensus_parameters.base_asset_id())
+                .await?;
 
             assert_eq!(coins.len(), num_coins as usize);
 
@@ -157,7 +160,7 @@ mod tests {
         for asset in assets {
             for wallet in &wallets {
                 let resources = wallet
-                    .get_spendable_resources(asset.id, asset.num_coins * asset.coin_amount)
+                    .get_spendable_resources(asset.id, asset.num_coins * asset.coin_amount, None)
                     .await?;
                 assert_eq!(resources.len() as u64, asset.num_coins);
 
@@ -224,6 +227,7 @@ mod tests {
                 wallet
                     .try_provider()?
                     .consensus_parameters()
+                    .await?
                     .tx_params()
                     .max_gas_per_tx(),
                 max_gas_per_tx

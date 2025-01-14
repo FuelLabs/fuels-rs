@@ -206,34 +206,32 @@ async fn main_function_vector_arguments() -> Result<()> {
     Ok(())
 }
 
-// TODO: Decide what to do with this test once
-// https://github.com/FuelLabs/sway/issues/5727 is resolved
-// #[tokio::test]
-// async fn test_script_raw_slice() -> Result<()> {
-//     setup_program_test!(
-//         Wallets("wallet"),
-//         Abigen(Script(
-//             name = "BimBamScript",
-//             project = "e2e/sway/types/scripts/script_raw_slice",
-//         )),
-//         LoadScript(
-//             name = "script_instance",
-//             script = "BimBamScript",
-//             wallet = "wallet"
-//         )
-//     );
+#[tokio::test]
+async fn script_raw_slice() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Script(
+            name = "BimBamScript",
+            project = "e2e/sway/types/scripts/script_raw_slice",
+        )),
+        LoadScript(
+            name = "script_instance",
+            script = "BimBamScript",
+            wallet = "wallet"
+        )
+    );
 
-//     let raw_slice = RawSlice(vec![40, 41, 42]);
-//     let wrapper = Wrapper {
-//         inner: vec![raw_slice.clone(), raw_slice.clone()],
-//         inner_enum: SomeEnum::Second(raw_slice),
-//     };
+    let raw_slice = RawSlice(vec![40, 41, 42]);
+    let wrapper = Wrapper {
+        inner: vec![raw_slice.clone(), raw_slice.clone()],
+        inner_enum: SomeEnum::Second(raw_slice),
+    };
 
-//     let rtn = script_instance.main(10, wrapper).call().await?.value;
-//     assert_eq!(rtn, RawSlice(vec![1, 2, 3]));
+    let rtn = script_instance.main(6, wrapper).call().await?.value;
+    assert_eq!(rtn, RawSlice(vec![0, 1, 2, 3, 4, 5]));
 
-//     Ok(())
-// }
+    Ok(())
+}
 
 #[tokio::test]
 async fn main_function_bytes_arguments() -> Result<()> {
@@ -331,7 +329,7 @@ async fn script_handles_u256() -> Result<()> {
 }
 
 #[tokio::test]
-async fn script_handles_std_string() -> Result<()> {
+async fn script_std_string() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Script(
@@ -345,8 +343,35 @@ async fn script_handles_std_string() -> Result<()> {
         )
     );
 
-    let arg = String::from("Hello World");
-    script_instance.main(arg).call().await?;
+    let response = script_instance
+        .main("script-input".to_string())
+        .call()
+        .await?;
+    assert_eq!(response.value, "script-return".to_string());
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn script_string_slice() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Script(
+            name = "MyScript",
+            project = "e2e/sway/types/scripts/script_string_slice",
+        )),
+        LoadScript(
+            name = "script_instance",
+            script = "MyScript",
+            wallet = "wallet"
+        )
+    );
+
+    let response = script_instance
+        .main("script-input".try_into()?)
+        .call()
+        .await?;
+    assert_eq!(response.value, "script-return");
 
     Ok(())
 }

@@ -15,7 +15,8 @@ async fn test_parse_logged_variables() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "LogContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -53,7 +54,8 @@ async fn test_parse_logs_values() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "LogContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -87,7 +89,8 @@ async fn test_parse_logs_custom_types() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "LogContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -127,7 +130,8 @@ async fn test_parse_logs_generic_types() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "LogContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -179,7 +183,8 @@ async fn test_decode_logs() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "LogContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -233,7 +238,8 @@ async fn test_decode_logs_with_no_logs() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -260,7 +266,8 @@ async fn test_multi_call_log_single_contract() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "LogContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -269,9 +276,7 @@ async fn test_multi_call_log_single_contract() -> Result<()> {
     let call_handler_1 = contract_methods.produce_logs_values();
     let call_handler_2 = contract_methods.produce_logs_variables();
 
-    let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
-
-    multi_call_handler
+    let multi_call_handler = CallHandler::new_multi_call(wallet.clone())
         .add_call(call_handler_1)
         .add_call(call_handler_2);
 
@@ -310,21 +315,21 @@ async fn test_multi_call_log_multiple_contracts() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "LogContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
         Deploy(
             name = "contract_instance2",
             contract = "LogContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
     let call_handler_1 = contract_instance.methods().produce_logs_values();
     let call_handler_2 = contract_instance2.methods().produce_logs_variables();
 
-    let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
-
-    multi_call_handler
+    let multi_call_handler = CallHandler::new_multi_call(wallet.clone())
         .add_call(call_handler_1)
         .add_call(call_handler_2);
 
@@ -366,12 +371,14 @@ async fn test_multi_call_contract_with_contract_logs() -> Result<()> {
         Deploy(
             name = "contract_caller_instance",
             contract = "ContractCaller",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
         Deploy(
             name = "contract_caller_instance2",
             contract = "ContractCaller",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -379,7 +386,7 @@ async fn test_multi_call_contract_with_contract_logs() -> Result<()> {
         "./sway/logs/contract_logs/out/release/contract_logs.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(&wallet, TxPolicies::default())
+    .deploy_if_not_exists(&wallet, TxPolicies::default())
     .await?;
 
     let contract_instance = MyContract::new(contract_id.clone(), wallet.clone());
@@ -394,9 +401,7 @@ async fn test_multi_call_contract_with_contract_logs() -> Result<()> {
         .logs_from_external_contract(contract_id)
         .with_contracts(&[&contract_instance]);
 
-    let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
-
-    multi_call_handler
+    let multi_call_handler = CallHandler::new_multi_call(wallet.clone())
         .add_call(call_handler_1)
         .add_call(call_handler_2);
 
@@ -429,26 +434,37 @@ fn assert_revert_containing_msg(msg: &str, error: Error) {
 }
 
 #[tokio::test]
-async fn test_require_log() -> Result<()> {
+async fn test_revert_logs() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
-            name = "RequireContract",
-            project = "e2e/sway/contracts/require"
+            name = "RevertLogsContract",
+            project = "e2e/sway/contracts/revert_logs"
         )),
         Deploy(
             name = "contract_instance",
-            contract = "RequireContract",
-            wallet = "wallet"
+            contract = "RevertLogsContract",
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
     macro_rules! reverts_with_msg {
-        ($method:ident, $execution: ident, $msg:expr) => {
+        ($method:ident, call, $msg:expr) => {
             let error = contract_instance
                 .methods()
                 .$method()
-                .$execution()
+                .call()
+                .await
+                .expect_err("should return a revert error");
+
+            assert_revert_containing_msg($msg, error);
+        };
+        ($method:ident, simulate, $msg:expr) => {
+            let error = contract_instance
+                .methods()
+                .$method()
+                .simulate(Execution::Realistic)
                 .await
                 .expect_err("should return a revert error");
 
@@ -456,37 +472,54 @@ async fn test_require_log() -> Result<()> {
         };
     }
 
-    reverts_with_msg!(require_primitive, call, "42");
-    reverts_with_msg!(require_primitive, simulate, "42");
+    {
+        reverts_with_msg!(require_primitive, call, "42");
+        reverts_with_msg!(require_primitive, simulate, "42");
 
-    reverts_with_msg!(require_string, call, "fuel");
-    reverts_with_msg!(require_string, simulate, "fuel");
+        reverts_with_msg!(require_string, call, "fuel");
+        reverts_with_msg!(require_string, simulate, "fuel");
 
-    reverts_with_msg!(require_custom_generic, call, "StructDeeplyNestedGeneric");
-    reverts_with_msg!(
-        require_custom_generic,
-        simulate,
-        "StructDeeplyNestedGeneric"
-    );
+        reverts_with_msg!(require_custom_generic, call, "StructDeeplyNestedGeneric");
+        reverts_with_msg!(
+            require_custom_generic,
+            simulate,
+            "StructDeeplyNestedGeneric"
+        );
 
-    reverts_with_msg!(require_with_additional_logs, call, "64");
-    reverts_with_msg!(require_with_additional_logs, simulate, "64");
+        reverts_with_msg!(require_with_additional_logs, call, "64");
+        reverts_with_msg!(require_with_additional_logs, simulate, "64");
+    }
+    {
+        reverts_with_msg!(rev_w_log_primitive, call, "42");
+        reverts_with_msg!(rev_w_log_primitive, simulate, "42");
+
+        reverts_with_msg!(rev_w_log_string, call, "fuel");
+        reverts_with_msg!(rev_w_log_string, simulate, "fuel");
+
+        reverts_with_msg!(rev_w_log_custom_generic, call, "StructDeeplyNestedGeneric");
+        reverts_with_msg!(
+            rev_w_log_custom_generic,
+            simulate,
+            "StructDeeplyNestedGeneric"
+        );
+    }
 
     Ok(())
 }
 
 #[tokio::test]
-async fn test_multi_call_require_log_single_contract() -> Result<()> {
+async fn test_multi_call_revert_logs_single_contract() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
-            name = "RequireContract",
-            project = "e2e/sway/contracts/require"
+            name = "RevertLogsContract",
+            project = "e2e/sway/contracts/revert_logs"
         )),
         Deploy(
             name = "contract_instance",
-            contract = "RequireContract",
-            wallet = "wallet"
+            contract = "RevertLogsContract",
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -496,16 +529,14 @@ async fn test_multi_call_require_log_single_contract() -> Result<()> {
     // handlers as the script returns the first revert it finds.
     {
         let call_handler_1 = contract_methods.require_string();
-        let call_handler_2 = contract_methods.require_custom_generic();
+        let call_handler_2 = contract_methods.rev_w_log_custom_generic();
 
-        let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
-
-        multi_call_handler
+        let mut multi_call_handler = CallHandler::new_multi_call(wallet.clone())
             .add_call(call_handler_1)
             .add_call(call_handler_2);
 
         let error = multi_call_handler
-            .simulate::<((), ())>()
+            .simulate::<((), ())>(Execution::Realistic)
             .await
             .expect_err("should return a revert error");
 
@@ -520,16 +551,14 @@ async fn test_multi_call_require_log_single_contract() -> Result<()> {
     }
     {
         let call_handler_1 = contract_methods.require_custom_generic();
-        let call_handler_2 = contract_methods.require_string();
+        let call_handler_2 = contract_methods.rev_w_log_string();
 
-        let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
-
-        multi_call_handler
+        let mut multi_call_handler = CallHandler::new_multi_call(wallet.clone())
             .add_call(call_handler_1)
             .add_call(call_handler_2);
 
         let error = multi_call_handler
-            .simulate::<((), ())>()
+            .simulate::<((), ())>(Execution::Realistic)
             .await
             .expect_err("should return a revert error");
 
@@ -547,22 +576,24 @@ async fn test_multi_call_require_log_single_contract() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_multi_call_require_log_multi_contract() -> Result<()> {
+async fn test_multi_call_revert_logs_multi_contract() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
-            name = "RequireContract",
-            project = "e2e/sway/contracts/require"
+            name = "RevertLogsContract",
+            project = "e2e/sway/contracts/revert_logs"
         )),
         Deploy(
             name = "contract_instance",
-            contract = "RequireContract",
-            wallet = "wallet"
+            contract = "RevertLogsContract",
+            wallet = "wallet",
+            random_salt = false,
         ),
         Deploy(
             name = "contract_instance2",
-            contract = "RequireContract",
-            wallet = "wallet"
+            contract = "RevertLogsContract",
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -573,16 +604,14 @@ async fn test_multi_call_require_log_multi_contract() -> Result<()> {
     // handlers as the script returns the first revert it finds.
     {
         let call_handler_1 = contract_methods.require_string();
-        let call_handler_2 = contract_methods2.require_custom_generic();
+        let call_handler_2 = contract_methods2.rev_w_log_custom_generic();
 
-        let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
-
-        multi_call_handler
+        let mut multi_call_handler = CallHandler::new_multi_call(wallet.clone())
             .add_call(call_handler_1)
             .add_call(call_handler_2);
 
         let error = multi_call_handler
-            .simulate::<((), ())>()
+            .simulate::<((), ())>(Execution::Realistic)
             .await
             .expect_err("should return a revert error");
 
@@ -597,16 +626,14 @@ async fn test_multi_call_require_log_multi_contract() -> Result<()> {
     }
     {
         let call_handler_1 = contract_methods2.require_custom_generic();
-        let call_handler_2 = contract_methods.require_string();
+        let call_handler_2 = contract_methods.rev_w_log_string();
 
-        let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
-
-        multi_call_handler
+        let mut multi_call_handler = CallHandler::new_multi_call(wallet.clone())
             .add_call(call_handler_1)
             .add_call(call_handler_2);
 
         let error = multi_call_handler
-            .simulate::<((), ())>()
+            .simulate::<((), ())>(Execution::Realistic)
             .await
             .expect_err("should return a revert error");
 
@@ -628,13 +655,13 @@ async fn test_multi_call_require_log_multi_contract() -> Result<()> {
 async fn test_script_decode_logs() -> Result<()> {
     // ANCHOR: script_logs
     abigen!(Script(
-        name = "log_script",
+        name = "LogScript",
         abi = "e2e/sway/logs/script_logs/out/release/script_logs-abi.json"
     ));
 
     let wallet = launch_provider_and_get_wallet().await?;
     let bin_path = "sway/logs/script_logs/out/release/script_logs.bin";
-    let instance = log_script::new(wallet.clone(), bin_path);
+    let instance = LogScript::new(wallet.clone(), bin_path);
 
     let response = instance.main().call().await?;
 
@@ -705,7 +732,8 @@ async fn test_contract_with_contract_logs() -> Result<()> {
         Deploy(
             name = "contract_caller_instance",
             contract = "ContractCaller",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         )
     );
 
@@ -713,7 +741,7 @@ async fn test_contract_with_contract_logs() -> Result<()> {
         "./sway/logs/contract_logs/out/release/contract_logs.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(&wallet, TxPolicies::default())
+    .deploy_if_not_exists(&wallet, TxPolicies::default())
     .await?;
 
     let contract_instance = MyContract::new(contract_id.clone(), wallet.clone());
@@ -753,7 +781,8 @@ async fn test_script_logs_with_contract_logs() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "MyContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
         LoadScript(
             name = "script_instance",
@@ -898,7 +927,7 @@ async fn test_script_require_log() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "LogScript",
-            project = "e2e/sway/scripts/script_require"
+            project = "e2e/sway/scripts/script_revert_logs"
         )),
         LoadScript(
             name = "script_instance",
@@ -908,35 +937,63 @@ async fn test_script_require_log() -> Result<()> {
     );
 
     macro_rules! reverts_with_msg {
-        ($arg:expr, $execution:ident, $msg:expr) => {
+        ($arg:expr, call, $msg:expr) => {
             let error = script_instance
                 .main($arg)
-                .$execution()
+                .call()
+                .await
+                .expect_err("should return a revert error");
+            assert_revert_containing_msg($msg, error);
+        };
+        ($arg:expr, simulate, $msg:expr) => {
+            let error = script_instance
+                .main($arg)
+                .simulate(Execution::Realistic)
                 .await
                 .expect_err("should return a revert error");
             assert_revert_containing_msg($msg, error);
         };
     }
 
-    reverts_with_msg!(MatchEnum::RequirePrimitive, call, "42");
-    reverts_with_msg!(MatchEnum::RequirePrimitive, simulate, "42");
+    {
+        reverts_with_msg!(MatchEnum::RequirePrimitive, call, "42");
+        reverts_with_msg!(MatchEnum::RequirePrimitive, simulate, "42");
 
-    reverts_with_msg!(MatchEnum::RequireString, call, "fuel");
-    reverts_with_msg!(MatchEnum::RequireString, simulate, "fuel");
+        reverts_with_msg!(MatchEnum::RequireString, call, "fuel");
+        reverts_with_msg!(MatchEnum::RequireString, simulate, "fuel");
 
-    reverts_with_msg!(
-        MatchEnum::RequireCustomGeneric,
-        call,
-        "StructDeeplyNestedGeneric"
-    );
-    reverts_with_msg!(
-        MatchEnum::RequireCustomGeneric,
-        simulate,
-        "StructDeeplyNestedGeneric"
-    );
+        reverts_with_msg!(
+            MatchEnum::RequireCustomGeneric,
+            call,
+            "StructDeeplyNestedGeneric"
+        );
+        reverts_with_msg!(
+            MatchEnum::RequireCustomGeneric,
+            simulate,
+            "StructDeeplyNestedGeneric"
+        );
 
-    reverts_with_msg!(MatchEnum::RequireWithAdditionalLogs, call, "64");
-    reverts_with_msg!(MatchEnum::RequireWithAdditionalLogs, simulate, "64");
+        reverts_with_msg!(MatchEnum::RequireWithAdditionalLogs, call, "64");
+        reverts_with_msg!(MatchEnum::RequireWithAdditionalLogs, simulate, "64");
+    }
+    {
+        reverts_with_msg!(MatchEnum::RevWLogPrimitive, call, "42");
+        reverts_with_msg!(MatchEnum::RevWLogPrimitive, simulate, "42");
+
+        reverts_with_msg!(MatchEnum::RevWLogString, call, "fuel");
+        reverts_with_msg!(MatchEnum::RevWLogString, simulate, "fuel");
+
+        reverts_with_msg!(
+            MatchEnum::RevWLogCustomGeneric,
+            call,
+            "StructDeeplyNestedGeneric"
+        );
+        reverts_with_msg!(
+            MatchEnum::RevWLogCustomGeneric,
+            simulate,
+            "StructDeeplyNestedGeneric"
+        );
+    }
 
     Ok(())
 }
@@ -958,7 +1015,8 @@ async fn test_contract_require_from_contract() -> Result<()> {
         Deploy(
             name = "contract_caller_instance",
             contract = "ContractCaller",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         )
     );
 
@@ -966,7 +1024,7 @@ async fn test_contract_require_from_contract() -> Result<()> {
         "./sway/contracts/lib_contract/out/release/lib_contract.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(&wallet, TxPolicies::default())
+    .deploy_if_not_exists(&wallet, TxPolicies::default())
     .await?;
 
     let contract_instance = MyContract::new(contract_id.clone(), wallet.clone());
@@ -1005,12 +1063,14 @@ async fn test_multi_call_contract_require_from_contract() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "ContractLogs",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
         Deploy(
             name = "contract_caller_instance",
             contract = "ContractCaller",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
@@ -1018,7 +1078,7 @@ async fn test_multi_call_contract_require_from_contract() -> Result<()> {
         "./sway/contracts/lib_contract/out/release/lib_contract.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(&wallet, TxPolicies::default())
+    .deploy_if_not_exists(&wallet, TxPolicies::default())
     .await?;
 
     let lib_contract_instance = MyContract::new(contract_id.clone(), wallet.clone());
@@ -1030,9 +1090,7 @@ async fn test_multi_call_contract_require_from_contract() -> Result<()> {
         .require_from_contract(contract_id)
         .with_contracts(&[&lib_contract_instance]);
 
-    let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
-
-    multi_call_handler
+    let multi_call_handler = CallHandler::new_multi_call(wallet.clone())
         .add_call(call_handler_1)
         .add_call(call_handler_2);
 
@@ -1063,7 +1121,8 @@ async fn test_script_require_from_contract() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "MyContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
         LoadScript(
             name = "script_instance",
@@ -1084,8 +1143,61 @@ async fn test_script_require_from_contract() -> Result<()> {
     Ok(())
 }
 
+#[tokio::test]
+async fn test_loader_script_require_from_loader_contract() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(
+            Contract(
+                name = "MyContract",
+                project = "e2e/sway/contracts/lib_contract",
+            ),
+            Script(
+                name = "LogScript",
+                project = "e2e/sway/scripts/require_from_contract"
+            )
+        ),
+        LoadScript(
+            name = "script_instance",
+            script = "LogScript",
+            wallet = "wallet"
+        )
+    );
+
+    let contract_binary = "sway/contracts/lib_contract/out/release/lib_contract.bin";
+    let contract = Contract::load_from(contract_binary, LoadConfiguration::default())?;
+    let contract_id = contract
+        .convert_to_loader(100_000)?
+        .deploy_if_not_exists(&wallet, TxPolicies::default())
+        .await?;
+    let contract_instance = MyContract::new(contract_id, wallet);
+
+    let mut script_instance = script_instance;
+    script_instance.convert_into_loader().await?;
+
+    let error = script_instance
+        .main(contract_instance.id())
+        .with_contracts(&[&contract_instance])
+        .call()
+        .await
+        .expect_err("should return a revert error");
+
+    assert_revert_containing_msg("require from contract", error);
+
+    Ok(())
+}
+
 fn assert_assert_eq_containing_msg<T: std::fmt::Debug>(left: T, right: T, error: Error) {
-    let msg = format!("left: `\"{left:?}\"`\n right: `\"{right:?}\"`");
+    let msg = format!(
+        "assertion failed: `(left == right)`\n left: `\"{left:?}\"`\n right: `\"{right:?}\"`"
+    );
+    assert_revert_containing_msg(&msg, error)
+}
+
+fn assert_assert_ne_containing_msg<T: std::fmt::Debug>(left: T, right: T, error: Error) {
+    let msg = format!(
+        "assertion failed: `(left != right)`\n left: `\"{left:?}\"`\n right: `\"{right:?}\"`"
+    );
     assert_revert_containing_msg(&msg, error)
 }
 
@@ -1100,16 +1212,26 @@ async fn test_contract_asserts_log() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "LogContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
 
     macro_rules! reverts_with_msg {
-        (($($arg: expr,)*), $method:ident, $execution: ident, $msg:expr) => {
+        (($($arg: expr,)*), $method:ident, call, $msg:expr) => {
             let error = contract_instance
                 .methods()
                 .$method($($arg,)*)
-                .$execution()
+                .call()
+                .await
+                .expect_err("should return a revert error");
+            assert_revert_containing_msg($msg, error);
+        };
+        (($($arg: expr,)*), $method:ident, simulate, $msg:expr) => {
+            let error = contract_instance
+                .methods()
+                .$method($($arg,)*)
+                .simulate(Execution::Realistic)
                 .await
                 .expect_err("should return a revert error");
             assert_revert_containing_msg($msg, error);
@@ -1179,6 +1301,59 @@ async fn test_contract_asserts_log() -> Result<()> {
         );
     }
 
+    macro_rules! reverts_with_assert_ne_msg {
+        (($($arg: expr,)*), $method:ident, $execution: ident, $msg:expr) => {
+            let error = contract_instance
+                .methods()
+                .$method($($arg,)*)
+                .call()
+                .await
+                .expect_err("should return a revert error");
+            assert_assert_ne_containing_msg($($arg,)* error);
+        }
+    }
+
+    {
+        reverts_with_assert_ne_msg!((32, 32,), assert_ne_primitive, call, "assertion failed");
+        reverts_with_assert_ne_msg!((32, 32,), assert_ne_primitive, simulate, "assertion failed");
+    }
+    {
+        let test_struct = TestStruct {
+            field_1: true,
+            field_2: 64,
+        };
+
+        reverts_with_assert_ne_msg!(
+            (test_struct.clone(), test_struct.clone(),),
+            assert_ne_struct,
+            call,
+            "assertion failed"
+        );
+
+        reverts_with_assert_ne_msg!(
+            (test_struct.clone(), test_struct.clone(),),
+            assert_ne_struct,
+            simulate,
+            "assertion failed"
+        );
+    }
+    {
+        let test_enum = TestEnum::VariantOne;
+        reverts_with_assert_ne_msg!(
+            (test_enum.clone(), test_enum.clone(),),
+            assert_ne_enum,
+            call,
+            "assertion failed"
+        );
+
+        reverts_with_assert_ne_msg!(
+            (test_enum.clone(), test_enum.clone(),),
+            assert_ne_enum,
+            simulate,
+            "assertion failed"
+        );
+    }
+
     Ok(())
 }
 
@@ -1197,21 +1372,37 @@ async fn test_script_asserts_log() -> Result<()> {
         )
     );
     macro_rules! reverts_with_msg {
-        ($arg:expr, $execution:ident, $msg:expr) => {
+        ($arg:expr, call, $msg:expr) => {
             let error = script_instance
                 .main($arg)
-                .$execution()
+                .call()
+                .await
+                .expect_err("should return a revert error");
+            assert_revert_containing_msg($msg, error);
+        };
+        ($arg:expr, simulate, $msg:expr) => {
+            let error = script_instance
+                .main($arg)
+                .simulate(Execution::Realistic)
                 .await
                 .expect_err("should return a revert error");
             assert_revert_containing_msg($msg, error);
         };
     }
 
-    macro_rules! reverts_with_assert_eq_msg {
-        ($arg:expr, $execution:ident, $msg:expr) => {
+    macro_rules! reverts_with_assert_eq_ne_msg {
+        ($arg:expr, call, $msg:expr) => {
             let error = script_instance
                 .main($arg)
-                .$execution()
+                .call()
+                .await
+                .expect_err("should return a revert error");
+            assert_revert_containing_msg($msg, error);
+        };
+        ($arg:expr, simulate, $msg:expr) => {
+            let error = script_instance
+                .main($arg)
+                .simulate(Execution::Realistic)
                 .await
                 .expect_err("should return a revert error");
             assert_revert_containing_msg($msg, error);
@@ -1230,15 +1421,15 @@ async fn test_script_asserts_log() -> Result<()> {
         );
     }
     {
-        reverts_with_assert_eq_msg!(
+        reverts_with_assert_eq_ne_msg!(
             MatchEnum::AssertEqPrimitive((32, 64)),
             call,
-            "assertion failed"
+            "assertion failed: `(left == right)`"
         );
-        reverts_with_assert_eq_msg!(
+        reverts_with_assert_eq_ne_msg!(
             MatchEnum::AssertEqPrimitive((32, 64)),
             simulate,
-            "assertion failed"
+            "assertion failed: `(left == right)`"
         );
     }
     {
@@ -1251,30 +1442,73 @@ async fn test_script_asserts_log() -> Result<()> {
             field_1: false,
             field_2: 32,
         };
-        reverts_with_assert_eq_msg!(
+        reverts_with_assert_eq_ne_msg!(
             MatchEnum::AssertEqStruct((test_struct.clone(), test_struct2.clone(),)),
             call,
-            "assertion failed"
+            "assertion failed: `(left == right)`"
         );
-        reverts_with_assert_eq_msg!(
+        reverts_with_assert_eq_ne_msg!(
             MatchEnum::AssertEqStruct((test_struct.clone(), test_struct2.clone(),)),
             simulate,
-            "assertion failed"
+            "assertion failed: `(left == right)`"
         );
     }
     {
         let test_enum = TestEnum::VariantOne;
         let test_enum2 = TestEnum::VariantTwo;
 
-        reverts_with_assert_eq_msg!(
+        reverts_with_assert_eq_ne_msg!(
             MatchEnum::AssertEqEnum((test_enum.clone(), test_enum2.clone(),)),
             call,
-            "assertion failed"
+            "assertion failed: `(left == right)`"
         );
-        reverts_with_assert_eq_msg!(
+        reverts_with_assert_eq_ne_msg!(
             MatchEnum::AssertEqEnum((test_enum.clone(), test_enum2.clone(),)),
             simulate,
-            "assertion failed"
+            "assertion failed: `(left == right)`"
+        );
+    }
+
+    {
+        reverts_with_assert_eq_ne_msg!(
+            MatchEnum::AssertNePrimitive((32, 32)),
+            call,
+            "assertion failed: `(left != right)`"
+        );
+        reverts_with_assert_eq_ne_msg!(
+            MatchEnum::AssertNePrimitive((32, 32)),
+            simulate,
+            "assertion failed: `(left != right)`"
+        );
+    }
+    {
+        let test_struct = TestStruct {
+            field_1: true,
+            field_2: 64,
+        };
+        reverts_with_assert_eq_ne_msg!(
+            MatchEnum::AssertNeStruct((test_struct.clone(), test_struct.clone(),)),
+            call,
+            "assertion failed: `(left != right)`"
+        );
+        reverts_with_assert_eq_ne_msg!(
+            MatchEnum::AssertNeStruct((test_struct.clone(), test_struct.clone(),)),
+            simulate,
+            "assertion failed: `(left != right)`"
+        );
+    }
+    {
+        let test_enum = TestEnum::VariantOne;
+
+        reverts_with_assert_eq_ne_msg!(
+            MatchEnum::AssertNeEnum((test_enum.clone(), test_enum.clone(),)),
+            call,
+            "assertion failed: `(left != right)`"
+        );
+        reverts_with_assert_eq_ne_msg!(
+            MatchEnum::AssertNeEnum((test_enum.clone(), test_enum.clone(),)),
+            simulate,
+            "assertion failed: `(left != right)`"
         );
     }
 
@@ -1292,7 +1526,8 @@ async fn contract_token_ops_error_messages() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         ),
     );
     let contract_methods = contract_instance.methods();
@@ -1304,7 +1539,7 @@ async fn contract_token_ops_error_messages() -> Result<()> {
 
         let error = contract_methods
             .transfer(1_000_000, asset_id, address.into())
-            .simulate()
+            .simulate(Execution::Realistic)
             .await
             .expect_err("should return a revert error");
         assert_revert_containing_msg("failed transfer to address", error);
@@ -1332,7 +1567,8 @@ async fn test_log_results() -> Result<()> {
         Deploy(
             contract = "MyContract",
             name = "contract_instance",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         )
     );
 
@@ -1370,7 +1606,8 @@ async fn can_configure_decoder_for_contract_log_decoding() -> Result<()> {
         Deploy(
             contract = "MyContract",
             name = "contract_instance",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         )
     );
 
@@ -1412,7 +1649,7 @@ async fn can_configure_decoder_for_contract_log_decoding() -> Result<()> {
     }
     {
         // Multi call: decoding with too low max_tokens will fail
-        let response = MultiContractCallHandler::new(wallet.clone())
+        let response = CallHandler::new_multi_call(wallet.clone())
             .add_call(methods.i_log_a_1k_el_array())
             .with_decoder_config(DecoderConfig {
                 max_tokens: 100,
@@ -1430,7 +1667,7 @@ async fn can_configure_decoder_for_contract_log_decoding() -> Result<()> {
     }
     {
         // Multi call: increasing limits makes the test pass
-        let response = MultiContractCallHandler::new(wallet.clone())
+        let response = CallHandler::new_multi_call(wallet.clone())
             .add_call(methods.i_log_a_1k_el_array())
             .with_decoder_config(DecoderConfig {
                 max_tokens: 1001,
@@ -1514,7 +1751,8 @@ async fn contract_heap_log() -> Result<()> {
         Deploy(
             contract = "MyContract",
             name = "contract_instance",
-            wallet = "wallet"
+            wallet = "wallet",
+            random_salt = false,
         )
     );
     let contract_methods = contract_instance.methods();

@@ -14,31 +14,30 @@ description = "Fuel Rust SDK."
 ignored = ["fuel-core"]
 
 [dependencies]
-fuel-core = { workspace = true, default-features = false, optional = true }
 fuel-core-client = { workspace = true, optional = true }
 fuel-crypto = { workspace = true }
 fuel-tx = { workspace = true }
 fuels-accounts = { workspace = true, default-features = false }
 fuels-core = { workspace = true }
 fuels-macros = { workspace = true }
-fuels-programs = { workspace = true, optional = true }
+fuels-programs = { workspace = true }
 fuels-test-helpers = { workspace = true, optional = true }
 
 [features]
 default = ["std", "fuels-test-helpers?/fuels-accounts", "coin-cache"]
 coin-cache = ["fuels-accounts/coin-cache"]
+test-helpers = ["dep:fuels-test-helpers", "fuels-accounts/test-helpers"]
 
 # The crates enabled via `dep:` below are not currently wasm compatible, as
 # such they are only available if `std` is enabled. The `dep:` syntax was
 # used so that we don't get a new feature flag for every optional dependency.
 std = [
   "dep:fuel-core-client",
-  "dep:fuels-programs",
+  "fuels-programs/std",
   "dep:fuels-test-helpers",
   "fuels-accounts/std",
-  "fuels-programs?/std",
   "fuels-core/std",
   "fuels-test-helpers?/std",
 ]
-fuel-core-lib = ["fuels-test-helpers?/fuel-core-lib", "dep:fuel-core"]
-rocksdb = ["fuel-core?/rocksdb"]
+fuel-core-lib = ["fuels-test-helpers?/fuel-core-lib"]
+rocksdb = ["fuels-test-helpers?/rocksdb"]

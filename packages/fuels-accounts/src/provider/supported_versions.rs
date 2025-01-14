@@ -1,5 +1,6 @@
-use crate::provider::supported_fuel_core_version::SUPPORTED_FUEL_CORE_VERSION;
 use semver::Version;
+
+use crate::provider::supported_fuel_core_version::SUPPORTED_FUEL_CORE_VERSION;
 
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) struct VersionCompatibility {

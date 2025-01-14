@@ -1,21 +1,28 @@
 use std::{future::Future, io};
 
+use async_trait::async_trait;
+use custom_queries::{ContractExistsQuery, IsUserAccountQuery, IsUserAccountVariables};
+use cynic::QueryBuilder;
 use fuel_core_client::client::{
     pagination::{PaginatedResult, PaginationRequest},
+    schema::contract::ContractByIdArgs,
     types::{
         gas_price::{EstimateGasPrice, LatestGasPrice},
         primitives::{BlockId, TransactionId},
-        Balance, Block, ChainInfo, Coin, CoinType, ContractBalance, Message, MessageProof,
+        Balance, Blob, Block, ChainInfo, Coin, CoinType, ContractBalance, Message, MessageProof,
         NodeInfo, TransactionResponse, TransactionStatus,
     },
     FuelClient,
 };
 use fuel_core_types::services::executor::TransactionExecutionStatus;
-use fuel_tx::{Transaction, TxId, UtxoId};
+use fuel_tx::{BlobId, ConsensusParameters, Transaction, TxId, UtxoId};
 use fuel_types::{Address, AssetId, BlockHeight, ContractId, Nonce};
 use fuels_core::types::errors::{error, Error, Result};
 
-use super::supported_versions::{self, VersionCompatibility};
+use super::{
+    cache::CacheableRpcs,
+    supported_versions::{self, VersionCompatibility},
+};
 use crate::provider::{retry_util, RetryConfig};
 
 #[derive(Debug, thiserror::Error)]
@@ -38,6 +45,13 @@ pub(crate) struct RetryableClient {
     url: String,
     retry_config: RetryConfig,
     prepend_warning: Option<String>,
+}
+
+#[async_trait]
+impl CacheableRpcs for RetryableClient {
+    async fn consensus_parameters(&self) -> Result<ConsensusParameters> {
+        Ok(self.client.chain_info().await?.consensus_parameters)
+    }
 }
 
 impl RetryableClient {
@@ -140,6 +154,14 @@ impl RetryableClient {
         self.wrap(|| self.client.node_info()).await
     }
 
+    pub async fn blob(&self, blob_id: BlobId) -> RequestResult<Option<Blob>> {
+        self.wrap(|| self.client.blob(blob_id)).await
+    }
+
+    pub async fn blob_exists(&self, blob_id: BlobId) -> RequestResult<bool> {
+        self.wrap(|| self.client.blob_exists(blob_id)).await
+    }
+
     pub async fn latest_gas_price(&self) -> RequestResult<LatestGasPrice> {
         self.wrap(|| self.client.latest_gas_price()).await
     }
@@ -170,8 +192,9 @@ impl RetryableClient {
         &self,
         tx: &[Transaction],
         utxo_validation: Option<bool>,
+        gas_price: Option<u64>,
     ) -> RequestResult<Vec<TransactionExecutionStatus>> {
-        self.wrap(|| self.client.dry_run_opt(tx, utxo_validation, None))
+        self.wrap(|| self.client.dry_run_opt(tx, utxo_validation, gas_price))
             .await
     }
 
@@ -295,5 +318,84 @@ impl RetryableClient {
         })
         .await
     }
+
+    pub async fn contract_exists(&self, contract_id: &ContractId) -> RequestResult<bool> {
+        self.wrap(|| {
+            let query = ContractExistsQuery::build(ContractByIdArgs {
+                id: (*contract_id).into(),
+            });
+            self.client.query(query)
+        })
+        .await
+        .map(|query| {
+            query
+                .contract
+                .map(|contract| ContractId::from(contract.id) == *contract_id)
+                .unwrap_or(false)
+        })
+    }
     // DELEGATION END
+
+    pub async fn is_user_account(&self, address: [u8; 32]) -> Result<bool> {
+        let blob_id = BlobId::from(address);
+        let contract_id = ContractId::from(address);
+        let transaction_id = TransactionId::from(address);
+
+        let query = IsUserAccountQuery::build(IsUserAccountVariables {
+            blob_id: blob_id.into(),
+            contract_id: contract_id.into(),
+            transaction_id: transaction_id.into(),
+        });
+
+        let response = self.client.query(query).await?;
+
+        let is_resource = response.blob.is_some()
+            || response.contract.is_some()
+            || response.transaction.is_some();
+
+        Ok(!is_resource)
+    }
+}
+
+mod custom_queries {
+    use fuel_core_client::client::schema::blob::BlobIdFragment;
+    use fuel_core_client::client::schema::schema;
+    use fuel_core_client::client::schema::{
+        contract::{ContractByIdArgs, ContractIdFragment},
+        tx::TransactionIdFragment,
+        BlobId, ContractId, TransactionId,
+    };
+
+    #[derive(cynic::QueryVariables, Debug)]
+    pub struct IsUserAccountVariables {
+        pub blob_id: BlobId,
+        pub contract_id: ContractId,
+        pub transaction_id: TransactionId,
+    }
+
+    #[derive(cynic::QueryFragment, Debug)]
+    #[cynic(
+        graphql_type = "Query",
+        variables = "IsUserAccountVariables",
+        schema_path = "./src/schema/schema.sdl"
+    )]
+    pub struct IsUserAccountQuery {
+        #[arguments(id: $blob_id)]
+        pub blob: Option<BlobIdFragment>,
+        #[arguments(id: $contract_id)]
+        pub contract: Option<ContractIdFragment>,
+        #[arguments(id: $transaction_id)]
+        pub transaction: Option<TransactionIdFragment>,
+    }
+
+    #[derive(cynic::QueryFragment, Clone, Debug)]
+    #[cynic(
+        schema_path = "./src/schema/schema.sdl",
+        graphql_type = "Query",
+        variables = "ContractByIdArgs"
+    )]
+    pub struct ContractExistsQuery {
+        #[arguments(id: $id)]
+        pub contract: Option<ContractIdFragment>,
+    }
 }

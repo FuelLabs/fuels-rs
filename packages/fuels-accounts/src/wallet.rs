@@ -7,6 +7,7 @@ use fuels_core::{
     traits::Signer,
     types::{
         bech32::{Bech32Address, FUEL_BECH32_HRP},
+        coin_type_id::CoinTypeId,
         errors::{error, Result},
         input::Input,
         transaction_builders::TransactionBuilder,
@@ -77,6 +78,7 @@ impl Wallet {
     }
 }
 
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl ViewOnlyAccount for Wallet {
     fn address(&self) -> &Bech32Address {
         self.address()
@@ -84,6 +86,20 @@ impl ViewOnlyAccount for Wallet {
 
     fn try_provider(&self) -> Result<&Provider> {
         self.provider.as_ref().ok_or_else(try_provider_error)
+    }
+
+    async fn get_asset_inputs_for_amount(
+        &self,
+        asset_id: AssetId,
+        amount: u64,
+        excluded_coins: Option<Vec<CoinTypeId>>,
+    ) -> Result<Vec<Input>> {
+        Ok(self
+            .get_spendable_resources(asset_id, amount, excluded_coins)
+            .await?
+            .into_iter()
+            .map(Input::resource_signed)
+            .collect::<Vec<Input>>())
     }
 }
 
@@ -187,8 +203,15 @@ impl WalletUnlocked {
     pub fn address(&self) -> &Bech32Address {
         &self.address
     }
+
+    /// Returns the private key of the wallet. This method is only available when the 'test-helpers' feature is enabled.
+    #[cfg(feature = "test-helpers")]
+    pub fn secret_key(&self) -> &SecretKey {
+        &self.private_key
+    }
 }
 
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl ViewOnlyAccount for WalletUnlocked {
     fn address(&self) -> &Bech32Address {
         self.wallet.address()
@@ -197,27 +220,20 @@ impl ViewOnlyAccount for WalletUnlocked {
     fn try_provider(&self) -> Result<&Provider> {
         self.provider.as_ref().ok_or_else(try_provider_error)
     }
-}
 
-#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
-impl Account for WalletUnlocked {
-    /// Returns a vector consisting of `Input::Coin`s and `Input::Message`s for the given
-    /// asset ID and amount. The `witness_index` is the position of the witness (signature)
-    /// in the transaction's list of witnesses. In the validation process, the node will
-    /// use the witness at this index to validate the coins returned by this method.
     async fn get_asset_inputs_for_amount(
         &self,
         asset_id: AssetId,
         amount: u64,
+        excluded_coins: Option<Vec<CoinTypeId>>,
     ) -> Result<Vec<Input>> {
-        Ok(self
-            .get_spendable_resources(asset_id, amount)
-            .await?
-            .into_iter()
-            .map(Input::resource_signed)
-            .collect::<Vec<Input>>())
+        self.wallet
+            .get_asset_inputs_for_amount(asset_id, amount, excluded_coins)
+            .await
     }
+}
 
+impl Account for WalletUnlocked {
     fn add_witnesses<Tb: TransactionBuilder>(&self, tb: &mut Tb) -> Result<()> {
         tb.add_signer(self.clone())?;
 

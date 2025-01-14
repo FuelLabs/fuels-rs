@@ -10,7 +10,7 @@ repository = { workspace = true }
 description = "Fuel Rust SDK examples for Rust-native bindings"
 
 [dev-dependencies]
-fuels = { workspace = true }
+fuels = { workspace = true, features = ["default"] }
 fuels-code-gen = { workspace = true }
 fuels-macros = { workspace = true }
 proc-macro2 = { workspace = true }

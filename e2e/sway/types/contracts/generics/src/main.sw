@@ -2,11 +2,14 @@ contract;
 
 use std::hash::*;
 
-struct StructOneUnusedGenericParam<T> {}
+#[allow(dead_code)]
+struct StructUnusedGeneric<T, K> {
+    field: u64,
+}
 
 #[allow(dead_code)]
-enum EnumOneUnusedGenericParam<T> {
-    One: (),
+enum EnumUnusedGeneric<T, K> {
+    One: u64,
 }
 
 struct StructTwoUnusedGenericParams<T, K> {}
@@ -49,6 +52,16 @@ enum EnumWGeneric<N> {
 }
 
 #[allow(dead_code)]
+struct StructWTwoGenerics<T, U> {
+    a: T,
+    b: U,
+}
+
+struct StructWArrWGenericStruct<S> {
+    a: [StructWTwoGenerics<S, u8>; 3],
+}
+
+#[allow(dead_code)]
 struct MegaExample<T, U> {
     a: ([U; 2], T),
     b: Vec<([EnumWGeneric<StructWTupleGeneric<StructWArrayGeneric<PassTheGenericOn<T>>>>; 1], u32)>,
@@ -62,8 +75,8 @@ impl Hash for str[3] {
 
 abi MyContract {
     fn unused_generic_args(
-        arg_1: StructOneUnusedGenericParam<u64>,
-        arg_2: EnumOneUnusedGenericParam<u32>,
+        arg_1: StructUnusedGeneric<u64, u32>,
+        arg_2: EnumUnusedGeneric<u32, u32>,
     );
     fn two_unused_generic_args(
         arg_1: StructTwoUnusedGenericParams<u32, u64>,
@@ -81,12 +94,15 @@ abi MyContract {
     fn enum_w_generic(arg1: EnumWGeneric<u64>) -> EnumWGeneric<u64>;
 
     fn complex_test(arg1: MegaExample<str[2], b256>);
+    fn array_with_generic_struct(
+        arg: StructWArrWGenericStruct<b256>,
+    ) -> StructWArrWGenericStruct<b256>;
 }
 
 impl MyContract for Contract {
     fn unused_generic_args(
-        _arg_1: StructOneUnusedGenericParam<u64>,
-        _arg_2: EnumOneUnusedGenericParam<u32>,
+        _arg_1: StructUnusedGeneric<u64, u32>,
+        _arg_2: EnumUnusedGeneric<u32, u32>,
     ) {}
 
     fn two_unused_generic_args(
@@ -172,4 +188,10 @@ impl MyContract for Contract {
     }
 
     fn complex_test(_arg: MegaExample<str[2], b256>) {}
+
+    fn array_with_generic_struct(
+        arg: StructWArrWGenericStruct<b256>,
+    ) -> StructWArrWGenericStruct<b256> {
+        arg
+    }
 }

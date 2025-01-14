@@ -1,9 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
+    use std::{str::FromStr, time::Duration};
 
     use fuels::{
-        accounts::{predicate::Predicate, wallet::WalletUnlocked, Account, ViewOnlyAccount},
+        accounts::{predicate::Predicate, wallet::WalletUnlocked, ViewOnlyAccount},
         prelude::Result,
         test_helpers::{setup_single_asset_coins, setup_test_provider},
         types::{
@@ -163,20 +163,24 @@ mod tests {
         // ANCHOR: transfer_multiple_input
         let balances = wallet_1.get_balances().await?;
 
+        let consensus_parameters = provider.consensus_parameters().await?;
         let mut inputs = vec![];
         let mut outputs = vec![];
         for (id_string, amount) in balances {
             let id = AssetId::from_str(&id_string)?;
 
-            // leave the base asset to cover transaction fees
-            if id == *provider.base_asset_id() {
-                continue;
-            }
-
-            let input = wallet_1.get_asset_inputs_for_amount(id, amount).await?;
+            let input = wallet_1
+                .get_asset_inputs_for_amount(id, amount, None)
+                .await?;
             inputs.extend(input);
 
-            let output = wallet_1.get_asset_outputs_for_amount(wallet_2.address(), id, amount);
+            // we don't transfer the full base asset so we can cover fees
+            let output = if id == *consensus_parameters.base_asset_id() {
+                wallet_1.get_asset_outputs_for_amount(wallet_2.address(), id, amount / 2)
+            } else {
+                wallet_1.get_asset_outputs_for_amount(wallet_2.address(), id, amount)
+            };
+
             outputs.extend(output);
         }
         // ANCHOR_END: transfer_multiple_input
@@ -192,9 +196,13 @@ mod tests {
 
         let balances = wallet_2.get_balances().await?;
 
-        assert_eq!(balances.len(), (NUM_ASSETS - 1) as usize);
-        for (_, balance) in balances {
-            assert_eq!(balance, AMOUNT);
+        assert_eq!(balances.len(), NUM_ASSETS as usize);
+        for (id, balance) in balances {
+            if id == *consensus_parameters.base_asset_id().to_string() {
+                assert_eq!(balance, AMOUNT / 2);
+            } else {
+                assert_eq!(balance, AMOUNT);
+            }
         }
         // ANCHOR_END: transfer_multiple_transaction
 
@@ -262,19 +270,20 @@ mod tests {
         // ANCHOR_END: custom_tx
 
         // ANCHOR: custom_tx_io_base
+        let consensus_parameters = provider.consensus_parameters().await?;
         let base_inputs = hot_wallet
-            .get_asset_inputs_for_amount(*provider.base_asset_id(), ask_amount)
+            .get_asset_inputs_for_amount(*consensus_parameters.base_asset_id(), ask_amount, None)
             .await?;
         let base_outputs = hot_wallet.get_asset_outputs_for_amount(
             &receiver,
-            *provider.base_asset_id(),
+            *consensus_parameters.base_asset_id(),
             ask_amount,
         );
         // ANCHOR_END: custom_tx_io_base
 
         // ANCHOR: custom_tx_io_other
         let other_asset_inputs = predicate
-            .get_asset_inputs_for_amount(bridged_asset_id, locked_amount)
+            .get_asset_inputs_for_amount(bridged_asset_id, locked_amount, None)
             .await?;
         let other_asset_outputs =
             predicate.get_asset_outputs_for_amount(cold_wallet.address(), bridged_asset_id, 500);
@@ -311,6 +320,7 @@ mod tests {
         let tx_id = provider.send_transaction(tx).await?;
         // ANCHOR_END: custom_tx_build
 
+        tokio::time::sleep(Duration::from_millis(500)).await;
         // ANCHOR: custom_tx_verify
         let status = provider.tx_status(&tx_id).await?;
         assert!(matches!(status, TxStatus::Success { .. }));

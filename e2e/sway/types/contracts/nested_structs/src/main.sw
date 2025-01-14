@@ -1,7 +1,8 @@
 contract;
 
 pub struct SomeStruct {
-    par1: u32,
+    field: u32,
+    field_2: bool,
 }
 
 pub struct AllStruct {
@@ -24,7 +25,10 @@ struct MemoryAddress {
 
 abi MyContract {
     fn get_struct() -> AllStruct;
+    #[payable]
     fn check_struct_integrity(arg: AllStruct) -> bool;
+    #[payable]
+    fn i_am_called_differently(_arg1: AllStruct, _arg2: MemoryAddress);
     fn nested_struct_with_reserved_keyword_substring(call_data: CallData) -> CallData;
 }
 
@@ -32,13 +36,19 @@ impl MyContract for Contract {
     fn get_struct() -> AllStruct {
         AllStruct {
             some_struct: SomeStruct {
-                par1: 12345u32,
+                field: 12345u32,
+                field_2: true,
             },
         }
     }
+
+    #[payable]
     fn check_struct_integrity(arg: AllStruct) -> bool {
-        arg.some_struct.par1 == 12345u32
+        arg.some_struct.field == 12345u32 && arg.some_struct.field_2 == true
     }
+
+    #[payable]
+    fn i_am_called_differently(_arg1: AllStruct, _arg2: MemoryAddress) {}
 
     fn nested_struct_with_reserved_keyword_substring(call_data: CallData) -> CallData {
         call_data

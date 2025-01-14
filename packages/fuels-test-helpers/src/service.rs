@@ -3,8 +3,6 @@ use std::net::SocketAddr;
 #[cfg(feature = "fuel-core-lib")]
 use fuel_core::service::{Config as ServiceConfig, FuelService as CoreFuelService};
 use fuel_core_chain_config::{ChainConfig, StateConfig};
-#[cfg(feature = "fuel-core-lib")]
-use fuel_core_services::Service;
 use fuel_core_services::State;
 use fuels_core::types::errors::{error, Result};
 
@@ -47,7 +45,7 @@ impl FuelService {
 
     pub async fn stop(&self) -> Result<State> {
         #[cfg(feature = "fuel-core-lib")]
-        let result = self.service.stop_and_await().await;
+        let result = self.service.send_stop_signal_and_await_shutdown().await;
 
         #[cfg(not(feature = "fuel-core-lib"))]
         let result = self.service.stop();
@@ -65,7 +63,12 @@ impl FuelService {
         chain_config: ChainConfig,
         state_config: StateConfig,
     ) -> ServiceConfig {
-        use fuel_core::combined_database::CombinedDatabaseConfig;
+        use std::time::Duration;
+
+        use fuel_core::{
+            combined_database::CombinedDatabaseConfig,
+            fuel_core_graphql_api::ServiceConfig as GraphQLConfig,
+        };
         use fuel_core_chain_config::SnapshotReader;
 
         use crate::{DbType, MAX_DATABASE_CACHE_SIZE};
@@ -81,14 +84,31 @@ impl FuelService {
                 DbType::RocksDb(path) => path.clone().unwrap_or_default(),
             },
             database_type: node_config.database_type.into(),
+            #[cfg(feature = "rocksdb")]
+            state_rewind_policy: Default::default(),
         };
         ServiceConfig {
-            addr: node_config.addr,
+            graphql_config: GraphQLConfig {
+                addr: node_config.addr,
+                max_queries_depth: 16,
+                max_queries_complexity: 80000,
+                max_queries_recursive_depth: 16,
+                max_queries_resolver_recursive_depth: 1,
+                max_queries_directives: 10,
+                max_concurrent_queries: 1024,
+                request_body_bytes_limit: 16 * 1024 * 1024,
+                query_log_threshold_time: Duration::from_secs(2),
+                api_request_timeout: Duration::from_secs(60),
+                database_batch_size: 100,
+                costs: Default::default(),
+                number_of_threads: 2,
+            },
             combined_db_config,
             snapshot_reader,
             utxo_validation: node_config.utxo_validation,
             debug: node_config.debug,
             block_production: node_config.block_production.into(),
+            starting_gas_price: node_config.starting_gas_price,
             ..ServiceConfig::local_node()
         }
     }
