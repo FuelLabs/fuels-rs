@@ -118,7 +118,7 @@ mod tests {
             .await?;
         // ANCHOR_END: contract_call_cost_estimation
 
-        let expected_gas = 2669;
+        let expected_gas = 8921;
 
         assert_eq!(transaction_cost.gas_used, expected_gas);
 
@@ -633,7 +633,7 @@ mod tests {
             .await?;
         // ANCHOR_END: multi_call_cost_estimation
 
-        let expected_gas = 4168;
+        let expected_gas = 10997;
 
         assert_eq!(transaction_cost.gas_used, expected_gas);
 
@@ -893,7 +893,7 @@ mod tests {
 
         let tx_status = provider.tx_status(&tx_id).await?;
 
-        let response = call_handler.get_response_from(tx_status)?;
+        let response = call_handler.get_response(tx_status)?;
 
         assert_eq!(counter, response.value);
         // ANCHOR_END: contract_call_tb

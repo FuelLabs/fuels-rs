@@ -1205,7 +1205,7 @@ async fn tx_with_witness_data() -> Result<()> {
     let status = provider.send_transaction_and_await_commit(tx).await?;
 
     match status {
-        TxStatus::Success { receipts } => {
+        TxStatus::Success { receipts, .. } => {
             let ret: u64 = receipts
                 .into_iter()
                 .find_map(|receipt| match receipt {

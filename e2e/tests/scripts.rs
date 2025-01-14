@@ -322,7 +322,7 @@ async fn test_script_transaction_builder() -> Result<()> {
     tokio::time::sleep(Duration::from_millis(500)).await;
     let tx_status = provider.tx_status(&tx_id).await?;
 
-    let response = script_call_handler.get_response_from(tx_status)?;
+    let response = script_call_handler.get_response(tx_status)?;
 
     assert_eq!(response.value, "hello");
     // ANCHOR_END: script_call_tb

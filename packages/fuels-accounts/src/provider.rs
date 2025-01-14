@@ -223,8 +223,6 @@ impl Provider {
                 .validate_predicates(&consensus_parameters, latest_block_height)?;
         }
 
-        self.validate_transaction(tx.clone()).await?;
-
         Ok(tx)
     }
 
@@ -239,17 +237,6 @@ impl Provider {
             .await_transaction_commit(&id)
             .await?
             .into())
-    }
-
-    async fn validate_transaction<T: Transaction>(&self, tx: T) -> Result<()> {
-        let tolerance = 0.0;
-        let TransactionCost { gas_used, .. } = self
-            .estimate_transaction_cost(tx.clone(), Some(tolerance), None)
-            .await?;
-
-        tx.validate_gas(gas_used)?;
-
-        Ok(())
     }
 
     #[cfg(not(feature = "coin-cache"))]
@@ -747,8 +734,7 @@ impl Provider {
         tx: T,
         tolerance: f64,
     ) -> Result<u64> {
-        let receipts = self.dry_run_opt(tx, false, None).await?.take_receipts();
-        let gas_used = self.get_script_gas_used(&receipts);
+        let gas_used = self.dry_run_opt(tx, false, None).await?.total_gas();
 
         Ok((gas_used as f64 * (1.0 + tolerance)) as u64)
     }

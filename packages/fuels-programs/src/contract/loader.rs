@@ -147,10 +147,7 @@ impl Contract<Loader<BlobsNotUploaded>> {
                     tx_status_response.check(None)?;
                 }
                 Err(err) => {
-                    if !err
-                        .to_string()
-                        .contains("Execution error: BlobIdAlreadyUploaded")
-                    {
+                    if !err.to_string().contains("BlobId is already taken") {
                         return Err(err);
                     }
                 }

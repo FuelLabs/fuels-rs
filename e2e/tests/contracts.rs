@@ -291,7 +291,7 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
     let gas_limit = 800;
     let tolerance = Some(0.2);
     let block_horizon = Some(1);
-    let expected_gas_used = 960;
+    let expected_gas_used = 8462;
     let expected_metered_bytes_size = 824;
 
     let estimated_transaction_cost = contract_instance
@@ -1730,7 +1730,7 @@ async fn contract_custom_call_no_signatures_strategy() -> Result<()> {
 
     let tx_status = provider.tx_status(&tx_id).await?;
 
-    let response = call_handler.get_response_from(tx_status)?;
+    let response = call_handler.get_response(tx_status)?;
 
     assert_eq!(counter, response.value);
 

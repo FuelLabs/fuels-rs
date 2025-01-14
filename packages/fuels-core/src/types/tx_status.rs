@@ -51,6 +51,20 @@ impl TxStatus {
         }
     }
 
+    pub fn total_gas(&self) -> u64 {
+        match self {
+            TxStatus::Success { total_gas, .. } | TxStatus::Revert { total_gas, .. } => *total_gas,
+            _ => 0,
+        }
+    }
+
+    pub fn total_fee(&self) -> u64 {
+        match self {
+            TxStatus::Success { total_fee, .. } | TxStatus::Revert { total_fee, .. } => *total_fee,
+            _ => 0,
+        }
+    }
+
     fn map_revert_error(
         receipts: &[Receipt],
         reason: &str,
