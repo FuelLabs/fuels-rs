@@ -553,37 +553,35 @@ impl Provider {
     /// for each asset id) and not the UTXOs coins themselves
     pub async fn get_balances(&self, address: &Bech32Address) -> Result<HashMap<String, u64>> {
         let mut balances = HashMap::new();
-        // let mut cursor = None;
-        let cursor = None;
+        let mut cursor = None;
 
-        // loop { //TODO: BLOCKED: pagination is not supported in rocks_db
-        // do not merge PR until the pagination is enabled
-        let response = self
-            .uncached_client()
-            .balances(
-                &address.into(),
-                PaginationRequest {
-                    cursor: cursor.clone(),
-                    // results: NUM_RESULTS_PER_REQUEST,
-                    results: 9999,
-                    direction: PageDirection::Forward,
-                },
-            )
-            .await?;
+        loop {
+            let response = self
+                .uncached_client()
+                .balances(
+                    &address.into(),
+                    PaginationRequest {
+                        cursor: cursor.clone(),
+                        // results: NUM_RESULTS_PER_REQUEST,
+                        results: 9999,
+                        direction: PageDirection::Forward,
+                    },
+                )
+                .await?;
 
-        // if response.results.is_empty() {
-        //     break;
-        // }
+            if response.results.is_empty() {
+                break;
+            }
 
-        balances.extend(response.results.into_iter().map(
-            |Balance {
-                 owner: _,
-                 amount,
-                 asset_id,
-             }| (asset_id.to_string(), amount),
-        ));
-        // cursor = response.cursor;
-        // }
+            balances.extend(response.results.into_iter().map(
+                |Balance {
+                     owner: _,
+                     amount,
+                     asset_id,
+                 }| (asset_id.to_string(), amount),
+            ));
+            cursor = response.cursor;
+        }
 
         Ok(balances)
     }
