@@ -698,7 +698,7 @@ impl Provider {
 
     pub async fn estimate_transaction_cost<T: Transaction>(
         &self,
-        mut tx: T,
+        tx: T,
         tolerance: Option<f64>,
         block_horizon: Option<u32>,
     ) -> Result<TransactionCost> {
@@ -706,37 +706,31 @@ impl Provider {
         let tolerance = tolerance.unwrap_or(DEFAULT_GAS_ESTIMATION_TOLERANCE);
 
         let EstimateGasPrice { gas_price, .. } = self.estimate_gas_price(block_horizon).await?;
+        let tx_status = self.dry_run_opt(tx.clone(), false, None).await?;
 
-        let gas_used = self
-            .get_gas_used_with_tolerance(tx.clone(), tolerance)
-            .await?;
-
-        if tx.is_using_predicates() {
-            tx.estimate_predicates(self, None).await?;
-        }
-
-        let transaction_fee = tx
-            .clone()
-            .fee_checked_from_tx(&self.consensus_parameters().await?, gas_price)
-            .expect("Error calculating TransactionFee");
+        let gas_used = self.gas_used_with_tolerance(&tx_status, tolerance).await?;
+        let total_fee = self.total_fee_with_tolerance(&tx_status, tolerance).await?;
 
         Ok(TransactionCost {
             gas_price,
             gas_used,
             metered_bytes_size: tx.metered_bytes_size() as u64,
-            total_fee: transaction_fee.max_fee(),
+            total_fee,
         })
     }
 
     // Increase estimated gas by the provided tolerance
-    async fn get_gas_used_with_tolerance<T: Transaction>(
-        &self,
-        tx: T,
-        tolerance: f64,
-    ) -> Result<u64> {
-        let gas_used = self.dry_run_opt(tx, false, None).await?.total_gas();
+    async fn gas_used_with_tolerance(&self, tx_status: &TxStatus, tolerance: f64) -> Result<u64> {
+        let gas_used = tx_status.total_gas();
 
         Ok((gas_used as f64 * (1.0 + tolerance)) as u64)
+    }
+
+    // Increase estimated total fee by the provided tolerance
+    async fn total_fee_with_tolerance(&self, tx_status: &TxStatus, tolerance: f64) -> Result<u64> {
+        let fee = tx_status.total_fee();
+
+        Ok((fee as f64 * (1.0 + tolerance)) as u64)
     }
 
     fn get_script_gas_used(&self, receipts: &[Receipt]) -> u64 {

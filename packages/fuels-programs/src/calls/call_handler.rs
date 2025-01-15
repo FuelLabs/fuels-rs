@@ -207,7 +207,7 @@ where
         self.get_response(tx_status)
     }
 
-    /// Create a [`CallResponse`] from call receipts
+    /// Create a [`CallResponse`] from `TxStatus`
     pub fn get_response(&self, tx_status: TxStatus) -> Result<CallResponse<T>> {
         let gas_used = tx_status.total_gas();
         let total_fee = tx_status.total_fee();
@@ -482,7 +482,7 @@ where
         Ok(())
     }
 
-    /// Create a [`CallResponse`] from call receipts
+    /// Create a [`CallResponse`] from `TxStatus`
     pub fn get_response<T: Tokenizable + Debug>(
         &self,
         tx_status: TxStatus,
