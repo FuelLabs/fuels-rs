@@ -2,9 +2,16 @@ scalar Address
 
 scalar AssetId
 
+type AssetInfoDetails {
+	contractId: ContractId!
+	subId: SubId!
+	totalSupply: U128!
+}
+
 type Balance {
 	owner: Address!
 	amount: U64!
+	amountU128: U128!
 	assetId: AssetId!
 }
 
@@ -442,6 +449,7 @@ type GasCosts {
 	wqmm: U64!
 	xor: U64!
 	xori: U64!
+	ecop: U64
 	alocDependentCost: DependentCost!
 	bldd: DependentCost
 	bsiz: DependentCost
@@ -466,6 +474,7 @@ type GasCosts {
 	smo: DependentCost!
 	srwq: DependentCost!
 	swwq: DependentCost!
+	epar: DependentCost
 	contractRoot: DependentCost!
 	stateRoot: DependentCost!
 	vmInitialization: DependentCost!
@@ -734,7 +743,7 @@ type Mutation {
 	dryRun(txs: [HexString!]!, utxoValidation: Boolean, gasPrice: U64): [DryRunTransactionExecutionStatus!]!
 	"""
 	Submits transaction to the `TxPool`.
-	
+
 	Returns submitted transaction if the transaction is included in the `TxPool` without problems.
 	"""
 	submit(tx: HexString!): Transaction!
@@ -751,8 +760,11 @@ type NodeInfo {
 	utxoValidation: Boolean!
 	vmBacktrace: Boolean!
 	maxTx: U64!
+	maxGas: U64!
+	maxSize: U64!
 	maxDepth: U64!
 	nodeVersion: String!
+	txPoolStats: TxPoolStats!
 	peers: [PeerInfo!]!
 }
 
@@ -850,6 +862,12 @@ type ProgramState {
 }
 
 type Query {
+	assetDetails(
+		"""
+		ID of the Asset
+		"""
+		id: AssetId!
+	): AssetInfoDetails!
 	"""
 	Read register value by index.
 	"""
@@ -924,9 +942,9 @@ type Query {
 	For each `query_per_asset`, get some spendable coins(of asset specified by the query) owned by
 	`owner` that add up at least the query amount. The returned coins can be spent.
 	The number of coins is optimized to prevent dust accumulation.
-	
+
 	The query supports excluding and maximum the number of coins.
-	
+
 	Returns:
 	The list of spendable coins per asset from the query. The length of the result is
 	the same as the length of `query_per_asset`. The ordering of assets and `query_per_asset`
@@ -1118,6 +1136,8 @@ type StateTransitionPurpose {
 }
 
 
+scalar SubId
+
 type SubmittedStatus {
 	time: Tai64Timestamp!
 }
@@ -1129,9 +1149,9 @@ type Subscription {
 	or [`TransactionStatus::Failed`] the stream will return that and end immediately.
 	If the current status is [`TransactionStatus::Submitted`] this will be returned
 	and the stream will wait for a future update.
-	
+
 	This stream will wait forever so it's advised to use within a timeout.
-	
+
 	It is possible for the stream to miss an update if it is polled slower
 	then the updates arrive. In such a case the stream will close without
 	a status. If this occurs the stream can simply be restarted to return
@@ -1258,6 +1278,23 @@ enum TxParametersVersion {
 }
 
 scalar TxPointer
+
+type TxPoolStats {
+	"""
+	The number of transactions in the pool
+	"""
+	txCount: U64!
+	"""
+	The total size of the transactions in the pool
+	"""
+	totalSize: U64!
+	"""
+	The total gas of the transactions in the pool
+	"""
+	totalGas: U64!
+}
+
+scalar U128
 
 scalar U16
 

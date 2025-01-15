@@ -28,9 +28,12 @@ async fn test_multiple_args() -> Result<()> {
         ),
     );
 
+    dbg!("halil0");
+
     // Make sure we can call the contract with multiple arguments
     let contract_methods = contract_instance.methods();
     let response = contract_methods.get(5, 6).call().await?;
+    dbg!("halil");
 
     assert_eq!(response.value, 11);
 
@@ -1410,11 +1413,11 @@ fn db_rocksdb() {
             assert_eq!(blocks.len(), 3);
             assert_eq!(
                 *wallet.get_balances().await?.iter().next().unwrap().1,
-                DEFAULT_COIN_AMOUNT
+                DEFAULT_COIN_AMOUNT as u128
             );
             assert_eq!(
                 *wallet.get_balances().await?.iter().next().unwrap().1,
-                DEFAULT_COIN_AMOUNT
+                DEFAULT_COIN_AMOUNT as u128
             );
             assert_eq!(wallet.get_balances().await?.len(), 2);
 

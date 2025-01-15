@@ -243,7 +243,7 @@ mod tests {
                     .await?
                     .get("0000000000000000000000000000000000000000000000000000000000000000")
                     .expect("failed to get value"),
-                num_coins * coin_amount
+                (num_coins * coin_amount) as u128
             );
         }
 

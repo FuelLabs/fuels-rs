@@ -33,7 +33,7 @@ async fn test_wallet_balance_api_multi_asset() -> Result<()> {
         assert!(balances.contains_key(&expected_key));
         assert_eq!(
             *balances.get(&expected_key).unwrap(),
-            coins_per_asset * amount_per_coin
+            (coins_per_asset * amount_per_coin) as u128
         );
     }
     Ok(())
@@ -65,7 +65,7 @@ async fn test_wallet_balance_api_single_asset() -> Result<()> {
     assert!(balances.contains_key(&expected_key));
     assert_eq!(
         *balances.get(&expected_key).unwrap(),
-        number_of_coins * amount_per_coin
+        (number_of_coins * amount_per_coin) as u128
     );
 
     Ok(())

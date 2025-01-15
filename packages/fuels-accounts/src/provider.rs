@@ -446,6 +446,9 @@ impl Provider {
 
         let consensus_parameters = self.consensus_parameters().await?;
         let base_asset_id = *consensus_parameters.base_asset_id();
+        dbg!("gyat0");
+        dbg!(queries.spend_query(base_asset_id));
+        dbg!(queries.exclusion_query());
 
         let res = self
             .uncached_client()
@@ -459,6 +462,7 @@ impl Provider {
             .flatten()
             .map(CoinType::from)
             .collect();
+        dbg!("gyat");
 
         Ok(res)
     }
@@ -549,7 +553,7 @@ impl Provider {
     /// Get all the spendable balances of all assets for address `address`. This is different from
     /// getting the coins because we are only returning the numbers (the sum of UTXOs coins amount
     /// for each asset id) and not the UTXOs coins themselves
-    pub async fn get_balances(&self, address: &Bech32Address) -> Result<HashMap<String, u64>> {
+    pub async fn get_balances(&self, address: &Bech32Address) -> Result<HashMap<String, u128>> {
         // We don't paginate results because there are likely at most ~100 different assets in one
         // wallet
         let pagination = PaginationRequest {
