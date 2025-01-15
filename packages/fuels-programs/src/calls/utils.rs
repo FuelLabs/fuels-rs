@@ -50,17 +50,14 @@ pub(crate) async fn transaction_builder_from_contract_calls(
     let required_asset_amounts =
         calculate_required_asset_amounts(calls, *consensus_parameters.base_asset_id());
 
-    dbg!("that0");
     // Find the spendable resources required for those calls
     let mut asset_inputs = vec![];
     for (asset_id, amount) in &required_asset_amounts {
-        dbg!((asset_id, amount));
         let resources = account
             .get_asset_inputs_for_amount(*asset_id, *amount, None)
             .await?;
         asset_inputs.extend(resources);
     }
-    dbg!("that");
 
     let (inputs, outputs) = get_transaction_inputs_outputs(
         calls,
@@ -89,11 +86,9 @@ pub(crate) async fn build_tx_from_contract_calls(
     variable_outputs: VariableOutputPolicy,
     account: &impl Account,
 ) -> Result<ScriptTransaction> {
-    dbg!("what0");
     let mut tb =
         transaction_builder_from_contract_calls(calls, tx_policies, variable_outputs, account)
             .await?;
-    dbg!("what");
 
     let consensus_parameters = account.try_provider()?.consensus_parameters().await?;
     let base_asset_id = *consensus_parameters.base_asset_id();
@@ -136,23 +131,41 @@ pub(crate) fn calculate_required_asset_amounts(
     calls: &[ContractCall],
     base_asset_id: AssetId,
 ) -> Vec<(AssetId, u64)> {
-    let call_param_assets = calls.iter().filter_map(|call| {
-        let amount = call.call_parameters.amount();
-
-        (amount != 0).then_some((
-            call.call_parameters.asset_id().unwrap_or(base_asset_id),
-            amount,
-        ))
-    });
-
-    let grouped_assets = calls
+    let call_param_assets = calls
         .iter()
-        .flat_map(|call| call.custom_assets.clone())
-        .map(|((asset_id, _), amount)| (asset_id, amount))
-        .chain(call_param_assets)
-        .group_by(|custom| custom.0);
+        .filter_map(|call| {
+            (call.call_parameters.amount() != 0).then_some((
+                call.call_parameters.asset_id().unwrap_or(base_asset_id),
+                call.call_parameters.amount(),
+            ))
+        })
+        .collect::<Vec<_>>();
 
-    grouped_assets
+    let custom_assets = calls
+        .iter()
+        .flat_map(|call| call.custom_assets.iter().collect::<Vec<_>>())
+        .group_by(|custom| custom.0 .0)
+        .into_iter()
+        .map(|(asset_id, groups_w_same_asset_id)| {
+            let total_amount_in_group = groups_w_same_asset_id.map(|(_, amount)| amount).sum();
+            (asset_id, total_amount_in_group)
+        })
+        .collect::<Vec<_>>();
+
+    let merged_assets = chain!(call_param_assets, custom_assets).collect::<Vec<_>>();
+
+    sum_up_amounts_for_each_asset_id(merged_assets)
+}
+
+/// Sum up the amounts required in each call for each asset ID, so you can get a total for each
+/// asset over all calls.
+fn sum_up_amounts_for_each_asset_id(
+    amounts_per_asset_id: Vec<(AssetId, u64)>,
+) -> Vec<(AssetId, u64)> {
+    amounts_per_asset_id
+        .into_iter()
+        .sorted_by_key(|(asset_id, _)| *asset_id)
+        .group_by(|(asset_id, _)| *asset_id)
         .into_iter()
         .map(|(asset_id, groups_w_same_asset_id)| {
             let total_amount_in_group = groups_w_same_asset_id.map(|(_, amount)| amount).sum();

@@ -446,9 +446,6 @@ impl Provider {
 
         let consensus_parameters = self.consensus_parameters().await?;
         let base_asset_id = *consensus_parameters.base_asset_id();
-        dbg!("gyat0");
-        dbg!(queries.spend_query(base_asset_id));
-        dbg!(queries.exclusion_query());
 
         let res = self
             .uncached_client()
@@ -462,7 +459,6 @@ impl Provider {
             .flatten()
             .map(CoinType::from)
             .collect();
-        dbg!("gyat");
 
         Ok(res)
     }
