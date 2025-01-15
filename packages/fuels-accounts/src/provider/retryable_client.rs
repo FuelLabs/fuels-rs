@@ -1,5 +1,6 @@
 use std::{future::Future, io};
 
+use async_trait::async_trait;
 use custom_queries::{ContractExistsQuery, IsUserAccountQuery, IsUserAccountVariables};
 use cynic::QueryBuilder;
 use fuel_core_client::client::{
@@ -14,11 +15,14 @@ use fuel_core_client::client::{
     FuelClient,
 };
 use fuel_core_types::services::executor::TransactionExecutionStatus;
-use fuel_tx::{BlobId, Transaction, TxId, UtxoId};
+use fuel_tx::{BlobId, ConsensusParameters, Transaction, TxId, UtxoId};
 use fuel_types::{Address, AssetId, BlockHeight, ContractId, Nonce};
 use fuels_core::types::errors::{error, Error, Result};
 
-use super::supported_versions::{self, VersionCompatibility};
+use super::{
+    cache::CacheableRpcs,
+    supported_versions::{self, VersionCompatibility},
+};
 use crate::provider::{retry_util, RetryConfig};
 
 #[derive(Debug, thiserror::Error)]
@@ -41,6 +45,13 @@ pub(crate) struct RetryableClient {
     url: String,
     retry_config: RetryConfig,
     prepend_warning: Option<String>,
+}
+
+#[async_trait]
+impl CacheableRpcs for RetryableClient {
+    async fn consensus_parameters(&self) -> Result<ConsensusParameters> {
+        Ok(self.client.chain_info().await?.consensus_parameters)
+    }
 }
 
 impl RetryableClient {

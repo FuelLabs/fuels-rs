@@ -37,14 +37,18 @@ pub(crate) async fn transaction_builder_from_contract_calls(
 ) -> Result<ScriptTransactionBuilder> {
     let calls_instructions_len = compute_calls_instructions_len(calls);
     let provider = account.try_provider()?;
-    let consensus_parameters = provider.consensus_parameters();
-    let data_offset = call_script_data_offset(consensus_parameters, calls_instructions_len)?;
+    let consensus_parameters = provider.consensus_parameters().await?;
+    let data_offset = call_script_data_offset(&consensus_parameters, calls_instructions_len)?;
 
-    let (script_data, call_param_offsets) =
-        build_script_data_from_contract_calls(calls, data_offset, *provider.base_asset_id())?;
+    let (script_data, call_param_offsets) = build_script_data_from_contract_calls(
+        calls,
+        data_offset,
+        *consensus_parameters.base_asset_id(),
+    )?;
     let script = get_instructions(call_param_offsets);
 
-    let required_asset_amounts = calculate_required_asset_amounts(calls, *provider.base_asset_id());
+    let required_asset_amounts =
+        calculate_required_asset_amounts(calls, *consensus_parameters.base_asset_id());
 
     // Find the spendable resources required for those calls
     let mut asset_inputs = vec![];
@@ -59,7 +63,7 @@ pub(crate) async fn transaction_builder_from_contract_calls(
         calls,
         asset_inputs,
         account.address(),
-        *provider.base_asset_id(),
+        *consensus_parameters.base_asset_id(),
     );
 
     Ok(ScriptTransactionBuilder::default()
@@ -86,13 +90,13 @@ pub(crate) async fn build_tx_from_contract_calls(
         transaction_builder_from_contract_calls(calls, tx_policies, variable_outputs, account)
             .await?;
 
-    let base_asset_id = *account.try_provider()?.base_asset_id();
+    let consensus_parameters = account.try_provider()?.consensus_parameters().await?;
+    let base_asset_id = *consensus_parameters.base_asset_id();
     let required_asset_amounts = calculate_required_asset_amounts(calls, base_asset_id);
 
-    let base_asset_id = account.try_provider()?.base_asset_id();
     let used_base_amount = required_asset_amounts
         .iter()
-        .find_map(|(asset_id, amount)| (asset_id == base_asset_id).then_some(*amount))
+        .find_map(|(asset_id, amount)| (*asset_id == base_asset_id).then_some(*amount))
         .unwrap_or_default();
 
     account.add_witnesses(&mut tb)?;

@@ -71,8 +71,9 @@ mod tests {
         // ANCHOR_END: setup_test_blockchain
 
         // ANCHOR: get_coins
+        let consensus_parameters = provider.consensus_parameters().await?;
         let coins = provider
-            .get_coins(wallet.address(), *provider.base_asset_id())
+            .get_coins(wallet.address(), *consensus_parameters.base_asset_id())
             .await?;
         assert_eq!(coins.len(), 1);
         // ANCHOR_END: get_coins

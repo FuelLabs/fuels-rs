@@ -551,19 +551,11 @@ impl EstimablePredicates for UploadTransaction {
         provider: impl DryRunner,
         latest_chain_executor_version: Option<u32>,
     ) -> Result<()> {
-        if let Some(tx) = provider
-            .maybe_estimate_predicates(&self.tx.clone().into(), latest_chain_executor_version)
-            .await?
-        {
-            tx.as_upload().expect("is upload").clone_into(&mut self.tx);
-        } else {
-            // We no longer estimate locally since we don't have the blob storage.
-            // maybe_estimate_predicates should always return an estimation
-            return Err(error!(
-                Other,
-                "Should have been given an estimation from the node. This is a bug."
-            ));
-        }
+        let tx = provider
+            .estimate_predicates(&self.tx.clone().into(), latest_chain_executor_version)
+            .await?;
+
+        tx.as_upload().expect("is upload").clone_into(&mut self.tx);
 
         Ok(())
     }
@@ -577,21 +569,13 @@ impl EstimablePredicates for UpgradeTransaction {
         provider: impl DryRunner,
         latest_chain_executor_version: Option<u32>,
     ) -> Result<()> {
-        if let Some(tx) = provider
-            .maybe_estimate_predicates(&self.tx.clone().into(), latest_chain_executor_version)
-            .await?
-        {
-            tx.as_upgrade()
-                .expect("is upgrade")
-                .clone_into(&mut self.tx);
-        } else {
-            // We no longer estimate locally since we don't have the blob storage.
-            // maybe_estimate_predicates should always return an estimation
-            return Err(error!(
-                Other,
-                "Should have been given an estimation from the node. This is a bug."
-            ));
-        }
+        let tx = provider
+            .estimate_predicates(&self.tx.clone().into(), latest_chain_executor_version)
+            .await?;
+
+        tx.as_upgrade()
+            .expect("is upgrade")
+            .clone_into(&mut self.tx);
 
         Ok(())
     }
@@ -605,19 +589,11 @@ impl EstimablePredicates for CreateTransaction {
         provider: impl DryRunner,
         latest_chain_executor_version: Option<u32>,
     ) -> Result<()> {
-        if let Some(tx) = provider
-            .maybe_estimate_predicates(&self.tx.clone().into(), latest_chain_executor_version)
-            .await?
-        {
-            tx.as_create().expect("is create").clone_into(&mut self.tx);
-        } else {
-            // We no longer estimate locally since we don't have the blob storage.
-            // maybe_estimate_predicates should always return an estimation
-            return Err(error!(
-                Other,
-                "Should have been given an estimation from the node. This is a bug."
-            ));
-        }
+        let tx = provider
+            .estimate_predicates(&self.tx.clone().into(), latest_chain_executor_version)
+            .await?;
+
+        tx.as_create().expect("is create").clone_into(&mut self.tx);
 
         Ok(())
     }
@@ -645,19 +621,11 @@ impl EstimablePredicates for ScriptTransaction {
         provider: impl DryRunner,
         latest_chain_executor_version: Option<u32>,
     ) -> Result<()> {
-        if let Some(tx) = provider
-            .maybe_estimate_predicates(&self.tx.clone().into(), latest_chain_executor_version)
-            .await?
-        {
-            tx.as_script().expect("is script").clone_into(&mut self.tx);
-        } else {
-            // We no longer estimate locally since we don't have the blob storage.
-            // maybe_estimate_predicates should always return an estimation
-            return Err(error!(
-                Other,
-                "Should have been given an estimation from the node. This is a bug."
-            ));
-        }
+        let tx = provider
+            .estimate_predicates(&self.tx.clone().into(), latest_chain_executor_version)
+            .await?;
+
+        tx.as_script().expect("is script").clone_into(&mut self.tx);
 
         Ok(())
     }
@@ -671,19 +639,11 @@ impl EstimablePredicates for BlobTransaction {
         provider: impl DryRunner,
         latest_chain_executor_version: Option<u32>,
     ) -> Result<()> {
-        if let Some(tx) = provider
-            .maybe_estimate_predicates(&self.tx.clone().into(), latest_chain_executor_version)
-            .await?
-        {
-            tx.as_blob().expect("is blob").clone_into(&mut self.tx);
-        } else {
-            // We no longer estimate locally since we don't have the blob storage.
-            // maybe_estimate_predicates should always return an estimation
-            return Err(error!(
-                Other,
-                "Should have been given an estimation from the node. This is a bug."
-            ));
-        }
+        let tx = provider
+            .estimate_predicates(&self.tx.clone().into(), latest_chain_executor_version)
+            .await?;
+
+        tx.as_blob().expect("is blob").clone_into(&mut self.tx);
 
         Ok(())
     }
