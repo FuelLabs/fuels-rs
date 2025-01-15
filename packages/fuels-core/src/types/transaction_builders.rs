@@ -1661,12 +1661,12 @@ mod tests {
             Ok(0)
         }
 
-        async fn maybe_estimate_predicates(
+        async fn estimate_predicates(
             &self,
             tx: &FuelTransaction,
             _: Option<u32>,
-        ) -> Result<Option<FuelTransaction>> {
-            Ok(Some(tx.clone()))
+        ) -> Result<FuelTransaction> {
+            Ok(tx.clone())
         }
     }
 
