@@ -19,7 +19,7 @@ use fuels_core::types::{
 
 use crate::{
     accounts_utils::{
-        adjust_inputs_outputs, available_base_assets_and_amount, calculate_missing_base_amount,
+        add_base_change_if_needed, available_base_assets_and_amount, calculate_missing_base_amount,
         extract_message_nonce, split_into_utxo_ids_and_nonces,
     },
     provider::{Provider, ResourceFilter},
@@ -117,7 +117,8 @@ pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync + Clone {
         excluded_coins: Option<Vec<CoinTypeId>>,
     ) -> Result<Vec<Input>>;
 
-    /// Add base asset inputs to the transaction to cover the estimated fee.
+    /// Add base asset inputs to the transaction to cover the estimated fee
+    /// and add a change output for the base asset if needed.
     /// Requires contract inputs to be at the start of the transactions inputs vec
     /// so that their indexes are retained
     async fn adjust_for_fee<Tb: TransactionBuilder + Sync>(
@@ -141,13 +142,10 @@ pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync + Clone {
                 )
                 .await?;
 
-            adjust_inputs_outputs(
-                tb,
-                new_base_inputs,
-                self.address(),
-                consensus_parameters.base_asset_id(),
-            );
+            tb.inputs_mut().extend(new_base_inputs);
         };
+
+        add_base_change_if_needed(tb, self.address(), consensus_parameters.base_asset_id());
 
         Ok(())
     }
@@ -407,10 +405,11 @@ mod tests {
                 1,
                 Default::default(),
             );
+            let change = Output::change(wallet.address().into(), 0, Default::default());
 
             ScriptTransactionBuilder::prepare_transfer(
                 vec![input_coin],
-                vec![output_coin],
+                vec![output_coin, change],
                 Default::default(),
             )
         };
@@ -433,7 +432,7 @@ mod tests {
         assert_eq!(signature, tx_signature);
 
         // Check if the signature is what we expect it to be
-        assert_eq!(signature, Signature::from_str("8afd30de7039faa07aac1cf2676970a77dc8ef3f779b44c1510ad7bf58ea56f43727b23142bd7252b79ae2c832e073927f84f6b0857fedf2f6d86e9535e48fd0")?);
+        assert_eq!(signature, Signature::from_str("faa616776a1c336ef6257f7cb0cb5cd932180e2d15faba5f17481dae1cbcaf314d94617bd900216a6680bccb1ea62438e4ca93b0d5733d33788ef9d79cc24e9f")?);
 
         // Recover the address that signed the transaction
         let recovered_address = signature.recover(&message)?;
