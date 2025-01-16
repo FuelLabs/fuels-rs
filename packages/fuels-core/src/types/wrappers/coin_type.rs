@@ -51,6 +51,13 @@ impl CoinType {
         }
     }
 
+    pub fn asset_id(&self, base_asset_id: AssetId) -> AssetId {
+        match self {
+            CoinType::Coin(coin) => coin.asset_id,
+            CoinType::Message(_) => base_asset_id,
+        }
+    }
+
     pub fn owner(&self) -> &Bech32Address {
         match self {
             CoinType::Coin(coin) => &coin.owner,

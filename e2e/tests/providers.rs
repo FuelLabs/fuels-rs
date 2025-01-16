@@ -167,7 +167,8 @@ async fn test_input_message_pays_fee() -> Result<()> {
     );
 
     let provider = setup_test_provider(vec![], vec![messages], None, None).await?;
-    let base_asset_id = *provider.base_asset_id();
+    let consensus_parameters = provider.consensus_parameters().await?;
+    let base_asset_id = consensus_parameters.base_asset_id();
     wallet.set_provider(provider);
 
     abigen!(Contract(
@@ -192,7 +193,7 @@ async fn test_input_message_pays_fee() -> Result<()> {
 
     assert_eq!(42, response.value);
 
-    let balance = wallet.get_asset_balance(&base_asset_id).await?;
+    let balance = wallet.get_asset_balance(base_asset_id).await?;
     // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
     let expected_fee = 2;
     assert_eq!(balance, DEFAULT_COIN_AMOUNT - expected_fee);
@@ -649,9 +650,14 @@ async fn test_get_spendable_with_exclusion() -> Result<()> {
     wallet.set_provider(provider.clone());
 
     let requested_amount = coin_amount_1 + coin_amount_2 + message_amount;
+    let consensus_parameters = provider.consensus_parameters().await?;
     {
         let resources = wallet
-            .get_spendable_resources(*provider.base_asset_id(), requested_amount, None)
+            .get_spendable_resources(
+                *consensus_parameters.base_asset_id(),
+                requested_amount,
+                None,
+            )
             .await
             .unwrap();
         assert_eq!(resources.len(), 3);
@@ -895,8 +901,9 @@ async fn test_cache_invalidation_on_await() -> Result<()> {
 
     assert!(matches!(tx_status, TxStatus::Revert { .. }));
 
+    let consensus_parameters = provider.consensus_parameters().await?;
     let coins = wallet
-        .get_spendable_resources(*provider.base_asset_id(), 1, None)
+        .get_spendable_resources(*consensus_parameters.base_asset_id(), 1, None)
         .await?;
     assert_eq!(coins.len(), 1);
 
@@ -950,11 +957,15 @@ async fn test_build_with_provider() -> Result<()> {
 
     let receiver = WalletUnlocked::new_random(Some(provider.clone()));
 
+    let consensus_parameters = provider.consensus_parameters().await?;
     let inputs = wallet
-        .get_asset_inputs_for_amount(*provider.base_asset_id(), 100, None)
+        .get_asset_inputs_for_amount(*consensus_parameters.base_asset_id(), 100, None)
         .await?;
-    let outputs =
-        wallet.get_asset_outputs_for_amount(receiver.address(), *provider.base_asset_id(), 100);
+    let outputs = wallet.get_asset_outputs_for_amount(
+        receiver.address(),
+        *consensus_parameters.base_asset_id(),
+        100,
+    );
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
     tb.add_signer(wallet.clone())?;
@@ -963,7 +974,9 @@ async fn test_build_with_provider() -> Result<()> {
 
     provider.send_transaction_and_await_commit(tx).await?;
 
-    let receiver_balance = receiver.get_asset_balance(provider.base_asset_id()).await?;
+    let receiver_balance = receiver
+        .get_asset_balance(consensus_parameters.base_asset_id())
+        .await?;
 
     assert_eq!(receiver_balance, 100);
 
@@ -982,19 +995,20 @@ async fn can_produce_blocks_with_trig_never() -> Result<()> {
     let wallet = &wallets[0];
     let provider = wallet.try_provider()?;
 
+    let consensus_parameters = provider.consensus_parameters().await?;
     let inputs = wallet
-        .get_asset_inputs_for_amount(*provider.base_asset_id(), 100, None)
+        .get_asset_inputs_for_amount(*consensus_parameters.base_asset_id(), 100, None)
         .await?;
     let outputs = wallet.get_asset_outputs_for_amount(
         &Bech32Address::default(),
-        *provider.base_asset_id(),
+        *consensus_parameters.base_asset_id(),
         100,
     );
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
     tb.add_signer(wallet.clone())?;
     let tx = tb.build(provider).await?;
-    let tx_id = tx.id(provider.chain_id());
+    let tx_id = tx.id(consensus_parameters.chain_id());
 
     provider.send_transaction(tx).await?;
     provider.produce_blocks(1, None).await?;
@@ -1140,11 +1154,15 @@ async fn tx_with_witness_data() -> Result<()> {
 
     let receiver = WalletUnlocked::new_random(Some(provider.clone()));
 
+    let consensus_parameters = provider.consensus_parameters().await?;
     let inputs = wallet
-        .get_asset_inputs_for_amount(*provider.base_asset_id(), 10000, None)
+        .get_asset_inputs_for_amount(*consensus_parameters.base_asset_id(), 10000, None)
         .await?;
-    let outputs =
-        wallet.get_asset_outputs_for_amount(receiver.address(), *provider.base_asset_id(), 1);
+    let outputs = wallet.get_asset_outputs_for_amount(
+        receiver.address(),
+        *consensus_parameters.base_asset_id(),
+        1,
+    );
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
     tb.add_signer(wallet.clone())?;
@@ -1297,7 +1315,8 @@ async fn is_account_query_test() -> Result<()> {
         wallet.add_witnesses(&mut tb)?;
         let tx = tb.build(provider.clone()).await?;
 
-        let tx_id = tx.id(provider.chain_id());
+        let consensus_parameters = provider.consensus_parameters().await?;
+        let tx_id = tx.id(consensus_parameters.chain_id());
         let is_account = provider.is_user_account(tx_id).await?;
         assert!(is_account);
 

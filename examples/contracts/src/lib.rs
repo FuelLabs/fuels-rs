@@ -1017,6 +1017,7 @@ mod tests {
         )?;
         let max_allowed = provider
             .consensus_parameters()
+            .await?
             .contract_params()
             .contract_max_size();
 
@@ -1105,11 +1106,19 @@ mod tests {
         // ANCHOR_END: use_loader
 
         // ANCHOR: show_max_tx_size
-        provider.consensus_parameters().tx_params().max_size();
+        provider
+            .consensus_parameters()
+            .await?
+            .tx_params()
+            .max_size();
         // ANCHOR_END: show_max_tx_size
 
         // ANCHOR: show_max_tx_gas
-        provider.consensus_parameters().tx_params().max_gas_per_tx();
+        provider
+            .consensus_parameters()
+            .await?
+            .tx_params()
+            .max_gas_per_tx();
         // ANCHOR_END: show_max_tx_gas
 
         let wallet = main_wallet;

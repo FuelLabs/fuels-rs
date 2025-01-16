@@ -241,9 +241,10 @@ async fn pay_with_predicate() -> Result<()> {
 
     // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
     let expected_fee = 1;
+    let consensus_parameters = provider.consensus_parameters().await?;
     assert_eq!(
         predicate
-            .get_asset_balance(provider.base_asset_id())
+            .get_asset_balance(consensus_parameters.base_asset_id())
             .await?,
         192 - expected_fee
     );
@@ -259,7 +260,7 @@ async fn pay_with_predicate() -> Result<()> {
     let expected_fee = 2;
     assert_eq!(
         predicate
-            .get_asset_balance(provider.base_asset_id())
+            .get_asset_balance(consensus_parameters.base_asset_id())
             .await?,
         191 - expected_fee
     );
@@ -310,9 +311,10 @@ async fn pay_with_predicate_vector_data() -> Result<()> {
 
     // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
     let expected_fee = 1;
+    let consensus_parameters = provider.consensus_parameters().await?;
     assert_eq!(
         predicate
-            .get_asset_balance(provider.base_asset_id())
+            .get_asset_balance(consensus_parameters.base_asset_id())
             .await?,
         192 - expected_fee
     );
@@ -328,7 +330,7 @@ async fn pay_with_predicate_vector_data() -> Result<()> {
     assert_eq!(42, response.value);
     assert_eq!(
         predicate
-            .get_asset_balance(provider.base_asset_id())
+            .get_asset_balance(consensus_parameters.base_asset_id())
             .await?,
         191 - expected_fee
     );
@@ -887,6 +889,7 @@ async fn predicate_adjust_fee_persists_message_w_data() -> Result<()> {
         TxPolicies::default().with_tip(1),
     );
     predicate.adjust_for_fee(&mut tb, 1000).await?;
+
     let tx = tb.build(&provider).await?;
 
     assert_eq!(tx.inputs().len(), 2);
@@ -929,9 +932,14 @@ async fn predicate_transfer_non_base_asset() -> Result<()> {
     let inputs = predicate
         .get_asset_inputs_for_amount(non_base_asset_id, amount, None)
         .await?;
+    let consensus_parameters = provider.consensus_parameters().await?;
     let outputs = vec![
         Output::change(wallet.address().into(), 0, non_base_asset_id),
-        Output::change(wallet.address().into(), 0, *provider.base_asset_id()),
+        Output::change(
+            wallet.address().into(),
+            0,
+            *consensus_parameters.base_asset_id(),
+        ),
     ];
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(
@@ -1062,14 +1070,16 @@ async fn tx_id_not_changed_after_adding_witnesses() -> Result<()> {
     .build(&provider)
     .await?;
 
-    let tx_id = tx.id(provider.chain_id());
+    let consensus_parameters = provider.consensus_parameters().await?;
+    let chain_id = consensus_parameters.chain_id();
+    let tx_id = tx.id(chain_id);
 
     let witness = ABIEncoder::default().encode(&[64u64.into_token()])?; // u64 because this is VM memory
     let witness2 = ABIEncoder::default().encode(&[4096u64.into_token()])?;
 
     tx.append_witness(witness.into())?;
     tx.append_witness(witness2.into())?;
-    let tx_id_after_witnesses = tx.id(provider.chain_id());
+    let tx_id_after_witnesses = tx.id(chain_id);
 
     let tx_id_from_provider = provider.send_transaction(tx).await?;
 

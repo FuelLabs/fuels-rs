@@ -97,6 +97,7 @@ pub struct BlobTransactionBuilder {
     pub blob: Blob,
     unresolved_witness_indexes: UnresolvedWitnessIndexes,
     unresolved_signers: Vec<Box<dyn Signer + Send + Sync>>,
+    enable_burn: bool,
 }
 
 impl Default for BlobTransactionBuilder {
@@ -112,6 +113,7 @@ impl Default for BlobTransactionBuilder {
             blob: Default::default(),
             unresolved_witness_indexes: Default::default(),
             unresolved_signers: Default::default(),
+            enable_burn: false,
         }
     }
 }
@@ -130,13 +132,22 @@ impl BlobTransactionBuilder {
             .await?;
 
         let current_tx_size = tx.size();
-        let max_tx_size = usize::try_from(provider.consensus_parameters().tx_params().max_size())
-            .unwrap_or(usize::MAX);
+        let max_tx_size = usize::try_from(
+            provider
+                .consensus_parameters()
+                .await?
+                .tx_params()
+                .max_size(),
+        )
+        .unwrap_or(usize::MAX);
 
         Ok(max_tx_size.saturating_sub(current_tx_size))
     }
 
     pub async fn build(mut self, provider: impl DryRunner) -> Result<BlobTransaction> {
+        let consensus_parameters = provider.consensus_parameters().await?;
+        self.intercept_burn(consensus_parameters.base_asset_id())?;
+
         let is_using_predicates = self.is_using_predicates();
 
         let tx = match self.build_strategy {
@@ -166,11 +177,12 @@ impl BlobTransactionBuilder {
             max_fee_estimation_tolerance: self.max_fee_estimation_tolerance,
             build_strategy: self.build_strategy.clone(),
             blob: self.blob.clone(),
+            enable_burn: self.enable_burn,
         }
     }
 
     async fn resolve_fuel_tx(mut self, provider: &impl DryRunner) -> Result<fuel_tx::Blob> {
-        let chain_id = provider.consensus_parameters().chain_id();
+        let chain_id = provider.consensus_parameters().await?.chain_id();
 
         let free_witness_index = self.num_witnesses()?;
         let body = self.blob.as_blob_body(free_witness_index);

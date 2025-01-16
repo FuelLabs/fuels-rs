@@ -19,7 +19,7 @@ use fuels_core::types::{
 
 use crate::{
     accounts_utils::{
-        adjust_inputs_outputs, available_base_assets_and_amount, calculate_missing_base_amount,
+        add_base_change_if_needed, available_base_assets_and_amount, calculate_missing_base_amount,
         extract_message_nonce, split_into_utxo_ids_and_nonces,
     },
     provider::{Provider, ResourceFilter},
@@ -117,7 +117,8 @@ pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync + Clone {
         excluded_coins: Option<Vec<CoinTypeId>>,
     ) -> Result<Vec<Input>>;
 
-    /// Add base asset inputs to the transaction to cover the estimated fee.
+    /// Add base asset inputs to the transaction to cover the estimated fee
+    /// and add a change output for the base asset if needed.
     /// Requires contract inputs to be at the start of the transactions inputs vec
     /// so that their indexes are retained
     async fn adjust_for_fee<Tb: TransactionBuilder + Sync>(
@@ -126,27 +127,25 @@ pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync + Clone {
         used_base_amount: u64,
     ) -> Result<()> {
         let provider = self.try_provider()?;
+        let consensus_parameters = provider.consensus_parameters().await?;
         let (base_assets, base_amount) =
-            available_base_assets_and_amount(tb, provider.base_asset_id());
+            available_base_assets_and_amount(tb, consensus_parameters.base_asset_id());
         let missing_base_amount =
             calculate_missing_base_amount(tb, base_amount, used_base_amount, provider).await?;
 
         if missing_base_amount > 0 {
             let new_base_inputs = self
                 .get_asset_inputs_for_amount(
-                    *provider.base_asset_id(),
+                    *consensus_parameters.base_asset_id(),
                     missing_base_amount,
                     Some(base_assets),
                 )
                 .await?;
 
-            adjust_inputs_outputs(
-                tb,
-                new_base_inputs,
-                self.address(),
-                provider.base_asset_id(),
-            );
+            tb.inputs_mut().extend(new_base_inputs);
         };
+
+        add_base_change_if_needed(tb, self.address(), consensus_parameters.base_asset_id());
 
         Ok(())
     }
@@ -181,7 +180,8 @@ pub trait Account: ViewOnlyAccount {
 
         self.add_witnesses(&mut tx_builder)?;
 
-        let used_base_amount = if asset_id == *provider.base_asset_id() {
+        let consensus_parameters = provider.consensus_parameters().await?;
+        let used_base_amount = if asset_id == *consensus_parameters.base_asset_id() {
             amount
         } else {
             0
@@ -190,7 +190,7 @@ pub trait Account: ViewOnlyAccount {
             .await?;
 
         let tx = tx_builder.build(provider).await?;
-        let tx_id = tx.id(provider.chain_id());
+        let tx_id = tx.id(consensus_parameters.chain_id());
 
         let tx_status = provider.send_transaction_and_await_commit(tx).await?;
 
@@ -253,7 +253,8 @@ pub trait Account: ViewOnlyAccount {
 
         let tx = tb.build(provider).await?;
 
-        let tx_id = tx.id(provider.chain_id());
+        let consensus_parameters = provider.consensus_parameters().await?;
+        let tx_id = tx.id(consensus_parameters.chain_id());
         let tx_status = provider.send_transaction_and_await_commit(tx).await?;
 
         let receipts = tx_status.take_receipts_checked(None)?;
@@ -271,9 +272,10 @@ pub trait Account: ViewOnlyAccount {
         tx_policies: TxPolicies,
     ) -> Result<(TxId, Nonce, Vec<Receipt>)> {
         let provider = self.try_provider()?;
+        let consensus_parameters = provider.consensus_parameters().await?;
 
         let inputs = self
-            .get_asset_inputs_for_amount(*provider.base_asset_id(), amount, None)
+            .get_asset_inputs_for_amount(*consensus_parameters.base_asset_id(), amount, None)
             .await?;
 
         let mut tb = ScriptTransactionBuilder::prepare_message_to_output(
@@ -281,7 +283,7 @@ pub trait Account: ViewOnlyAccount {
             amount,
             inputs,
             tx_policies,
-            *provider.base_asset_id(),
+            *consensus_parameters.base_asset_id(),
         );
 
         self.add_witnesses(&mut tb)?;
@@ -289,7 +291,7 @@ pub trait Account: ViewOnlyAccount {
 
         let tx = tb.build(provider).await?;
 
-        let tx_id = tx.id(provider.chain_id());
+        let tx_id = tx.id(consensus_parameters.chain_id());
         let tx_status = provider.send_transaction_and_await_commit(tx).await?;
 
         let receipts = tx_status.take_receipts_checked(None)?;
@@ -361,20 +363,20 @@ mod tests {
             })
         }
 
-        fn consensus_parameters(&self) -> &ConsensusParameters {
-            &self.c_param
+        async fn consensus_parameters(&self) -> Result<ConsensusParameters> {
+            Ok(self.c_param.clone())
         }
 
         async fn estimate_gas_price(&self, _block_header: u32) -> Result<u64> {
             Ok(0)
         }
 
-        async fn maybe_estimate_predicates(
+        async fn estimate_predicates(
             &self,
             _: &FuelTransaction,
             _: Option<u32>,
-        ) -> Result<Option<FuelTransaction>> {
-            Ok(None)
+        ) -> Result<FuelTransaction> {
+            unimplemented!()
         }
     }
 
@@ -403,10 +405,11 @@ mod tests {
                 1,
                 Default::default(),
             );
+            let change = Output::change(wallet.address().into(), 0, Default::default());
 
             ScriptTransactionBuilder::prepare_transfer(
                 vec![input_coin],
-                vec![output_coin],
+                vec![output_coin, change],
                 Default::default(),
             )
         };
@@ -429,7 +432,7 @@ mod tests {
         assert_eq!(signature, tx_signature);
 
         // Check if the signature is what we expect it to be
-        assert_eq!(signature, Signature::from_str("8afd30de7039faa07aac1cf2676970a77dc8ef3f779b44c1510ad7bf58ea56f43727b23142bd7252b79ae2c832e073927f84f6b0857fedf2f6d86e9535e48fd0")?);
+        assert_eq!(signature, Signature::from_str("faa616776a1c336ef6257f7cb0cb5cd932180e2d15faba5f17481dae1cbcaf314d94617bd900216a6680bccb1ea62438e4ca93b0d5733d33788ef9d79cc24e9f")?);
 
         // Recover the address that signed the transaction
         let recovered_address = signature.recover(&message)?;

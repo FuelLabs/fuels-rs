@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use fuel_tx::{
     consensus_parameters::{ConsensusParametersV1, FeeParametersV1},
-    ConsensusParameters, FeeParameters,
+    ConsensusParameters, FeeParameters, Output,
 };
 use fuels::{
     core::codec::{calldata, encode_fn_selector, DecoderConfig, EncoderConfig},
@@ -1022,7 +1022,7 @@ async fn test_contract_call_with_non_default_max_input() -> Result<()> {
 
     let provider = setup_test_provider(coins, vec![], None, Some(chain_config)).await?;
     wallet.set_provider(provider.clone());
-    assert_eq!(consensus_parameters, *provider.consensus_parameters());
+    assert_eq!(consensus_parameters, provider.consensus_parameters().await?);
 
     setup_program_test!(
         Abigen(Contract(
@@ -1707,11 +1707,16 @@ async fn contract_custom_call_no_signatures_strategy() -> Result<()> {
 
     let mut tb = call_handler.transaction_builder().await?;
 
+    let base_asset_id = *provider.consensus_parameters().await?.base_asset_id();
+
     let amount = 10;
+    let consensus_parameters = provider.consensus_parameters().await?;
     let new_base_inputs = wallet
-        .get_asset_inputs_for_amount(*provider.base_asset_id(), amount, None)
+        .get_asset_inputs_for_amount(base_asset_id, amount, None)
         .await?;
     tb.inputs_mut().extend(new_base_inputs);
+    tb.outputs_mut()
+        .push(Output::change(wallet.address().into(), 0, base_asset_id));
 
     // ANCHOR: tb_no_signatures_strategy
     let mut tx = tb
@@ -1719,7 +1724,8 @@ async fn contract_custom_call_no_signatures_strategy() -> Result<()> {
         .build(provider)
         .await?;
     // ANCHOR: tx_sign_with
-    tx.sign_with(&wallet, provider.chain_id()).await?;
+    tx.sign_with(&wallet, consensus_parameters.chain_id())
+        .await?;
     // ANCHOR_END: tx_sign_with
     // ANCHOR_END: tb_no_signatures_strategy
 
@@ -1856,7 +1862,14 @@ async fn msg_sender_gas_estimation_issue() {
     let asset_id = ids[0];
 
     // The fake coin won't be added if we add a base asset, so let's not do that
-    assert!(asset_id != *provider.base_asset_id());
+    assert!(
+        asset_id
+            != *provider
+                .consensus_parameters()
+                .await
+                .unwrap()
+                .base_asset_id()
+    );
     let call_params = CallParameters::default()
         .with_amount(100)
         .with_asset_id(asset_id);
@@ -2207,7 +2220,7 @@ async fn blob_contract_deployment() -> Result<()> {
 
     let provider = wallets[0].provider().unwrap().clone();
 
-    let consensus_parameters = provider.consensus_parameters();
+    let consensus_parameters = provider.consensus_parameters().await?;
 
     let contract_max_size = consensus_parameters.contract_params().contract_max_size();
     assert!(

@@ -344,9 +344,9 @@ mod tests {
         };
         let provider = setup_test_provider(vec![], vec![], None, Some(chain_config)).await?;
 
-        let retrieved_parameters = provider.consensus_parameters();
+        let retrieved_parameters = provider.consensus_parameters().await?;
 
-        assert_eq!(*retrieved_parameters, consensus_parameters);
+        assert_eq!(retrieved_parameters, consensus_parameters);
 
         Ok(())
     }
