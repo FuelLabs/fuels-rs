@@ -262,6 +262,7 @@ async fn can_set_custom_block_time() -> Result<()> {
     assert_eq!(blocks[1].header.time.unwrap().timestamp(), 20);
     assert_eq!(blocks[2].header.time.unwrap().timestamp(), 40);
     assert_eq!(blocks[3].header.time.unwrap().timestamp(), 60);
+
     Ok(())
 }
 
