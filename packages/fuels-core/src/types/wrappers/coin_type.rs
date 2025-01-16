@@ -48,6 +48,14 @@ impl CoinType {
         }
     }
 
+    pub fn asset_id(&self, base_asset_id: AssetId) -> Option<AssetId> {
+        match self {
+            CoinType::Coin(coin) => Some(coin.asset_id),
+            CoinType::Message(_) => Some(base_asset_id),
+            CoinType::Unknown => None,
+        }
+    }
+
     pub fn owner(&self) -> Option<&Bech32Address> {
         match self {
             CoinType::Coin(coin) => Some(&coin.owner),

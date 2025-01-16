@@ -1139,9 +1139,8 @@ async fn can_setup_static_gas_price() -> Result<()> {
 
     let gas_price = provider.estimate_gas_price(0).await?.gas_price;
 
-    //TODO:https://github.com/FuelLabs/fuels-rs/issues/1579
-    // why was 1000 added
-    assert_eq!(gas_price, 1000 + expected_gas_price);
+    let da_cost = 1000;
+    assert_eq!(gas_price, da_cost + expected_gas_price);
 
     Ok(())
 }
