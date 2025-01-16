@@ -676,7 +676,6 @@ async fn predicate_default_configurables() -> Result<()> {
     )?
     .with_data(predicate_data);
 
-    dbg!("halil");
     let num_coins = 4;
     let num_messages = 8;
     let amount = 16;
@@ -1142,12 +1141,10 @@ async fn predicate_blobs() -> Result<()> {
     let (provider, predicate_balance, receiver, receiver_balance, asset_id, extra_wallet) =
         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
-    dbg!("0halil");
     // we don't want to pay with the recipient wallet so that we don't affect the assertion we're
     // gonna make later on
     // ANCHOR: uploading_the_blob
     loader.upload_blob(extra_wallet).await?;
-    dbg!("halil");
 
     predicate.set_provider(provider.clone());
 

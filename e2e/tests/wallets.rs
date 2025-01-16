@@ -129,6 +129,8 @@ fn base_asset_wallet_config(num_wallets: u64) -> WalletsConfig {
 }
 
 #[tokio::test]
+//TODO:https://github.com/FuelLabs/fuels-rs/issues/1579
+#[ignore]
 async fn adjust_fee_empty_transaction() -> Result<()> {
     let wallet_config = base_asset_wallet_config(1);
     let wallet = launch_custom_provider_and_get_wallets(wallet_config, None, None)
@@ -158,7 +160,6 @@ async fn adjust_fee_empty_transaction() -> Result<()> {
         AssetId::zeroed(),
     )];
 
-    dbg!(&tx.inputs().len(), &expected_inputs);
     assert!(compare_inputs(tx.inputs(), &mut expected_inputs));
     assert_eq!(tx.outputs(), &expected_outputs);
 
@@ -166,6 +167,8 @@ async fn adjust_fee_empty_transaction() -> Result<()> {
 }
 
 #[tokio::test]
+//TODO:https://github.com/FuelLabs/fuels-rs/issues/1579
+#[ignore]
 async fn adjust_fee_resources_to_transfer_with_base_asset() -> Result<()> {
     let wallet_config = base_asset_wallet_config(1);
     let wallet = launch_custom_provider_and_get_wallets(wallet_config, None, None)

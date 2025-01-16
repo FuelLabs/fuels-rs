@@ -132,9 +132,6 @@ pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync + Clone {
         let missing_base_amount =
             calculate_missing_base_amount(tb, base_amount, used_base_amount, provider).await?;
 
-        dbg!(missing_base_amount);
-        dbg!(&base_assets, &base_amount);
-
         if missing_base_amount > 0 {
             let new_base_inputs = self
                 .get_asset_inputs_for_amount(
@@ -145,8 +142,6 @@ pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync + Clone {
                 .await
                 // if there query fails do nothing
                 .unwrap_or_default();
-
-            dbg!(new_base_inputs.len());
 
             adjust_inputs_outputs(
                 tb,
@@ -195,14 +190,11 @@ pub trait Account: ViewOnlyAccount {
         } else {
             0
         };
-        dbg!("nani-here");
         self.adjust_for_fee(&mut tx_builder, used_base_amount)
             .await?;
-        dbg!("nani2");
 
         let tx = tx_builder.build(provider).await?;
         let tx_id = tx.id(consensus_parameters.chain_id());
-        dbg!("nani3");
 
         let tx_status = provider.send_transaction_and_await_commit(tx).await?;
 

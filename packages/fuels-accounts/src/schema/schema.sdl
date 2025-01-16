@@ -743,7 +743,7 @@ type Mutation {
 	dryRun(txs: [HexString!]!, utxoValidation: Boolean, gasPrice: U64): [DryRunTransactionExecutionStatus!]!
 	"""
 	Submits transaction to the `TxPool`.
-
+	
 	Returns submitted transaction if the transaction is included in the `TxPool` without problems.
 	"""
 	submit(tx: HexString!): Transaction!
@@ -942,9 +942,9 @@ type Query {
 	For each `query_per_asset`, get some spendable coins(of asset specified by the query) owned by
 	`owner` that add up at least the query amount. The returned coins can be spent.
 	The number of coins is optimized to prevent dust accumulation.
-
+	
 	The query supports excluding and maximum the number of coins.
-
+	
 	Returns:
 	The list of spendable coins per asset from the query. The length of the result is
 	the same as the length of `query_per_asset`. The ordering of assets and `query_per_asset`
@@ -1149,9 +1149,9 @@ type Subscription {
 	or [`TransactionStatus::Failed`] the stream will return that and end immediately.
 	If the current status is [`TransactionStatus::Submitted`] this will be returned
 	and the stream will wait for a future update.
-
+	
 	This stream will wait forever so it's advised to use within a timeout.
-
+	
 	It is possible for the stream to miss an update if it is polled slower
 	then the updates arrive. In such a case the stream will close without
 	a status. If this occurs the stream can simply be restarted to return

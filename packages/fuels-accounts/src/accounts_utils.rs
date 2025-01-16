@@ -24,7 +24,6 @@ pub async fn calculate_missing_base_amount(
     provider: &Provider,
 ) -> Result<u64> {
     let max_fee = tb.estimate_max_fee(provider).await?;
-    dbg!(max_fee);
 
     let total_used = max_fee + reserved_base_amount;
     let missing_amount = if total_used > available_base_amount {
