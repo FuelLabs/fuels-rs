@@ -35,7 +35,7 @@ async fn test_provider_launch_and_connect() -> Result<()> {
     let provider = setup_test_provider(coins, vec![], None, None).await?;
     wallet.set_provider(provider.clone());
 
-    let contract_id = Contract::load_from(
+    let (contract_id, _) = Contract::load_from(
         "sway/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
@@ -176,7 +176,7 @@ async fn test_input_message_pays_fee() -> Result<()> {
         abi = "e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
     ));
 
-    let contract_id = Contract::load_from(
+    let (contract_id, deploy_tx_status) = Contract::load_from(
         "sway/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
@@ -194,9 +194,9 @@ async fn test_input_message_pays_fee() -> Result<()> {
     assert_eq!(42, response.value);
 
     let balance = wallet.get_asset_balance(base_asset_id).await?;
-    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
-    let expected_fee = 2;
-    assert_eq!(balance, DEFAULT_COIN_AMOUNT - expected_fee);
+    let deploy_fee = deploy_tx_status.unwrap().total_fee();
+    let call_fee = response.total_fee;
+    assert_eq!(balance, DEFAULT_COIN_AMOUNT - deploy_fee - call_fee);
 
     Ok(())
 }
@@ -263,6 +263,7 @@ async fn can_set_custom_block_time() -> Result<()> {
     assert_eq!(blocks[1].header.time.unwrap().timestamp(), 20);
     assert_eq!(blocks[2].header.time.unwrap().timestamp(), 40);
     assert_eq!(blocks[3].header.time.unwrap().timestamp(), 60);
+
     Ok(())
 }
 
@@ -1244,7 +1245,7 @@ async fn contract_call_with_impersonation() -> Result<()> {
         abi = "e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
     ));
 
-    let contract_id = Contract::load_from(
+    let (contract_id, _) = Contract::load_from(
         "sway/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?

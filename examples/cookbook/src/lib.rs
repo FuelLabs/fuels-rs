@@ -51,7 +51,7 @@ mod tests {
         // ANCHOR_END: liquidity_wallet
 
         // ANCHOR: liquidity_deploy
-        let contract_id = Contract::load_from(
+        let (contract_id, _) = Contract::load_from(
             "../../e2e/sway/contracts/liquidity_pool/out/release/liquidity_pool.bin",
             LoadConfiguration::default(),
         )?

@@ -528,14 +528,14 @@ async fn loader_script_calling_loader_proxy() -> Result<()> {
 
     let contract = Contract::load_from(contract_binary, LoadConfiguration::default())?;
 
-    let contract_id = contract
+    let (contract_id, _) = contract
         .convert_to_loader(100)?
         .deploy_if_not_exists(&wallet, TxPolicies::default())
         .await?;
 
     let contract_binary = "sway/contracts/proxy/out/release/proxy.bin";
 
-    let proxy_id = Contract::load_from(contract_binary, LoadConfiguration::default())?
+    let (proxy_id, _) = Contract::load_from(contract_binary, LoadConfiguration::default())?
         .convert_to_loader(100)?
         .deploy_if_not_exists(&wallet, TxPolicies::default())
         .await?;

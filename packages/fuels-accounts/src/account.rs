@@ -15,6 +15,7 @@ use fuels_core::types::{
     transaction::{Transaction, TxPolicies},
     transaction_builders::{BuildableTransaction, ScriptTransactionBuilder, TransactionBuilder},
     transaction_response::TransactionResponse,
+    tx_status::TxStatus,
 };
 
 use crate::{
@@ -167,7 +168,7 @@ pub trait Account: ViewOnlyAccount {
         amount: u64,
         asset_id: AssetId,
         tx_policies: TxPolicies,
-    ) -> Result<(TxId, Vec<Receipt>)> {
+    ) -> Result<(TxId, TxStatus)> {
         let provider = self.try_provider()?;
 
         let inputs = self
@@ -194,9 +195,7 @@ pub trait Account: ViewOnlyAccount {
 
         let tx_status = provider.send_transaction_and_await_commit(tx).await?;
 
-        let receipts = tx_status.take_receipts_checked(None)?;
-
-        Ok((tx_id, receipts))
+        Ok((tx_id, tx_status))
     }
 
     /// Unconditionally transfers `balance` of type `asset_id` to

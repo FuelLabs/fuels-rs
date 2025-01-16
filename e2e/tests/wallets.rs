@@ -226,7 +226,7 @@ async fn test_transfer() -> Result<()> {
     wallet_1.set_provider(provider.clone());
     wallet_2.set_provider(provider);
 
-    let _receipts = wallet_1
+    let _ = wallet_1
         .transfer(
             wallet_2.address(),
             amount / 2,
@@ -262,7 +262,7 @@ async fn send_transfer_transactions() -> Result<()> {
     // Transfer 1 from wallet 1 to wallet 2.
     const SEND_AMOUNT: u64 = 1;
     let base_asset_id = AssetId::zeroed();
-    let (tx_id, _receipts) = wallet_1
+    let (tx_id, _tx_status) = wallet_1
         .transfer(wallet_2.address(), SEND_AMOUNT, base_asset_id, tx_policies)
         .await?;
 
@@ -307,7 +307,7 @@ async fn transfer_coins_with_change() -> Result<()> {
 
     // Transfer 2 from wallet 1 to wallet 2.
     const SEND_AMOUNT: u64 = 2;
-    let _receipts = wallet_1
+    let (_tx_id, tx_status) = wallet_1
         .transfer(
             wallet_2.address(),
             SEND_AMOUNT,
@@ -321,14 +321,10 @@ async fn transfer_coins_with_change() -> Result<()> {
         .get_spendable_resources(base_asset_id, 1, None)
         .await?;
 
-    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
-    let expected_fee = 1;
     // Assert that we've sent 2 from wallet 1, resulting in an amount of 3 in wallet 1.
     let resulting_amount = wallet_1_final_coins.first().unwrap();
-    assert_eq!(
-        resulting_amount.amount(),
-        AMOUNT - SEND_AMOUNT - expected_fee
-    );
+    let fee = tx_status.total_fee();
+    assert_eq!(resulting_amount.amount(), AMOUNT - SEND_AMOUNT - fee);
 
     let wallet_2_final_coins = wallet_2.get_coins(base_asset_id).await?;
     assert_eq!(wallet_2_final_coins.len(), 1);
@@ -415,7 +411,7 @@ async fn transfer_coins_of_non_base_asset() -> Result<()> {
     wallet_2.set_provider(provider);
 
     const SEND_AMOUNT: u64 = 200;
-    let _receipts = wallet_1
+    let _ = wallet_1
         .transfer(
             wallet_2.address(),
             SEND_AMOUNT,

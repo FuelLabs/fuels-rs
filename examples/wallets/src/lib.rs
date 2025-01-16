@@ -180,7 +180,7 @@ mod tests {
             .pop()
             .unwrap();
 
-        let contract_id = Contract::load_from(
+        let (contract_id, _) = Contract::load_from(
             "../../e2e/sway/contracts/contract_test/out/release/contract_test.bin",
             LoadConfiguration::default(),
         )?
