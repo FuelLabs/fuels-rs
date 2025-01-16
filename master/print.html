@@ -945,10 +945,11 @@ coins and coin amount</p>
                 1,
                 Default::default(),
             );
+            let change = Output::change(wallet.address().into(), 0, Default::default());
 
             ScriptTransactionBuilder::prepare_transfer(
                 vec![input_coin],
-                vec![output_coin],
+                vec![output_coin, change],
                 Default::default(),
             )
         };
