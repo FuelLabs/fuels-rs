@@ -86,7 +86,7 @@ impl FuelService {
             database_type: node_config.database_type.into(),
             #[cfg(feature = "rocksdb")]
             database_config: DatabaseConfig {
-                cache_capacity: None,
+                cache_capacity: node_config.max_database_cache_size,
                 max_fds: 512,
                 columns_policy: ColumnsPolicy::Lazy,
             },
