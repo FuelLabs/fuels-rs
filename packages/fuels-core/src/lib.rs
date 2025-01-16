@@ -97,7 +97,7 @@ impl Configurables {
             .map(|(offset, data)| Ok((Self::shift_offset(offset, shift)?, data.clone())))
             .collect::<Result<Vec<_>>>()?;
 
-        // TODO: @hal3e test this and thest with loader configurables
+        // TODO: @hal3e test this and test with loader configurables
         let new_sorted_indirect_configurables = self
             .sorted_indirect_configurables
             .into_iter()
