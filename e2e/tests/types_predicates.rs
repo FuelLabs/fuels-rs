@@ -18,10 +18,11 @@ async fn assert_predicate_spendable(data: Vec<u8>, project_path: impl AsRef<Path
 
     predicate.set_provider(provider.clone());
 
+    let expected_fee = 2;
     predicate
         .transfer(
             receiver.address(),
-            predicate_balance,
+            predicate_balance - expected_fee,
             asset_id,
             TxPolicies::default(),
         )
@@ -35,7 +36,7 @@ async fn assert_predicate_spendable(data: Vec<u8>, project_path: impl AsRef<Path
         receiver.address(),
         &provider,
         asset_id,
-        receiver_balance + predicate_balance,
+        receiver_balance + predicate_balance - expected_fee,
     )
     .await;
 

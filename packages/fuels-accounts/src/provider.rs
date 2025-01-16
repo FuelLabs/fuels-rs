@@ -56,6 +56,8 @@ use tokio::sync::Mutex;
 use crate::coin_cache::CoinsCache;
 use crate::provider::retryable_client::RetryableClient;
 
+const MAX_COINS_PER_REQUEST: u32 = 5;
+
 #[derive(Debug, Clone, PartialEq)]
 // ANCHOR: transaction_cost
 pub struct TransactionCost {
@@ -83,7 +85,11 @@ impl ResourceQueries {
     }
 
     pub fn spend_query(&self, base_asset_id: AssetId) -> Vec<(AssetId, u64, Option<u32>)> {
-        vec![(self.asset_id.unwrap_or(base_asset_id), self.amount, None)]
+        vec![(
+            self.asset_id.unwrap_or(base_asset_id),
+            self.amount,
+            Some(MAX_COINS_PER_REQUEST),
+        )]
     }
 }
 

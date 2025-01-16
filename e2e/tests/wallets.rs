@@ -158,6 +158,7 @@ async fn adjust_fee_empty_transaction() -> Result<()> {
         AssetId::zeroed(),
     )];
 
+    dbg!(&tx.inputs().len(), &expected_inputs);
     assert!(compare_inputs(tx.inputs(), &mut expected_inputs));
     assert_eq!(tx.outputs(), &expected_outputs);
 
