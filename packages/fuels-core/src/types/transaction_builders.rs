@@ -163,6 +163,7 @@ pub trait TransactionBuilder: BuildableTransaction + Send + sealed::Sealed {
 
     fn add_signer(&mut self, signer: impl Signer + Send + Sync) -> Result<&mut Self>;
     async fn estimate_max_fee(&self, provider: impl DryRunner) -> Result<u64>;
+    fn enable_burn(self, enable: bool) -> Self;
     fn with_tx_policies(self, tx_policies: TxPolicies) -> Self;
     fn with_inputs(self, inputs: Vec<Input>) -> Self;
     fn with_outputs(self, outputs: Vec<Output>) -> Self;
@@ -216,6 +217,9 @@ macro_rules! impl_tx_builder_trait {
                     .witnesses_mut()
                     .extend(repeat(witness).take(self.unresolved_signers.len()));
 
+                // Temporarily enable burning to avoid errors when calculating the fee.
+                let fee_estimation_tb = fee_estimation_tb.enable_burn(true);
+
                 let mut tx = $crate::types::transaction_builders::BuildableTransaction::build(
                     fee_estimation_tb,
                     &provider,
@@ -238,6 +242,11 @@ macro_rules! impl_tx_builder_trait {
                     gas_price,
                     &consensus_parameters,
                 )
+            }
+
+            fn enable_burn(mut self, enable: bool) -> Self {
+                self.enable_burn = enable;
+                self
             }
 
             fn with_tx_policies(mut self, tx_policies: TxPolicies) -> Self {
@@ -329,6 +338,46 @@ macro_rules! impl_tx_builder_trait {
                 self.inputs()
                     .iter()
                     .any(|input| matches!(input, Input::ResourcePredicate { .. }))
+            }
+
+            fn intercept_burn(&self, base_asset_id: &$crate::types::AssetId) -> Result<()> {
+                use std::collections::HashSet;
+
+                if self.enable_burn {
+                    return Ok(());
+                }
+
+                let assets_w_change = self
+                    .outputs
+                    .iter()
+                    .filter_map(|output| match output {
+                        Output::Change { asset_id, .. } => Some(*asset_id),
+                        _ => None,
+                    })
+                    .collect::<HashSet<_>>();
+
+                let input_assets = self
+                    .inputs
+                    .iter()
+                    .filter_map(|input| match input {
+                        Input::ResourceSigned { resource } |
+                        Input::ResourcePredicate { resource, .. } => Some(resource.asset_id(*base_asset_id)),
+                        _ => None,
+                    })
+                    .collect::<HashSet<_>>();
+
+                let diff = input_assets.difference(&assets_w_change).collect_vec();
+                if !diff.is_empty() {
+                    return Err(error_transaction!(
+                        Builder,
+                        "the following assets have no change outputs and may be burned unintentionally: {:?}. \
+                        To resolve this, either add the necessary change outputs manually or explicitly allow asset burning \
+                        by calling `.enable_burn(true)` on the transaction builder.",
+                        diff
+                    ));
+                }
+
+                Ok(())
             }
 
             fn num_witnesses(&self) -> Result<u16> {
@@ -461,6 +510,7 @@ pub struct ScriptTransactionBuilder {
     pub build_strategy: ScriptBuildStrategy,
     unresolved_witness_indexes: UnresolvedWitnessIndexes,
     unresolved_signers: Vec<Box<dyn Signer + Send + Sync>>,
+    enable_burn: bool,
 }
 
 impl Default for ScriptTransactionBuilder {
@@ -479,6 +529,7 @@ impl Default for ScriptTransactionBuilder {
             build_strategy: Default::default(),
             unresolved_witness_indexes: Default::default(),
             unresolved_signers: Default::default(),
+            enable_burn: false,
         }
     }
 }
@@ -497,6 +548,7 @@ pub struct CreateTransactionBuilder {
     pub build_strategy: Strategy,
     unresolved_witness_indexes: UnresolvedWitnessIndexes,
     unresolved_signers: Vec<Box<dyn Signer + Send + Sync>>,
+    enable_burn: bool,
 }
 
 impl Default for CreateTransactionBuilder {
@@ -515,6 +567,7 @@ impl Default for CreateTransactionBuilder {
             build_strategy: Default::default(),
             unresolved_witness_indexes: Default::default(),
             unresolved_signers: Default::default(),
+            enable_burn: false,
         }
     }
 }
@@ -539,6 +592,7 @@ pub struct UploadTransactionBuilder {
     pub build_strategy: Strategy,
     unresolved_witness_indexes: UnresolvedWitnessIndexes,
     unresolved_signers: Vec<Box<dyn Signer + Send + Sync>>,
+    enable_burn: bool,
 }
 
 impl Default for UploadTransactionBuilder {
@@ -558,6 +612,7 @@ impl Default for UploadTransactionBuilder {
             build_strategy: Default::default(),
             unresolved_witness_indexes: Default::default(),
             unresolved_signers: Default::default(),
+            enable_burn: false,
         }
     }
 }
@@ -574,6 +629,7 @@ pub struct UpgradeTransactionBuilder {
     pub build_strategy: Strategy,
     unresolved_witness_indexes: UnresolvedWitnessIndexes,
     unresolved_signers: Vec<Box<dyn Signer + Send + Sync>>,
+    enable_burn: bool,
 }
 
 impl Default for UpgradeTransactionBuilder {
@@ -591,6 +647,7 @@ impl Default for UpgradeTransactionBuilder {
             unresolved_signers: Default::default(),
             max_fee_estimation_tolerance: Default::default(),
             build_strategy: Default::default(),
+            enable_burn: false,
         }
     }
 }
@@ -602,6 +659,9 @@ impl_tx_builder_trait!(UpgradeTransactionBuilder, UpgradeTransaction);
 
 impl ScriptTransactionBuilder {
     async fn build(mut self, provider: impl DryRunner) -> Result<ScriptTransaction> {
+        let consensus_parameters = provider.consensus_parameters().await?;
+        self.intercept_burn(consensus_parameters.base_asset_id())?;
+
         let is_using_predicates = self.is_using_predicates();
 
         let tx = match self.build_strategy {
@@ -913,6 +973,7 @@ impl ScriptTransactionBuilder {
             variable_output_policy: self.variable_output_policy,
             max_fee_estimation_tolerance: self.max_fee_estimation_tolerance,
             build_strategy: self.build_strategy.clone(),
+            enable_burn: self.enable_burn,
         }
     }
 }
@@ -930,6 +991,9 @@ fn add_variable_outputs(tx: &mut fuel_tx::Script, variable_outputs: usize) {
 
 impl CreateTransactionBuilder {
     pub async fn build(mut self, provider: impl DryRunner) -> Result<CreateTransaction> {
+        let consensus_parameters = provider.consensus_parameters().await?;
+        self.intercept_burn(consensus_parameters.base_asset_id())?;
+
         let is_using_predicates = self.is_using_predicates();
 
         let tx = match self.build_strategy {
@@ -1047,12 +1111,16 @@ impl CreateTransactionBuilder {
             gas_price_estimation_block_horizon: self.gas_price_estimation_block_horizon,
             max_fee_estimation_tolerance: self.max_fee_estimation_tolerance,
             build_strategy: self.build_strategy.clone(),
+            enable_burn: self.enable_burn,
         }
     }
 }
 
 impl UploadTransactionBuilder {
     pub async fn build(mut self, provider: impl DryRunner) -> Result<UploadTransaction> {
+        let consensus_parameters = provider.consensus_parameters().await?;
+        self.intercept_burn(consensus_parameters.base_asset_id())?;
+
         let is_using_predicates = self.is_using_predicates();
 
         let tx = match self.build_strategy {
@@ -1182,12 +1250,16 @@ impl UploadTransactionBuilder {
             proof_set: vec![],
             max_fee_estimation_tolerance: self.max_fee_estimation_tolerance,
             build_strategy: self.build_strategy.clone(),
+            enable_burn: self.enable_burn,
         }
     }
 }
 
 impl UpgradeTransactionBuilder {
     pub async fn build(mut self, provider: impl DryRunner) -> Result<UpgradeTransaction> {
+        let consensus_parameters = provider.consensus_parameters().await?;
+        self.intercept_burn(consensus_parameters.base_asset_id())?;
+
         let is_using_predicates = self.is_using_predicates();
         let tx = match self.build_strategy {
             Strategy::Complete => self.resolve_fuel_tx(&provider).await?,
@@ -1286,6 +1358,7 @@ impl UpgradeTransactionBuilder {
             gas_price_estimation_block_horizon: self.gas_price_estimation_block_horizon,
             max_fee_estimation_tolerance: self.max_fee_estimation_tolerance,
             build_strategy: self.build_strategy.clone(),
+            enable_burn: self.enable_burn,
         }
     }
 }
@@ -1535,16 +1608,20 @@ mod tests {
         }
     }
 
+    fn given_a_coin(tx_id: [u8; 32], owner: [u8; 32], amount: u64) -> Coin {
+        Coin {
+            utxo_id: UtxoId::new(tx_id.into(), 0),
+            owner: Bech32Address::new("fuel", owner),
+            amount,
+            ..Default::default()
+        }
+    }
+
     fn given_inputs(num_inputs: u8) -> Vec<Input> {
         (0..num_inputs)
             .map(|i| {
-                let bytes = [i; 32];
-                let coin = CoinType::Coin(Coin {
-                    utxo_id: UtxoId::new(bytes.into(), 0),
-                    owner: Bech32Address::new("fuel", bytes),
-                    ..Default::default()
-                });
-                Input::resource_signed(coin)
+                let coin = given_a_coin([i; 32], [num_inputs + i; 32], 1000);
+                Input::resource_signed(CoinType::Coin(coin))
             })
             .collect()
     }
@@ -1586,10 +1663,10 @@ mod tests {
 
         async fn estimate_predicates(
             &self,
-            _tx: &FuelTransaction,
+            tx: &FuelTransaction,
             _: Option<u32>,
         ) -> Result<FuelTransaction> {
-            unimplemented!("")
+            Ok(tx.clone())
         }
     }
 
@@ -1601,7 +1678,8 @@ mod tests {
 
         let tb = CreateTransactionBuilder::default()
             .with_witnesses(given_witnesses(num_witnesses))
-            .with_inputs(given_inputs(num_inputs));
+            .with_inputs(given_inputs(num_inputs))
+            .enable_burn(true);
 
         // when
         let tx = tb
@@ -1637,7 +1715,8 @@ mod tests {
 
         let tb = ScriptTransactionBuilder::default()
             .with_witnesses(given_witnesses(num_witnesses))
-            .with_inputs(given_inputs(num_inputs));
+            .with_inputs(given_inputs(num_inputs))
+            .enable_burn(true);
 
         // when
         let tx = tb
@@ -1661,6 +1740,65 @@ mod tests {
             (num_witnesses..(num_witnesses + num_inputs as usize)).collect();
 
         assert_eq!(indexes, expected_indexes);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn build_w_enable_burn() -> Result<()> {
+        let coin = CoinType::Coin(given_a_coin([1; 32], [2; 32], 1000));
+        test_enable_burn(Input::resource_signed(coin)).await
+    }
+
+    #[tokio::test]
+    async fn build_w_enable_burn_predicates() -> Result<()> {
+        let predicate_coin = CoinType::Coin(given_a_coin([1; 32], [2; 32], 1000));
+
+        test_enable_burn(Input::resource_predicate(
+            predicate_coin,
+            op::ret(1).to_bytes().to_vec(),
+            vec![],
+        ))
+        .await
+    }
+
+    #[tokio::test]
+    async fn build_w_enable_burn_messages() -> Result<()> {
+        let message = CoinType::Message(given_a_message(vec![1, 2, 3]));
+
+        test_enable_burn(Input::resource_signed(message)).await
+    }
+
+    #[tokio::test]
+    async fn build_w_enable_burn_predicates_message() -> Result<()> {
+        let message_predicate = CoinType::Message(given_a_message(vec![1, 2, 3]));
+
+        test_enable_burn(Input::resource_predicate(
+            message_predicate,
+            op::ret(1).to_bytes().to_vec(),
+            vec![],
+        ))
+        .await
+    }
+
+    async fn test_enable_burn(input: Input) -> Result<()> {
+        // Test failure case without enable_burn
+        let tb = ScriptTransactionBuilder::default().with_inputs(vec![input.clone()]);
+        let err = tb
+            .with_build_strategy(ScriptBuildStrategy::NoSignatures)
+            .build(&MockDryRunner::default())
+            .await
+            .expect_err("should fail because of missing change outputs");
+
+        assert!(err.to_string().contains("no change outputs"));
+
+        // Test success case with enable_burn
+        let tb = ScriptTransactionBuilder::default().with_inputs(vec![input]);
+        let _tx = tb
+            .with_build_strategy(ScriptBuildStrategy::NoSignatures)
+            .enable_burn(true)
+            .build(&MockDryRunner::default())
+            .await?;
 
         Ok(())
     }
