@@ -562,8 +562,7 @@ impl Provider {
                     &address.into(),
                     PaginationRequest {
                         cursor: cursor.clone(),
-                        // results: NUM_RESULTS_PER_REQUEST,
-                        results: 9999,
+                        results: NUM_RESULTS_PER_REQUEST,
                         direction: PageDirection::Forward,
                     },
                 )
