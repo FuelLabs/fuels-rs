@@ -809,6 +809,7 @@ async fn predicate_adjust_fee_persists_message_w_data() -> Result<()> {
         TxPolicies::default().with_tip(1),
     );
     predicate.adjust_for_fee(&mut tb, 1000).await?;
+
     let tx = tb.build(&provider).await?;
 
     assert_eq!(tx.inputs().len(), 2);
