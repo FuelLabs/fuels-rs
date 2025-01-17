@@ -1,6 +1,8 @@
 mod bounded_decoder;
 mod decode_as_debug_str;
 
+use std::io::Read;
+
 use crate::{
     codec::abi_decoder::{
         bounded_decoder::BoundedDecoder, decode_as_debug_str::decode_as_debug_str,
@@ -55,12 +57,12 @@ impl ABIDecoder {
     ///
     /// let decoder = ABIDecoder::default();
     ///
-    /// let token = decoder.decode(&ParamType::U64,  &[0, 0, 0, 0, 0, 0, 0, 7]).unwrap();
+    /// let token = decoder.decode(&ParamType::U64,  [0, 0, 0, 0, 0, 0, 0, 7].as_slice()).unwrap();
     ///
     /// assert_eq!(u64::from_token(token).unwrap(), 7u64);
     /// ```
-    pub fn decode(&self, param_type: &ParamType, bytes: &[u8]) -> Result<Token> {
-        BoundedDecoder::new(self.config).decode(param_type, bytes)
+    pub fn decode(&self, param_type: &ParamType, mut bytes: impl Read) -> Result<Token> {
+        BoundedDecoder::new(self.config).decode(param_type, &mut bytes)
     }
 
     /// Same as `decode` but decodes multiple `ParamType`s in one go.
@@ -71,14 +73,18 @@ impl ABIDecoder {
     /// use fuels_core::types::Token;
     ///
     /// let decoder = ABIDecoder::default();
-    /// let data: &[u8] = &[7, 8];
+    /// let data = [7, 8];
     ///
-    /// let tokens = decoder.decode_multiple(&[ParamType::U8, ParamType::U8], &data).unwrap();
+    /// let tokens = decoder.decode_multiple(&[ParamType::U8, ParamType::U8], data.as_slice()).unwrap();
     ///
     /// assert_eq!(tokens, vec![Token::U8(7), Token::U8(8)]);
     /// ```
-    pub fn decode_multiple(&self, param_types: &[ParamType], bytes: &[u8]) -> Result<Vec<Token>> {
-        BoundedDecoder::new(self.config).decode_multiple(param_types, bytes)
+    pub fn decode_multiple(
+        &self,
+        param_types: &[ParamType],
+        mut bytes: impl Read,
+    ) -> Result<Vec<Token>> {
+        BoundedDecoder::new(self.config).decode_multiple(param_types, &mut bytes)
     }
 
     /// Decodes `bytes` following the schema described in `param_type` into its respective debug
@@ -97,22 +103,26 @@ impl ABIDecoder {
     ///
     /// let decoder = ABIDecoder::default();
     ///
-    /// let debug_string = decoder.decode_as_debug_str(&ParamType::U64,  &[0, 0, 0, 0, 0, 0, 0, 7]).unwrap();
+    /// let debug_string = decoder.decode_as_debug_str(&ParamType::U64,  [0, 0, 0, 0, 0, 0, 0, 7].as_slice()).unwrap();
     /// let expected_value = 7u64;
     ///
     /// assert_eq!(debug_string, format!("{expected_value}"));
     /// ```
-    pub fn decode_as_debug_str(&self, param_type: &ParamType, bytes: &[u8]) -> Result<String> {
-        let token = BoundedDecoder::new(self.config).decode(param_type, bytes)?;
+    pub fn decode_as_debug_str(
+        &self,
+        param_type: &ParamType,
+        mut bytes: impl Read,
+    ) -> Result<String> {
+        let token = BoundedDecoder::new(self.config).decode(param_type, &mut bytes)?;
         decode_as_debug_str(param_type, &token)
     }
 
     pub fn decode_multiple_as_debug_str(
         &self,
         param_types: &[ParamType],
-        bytes: &[u8],
+        mut bytes: impl Read,
     ) -> Result<Vec<String>> {
-        let token = BoundedDecoder::new(self.config).decode_multiple(param_types, bytes)?;
+        let token = BoundedDecoder::new(self.config).decode_multiple(param_types, &mut bytes)?;
         token
             .into_iter()
             .zip(param_types)
@@ -157,7 +167,7 @@ mod tests {
             255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, // u256
         ];
 
-        let decoded = ABIDecoder::default().decode_multiple(&types, &data)?;
+        let decoded = ABIDecoder::default().decode_multiple(&types, data.as_slice())?;
 
         let expected = vec![
             Token::U8(u8::MAX),
@@ -177,7 +187,7 @@ mod tests {
         let types = vec![ParamType::Bool, ParamType::Bool];
         let data = [1, 0];
 
-        let decoded = ABIDecoder::default().decode_multiple(&types, &data)?;
+        let decoded = ABIDecoder::default().decode_multiple(&types, data.as_slice())?;
 
         let expected = vec![Token::Bool(true), Token::Bool(false)];
 
@@ -193,7 +203,7 @@ mod tests {
             152, 244, 172, 69, 123, 168, 248, 39, 67, 243, 30, 147, 11,
         ];
 
-        let decoded = ABIDecoder::default().decode(&ParamType::B256, &data)?;
+        let decoded = ABIDecoder::default().decode(&ParamType::B256, data.as_slice())?;
 
         assert_eq!(decoded, Token::B256(data));
 
@@ -209,7 +219,7 @@ mod tests {
             72, 101, 108, 108, 111, // Hello
         ];
 
-        let decoded = ABIDecoder::default().decode_multiple(&types, &data)?;
+        let decoded = ABIDecoder::default().decode_multiple(&types, data.as_slice())?;
 
         let expected = vec![
             Token::StringArray(StaticStringToken::new(
@@ -232,7 +242,7 @@ mod tests {
             116, 101, 110, 99, 101, //This is a full sentence
         ];
 
-        let decoded = ABIDecoder::default().decode(&ParamType::StringSlice, &data)?;
+        let decoded = ABIDecoder::default().decode(&ParamType::StringSlice, data.as_slice())?;
 
         let expected = Token::StringSlice(StaticStringToken::new(
             "This is a full sentence".into(),
@@ -252,7 +262,7 @@ mod tests {
             116, 101, 110, 99, 101, //This is a full sentence
         ];
 
-        let decoded = ABIDecoder::default().decode(&ParamType::String, &data)?;
+        let decoded = ABIDecoder::default().decode(&ParamType::String, data.as_slice())?;
 
         let expected = Token::String("This is a full sentence".to_string());
 
@@ -269,7 +279,7 @@ mod tests {
             1,   //bool
         ];
 
-        let result = ABIDecoder::default().decode(&param_type, &data)?;
+        let result = ABIDecoder::default().decode(&param_type, data.as_slice())?;
 
         let expected = Token::Tuple(vec![Token::U32(255), Token::Bool(true)]);
 
@@ -283,7 +293,7 @@ mod tests {
         let types = vec![ParamType::Array(Box::new(ParamType::U8), 2)];
         let data = [255, 42];
 
-        let decoded = ABIDecoder::default().decode_multiple(&types, &data)?;
+        let decoded = ABIDecoder::default().decode_multiple(&types, data.as_slice())?;
 
         let expected = vec![Token::Array(vec![Token::U8(255), Token::U8(42)])];
         assert_eq!(decoded, expected);
@@ -306,7 +316,7 @@ mod tests {
             generics: vec![],
         };
 
-        let decoded = ABIDecoder::default().decode(&param_type, &data)?;
+        let decoded = ABIDecoder::default().decode(&param_type, data.as_slice())?;
 
         let expected = Token::Struct(vec![Token::U8(1), Token::Bool(true)]);
 
@@ -319,7 +329,7 @@ mod tests {
     fn decode_bytes() -> Result<()> {
         let data = [0, 0, 0, 0, 0, 0, 0, 7, 255, 0, 1, 2, 3, 4, 5];
 
-        let decoded = ABIDecoder::default().decode(&ParamType::Bytes, &data)?;
+        let decoded = ABIDecoder::default().decode(&ParamType::Bytes, data.as_slice())?;
 
         let expected = Token::Bytes([255, 0, 1, 2, 3, 4, 5].to_vec());
 
@@ -332,7 +342,7 @@ mod tests {
     fn decode_raw_slice() -> Result<()> {
         let data = [0, 0, 0, 0, 0, 0, 0, 7, 255, 0, 1, 2, 3, 4, 5];
 
-        let decoded = ABIDecoder::default().decode(&ParamType::RawSlice, &data)?;
+        let decoded = ABIDecoder::default().decode(&ParamType::RawSlice, data.as_slice())?;
 
         let expected = Token::RawSlice([255, 0, 1, 2, 3, 4, 5].to_vec());
 
@@ -361,7 +371,7 @@ mod tests {
             0, 0, 0, 42, // u32
         ];
 
-        let decoded = ABIDecoder::default().decode_multiple(&types, &data)?;
+        let decoded = ABIDecoder::default().decode_multiple(&types, data.as_slice())?;
 
         let expected = vec![Token::Enum(Box::new((0, Token::U32(42), inner_enum_types)))];
         assert_eq!(decoded, expected);
@@ -400,7 +410,7 @@ mod tests {
 
         let data = [0, 10, 1, 1, 2];
 
-        let decoded = ABIDecoder::default().decode(&nested_struct, &data)?;
+        let decoded = ABIDecoder::default().decode(&nested_struct, data.as_slice())?;
 
         let my_nested_struct = vec![
             Token::U16(10),
@@ -461,7 +471,7 @@ mod tests {
             152, 244, 172, 69, 123, 168, 248, 39, 67, 243, 30, 147, 11, // b256
         ];
 
-        let decoded = ABIDecoder::default().decode_multiple(&types, &bytes)?;
+        let decoded = ABIDecoder::default().decode_multiple(&types, bytes.as_slice())?;
 
         // Expected tokens
         let foo = Token::Struct(vec![
@@ -497,7 +507,7 @@ mod tests {
             generics: vec![],
         };
 
-        let result = ABIDecoder::default().decode(&enum_w_only_units, &data)?;
+        let result = ABIDecoder::default().decode(&enum_w_only_units, data.as_slice())?;
 
         let expected_enum = Token::Enum(Box::new((1, Token::Unit, enum_variants)));
         assert_eq!(result, expected_enum);
@@ -516,7 +526,7 @@ mod tests {
             generics: vec![],
         };
 
-        let result = ABIDecoder::default().decode(&enum_type, &data);
+        let result = ABIDecoder::default().decode(&enum_type, data.as_slice());
 
         let error = result.expect_err("should have resulted in an error");
 
@@ -529,8 +539,8 @@ mod tests {
     #[test]
     pub fn division_by_zero() {
         let param_type = Vec::<[u16; 0]>::param_type();
-        let result = ABIDecoder::default().decode(&param_type, &[]);
-        assert!(matches!(result, Err(Error::Codec(_))));
+        let result = ABIDecoder::default().decode(&param_type, [].as_slice());
+        assert!(matches!(result, Err(Error::IO(_))));
     }
 
     #[test]
@@ -554,10 +564,10 @@ mod tests {
                 .unwrap(),
                 generics: vec![U16],
             },
-            &[],
+            [].as_slice(),
         );
 
-        assert!(matches!(result, Err(Error::Codec(_))));
+        assert!(matches!(result, Err(Error::IO(_))));
     }
 
     #[test]
@@ -572,16 +582,16 @@ mod tests {
                 enum_variants: EnumVariants::new(to_named(&[param_type])).unwrap(),
                 generics: vec![U16],
             },
-            &[],
+            [].as_slice(),
         );
-        assert!(matches!(result, Err(Error::Codec(_))));
+        assert!(matches!(result, Err(Error::IO(_))));
     }
 
     #[test]
     pub fn capacity_overflow() {
         let result = ABIDecoder::default().decode(
             &Array(Box::new(Array(Box::new(Tuple(vec![])), usize::MAX)), 1),
-            &[],
+            [].as_slice(),
         );
         assert!(matches!(result, Err(Error::Codec(_))));
     }
@@ -592,15 +602,15 @@ mod tests {
         for _ in 0..13500 {
             param_type = Vector(Box::new(param_type));
         }
-        let result = ABIDecoder::default().decode(&param_type, &[]);
-        assert!(matches!(result, Err(Error::Codec(_))));
+        let result = ABIDecoder::default().decode(&param_type, [].as_slice());
+        assert!(matches!(result, Err(Error::IO(_))));
     }
 
     #[test]
     pub fn capacity_malloc() {
         let param_type = Array(Box::new(U8), usize::MAX);
-        let result = ABIDecoder::default().decode(&param_type, &[]);
-        assert!(matches!(result, Err(Error::Codec(_))));
+        let result = ABIDecoder::default().decode(&param_type, [].as_slice());
+        assert!(matches!(result, Err(Error::IO(_))));
     }
 
     #[test]
@@ -618,7 +628,7 @@ mod tests {
             .iter()
             .map(|fun| fun(MAX_DEPTH + 1))
             .for_each(|param_type| {
-                assert_decoding_failed_w_data(config, &param_type, &msg, &data);
+                assert_decoding_failed_w_data(config, &param_type, &msg, data.as_slice());
             })
     }
 
@@ -647,7 +657,9 @@ mod tests {
                 }
             })
             .for_each(|param_type| {
-                ABIDecoder::new(config).decode(&param_type, &data).unwrap();
+                ABIDecoder::new(config)
+                    .decode(&param_type, data.as_slice())
+                    .unwrap();
             })
     }
 
@@ -700,10 +712,10 @@ mod tests {
         let param_type = ParamType::Array(Box::new(ParamType::StringArray(0)), 2);
 
         let decoder = ABIDecoder::new(config);
-        decoder.decode(&param_type, &[]).unwrap();
+        decoder.decode(&param_type, [].as_slice()).unwrap();
 
         // when
-        let result = decoder.decode(&param_type, &[]);
+        let result = decoder.decode(&param_type, [].as_slice());
 
         // then
         result.expect("element count to be reset");

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, io::Read};
 
 use fuel_abi_types::abi::unified_program::UnifiedProgramABI;
 use itertools::Itertools;
@@ -75,7 +75,7 @@ impl ABIFormatter {
         Self::from_abi(parsed_abi)
     }
 
-    pub fn decode_fn_args(&self, fn_name: &str, data: &[u8]) -> Result<Vec<String>> {
+    pub fn decode_fn_args<R: Read>(&self, fn_name: &str, data: R) -> Result<Vec<String>> {
         let args = self
             .functions
             .get(fn_name)
@@ -84,7 +84,10 @@ impl ABIFormatter {
         self.decoder.decode_multiple_as_debug_str(args, data)
     }
 
-    pub fn decode_configurables(&self, configurable_data: &[u8]) -> Result<Vec<(String, String)>> {
+    pub fn decode_configurables<R: Read>(
+        &self,
+        configurable_data: R,
+    ) -> Result<Vec<(String, String)>> {
         let param_types = self
             .configurables
             .iter()
@@ -116,7 +119,9 @@ mod tests {
         let decoder = ABIFormatter::from_abi(UnifiedProgramABI::default()).unwrap();
 
         // when
-        let err = decoder.decode_fn_args("non_existent_fn", &[]).unwrap_err();
+        let err = decoder
+            .decode_fn_args("non_existent_fn", [].as_slice())
+            .unwrap_err();
 
         // then
         let Error::Codec(err) = err else {
