@@ -54,11 +54,11 @@ pub fn available_base_assets_and_amount(
                         amount, asset_id, ..
                     }) if asset_id == base_asset_id => {
                         sum += amount;
-                        Some(resource.id())
+                        resource.id()
                     }
                     CoinType::Message(message) => {
                         sum += message.amount;
-                        Some(resource.id())
+                        resource.id()
                     }
                     _ => None,
                 },
@@ -90,14 +90,11 @@ fn is_consuming_utxos(tb: &impl TransactionBuilder) -> bool {
         .any(|input| !matches!(input, Input::Contract { .. }))
 }
 
-pub fn adjust_inputs_outputs(
+pub fn add_base_change_if_needed(
     tb: &mut impl TransactionBuilder,
-    new_base_inputs: impl IntoIterator<Item = Input>,
     address: &Bech32Address,
     base_asset_id: &AssetId,
 ) {
-    tb.inputs_mut().extend(new_base_inputs);
-
     let is_base_change_present = tb.outputs().iter().any(|output| {
         matches!(output , Output::Change { asset_id , .. }
                                         if asset_id == base_asset_id)

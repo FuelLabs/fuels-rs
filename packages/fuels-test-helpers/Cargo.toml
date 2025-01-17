@@ -34,5 +34,7 @@ which = { workspace = true, default-features = false }
 [features]
 default = ["fuels-accounts", "std"]
 std = ["fuels-accounts?/std", "fuels-core/std", "fuel-core-chain-config/std"]
-fuel-core-lib = ["dep:fuel-core"]
+#TODO: remove the rocksdb dep once fuel-core is fixed
+#https://github.com/FuelLabs/fuels-rs/issues/1580
+fuel-core-lib = ["fuel-core/rocksdb", "rocksdb"]
 rocksdb = ["fuel-core?/rocksdb"]

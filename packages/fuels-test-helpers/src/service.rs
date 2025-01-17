@@ -71,20 +71,25 @@ impl FuelService {
         };
         use fuel_core_chain_config::SnapshotReader;
 
-        use crate::{DbType, MAX_DATABASE_CACHE_SIZE};
+        #[cfg(feature = "rocksdb")]
+        use fuel_core::state::rocks_db::{ColumnsPolicy, DatabaseConfig};
+
+        use crate::DbType;
 
         let snapshot_reader = SnapshotReader::new_in_memory(chain_config, state_config);
 
         let combined_db_config = CombinedDatabaseConfig {
-            max_database_cache_size: node_config
-                .max_database_cache_size
-                .unwrap_or(MAX_DATABASE_CACHE_SIZE),
             database_path: match &node_config.database_type {
                 DbType::InMemory => Default::default(),
                 DbType::RocksDb(path) => path.clone().unwrap_or_default(),
             },
             database_type: node_config.database_type.into(),
             #[cfg(feature = "rocksdb")]
+            database_config: DatabaseConfig {
+                cache_capacity: node_config.max_database_cache_size,
+                max_fds: 512,
+                columns_policy: ColumnsPolicy::Lazy,
+            },
             state_rewind_policy: Default::default(),
         };
         ServiceConfig {
@@ -108,7 +113,7 @@ impl FuelService {
             utxo_validation: node_config.utxo_validation,
             debug: node_config.debug,
             block_production: node_config.block_production.into(),
-            starting_gas_price: node_config.starting_gas_price,
+            starting_exec_gas_price: node_config.starting_gas_price,
             ..ServiceConfig::local_node()
         }
     }
