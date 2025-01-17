@@ -539,8 +539,7 @@ pub enum Backoff {
         let proof = wallet
             .try_provider()?
             .get_message_proof(&amp;tx_id, &amp;msg_id, None, Some(2))
-            .await?
-            .expect(&quot;failed to retrieve message proof&quot;);
+            .await?;
 
         // Verify the amount and recipient
         assert_eq!(proof.amount, amount);
@@ -743,7 +742,7 @@ vulnerabilities in downstream libraries and applications.</p>
 <!-- balances:example:start -->
 <p>If you want to query all the balances (i.e., get the balance for each asset ID in that wallet), you can use the <code>get_balances</code> method:</p>
 <!-- balances:example:end -->
-<pre><code class="language-rust ignore">        let balances: HashMap&lt;String, u64&gt; = wallet.get_balances().await?;
+<pre><code class="language-rust ignore">        let balances: HashMap&lt;String, u128&gt; = wallet.get_balances().await?;
 </code></pre>
 <!-- This section should explain the return type for `get_balances` -->
 <!-- balances_return:example:start -->
@@ -4090,6 +4089,7 @@ impl LiquidityPool for Contract {
         let mut outputs = vec![];
         for (id_string, amount) in balances {
             let id = AssetId::from_str(&amp;id_string)?;
+            let amount = amount as u64;
 
             let input = wallet_1
                 .get_asset_inputs_for_amount(id, amount, None)
@@ -4120,9 +4120,9 @@ impl LiquidityPool for Contract {
         assert_eq!(balances.len(), NUM_ASSETS as usize);
         for (id, balance) in balances {
             if id == *consensus_parameters.base_asset_id().to_string() {
-                assert_eq!(balance, AMOUNT / 2);
+                assert_eq!(balance, (AMOUNT / 2) as u128);
             } else {
-                assert_eq!(balance, AMOUNT);
+                assert_eq!(balance, AMOUNT as u128);
             }
         }
 </code></pre>

@@ -149,7 +149,7 @@
 <!-- balances:example:start -->
 <p>If you want to query all the balances (i.e., get the balance for each asset ID in that wallet), you can use the <code>get_balances</code> method:</p>
 <!-- balances:example:end -->
-<pre><code class="language-rust ignore">        let balances: HashMap&lt;String, u64&gt; = wallet.get_balances().await?;
+<pre><code class="language-rust ignore">        let balances: HashMap&lt;String, u128&gt; = wallet.get_balances().await?;
 </code></pre>
 <!-- This section should explain the return type for `get_balances` -->
 <!-- balances_return:example:start -->
