@@ -133,11 +133,11 @@ pub(crate) fn calculate_required_asset_amounts(
 ) -> Vec<(AssetId, u64)> {
     let call_param_assets = calls
         .iter()
-        .map(|call| {
-            (
+        .filter_map(|call| {
+            (call.call_parameters.amount() != 0).then_some((
                 call.call_parameters.asset_id().unwrap_or(base_asset_id),
                 call.call_parameters.amount(),
-            )
+            ))
         })
         .collect::<Vec<_>>();
 
@@ -169,6 +169,7 @@ fn sum_up_amounts_for_each_asset_id(
         .into_iter()
         .map(|(asset_id, groups_w_same_asset_id)| {
             let total_amount_in_group = groups_w_same_asset_id.map(|(_, amount)| amount).sum();
+
             (asset_id, total_amount_in_group)
         })
         .collect()

@@ -3,37 +3,32 @@
 use fuel_core_client::client::types::CoinType as ClientCoinType;
 
 use crate::types::{
-    bech32::Bech32Address,
-    coin::Coin,
-    coin_type_id::CoinTypeId,
-    errors::{error, Error},
-    message::Message,
-    AssetId,
+    bech32::Bech32Address, coin::Coin, coin_type_id::CoinTypeId, message::Message, AssetId,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum CoinType {
     Coin(Coin),
     Message(Message),
+    Unknown,
 }
 
-impl TryFrom<ClientCoinType> for CoinType {
-    type Error = Error;
-
-    fn try_from(client_resource: ClientCoinType) -> Result<Self, Self::Error> {
+impl From<ClientCoinType> for CoinType {
+    fn from(client_resource: ClientCoinType) -> Self {
         match client_resource {
-            ClientCoinType::Coin(coin) => Ok(CoinType::Coin(coin.into())),
-            ClientCoinType::MessageCoin(message) => Ok(CoinType::Message(message.into())),
-            ClientCoinType::Unknown => Err(error!(Other, "unknown `ClientCoinType`")),
+            ClientCoinType::Coin(coin) => CoinType::Coin(coin.into()),
+            ClientCoinType::MessageCoin(message) => CoinType::Message(message.into()),
+            ClientCoinType::Unknown => CoinType::Unknown,
         }
     }
 }
 
 impl CoinType {
-    pub fn id(&self) -> CoinTypeId {
+    pub fn id(&self) -> Option<CoinTypeId> {
         match self {
-            CoinType::Coin(coin) => CoinTypeId::UtxoId(coin.utxo_id),
-            CoinType::Message(message) => CoinTypeId::Nonce(message.nonce),
+            CoinType::Coin(coin) => Some(CoinTypeId::UtxoId(coin.utxo_id)),
+            CoinType::Message(message) => Some(CoinTypeId::Nonce(message.nonce)),
+            CoinType::Unknown => None,
         }
     }
 
@@ -41,6 +36,7 @@ impl CoinType {
         match self {
             CoinType::Coin(coin) => coin.amount,
             CoinType::Message(message) => message.amount,
+            CoinType::Unknown => 0,
         }
     }
 
@@ -48,20 +44,23 @@ impl CoinType {
         match self {
             CoinType::Coin(coin) => Some(coin.asset_id),
             CoinType::Message(_) => None,
+            CoinType::Unknown => None,
         }
     }
 
-    pub fn asset_id(&self, base_asset_id: AssetId) -> AssetId {
+    pub fn asset_id(&self, base_asset_id: AssetId) -> Option<AssetId> {
         match self {
-            CoinType::Coin(coin) => coin.asset_id,
-            CoinType::Message(_) => base_asset_id,
+            CoinType::Coin(coin) => Some(coin.asset_id),
+            CoinType::Message(_) => Some(base_asset_id),
+            CoinType::Unknown => None,
         }
     }
 
-    pub fn owner(&self) -> &Bech32Address {
+    pub fn owner(&self) -> Option<&Bech32Address> {
         match self {
-            CoinType::Coin(coin) => &coin.owner,
-            CoinType::Message(message) => &message.recipient,
+            CoinType::Coin(coin) => Some(&coin.owner),
+            CoinType::Message(message) => Some(&message.recipient),
+            CoinType::Unknown => None,
         }
     }
 }

@@ -6,8 +6,6 @@ use std::{
 
 pub use fuel_core_chain_config::{ChainConfig, StateConfig};
 
-pub(crate) const MAX_DATABASE_CACHE_SIZE: usize = 10 * 1024 * 1024;
-
 #[derive(Clone, Debug)]
 pub enum Trigger {
     Instant,
@@ -60,7 +58,7 @@ impl Default for NodeConfig {
     fn default() -> Self {
         Self {
             addr: SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 0),
-            max_database_cache_size: Some(MAX_DATABASE_CACHE_SIZE),
+            max_database_cache_size: None,
             database_type: DbType::InMemory,
             utxo_validation: true,
             debug: true,

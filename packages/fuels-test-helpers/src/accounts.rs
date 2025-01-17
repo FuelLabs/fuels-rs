@@ -171,6 +171,7 @@ mod tests {
                             assert_eq!(&coin.owner, wallet.address())
                         }
                         CoinType::Message(_) => panic!("resources contained messages"),
+                        CoinType::Unknown => panic!("resources contained unknown coins"),
                     }
                 }
             }
@@ -242,7 +243,7 @@ mod tests {
                     .await?
                     .get("0000000000000000000000000000000000000000000000000000000000000000")
                     .expect("failed to get value"),
-                num_coins * coin_amount
+                (num_coins * coin_amount) as u128
             );
         }
 

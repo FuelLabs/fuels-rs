@@ -457,8 +457,8 @@ impl Provider {
             .await?
             .into_iter()
             .flatten()
-            .map(CoinType::try_from)
-            .collect::<Result<Vec<CoinType>>>()?;
+            .map(CoinType::from)
+            .collect();
 
         Ok(res)
     }
@@ -549,7 +549,7 @@ impl Provider {
     /// Get all the spendable balances of all assets for address `address`. This is different from
     /// getting the coins because we are only returning the numbers (the sum of UTXOs coins amount
     /// for each asset id) and not the UTXOs coins themselves
-    pub async fn get_balances(&self, address: &Bech32Address) -> Result<HashMap<String, u64>> {
+    pub async fn get_balances(&self, address: &Bech32Address) -> Result<HashMap<String, u128>> {
         // We don't paginate results because there are likely at most ~100 different assets in one
         // wallet
         let pagination = PaginationRequest {
@@ -788,19 +788,17 @@ impl Provider {
         nonce: &Nonce,
         commit_block_id: Option<&Bytes32>,
         commit_block_height: Option<u32>,
-    ) -> Result<Option<MessageProof>> {
-        let proof = self
-            .uncached_client()
+    ) -> Result<MessageProof> {
+        self.uncached_client()
             .message_proof(
                 tx_id,
                 nonce,
                 commit_block_id.map(Into::into),
                 commit_block_height.map(Into::into),
             )
-            .await?
-            .map(Into::into);
-
-        Ok(proof)
+            .await
+            .map(Into::into)
+            .map_err(Into::into)
     }
 
     pub async fn is_user_account(&self, address: impl Into<Bytes32>) -> Result<bool> {
