@@ -66,7 +66,7 @@ pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync + Clone {
     /// Get all the spendable balances of all assets for the account. This is different from getting
     /// the coins because we are only returning the sum of UTXOs coins amount and not the UTXOs
     /// coins themselves.
-    async fn get_balances(&self) -> Result<HashMap<String, u64>> {
+    async fn get_balances(&self) -> Result<HashMap<String, u128>> {
         self.try_provider()?.get_balances(self.address()).await
     }
 
@@ -140,7 +140,9 @@ pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync + Clone {
                     missing_base_amount,
                     Some(base_assets),
                 )
-                .await?;
+                .await
+                // if there query fails do nothing
+                .unwrap_or_default();
 
             tb.inputs_mut().extend(new_base_inputs);
         };
