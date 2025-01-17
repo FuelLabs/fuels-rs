@@ -173,8 +173,8 @@ impl LogDecoder {
             .extract_log_id_and_data()
             .filter_map(|(log_id, bytes)| {
                 target_ids.contains(&log_id).then(|| {
-                    let token =
-                        ABIDecoder::new(self.decoder_config).decode(&T::param_type(), &bytes)?;
+                    let token = ABIDecoder::new(self.decoder_config)
+                        .decode(&T::param_type(), bytes.as_slice())?;
 
                     T::from_token(token)
                 })

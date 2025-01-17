@@ -110,34 +110,35 @@ mod tests {
         {
             assert_eq!(
                 format!("{:?}", true),
-                decoder.decode_as_debug_str(&bool::param_type(), &[1])?
+                decoder.decode_as_debug_str(&bool::param_type(), [1].as_slice())?
             );
 
             assert_eq!(
                 format!("{:?}", 128u8),
-                decoder.decode_as_debug_str(&u8::param_type(), &[128])?
+                decoder.decode_as_debug_str(&u8::param_type(), [128].as_slice())?
             );
 
             assert_eq!(
                 format!("{:?}", 256u16),
-                decoder.decode_as_debug_str(&u16::param_type(), &[1, 0])?
+                decoder.decode_as_debug_str(&u16::param_type(), [1, 0].as_slice())?
             );
 
             assert_eq!(
                 format!("{:?}", 512u32),
-                decoder.decode_as_debug_str(&u32::param_type(), &[0, 0, 2, 0])?
+                decoder.decode_as_debug_str(&u32::param_type(), [0, 0, 2, 0].as_slice())?
             );
 
             assert_eq!(
                 format!("{:?}", 1024u64),
-                decoder.decode_as_debug_str(&u64::param_type(), &[0, 0, 0, 0, 0, 0, 4, 0])?
+                decoder
+                    .decode_as_debug_str(&u64::param_type(), [0, 0, 0, 0, 0, 0, 4, 0].as_slice())?
             );
 
             assert_eq!(
                 format!("{:?}", 1024u128),
                 decoder.decode_as_debug_str(
                     &u128::param_type(),
-                    &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0]
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0].as_slice()
                 )?
             );
 
@@ -145,10 +146,11 @@ mod tests {
                 format!("{:?}", U256::from(2048)),
                 decoder.decode_as_debug_str(
                     &U256::param_type(),
-                    &[
+                    [
                         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                         0, 0, 0, 0, 0, 8, 0
                     ]
+                    .as_slice()
                 )?
             );
         }
@@ -163,10 +165,11 @@ mod tests {
                 format!("{bits256:?}"),
                 decoder.decode_as_debug_str(
                     &Bits256::param_type(),
-                    &[
+                    [
                         239, 134, 175, 169, 105, 108, 240, 220, 99, 133, 226, 196, 7, 166, 225, 89,
                         161, 16, 60, 239, 183, 226, 174, 6, 54, 251, 51, 211, 203, 42, 158, 74
                     ]
+                    .as_slice()
                 )?
             );
 
@@ -174,11 +177,12 @@ mod tests {
                 format!("{:?}", Bytes(bytes.to_vec())),
                 decoder.decode_as_debug_str(
                     &Bytes::param_type(),
-                    &[
+                    [
                         0, 0, 0, 0, 0, 0, 0, 32, 239, 134, 175, 169, 105, 108, 240, 220, 99, 133,
                         226, 196, 7, 166, 225, 89, 161, 16, 60, 239, 183, 226, 174, 6, 54, 251, 51,
                         211, 203, 42, 158, 74
                     ]
+                    .as_slice()
                 )?
             );
 
@@ -186,11 +190,12 @@ mod tests {
                 format!("{:?}", RawSlice(bytes.to_vec())),
                 decoder.decode_as_debug_str(
                     &RawSlice::param_type(),
-                    &[
+                    [
                         0, 0, 0, 0, 0, 0, 0, 32, 239, 134, 175, 169, 105, 108, 240, 220, 99, 133,
                         226, 196, 7, 166, 225, 89, 161, 16, 60, 239, 183, 226, 174, 6, 54, 251, 51,
                         211, 203, 42, 158, 74
                     ]
+                    .as_slice()
                 )?
             );
 
@@ -198,10 +203,11 @@ mod tests {
                 format!("{:?}", EvmAddress::from(bits256)),
                 decoder.decode_as_debug_str(
                     &EvmAddress::param_type(),
-                    &[
+                    [
                         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 166, 225, 89, 161, 16, 60, 239, 183,
                         226, 174, 6, 54, 251, 51, 211, 203, 42, 158, 74
                     ]
+                    .as_slice()
                 )?
             );
         }
@@ -210,7 +216,7 @@ mod tests {
                 format!("{:?}", AsciiString::new("Fuel".to_string())?),
                 decoder.decode_as_debug_str(
                     &AsciiString::param_type(),
-                    &[0, 0, 0, 0, 0, 0, 0, 4, 70, 117, 101, 108]
+                    [0, 0, 0, 0, 0, 0, 0, 4, 70, 117, 101, 108].as_slice()
                 )?
             );
 
@@ -218,7 +224,7 @@ mod tests {
                 format!("{:?}", SizedAsciiString::<4>::new("Fuel".to_string())?),
                 decoder.decode_as_debug_str(
                     &SizedAsciiString::<4>::param_type(),
-                    &[70, 117, 101, 108, 0, 0, 0, 0]
+                    [70, 117, 101, 108, 0, 0, 0, 0].as_slice()
                 )?
             );
 
@@ -226,21 +232,21 @@ mod tests {
                 format!("{}", "Fuel"),
                 decoder.decode_as_debug_str(
                     &String::param_type(),
-                    &[0, 0, 0, 0, 0, 0, 0, 4, 70, 117, 101, 108]
+                    [0, 0, 0, 0, 0, 0, 0, 4, 70, 117, 101, 108].as_slice()
                 )?
             );
         }
         {
             assert_eq!(
                 format!("{:?}", (1, 2)),
-                decoder.decode_as_debug_str(&<(u8, u8)>::param_type(), &[1, 2])?
+                decoder.decode_as_debug_str(&<(u8, u8)>::param_type(), [1, 2].as_slice())?
             );
 
             assert_eq!(
                 format!("{:?}", [3, 4]),
                 decoder.decode_as_debug_str(
                     &<[u64; 2]>::param_type(),
-                    &[0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 4]
+                    [0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 4].as_slice()
                 )?
             );
         }
@@ -249,7 +255,7 @@ mod tests {
                 format!("{:?}", Some(42)),
                 decoder.decode_as_debug_str(
                     &<Option<u64>>::param_type(),
-                    &[0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 42]
+                    [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 42].as_slice()
                 )?
             );
 
@@ -257,7 +263,7 @@ mod tests {
                 format!("{:?}", Err::<u64, u64>(42u64)),
                 decoder.decode_as_debug_str(
                     &<std::result::Result<u64, u64>>::param_type(),
-                    &[0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 42]
+                    [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 42].as_slice()
                 )?
             );
         }

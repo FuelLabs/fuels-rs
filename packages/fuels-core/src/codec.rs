@@ -5,6 +5,8 @@ mod function_selector;
 mod logs;
 mod utils;
 
+use std::io::Read;
+
 pub use abi_decoder::*;
 pub use abi_encoder::*;
 pub use abi_formatter::*;
@@ -17,7 +19,7 @@ use crate::{
 };
 
 /// Decodes `bytes` into type `T` following the schema defined by T's `Parameterize` impl
-pub fn try_from_bytes<T>(bytes: &[u8], decoder_config: DecoderConfig) -> Result<T>
+pub fn try_from_bytes<T>(bytes: impl Read, decoder_config: DecoderConfig) -> Result<T>
 where
     T: Parameterize + Tokenizable,
 {
@@ -41,13 +43,16 @@ mod tests {
         macro_rules! test_decode {
             ($($for_type: ident),*) => {
                 $(assert_eq!(
-                        try_from_bytes::<$for_type>(&bytes, DecoderConfig::default())?,
+                        try_from_bytes::<$for_type>(bytes.as_slice(), DecoderConfig::default())?,
                         $for_type::MAX
                 );)*
             };
         }
 
-        assert!(try_from_bytes::<bool>(&bytes, DecoderConfig::default())?);
+        assert!(try_from_bytes::<bool>(
+            bytes.as_slice(),
+            DecoderConfig::default()
+        )?);
 
         test_decode!(u8, u16, u32, u64);
 
@@ -58,7 +63,8 @@ mod tests {
     fn convert_bytes_into_tuple() -> Result<()> {
         let tuple_in_bytes = [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 2];
 
-        let the_tuple: (u64, u32) = try_from_bytes(&tuple_in_bytes, DecoderConfig::default())?;
+        let the_tuple: (u64, u32) =
+            try_from_bytes(tuple_in_bytes.as_slice(), DecoderConfig::default())?;
 
         assert_eq!(the_tuple, (1, 2));
 
@@ -72,7 +78,7 @@ mod tests {
         macro_rules! test_decode {
             ($($for_type: ident),*) => {
                 $(assert_eq!(
-                        try_from_bytes::<$for_type>(&bytes, DecoderConfig::default())?,
+                        try_from_bytes::<$for_type>(bytes.as_slice(), DecoderConfig::default())?,
                         $for_type::new(bytes.as_slice().try_into()?)
                 );)*
             };
@@ -109,7 +115,7 @@ mod tests {
             .unwrap();
 
         // when
-        let decoded = try_from_bytes::<Test>(&encoded, DecoderConfig::default()).unwrap();
+        let decoded = try_from_bytes::<Test>(encoded.as_slice(), DecoderConfig::default()).unwrap();
 
         // then
         assert_eq!(decoded, input);
