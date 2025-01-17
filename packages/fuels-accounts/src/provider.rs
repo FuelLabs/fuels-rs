@@ -56,6 +56,8 @@ use tokio::sync::Mutex;
 use crate::coin_cache::CoinsCache;
 use crate::provider::retryable_client::RetryableClient;
 
+const NUM_RESULTS_PER_REQUEST: i32 = 100;
+
 #[derive(Debug, Clone, PartialEq)]
 // ANCHOR: transaction_cost
 pub struct TransactionCost {
@@ -414,28 +416,28 @@ impl Provider {
     /// Gets all unspent coins owned by address `from`, with asset ID `asset_id`.
     pub async fn get_coins(&self, from: &Bech32Address, asset_id: AssetId) -> Result<Vec<Coin>> {
         let mut coins: Vec<Coin> = vec![];
-
         let mut cursor = None;
 
         loop {
-            let res = self
+            let response = self
                 .uncached_client()
                 .coins(
                     &from.into(),
                     Some(&asset_id),
                     PaginationRequest {
                         cursor: cursor.clone(),
-                        results: 100,
+                        results: NUM_RESULTS_PER_REQUEST,
                         direction: PageDirection::Forward,
                     },
                 )
                 .await?;
 
-            if res.results.is_empty() {
+            if response.results.is_empty() {
                 break;
             }
-            coins.extend(res.results.into_iter().map(Into::into));
-            cursor = res.cursor;
+
+            coins.extend(response.results.into_iter().map(Into::into));
+            cursor = response.cursor;
         }
 
         Ok(coins)
@@ -550,28 +552,36 @@ impl Provider {
     /// getting the coins because we are only returning the numbers (the sum of UTXOs coins amount
     /// for each asset id) and not the UTXOs coins themselves
     pub async fn get_balances(&self, address: &Bech32Address) -> Result<HashMap<String, u128>> {
-        // We don't paginate results because there are likely at most ~100 different assets in one
-        // wallet
-        let pagination = PaginationRequest {
-            cursor: None,
-            results: 9999,
-            direction: PageDirection::Forward,
-        };
-        let balances_vec = self
-            .uncached_client()
-            .balances(&address.into(), pagination)
-            .await?
-            .results;
-        let balances = balances_vec
-            .into_iter()
-            .map(
+        let mut balances = HashMap::new();
+        let mut cursor = None;
+
+        loop {
+            let response = self
+                .uncached_client()
+                .balances(
+                    &address.into(),
+                    PaginationRequest {
+                        cursor: cursor.clone(),
+                        results: NUM_RESULTS_PER_REQUEST,
+                        direction: PageDirection::Forward,
+                    },
+                )
+                .await?;
+
+            if response.results.is_empty() {
+                break;
+            }
+
+            balances.extend(response.results.into_iter().map(
                 |Balance {
                      owner: _,
                      amount,
                      asset_id,
                  }| (asset_id.to_string(), amount),
-            )
-            .collect();
+            ));
+            cursor = response.cursor;
+        }
+
         Ok(balances)
     }
 
@@ -580,39 +590,37 @@ impl Provider {
         &self,
         contract_id: &Bech32ContractId,
     ) -> Result<HashMap<AssetId, u64>> {
-        let mut pagination = PaginationRequest {
-            cursor: None,
-            results: 512,
-            direction: PageDirection::Forward,
-        };
+        let mut contract_balances = HashMap::new();
+        let mut cursor = None;
 
-        let mut balances_vec = vec![];
         loop {
-            let mut paginated_result = self
+            let response = self
                 .uncached_client()
-                .contract_balances(&contract_id.into(), pagination.clone())
+                .contract_balances(
+                    &contract_id.into(),
+                    PaginationRequest {
+                        cursor: cursor.clone(),
+                        results: NUM_RESULTS_PER_REQUEST,
+                        direction: PageDirection::Forward,
+                    },
+                )
                 .await?;
 
-            pagination.cursor = paginated_result.cursor;
-            balances_vec.append(&mut paginated_result.results);
-
-            if !paginated_result.has_next_page {
+            if response.results.is_empty() {
                 break;
             }
-        }
 
-        let balances = balances_vec
-            .into_iter()
-            .map(
+            contract_balances.extend(response.results.into_iter().map(
                 |ContractBalance {
                      contract: _,
                      amount,
                      asset_id,
                  }| (asset_id, amount),
-            )
-            .collect();
+            ));
+            cursor = response.cursor;
+        }
 
-        Ok(balances)
+        Ok(contract_balances)
     }
 
     pub async fn get_transaction_by_id(&self, tx_id: &TxId) -> Result<Option<TransactionResponse>> {
@@ -766,20 +774,31 @@ impl Provider {
     }
 
     pub async fn get_messages(&self, from: &Bech32Address) -> Result<Vec<Message>> {
-        let pagination = PaginationRequest {
-            cursor: None,
-            results: 100,
-            direction: PageDirection::Forward,
-        };
+        let mut messages = Vec::new();
+        let mut cursor = None;
 
-        Ok(self
-            .uncached_client()
-            .messages(Some(&from.into()), pagination)
-            .await?
-            .results
-            .into_iter()
-            .map(Into::into)
-            .collect())
+        loop {
+            let response = self
+                .uncached_client()
+                .messages(
+                    Some(&from.into()),
+                    PaginationRequest {
+                        cursor: cursor.clone(),
+                        results: NUM_RESULTS_PER_REQUEST,
+                        direction: PageDirection::Forward,
+                    },
+                )
+                .await?;
+
+            if response.results.is_empty() {
+                break;
+            }
+
+            messages.extend(response.results.into_iter().map(Into::into));
+            cursor = response.cursor;
+        }
+
+        Ok(messages)
     }
 
     pub async fn get_message_proof(
