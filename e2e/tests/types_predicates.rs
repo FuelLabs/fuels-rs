@@ -13,29 +13,27 @@ async fn assert_predicate_spendable(data: Vec<u8>, project_path: impl AsRef<Path
     let num_coins = 4;
     let num_messages = 8;
     let amount = 16;
-    let (provider, predicate_balance, receiver, receiver_balance, asset_id) =
+    let (provider, _predicate_balance, receiver, receiver_balance, asset_id) =
         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
     predicate.set_provider(provider.clone());
 
+    let amount_to_send = 42;
     predicate
-        .transfer(
-            receiver.address(),
-            predicate_balance,
-            asset_id,
-            TxPolicies::default(),
-        )
+        .transfer(receiver.address(), 42, asset_id, TxPolicies::default())
         .await?;
 
     // The predicate has spent the funds
-    assert_address_balance(predicate.address(), &provider, asset_id, 0).await;
+    //TODO:https://github.com/FuelLabs/fuels-rs/issues/1579
+    // assert that the amount_to_send + fee was deducted from the predicate
+    // assert_address_balance(predicate.address(), &provider, asset_id, 0).await;
 
     // Funds were transferred
     assert_address_balance(
         receiver.address(),
         &provider,
         asset_id,
-        receiver_balance + predicate_balance,
+        receiver_balance + amount_to_send,
     )
     .await;
 

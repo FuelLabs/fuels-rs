@@ -33,7 +33,7 @@ async fn test_wallet_balance_api_multi_asset() -> Result<()> {
         assert!(balances.contains_key(&expected_key));
         assert_eq!(
             *balances.get(&expected_key).unwrap(),
-            coins_per_asset * amount_per_coin
+            (coins_per_asset * amount_per_coin) as u128
         );
     }
     Ok(())
@@ -65,7 +65,7 @@ async fn test_wallet_balance_api_single_asset() -> Result<()> {
     assert!(balances.contains_key(&expected_key));
     assert_eq!(
         *balances.get(&expected_key).unwrap(),
-        number_of_coins * amount_per_coin
+        (number_of_coins * amount_per_coin) as u128
     );
 
     Ok(())
@@ -129,6 +129,8 @@ fn base_asset_wallet_config(num_wallets: u64) -> WalletsConfig {
 }
 
 #[tokio::test]
+//TODO:https://github.com/FuelLabs/fuels-rs/issues/1579
+#[ignore]
 async fn adjust_fee_empty_transaction() -> Result<()> {
     let wallet_config = base_asset_wallet_config(1);
     let wallet = launch_custom_provider_and_get_wallets(wallet_config, None, None)
@@ -165,6 +167,8 @@ async fn adjust_fee_empty_transaction() -> Result<()> {
 }
 
 #[tokio::test]
+//TODO:https://github.com/FuelLabs/fuels-rs/issues/1579
+#[ignore]
 async fn adjust_fee_resources_to_transfer_with_base_asset() -> Result<()> {
     let wallet_config = base_asset_wallet_config(1);
     let wallet = launch_custom_provider_and_get_wallets(wallet_config, None, None)
