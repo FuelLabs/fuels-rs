@@ -130,6 +130,11 @@ impl Contract<Loader<BlobsNotUploaded>> {
                 continue;
             }
 
+            if provider.blob_exists(id).await? {
+                already_uploaded.insert(id);
+                continue;
+            }
+
             let mut tb = BlobTransactionBuilder::default()
                 .with_blob(blob)
                 .with_tx_policies(tx_policies)
@@ -141,20 +146,7 @@ impl Contract<Loader<BlobsNotUploaded>> {
             let tx = tb.build(provider).await?;
 
             let tx_status_response = provider.send_transaction_and_await_commit(tx).await;
-
-            match tx_status_response {
-                Ok(tx_status_response) => {
-                    tx_status_response.check(None)?;
-                }
-                Err(err) => {
-                    if !err
-                        .to_string()
-                        .contains("Execution error: BlobIdAlreadyUploaded")
-                    {
-                        return Err(err);
-                    }
-                }
-            }
+            tx_status_response.and_then(|response| response.check(None))?;
 
             already_uploaded.insert(id);
         }
