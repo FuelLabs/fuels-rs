@@ -333,14 +333,17 @@ mod tests {
         let balance: u64 = wallet.get_asset_balance(&asset_id).await?;
         // ANCHOR_END: get_asset_balance
         // ANCHOR: get_balances
-        let balances: HashMap<String, u64> = wallet.get_balances().await?;
+        let balances: HashMap<String, u128> = wallet.get_balances().await?;
         // ANCHOR_END: get_balances
 
         // ANCHOR: get_balance_hashmap
         let asset_balance = balances.get(&asset_id.to_string()).unwrap();
         // ANCHOR_END: get_balance_hashmap
 
-        assert_eq!(*asset_balance, DEFAULT_COIN_AMOUNT * DEFAULT_NUM_COINS);
+        assert_eq!(
+            *asset_balance,
+            (DEFAULT_COIN_AMOUNT * DEFAULT_NUM_COINS) as u128
+        );
 
         Ok(())
     }
@@ -376,8 +379,7 @@ mod tests {
         let proof = wallet
             .try_provider()?
             .get_message_proof(&tx_id, &msg_id, None, Some(2))
-            .await?
-            .expect("failed to retrieve message proof");
+            .await?;
 
         // Verify the amount and recipient
         assert_eq!(proof.amount, amount);

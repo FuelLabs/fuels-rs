@@ -148,10 +148,10 @@ pub(crate) fn calculate_required_asset_amounts(
 
     grouped_assets
         .into_iter()
-        .map(|(asset_id, groups_w_same_asset_id)| {
+        .filter_map(|(asset_id, groups_w_same_asset_id)| {
             let total_amount_in_group = groups_w_same_asset_id.map(|(_, amount)| amount).sum();
 
-            (asset_id, total_amount_in_group)
+            (total_amount_in_group != 0).then_some((asset_id, total_amount_in_group))
         })
         .collect()
 }
