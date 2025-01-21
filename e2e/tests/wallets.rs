@@ -7,6 +7,19 @@ use fuels::{
     types::{output::Output, Bytes32},
 };
 
+async fn assert_address_balance(
+    address: &Bech32Address,
+    provider: &Provider,
+    asset_id: AssetId,
+    amount: u64,
+) {
+    let balance = provider
+        .get_asset_balance(address, asset_id)
+        .await
+        .expect("Could not retrieve balance");
+    assert_eq!(balance, amount);
+}
+
 #[tokio::test]
 async fn test_wallet_balance_api_multi_asset() -> Result<()> {
     let mut wallet = WalletUnlocked::new_random(None);
@@ -489,6 +502,65 @@ async fn test_transfer_with_multiple_signatures() -> Result<()> {
             .await?,
         amount_to_receive,
     );
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn wallet_transfer_respects_maturity_and_expiration() -> Result<()> {
+    let wallet = launch_provider_and_get_wallet().await?;
+    let asset_id = AssetId::zeroed();
+    let wallet_balance = wallet.get_asset_balance(&asset_id).await?;
+
+    let provider = wallet.try_provider()?;
+    let receiver = WalletUnlocked::new_random(None);
+
+    let maturity = 10;
+    let expiration = 20;
+    let tx_policies = TxPolicies::default()
+        .with_maturity(maturity)
+        .with_expiration(expiration);
+    let amount_to_send = 10;
+
+    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
+    let expected_fee = 1;
+
+    {
+        let err = wallet
+            .transfer(receiver.address(), amount_to_send, asset_id, tx_policies)
+            .await
+            .expect_err("maturity not reached");
+
+        assert!(err.to_string().contains("TransactionMaturity"));
+    }
+    {
+        provider.produce_blocks(15, None).await?;
+        wallet
+            .transfer(receiver.address(), amount_to_send, asset_id, tx_policies)
+            .await
+            .expect("should succed. Block height between `maturity` and `expiration`");
+    }
+    {
+        provider.produce_blocks(15, None).await?;
+        let err = wallet
+            .transfer(receiver.address(), amount_to_send, asset_id, tx_policies)
+            .await
+            .expect_err("expiration reached");
+
+        assert!(err.to_string().contains("TransactionExpiration"));
+    }
+
+    // Wallet has spent the funds
+    assert_address_balance(
+        wallet.address(),
+        provider,
+        asset_id,
+        wallet_balance - amount_to_send - expected_fee,
+    )
+    .await;
+
+    // Funds were transferred
+    assert_address_balance(receiver.address(), provider, asset_id, amount_to_send).await;
 
     Ok(())
 }

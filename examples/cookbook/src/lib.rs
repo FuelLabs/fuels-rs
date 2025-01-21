@@ -312,7 +312,9 @@ mod tests {
         // ANCHOR_END: custom_tx_adjust
 
         // ANCHOR: custom_tx_policies
-        let tx_policies = TxPolicies::default().with_tip(1);
+        let tx_policies = TxPolicies::default()
+            .with_maturity(1)
+            .with_expiration(1_0000);
         let tb = tb.with_tx_policies(tx_policies);
         // ANCHOR_END: custom_tx_policies
 

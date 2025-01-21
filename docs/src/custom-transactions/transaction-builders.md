@@ -68,7 +68,7 @@ We need to do one more thing before we stop thinking about transaction inputs. E
 
 > **Note** It is recommended to add signers before calling `adjust_for_fee()` as the estimation will include the size of the witnesses.
 
-We can also define transaction policies. For example, we can limit the gas price by doing the following:
+We can also define transaction policies. For example, we can set the maturity and expiration with:
 
 ```rust,ignore
 {{#include ../../../examples/cookbook/src/lib.rs:custom_tx_policies}}
