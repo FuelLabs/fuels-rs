@@ -538,7 +538,7 @@ async fn wallet_transfer_respects_maturity_and_expiration() -> Result<()> {
         wallet
             .transfer(receiver.address(), amount_to_send, asset_id, tx_policies)
             .await
-            .expect("should succed. Block height between `maturity` and `expiration`");
+            .expect("should succeed. Block height between `maturity` and `expiration`");
     }
     {
         provider.produce_blocks(15, None).await?;

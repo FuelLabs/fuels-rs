@@ -318,7 +318,7 @@ async fn contract_deployment_respects_maturity_and_expiration() -> Result<()> {
         provider.produce_blocks(15, None).await?;
         deploy_w_maturity_and_expiration()?
             .await
-            .expect("should succed. Block height between `maturity` and `expiration`");
+            .expect("should succeed. Block height between `maturity` and `expiration`");
     }
     {
         provider.produce_blocks(15, None).await?;

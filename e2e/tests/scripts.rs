@@ -651,7 +651,7 @@ async fn script_call_respects_maturity_and_expiration() -> Result<()> {
             .clone()
             .call()
             .await
-            .expect("should succed. Block height between `maturity` and `expiration`");
+            .expect("should succeed. Block height between `maturity` and `expiration`");
     }
     {
         provider.produce_blocks(15, None).await?;
