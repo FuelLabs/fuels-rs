@@ -8,7 +8,7 @@ use fuels::{
     core::codec::{calldata, encode_fn_selector, DecoderConfig, EncoderConfig},
     prelude::*,
     tx::ContractParameters,
-    types::{errors::transaction::Reason, Bits256, Identity},
+    types::{errors::transaction::Reason, input::Input, Bits256, Identity},
 };
 use tokio::time::Instant;
 
@@ -2145,33 +2145,32 @@ async fn max_fee_estimation_respects_tolerance() -> Result<()> {
         }
     };
 
-    //TODO:https://github.com/FuelLabs/fuels-rs/issues/1579
-    // let base_amount_in_inputs = |tolerance: f32| {
-    //     let contract_instance = contract_instance.clone();
-    //     let call_wallet = &call_wallet;
-    //     async move {
-    //         let mut tb = contract_instance
-    //             .methods()
-    //             .initialize_counter(42)
-    //             .transaction_builder()
-    //             .await
-    //             .unwrap()
-    //             .with_max_fee_estimation_tolerance(tolerance);
+    let base_amount_in_inputs = |tolerance: f32| {
+        let contract_instance = contract_instance.clone();
+        let call_wallet = &call_wallet;
+        async move {
+            let mut tb = contract_instance
+                .methods()
+                .initialize_counter(42)
+                .transaction_builder()
+                .await
+                .unwrap()
+                .with_max_fee_estimation_tolerance(tolerance);
 
-    //         call_wallet.adjust_for_fee(&mut tb, 0).await.unwrap();
-    //         tb.inputs
-    //             .iter()
-    //             .filter_map(|input: &Input| match input {
-    //                 Input::ResourceSigned { resource }
-    //                     if resource.coin_asset_id().unwrap() == AssetId::BASE =>
-    //                 {
-    //                     Some(resource.amount())
-    //                 }
-    //                 _ => None,
-    //             })
-    //             .sum::<u64>()
-    //     }
-    // };
+            call_wallet.adjust_for_fee(&mut tb, 0).await.unwrap();
+            tb.inputs
+                .iter()
+                .filter_map(|input: &Input| match input {
+                    Input::ResourceSigned { resource }
+                        if resource.coin_asset_id().unwrap() == AssetId::BASE =>
+                    {
+                        Some(resource.amount())
+                    }
+                    _ => None,
+                })
+                .sum::<u64>()
+        }
+    };
 
     let no_increase_max_fee = max_fee_from_tx(0.0).await;
     let increased_max_fee = max_fee_from_tx(2.00).await;
@@ -2188,13 +2187,9 @@ async fn max_fee_estimation_respects_tolerance() -> Result<()> {
         1.00 + 2.00
     );
 
-    //TODO:https://github.com/FuelLabs/fuels-rs/issues/1579
-    // let normal_base_asset = base_amount_in_inputs(0.0).await;
-    // let more_base_asset_due_to_bigger_tolerance = base_amount_in_inputs(2.00).await;
-    // assert_eq!(
-    //     more_base_asset_due_to_bigger_tolerance as f64 / normal_base_asset as f64,
-    //     1.00 + 2.00
-    // );
+    let normal_base_asset = base_amount_in_inputs(0.0).await;
+    let more_base_asset_due_to_bigger_tolerance = base_amount_in_inputs(5.00).await;
+    assert!(more_base_asset_due_to_bigger_tolerance > normal_base_asset);
 
     Ok(())
 }
