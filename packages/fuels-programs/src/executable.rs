@@ -2,6 +2,7 @@ use fuels_core::{
     types::{
         errors::Result,
         transaction_builders::{Blob, BlobTransactionBuilder},
+        tx_status::TxStatus,
     },
     Configurables,
 };
@@ -143,28 +144,26 @@ impl Executable<Loader> {
     }
 
     /// Uploads a blob containing the original executable code minus the data section.
-    pub async fn upload_blob(&self, account: impl fuels_accounts::Account) -> Result<()> {
+    pub async fn upload_blob(
+        &self,
+        account: impl fuels_accounts::Account,
+    ) -> Result<Option<TxStatus>> {
         let blob = self.blob();
         let provider = account.try_provider()?;
 
         if provider.blob_exists(blob.id()).await? {
-            return Ok(());
+            return Ok(None);
         }
 
         let mut tb = BlobTransactionBuilder::default().with_blob(self.blob());
-
         account.adjust_for_fee(&mut tb, 0).await?;
-
         account.add_witnesses(&mut tb)?;
 
         let tx = tb.build(provider).await?;
+        let tx_status = provider.send_transaction_and_await_commit(tx).await?;
+        tx_status.check(None)?;
 
-        provider
-            .send_transaction_and_await_commit(tx)
-            .await?
-            .check(None)?;
-
-        Ok(())
+        Ok(Some(tx_status))
     }
 }
 

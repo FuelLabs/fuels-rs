@@ -9,6 +9,7 @@ use fuels_core::{
         errors::{error, Result},
         transaction::TxPolicies,
         transaction_builders::{Blob, BlobId, BlobTransactionBuilder, TransactionBuilder},
+        tx_status::TxStatus,
     },
 };
 
@@ -159,7 +160,7 @@ impl Contract<Loader<BlobsNotUploaded>> {
         self,
         account: &impl Account,
         tx_policies: TxPolicies,
-    ) -> Result<Bech32ContractId> {
+    ) -> Result<(Bech32ContractId, TxStatus)> {
         self.upload_blobs(account, tx_policies)
             .await?
             .deploy(account, tx_policies)
@@ -172,7 +173,7 @@ impl Contract<Loader<BlobsNotUploaded>> {
         self,
         account: &impl Account,
         tx_policies: TxPolicies,
-    ) -> Result<Bech32ContractId> {
+    ) -> Result<(Bech32ContractId, Option<TxStatus>)> {
         self.upload_blobs(account, tx_policies)
             .await?
             .deploy_if_not_exists(account, tx_policies)
@@ -248,7 +249,7 @@ impl Contract<Loader<BlobsUploaded>> {
         self,
         account: &impl Account,
         tx_policies: TxPolicies,
-    ) -> Result<Bech32ContractId> {
+    ) -> Result<(Bech32ContractId, TxStatus)> {
         Contract::regular(self.code(), self.salt, self.storage_slots)
             .deploy(account, tx_policies)
             .await
@@ -258,7 +259,7 @@ impl Contract<Loader<BlobsUploaded>> {
         self,
         account: &impl Account,
         tx_policies: TxPolicies,
-    ) -> Result<Bech32ContractId> {
+    ) -> Result<(Bech32ContractId, Option<TxStatus>)> {
         Contract::regular(self.code(), self.salt, self.storage_slots)
             .deploy_if_not_exists(account, tx_policies)
             .await

@@ -154,7 +154,7 @@ fn contract_deploying_code(
                     )
                     .expect("Failed to load the contract");
 
-                    let contract_id = loaded_contract.deploy_if_not_exists(
+                    let (contract_id, _) = loaded_contract.deploy_if_not_exists(
                         &#wallet_name,
                         ::fuels::types::transaction::TxPolicies::default()
                     )

@@ -10,6 +10,7 @@ use fuels_core::{
         errors::Result,
         transaction::TxPolicies,
         transaction_builders::{Blob, CreateTransactionBuilder},
+        tx_status::TxStatus,
     },
     Configurables,
 };
@@ -138,7 +139,7 @@ impl Contract<Regular> {
         self,
         account: &impl Account,
         tx_policies: TxPolicies,
-    ) -> Result<Bech32ContractId> {
+    ) -> Result<(Bech32ContractId, TxStatus)> {
         let contract_id = self.contract_id();
         let state_root = self.state_root();
         let salt = self.salt;
@@ -161,12 +162,10 @@ impl Contract<Regular> {
 
         let tx = tb.build(provider).await?;
 
-        provider
-            .send_transaction_and_await_commit(tx)
-            .await?
-            .check(None)?;
+        let tx_status = provider.send_transaction_and_await_commit(tx).await?;
+        tx_status.check(None)?;
 
-        Ok(contract_id.into())
+        Ok((contract_id.into(), tx_status))
     }
 
     /// Deploys a compiled contract to a running node if a contract with
@@ -175,13 +174,15 @@ impl Contract<Regular> {
         self,
         account: &impl Account,
         tx_policies: TxPolicies,
-    ) -> Result<Bech32ContractId> {
+    ) -> Result<(Bech32ContractId, Option<TxStatus>)> {
         let contract_id = Bech32ContractId::from(self.contract_id());
         let provider = account.try_provider()?;
         if provider.contract_exists(&contract_id).await? {
-            Ok(contract_id)
+            Ok((contract_id, None))
         } else {
-            self.deploy(account, tx_policies).await
+            let (contract_id, tx_status) = self.deploy(account, tx_policies).await?;
+
+            Ok((contract_id, Some(tx_status)))
         }
     }
 
@@ -208,7 +209,7 @@ impl Contract<Regular> {
         account: &impl Account,
         tx_policies: TxPolicies,
         max_words_per_blob: usize,
-    ) -> Result<Bech32ContractId> {
+    ) -> Result<(Bech32ContractId, TxStatus)> {
         let provider = account.try_provider()?;
         let max_contract_size = provider
             .consensus_parameters()

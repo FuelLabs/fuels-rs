@@ -325,7 +325,7 @@ async fn test_script_transaction_builder() -> Result<()> {
     tokio::time::sleep(Duration::from_millis(500)).await;
     let tx_status = provider.tx_status(&tx_id).await?;
 
-    let response = script_call_handler.get_response_from(tx_status)?;
+    let response = script_call_handler.get_response(tx_status)?;
 
     assert_eq!(response.value, "hello");
     // ANCHOR_END: script_call_tb
@@ -528,14 +528,14 @@ async fn loader_script_calling_loader_proxy() -> Result<()> {
 
     let contract = Contract::load_from(contract_binary, LoadConfiguration::default())?;
 
-    let contract_id = contract
+    let (contract_id, _) = contract
         .convert_to_loader(100)?
         .deploy_if_not_exists(&wallet, TxPolicies::default())
         .await?;
 
     let contract_binary = "sway/contracts/proxy/out/release/proxy.bin";
 
-    let proxy_id = Contract::load_from(contract_binary, LoadConfiguration::default())?
+    let (proxy_id, _) = Contract::load_from(contract_binary, LoadConfiguration::default())?
         .convert_to_loader(100)?
         .deploy_if_not_exists(&wallet, TxPolicies::default())
         .await?;
