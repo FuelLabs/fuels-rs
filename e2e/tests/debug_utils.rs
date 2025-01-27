@@ -71,7 +71,7 @@ async fn can_debug_single_call_tx() -> Result<()> {
         assert_eq!(
             decoder.decode_fn_args(
                 &call_description.decode_fn_selector().unwrap(),
-                &call_description.encoded_args
+                call_description.encoded_args.as_slice()
             )?,
             vec!["AllStruct { some_struct: SomeStruct { field: 2, field_2: true } }"]
         );
@@ -115,7 +115,7 @@ async fn can_debug_single_call_tx() -> Result<()> {
         assert_eq!(
             decoder.decode_fn_args(
                 &call_description.decode_fn_selector().unwrap(),
-                &call_description.encoded_args
+                call_description.encoded_args.as_slice()
             )?,
             vec!["AllStruct { some_struct: SomeStruct { field: 2, field_2: true } }"]
         );
@@ -214,7 +214,7 @@ async fn can_debug_multi_call_tx() -> Result<()> {
         assert_eq!(
             decoder.decode_fn_args(
                 &call_description.decode_fn_selector().unwrap(),
-                &call_description.encoded_args
+                call_description.encoded_args.as_slice()
             )?,
             vec!["AllStruct { some_struct: SomeStruct { field: 2, field_2: true } }"]
         );
@@ -229,7 +229,7 @@ async fn can_debug_multi_call_tx() -> Result<()> {
         assert!(call_description.gas_forwarded.is_none());
 
         assert_eq!(
-            decoder.decode_fn_args(&fn_selector, &call_description.encoded_args)?,
+            decoder.decode_fn_args(&fn_selector, call_description.encoded_args.as_slice())?,
             vec!["AllStruct { some_struct: SomeStruct { field: 2, field_2: true } }", "MemoryAddress { contract_id: std::contract_id::ContractId { bits: Bits256([77, 127, 224, 17, 182, 42, 211, 241, 46, 156, 74, 204, 31, 156, 188, 77, 183, 63, 55, 80, 119, 142, 192, 75, 130, 205, 208, 253, 25, 104, 22, 171]) }, function_selector: 123, function_data: 456 }"]
         );
     }
@@ -286,7 +286,7 @@ async fn can_debug_multi_call_tx() -> Result<()> {
         assert_eq!(
             decoder.decode_fn_args(
                 &call_description.decode_fn_selector().unwrap(),
-                &call_description.encoded_args
+                call_description.encoded_args.as_slice()
             )?,
             vec!["AllStruct { some_struct: SomeStruct { field: 2, field_2: true } }"]
         );
@@ -303,7 +303,7 @@ async fn can_debug_multi_call_tx() -> Result<()> {
         assert_eq!(call_description.gas_forwarded, Some(25));
 
         assert_eq!(
-            decoder.decode_fn_args(&call_description.decode_fn_selector().unwrap(), &call_description.encoded_args)?,
+            decoder.decode_fn_args(&call_description.decode_fn_selector().unwrap(), call_description.encoded_args.as_slice())?,
             vec!["AllStruct { some_struct: SomeStruct { field: 2, field_2: true } }", "MemoryAddress { contract_id: std::contract_id::ContractId { bits: Bits256([77, 127, 224, 17, 182, 42, 211, 241, 46, 156, 74, 204, 31, 156, 188, 77, 183, 63, 55, 80, 119, 142, 192, 75, 130, 205, 208, 253, 25, 104, 22, 171]) }, function_selector: 123, function_data: 456 }"]
         );
     }
@@ -345,7 +345,7 @@ async fn can_debug_sway_script() -> Result<()> {
     };
 
     assert_eq!(
-        decoder.decode_fn_args("main", &desc.data)?,
+        decoder.decode_fn_args("main", desc.data.as_slice())?,
         vec!["MyStruct { number: 10, boolean: false }"]
     );
 
@@ -455,7 +455,7 @@ async fn can_detect_a_loader_script_w_data_section() -> Result<()> {
     )?)?;
 
     assert_eq!(
-        decoder.decode_fn_args("main", &script.data)?,
+        decoder.decode_fn_args("main", script.data.as_slice())?,
         vec!["MyStruct { number: 10, boolean: false }"]
     );
 

@@ -41,7 +41,7 @@ impl ReceiptParser {
             .extract_contract_call_data(contract_id.into())
             .ok_or_else(|| Self::missing_receipts_error(output_param))?;
 
-        self.decoder.decode(output_param, &data)
+        self.decoder.decode(output_param, data.as_slice())
     }
 
     pub fn parse_script(self, output_param: &ParamType) -> Result<Token> {
@@ -49,7 +49,7 @@ impl ReceiptParser {
             .extract_script_data()
             .ok_or_else(|| Self::missing_receipts_error(output_param))?;
 
-        self.decoder.decode(output_param, &data)
+        self.decoder.decode(output_param, data.as_slice())
     }
 
     fn missing_receipts_error(output_param: &ParamType) -> Error {

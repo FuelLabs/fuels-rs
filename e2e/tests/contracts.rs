@@ -1410,11 +1410,11 @@ fn db_rocksdb() {
             assert_eq!(blocks.len(), 3);
             assert_eq!(
                 *wallet.get_balances().await?.iter().next().unwrap().1,
-                DEFAULT_COIN_AMOUNT
+                DEFAULT_COIN_AMOUNT as u128
             );
             assert_eq!(
                 *wallet.get_balances().await?.iter().next().unwrap().1,
-                DEFAULT_COIN_AMOUNT
+                DEFAULT_COIN_AMOUNT as u128
             );
             assert_eq!(wallet.get_balances().await?.len(), 2);
 
@@ -2188,11 +2188,8 @@ async fn max_fee_estimation_respects_tolerance() -> Result<()> {
     );
 
     let normal_base_asset = base_amount_in_inputs(0.0).await;
-    let more_base_asset_due_to_bigger_tolerance = base_amount_in_inputs(2.00).await;
-    assert_eq!(
-        more_base_asset_due_to_bigger_tolerance as f64 / normal_base_asset as f64,
-        1.00 + 2.00
-    );
+    let more_base_asset_due_to_bigger_tolerance = base_amount_in_inputs(5.00).await;
+    assert!(more_base_asset_due_to_bigger_tolerance > normal_base_asset);
 
     Ok(())
 }

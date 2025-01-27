@@ -187,6 +187,7 @@ pub enum TransactionType {
     Upload(UploadTransaction),
     Upgrade(UpgradeTransaction),
     Blob(BlobTransaction),
+    Unknown,
 }
 
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
@@ -284,15 +285,17 @@ pub trait Transaction:
     ) -> Result<Signature>;
 }
 
-impl From<TransactionType> for FuelTransaction {
-    fn from(value: TransactionType) -> Self {
+impl TryFrom<TransactionType> for FuelTransaction {
+    type Error = Error;
+    fn try_from(value: TransactionType) -> Result<Self> {
         match value {
-            TransactionType::Script(tx) => tx.into(),
-            TransactionType::Create(tx) => tx.into(),
-            TransactionType::Mint(tx) => tx.into(),
-            TransactionType::Upload(tx) => tx.into(),
-            TransactionType::Upgrade(tx) => tx.into(),
-            TransactionType::Blob(tx) => tx.into(),
+            TransactionType::Script(tx) => Ok(tx.into()),
+            TransactionType::Create(tx) => Ok(tx.into()),
+            TransactionType::Mint(tx) => Ok(tx.into()),
+            TransactionType::Upload(tx) => Ok(tx.into()),
+            TransactionType::Upgrade(tx) => Ok(tx.into()),
+            TransactionType::Blob(tx) => Ok(tx.into()),
+            TransactionType::Unknown => Err(error_transaction!(Other, "`Unknown` transaction")),
         }
     }
 }

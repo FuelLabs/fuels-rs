@@ -40,7 +40,7 @@ readme = "README.md"
 license = "Apache-2.0"
 repository = "https://github.com/FuelLabs/fuels-rs"
 rust-version = "1.81.0"
-version = "0.66.10"
+version = "0.70.0"
 
 [workspace.dependencies]
 Inflector = "0.11.4"
@@ -49,7 +49,7 @@ async-trait = { version = "0.1.74", default-features = false }
 bech32 = "0.9.1"
 bytes = { version = "1.5.0", default-features = false }
 chrono = "0.4.31"
-cynic = { version = "2.2", default-features = false }
+cynic = { version = "3.1.0", default-features = false }
 elliptic-curve = { version = "0.13.8", default-features = false }
 test-case = { version = "3.3", default-features = false }
 eth-keystore = "0.5.0"
@@ -90,30 +90,30 @@ toml = { version = "0.8", default-features = false }
 mockall = { version = "0.13", default-features = false }
 
 # Dependencies from the `fuel-core` repository:
-fuel-core = { version = "0.40.1", default-features = false, features = [
+fuel-core = { version = "0.41.3", default-features = false, features = [
   "wasm-executor",
 ] }
-fuel-core-chain-config = { version = "0.40.1", default-features = false }
-fuel-core-client = { version = "0.40.1", default-features = false }
-fuel-core-poa = { version = "0.40.1", default-features = false }
-fuel-core-services = { version = "0.40.1", default-features = false }
-fuel-core-types = { version = "0.40.1", default-features = false }
+fuel-core-chain-config = { version = "0.41.3", default-features = false }
+fuel-core-client = { version = "0.41.3", default-features = false }
+fuel-core-poa = { version = "0.41.3", default-features = false }
+fuel-core-services = { version = "0.41.3", default-features = false }
+fuel-core-types = { version = "0.41.3", default-features = false }
 
 # Dependencies from the `fuel-vm` repository:
-fuel-asm = { version = "0.58.2" }
-fuel-crypto = { version = "0.58.2" }
-fuel-merkle = { version = "0.58.2" }
-fuel-storage = { version = "0.58.2" }
-fuel-tx = { version = "0.58.2" }
-fuel-types = { version = "0.58.2" }
-fuel-vm = { version = "0.58.2" }
+fuel-asm = { version = "0.59.1" }
+fuel-crypto = { version = "0.59.1" }
+fuel-merkle = { version = "0.59.1" }
+fuel-storage = { version = "0.59.1" }
+fuel-tx = { version = "0.59.1" }
+fuel-types = { version = "0.59.1" }
+fuel-vm = { version = "0.59.1" }
 
 # Workspace projects
-fuels = { version = "0.66.10", path = "./packages/fuels", default-features = false }
-fuels-accounts = { version = "0.66.10", path = "./packages/fuels-accounts", default-features = false }
-fuels-code-gen = { version = "0.66.10", path = "./packages/fuels-code-gen", default-features = false }
-fuels-core = { version = "0.66.10", path = "./packages/fuels-core", default-features = false }
-fuels-macros = { version = "0.66.10", path = "./packages/fuels-macros", default-features = false }
-fuels-programs = { version = "0.66.10", path = "./packages/fuels-programs", default-features = false }
-fuels-test-helpers = { version = "0.66.10", path = "./packages/fuels-test-helpers", default-features = false }
-versions-replacer = { version = "0.66.10", path = "./scripts/versions-replacer", default-features = false }
+fuels = { version = "0.70.0", path = "./packages/fuels", default-features = false }
+fuels-accounts = { version = "0.70.0", path = "./packages/fuels-accounts", default-features = false }
+fuels-code-gen = { version = "0.70.0", path = "./packages/fuels-code-gen", default-features = false }
+fuels-core = { version = "0.70.0", path = "./packages/fuels-core", default-features = false }
+fuels-macros = { version = "0.70.0", path = "./packages/fuels-macros", default-features = false }
+fuels-programs = { version = "0.70.0", path = "./packages/fuels-programs", default-features = false }
+fuels-test-helpers = { version = "0.70.0", path = "./packages/fuels-test-helpers", default-features = false }
+versions-replacer = { version = "0.70.0", path = "./scripts/versions-replacer", default-features = false }
