@@ -5,4 +5,4 @@ license = "Apache-2.0"
 name = "contract_logs"
 
 [dependencies]
-contract_logs = { path = "../contract_logs_abi/", package = "contract_logs_abi" }
+contract_logs_abi = { path = "../contract_logs_abi/", package = "contract_logs_abi" }
