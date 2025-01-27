@@ -83,7 +83,7 @@ async fn adjust_fee_empty_transaction() -> Result<()> {
 
     tb.add_signer(wallet.clone())?;
     wallet.adjust_for_fee(&mut tb, 0).await?;
-    assert_ne!(tb.inputs().len(), 0); // inputs added
+    assert!(!tb.inputs().empty()); // inputs added
     assert_eq!(tb.outputs().len(), 1); // output added
 
     let tx = tb.build(wallet.try_provider()?).await?;
