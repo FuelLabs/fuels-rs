@@ -1,11 +1,4 @@
-use std::iter::repeat;
-
-use fuel_tx::{input::coin::CoinSigned, Input};
-use fuels::{
-    prelude::*,
-    tx::{TxPointer, UtxoId},
-    types::{output::Output, Bytes32},
-};
+use fuels::{prelude::*, types::output::Output};
 
 #[tokio::test]
 async fn test_wallet_balance_api_multi_asset() -> Result<()> {
@@ -71,54 +64,6 @@ async fn test_wallet_balance_api_single_asset() -> Result<()> {
     Ok(())
 }
 
-fn compare_inputs(inputs: &[Input], expected_inputs: &mut Vec<Input>) -> bool {
-    let zero_utxo_id = UtxoId::new(Bytes32::zeroed(), 0);
-
-    // change UTXO_ids to 0s for comparison, because we can't guess the genesis coin ids
-    let inputs: Vec<Input> = inputs
-        .iter()
-        .map(|input| match input {
-            Input::CoinSigned(CoinSigned {
-                owner,
-                amount,
-                asset_id,
-                tx_pointer,
-                witness_index,
-                ..
-            }) => Input::coin_signed(
-                zero_utxo_id,
-                *owner,
-                *amount,
-                *asset_id,
-                *tx_pointer,
-                *witness_index,
-            ),
-            other => other.clone(),
-        })
-        .collect();
-
-    let comparison_results: Vec<bool> = inputs
-        .iter()
-        .map(|input| {
-            let found_index = expected_inputs
-                .iter()
-                .position(|expected| expected == input);
-            if let Some(index) = found_index {
-                expected_inputs.remove(index);
-                true
-            } else {
-                false
-            }
-        })
-        .collect();
-
-    if !expected_inputs.is_empty() {
-        return false;
-    }
-
-    comparison_results.iter().all(|&r| r)
-}
-
 fn base_asset_wallet_config(num_wallets: u64) -> WalletsConfig {
     let asset_configs = vec![AssetConfig {
         id: AssetId::zeroed(),
@@ -129,52 +74,40 @@ fn base_asset_wallet_config(num_wallets: u64) -> WalletsConfig {
 }
 
 #[tokio::test]
-//TODO:https://github.com/FuelLabs/fuels-rs/issues/1579
-#[ignore]
 async fn adjust_fee_empty_transaction() -> Result<()> {
-    let wallet_config = base_asset_wallet_config(1);
-    let wallet = launch_custom_provider_and_get_wallets(wallet_config, None, None)
-        .await?
-        .pop()
-        .unwrap();
+    let wallet = launch_provider_and_get_wallet().await?;
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(vec![], vec![], TxPolicies::default());
-    tb.add_signer(wallet.clone())?;
+    assert!(tb.inputs().is_empty());
+    assert!(tb.outputs().is_empty());
 
+    tb.add_signer(wallet.clone())?;
     wallet.adjust_for_fee(&mut tb, 0).await?;
+    assert!(!tb.inputs().is_empty(), "inputs should be added");
+    assert_eq!(tb.outputs().len(), 1, "output should be added");
 
     let tx = tb.build(wallet.try_provider()?).await?;
 
-    let zero_utxo_id = UtxoId::new(Bytes32::zeroed(), 0);
-    let mut expected_inputs = vec![Input::coin_signed(
-        zero_utxo_id,
-        wallet.address().into(),
-        20,
-        AssetId::zeroed(),
-        TxPointer::default(),
-        0,
-    )];
+    let total_amount_inputs: u64 = tx.inputs().iter().map(|i| i.amount().unwrap()).sum();
+    assert!(
+        total_amount_inputs > tx.max_fee().unwrap(),
+        "amount should cover tx"
+    );
+
     let expected_outputs = vec![Output::change(
         wallet.address().into(),
         0,
         AssetId::zeroed(),
     )];
 
-    assert!(compare_inputs(tx.inputs(), &mut expected_inputs));
     assert_eq!(tx.outputs(), &expected_outputs);
 
     Ok(())
 }
 
 #[tokio::test]
-//TODO:https://github.com/FuelLabs/fuels-rs/issues/1579
-#[ignore]
 async fn adjust_fee_resources_to_transfer_with_base_asset() -> Result<()> {
-    let wallet_config = base_asset_wallet_config(1);
-    let wallet = launch_custom_provider_and_get_wallets(wallet_config, None, None)
-        .await?
-        .pop()
-        .unwrap();
+    let wallet = launch_provider_and_get_wallet().await?;
 
     let base_amount = 30;
     let base_asset_id = AssetId::zeroed();
@@ -191,23 +124,14 @@ async fn adjust_fee_resources_to_transfer_with_base_asset() -> Result<()> {
 
     let tx = tb.build(wallet.try_provider()?).await?;
 
-    let zero_utxo_id = UtxoId::new(Bytes32::zeroed(), 0);
-    let mut expected_inputs = repeat(Input::coin_signed(
-        zero_utxo_id,
-        wallet.address().into(),
-        20,
-        base_asset_id,
-        TxPointer::default(),
-        0,
-    ))
-    .take(3)
-    .collect::<Vec<_>>();
+    let total_amount_inputs: u64 = tx.inputs().iter().map(|i| i.amount().unwrap()).sum();
+    assert!(total_amount_inputs > tx.max_fee().unwrap()); // can cover tx
+
     let expected_outputs = vec![
         Output::coin(Address::zeroed(), base_amount, base_asset_id),
         Output::change(wallet.address().into(), 0, base_asset_id),
     ];
 
-    assert!(compare_inputs(tx.inputs(), &mut expected_inputs));
     assert_eq!(tx.outputs(), &expected_outputs);
 
     Ok(())
