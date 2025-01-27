@@ -168,6 +168,7 @@ mod tests {
         let mut outputs = vec![];
         for (id_string, amount) in balances {
             let id = AssetId::from_str(&id_string)?;
+            let amount = amount as u64;
 
             let input = wallet_1
                 .get_asset_inputs_for_amount(id, amount, None)
@@ -199,9 +200,9 @@ mod tests {
         assert_eq!(balances.len(), NUM_ASSETS as usize);
         for (id, balance) in balances {
             if id == *consensus_parameters.base_asset_id().to_string() {
-                assert_eq!(balance, AMOUNT / 2);
+                assert_eq!(balance, (AMOUNT / 2) as u128);
             } else {
-                assert_eq!(balance, AMOUNT);
+                assert_eq!(balance, AMOUNT as u128);
             }
         }
         // ANCHOR_END: transfer_multiple_transaction

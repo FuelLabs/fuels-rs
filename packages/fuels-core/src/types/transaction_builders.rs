@@ -308,7 +308,7 @@ macro_rules! impl_tx_builder_trait {
                     .inputs()
                     .iter()
                     .filter_map(|input| match input {
-                        Input::ResourceSigned { resource } => Some(resource.owner()),
+                        Input::ResourceSigned { resource } => resource.owner(),
                         _ => None,
                     })
                     .unique()
@@ -361,7 +361,7 @@ macro_rules! impl_tx_builder_trait {
                     .iter()
                     .filter_map(|input| match input {
                         Input::ResourceSigned { resource } |
-                        Input::ResourcePredicate { resource, .. } => Some(resource.asset_id(*base_asset_id)),
+                        Input::ResourcePredicate { resource, .. } => resource.asset_id(*base_asset_id),
                         _ => None,
                     })
                     .collect::<HashSet<_>>();
@@ -1380,7 +1380,7 @@ fn resolve_fuel_inputs(
                 resource,
                 code,
                 data,
-            } => Ok(resolve_predicate_resource(resource, code, data)),
+            } => resolve_predicate_resource(resource, code, data),
             Input::Contract {
                 utxo_id,
                 balance_root,
@@ -1432,13 +1432,25 @@ fn resolve_signed_resource(
                     create_coin_message_input(message, num_witnesses + *witness_idx_offset as u16)
                 })
         }
+        CoinType::Unknown => Err(error_transaction!(
+            Builder,
+            "can not resolve `CoinType::Unknown`"
+        )),
     }
 }
 
-fn resolve_predicate_resource(resource: CoinType, code: Vec<u8>, data: Vec<u8>) -> FuelInput {
+fn resolve_predicate_resource(
+    resource: CoinType,
+    code: Vec<u8>,
+    data: Vec<u8>,
+) -> Result<FuelInput> {
     match resource {
-        CoinType::Coin(coin) => create_coin_predicate(coin.asset_id, coin, code, data),
-        CoinType::Message(message) => create_coin_message_predicate(message, code, data),
+        CoinType::Coin(coin) => Ok(create_coin_predicate(coin.asset_id, coin, code, data)),
+        CoinType::Message(message) => Ok(create_coin_message_predicate(message, code, data)),
+        CoinType::Unknown => Err(error_transaction!(
+            Builder,
+            "can not resolve `CoinType::Unknown`"
+        )),
     }
 }
 
