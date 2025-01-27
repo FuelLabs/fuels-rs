@@ -230,7 +230,7 @@ async fn can_debug_multi_call_tx() -> Result<()> {
 
         assert_eq!(
             decoder.decode_fn_args(&fn_selector, call_description.encoded_args.as_slice())?,
-            vec!["AllStruct { some_struct: SomeStruct { field: 2, field_2: true } }", "MemoryAddress { contract_id: std::contract_id::ContractId { bits: Bits256([77, 127, 224, 17, 182, 42, 211, 241, 46, 156, 74, 204, 31, 156, 188, 77, 183, 63, 55, 80, 119, 142, 192, 75, 130, 205, 208, 253, 25, 104, 22, 171]) }, function_selector: 123, function_data: 456 }"]
+            vec![ "AllStruct { some_struct: SomeStruct { field: 2, field_2: true } }".to_string(), format!("MemoryAddress {{ contract_id: std::contract_id::ContractId {{ bits: Bits256({:?}) }}, function_selector: 123, function_data: 456 }}", contract_id.as_slice())]
         );
     }
 
@@ -304,7 +304,7 @@ async fn can_debug_multi_call_tx() -> Result<()> {
 
         assert_eq!(
             decoder.decode_fn_args(&call_description.decode_fn_selector().unwrap(), call_description.encoded_args.as_slice())?,
-            vec!["AllStruct { some_struct: SomeStruct { field: 2, field_2: true } }", "MemoryAddress { contract_id: std::contract_id::ContractId { bits: Bits256([77, 127, 224, 17, 182, 42, 211, 241, 46, 156, 74, 204, 31, 156, 188, 77, 183, 63, 55, 80, 119, 142, 192, 75, 130, 205, 208, 253, 25, 104, 22, 171]) }, function_selector: 123, function_data: 456 }"]
+            vec![ "AllStruct { some_struct: SomeStruct { field: 2, field_2: true } }".to_string(), format!("MemoryAddress {{ contract_id: std::contract_id::ContractId {{ bits: Bits256({:?}) }}, function_selector: 123, function_data: 456 }}", contract_id.as_slice())]
         );
     }
 

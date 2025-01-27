@@ -1,7 +1,7 @@
 contract;
 
 use std::{logging::log, string::String};
-use contract_logs::ContractLogs;
+use contract_logs_abi::ContractLogs;
 
 #[allow(dead_code)]
 struct TestStruct {
