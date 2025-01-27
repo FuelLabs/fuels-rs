@@ -24,7 +24,7 @@ async fn assert_predicate_spendable(data: Vec<u8>, project_path: impl AsRef<Path
         .await?;
 
     // The predicate has spent the funds
-    //TODO:https://github.com/FuelLabs/fuels-rs/issues/1579
+    //TODO:https://github.com/FuelLabs/fuels-rs/issues/1394
     // assert that the amount_to_send + fee was deducted from the predicate
     // assert_address_balance(predicate.address(), &provider, asset_id, 0).await;
 
