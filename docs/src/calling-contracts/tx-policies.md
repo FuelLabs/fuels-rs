@@ -13,8 +13,9 @@ Where:
 1. **Tip** - amount to pay the block producer to prioritize the transaction.
 2. **Witness Limit** - The maximum amount of witness data allowed for the transaction.
 3. **Maturity** - Block until which the transaction cannot be included.
-4. **Max Fee** - The maximum fee payable by this transaction.
-5. **Script Gas Limit** - The maximum amount of gas the transaction may consume for executing its script code.
+4. **Expiration** - Block after which the transaction cannot be included.
+5. **Max Fee** - The maximum fee payable by this transaction.
+6. **Script Gas Limit** - The maximum amount of gas the transaction may consume for executing its script code.
 
 When the **Script Gas Limit** is not set, the Rust SDK will estimate the consumed gas in the background and set it as the limit.
 
