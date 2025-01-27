@@ -89,7 +89,7 @@ async fn adjust_fee_empty_transaction() -> Result<()> {
     let tx = tb.build(wallet.try_provider()?).await?;
 
     let total_amount_inputs: u64 = tx.inputs().iter().map(|i| i.amount().unwrap()).sum();
-    assert!(total_amount_inputs > tx.max_fee().unwrap()); // can cover tx
+    assert!(total_amount_inputs > tx.max_fee().unwrap(), "can cover tx");
 
     let expected_outputs = vec![Output::change(
         wallet.address().into(),
