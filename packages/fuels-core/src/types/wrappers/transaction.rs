@@ -439,17 +439,12 @@ macro_rules! impl_tx_wrapper {
                 self.tx.id(&chain_id)
             }
 
-            fn maturity(&self) -> u32 {
-                (*self.tx.maturity()).into()
+            fn maturity(&self) -> Option<u64> {
+                self.tx.policies().get(PolicyType::Maturity)
             }
 
             fn expiration(&self) -> Option<u64> {
                 self.tx.policies().get(PolicyType::Expiration)
-            }
-
-            fn with_maturity(mut self, maturity: u32) -> Self {
-                self.tx.set_maturity(maturity.into());
-                self
             }
 
             fn metered_bytes_size(&self) -> usize {
