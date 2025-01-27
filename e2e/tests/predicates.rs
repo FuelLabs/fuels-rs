@@ -9,6 +9,7 @@ use fuels::{
     programs::executable::Executable,
     types::{coin::Coin, coin_type::CoinType, input::Input, message::Message, output::Output},
 };
+use test_case::test_case;
 
 async fn assert_address_balance(
     address: &Bech32Address,
@@ -740,7 +741,7 @@ async fn predicate_configurables() -> Result<()> {
         "sway/predicates/predicate_configurables/out/release/predicate_configurables.bin",
     )?
     .with_data(predicate_data)
-    .with_configurables(configurables);
+    .with_configurables(configurables)?;
     // ANCHOR_END: predicate_configurables
 
     let num_coins = 4;
@@ -748,6 +749,85 @@ async fn predicate_configurables() -> Result<()> {
     let amount = 16;
     let (provider, predicate_balance, receiver, receiver_balance, asset_id, _) =
         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
+
+    predicate.set_provider(provider.clone());
+
+    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
+    let expected_fee = 1;
+    predicate
+        .transfer(
+            receiver.address(),
+            predicate_balance - expected_fee,
+            asset_id,
+            TxPolicies::default(),
+        )
+        .await?;
+
+    // The predicate has spent the funds
+    assert_address_balance(predicate.address(), &provider, asset_id, 0).await;
+
+    // Funds were transferred
+    assert_address_balance(
+        receiver.address(),
+        &provider,
+        asset_id,
+        receiver_balance + predicate_balance - expected_fee,
+    )
+    .await;
+
+    Ok(())
+}
+
+#[test_case(true ; "regular")]
+#[test_case(false ; "use loader")]
+#[tokio::test]
+async fn predicate_dyn_configurables(is_regular: bool) -> Result<()> {
+    abigen!(Predicate(
+        name = "MyPredicate",
+        abi = "e2e/sway/predicates/predicate_dyn_configurables/out/release/predicate_dyn_configurables-abi.json"
+    ));
+
+    let configurables = MyPredicateConfigurables::default()
+        .with_BOOL(false)?
+        .with_U8(6)?
+        .with_STR("sway-sway".try_into()?)?
+        .with_STR_3("fuel-fuel".try_into()?)?
+        .with_LAST_U8(12)?;
+
+    let predicate_data = MyPredicateEncoder::default().encode_data(
+        false,
+        6u8,
+        "sway-sway".try_into()?,
+        "forc".try_into()?,
+        "fuel-fuel".try_into()?,
+        12,
+    )?;
+
+    let executable = Executable::load_from(
+        "sway/predicates/predicate_dyn_configurables/out/release/predicate_dyn_configurables.bin",
+    )?
+    .with_configurables(configurables);
+
+    let (maybe_loader, code) = if is_regular {
+        (None, executable.code()?)
+    } else {
+        let loader = executable.convert_to_loader()?;
+        let code = loader.code()?;
+
+        (Some(loader), code)
+    };
+
+    let mut predicate: Predicate = Predicate::from_code(code).with_data(predicate_data);
+
+    let num_coins = 4;
+    let num_messages = 8;
+    let amount = 16;
+    let (provider, predicate_balance, receiver, receiver_balance, asset_id, extra_wallet) =
+        setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
+
+    if let Some(loader) = maybe_loader {
+        loader.upload_blob(extra_wallet).await?;
+    }
 
     predicate.set_provider(provider.clone());
 
@@ -1133,7 +1213,7 @@ async fn predicate_blobs() -> Result<()> {
         .convert_to_loader()?
         .with_configurables(configurables);
 
-    let mut predicate: Predicate = Predicate::from_code(loader.code()).with_data(predicate_data);
+    let mut predicate: Predicate = Predicate::from_code(loader.code()?).with_data(predicate_data);
     // ANCHOR_END: preparing_the_predicate
 
     let num_coins = 4;
@@ -1208,7 +1288,7 @@ async fn predicate_configurables_in_blobs() -> Result<()> {
         .convert_to_loader()?
         .with_configurables(configurables);
 
-    let mut predicate: Predicate = Predicate::from_code(loader.code()).with_data(predicate_data);
+    let mut predicate: Predicate = Predicate::from_code(loader.code()?).with_data(predicate_data);
 
     let num_coins = 4;
     let num_messages = 8;

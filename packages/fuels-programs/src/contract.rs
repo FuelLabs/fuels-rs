@@ -219,7 +219,7 @@ mod tests {
         )?;
 
         // then
-        assert_eq!(contract.code(), code);
+        assert_eq!(contract.code()?, code);
 
         Ok(())
     }
@@ -233,19 +233,9 @@ mod tests {
         let contract = Contract::regular(binary.to_vec(), Salt::zeroed(), vec![]);
 
         // then
-        assert_eq!(contract.code(), binary);
+        assert_eq!(contract.code()?, binary);
 
         Ok(())
-    }
-
-    macro_rules! getters_work {
-        ($contract: ident, $contract_id: expr, $state_root: expr, $code_root: expr, $salt: expr, $code: expr) => {
-            assert_eq!($contract.contract_id(), $contract_id);
-            assert_eq!($contract.state_root(), $state_root);
-            assert_eq!($contract.code_root(), $code_root);
-            assert_eq!($contract.salt(), $salt);
-            assert_eq!($contract.code(), $code);
-        };
     }
 
     #[test]
@@ -262,16 +252,23 @@ mod tests {
             "69ca130191e9e469f1580229760b327a0729237f1aff65cf1d076b2dd8360031".parse()?;
         let expected_salt = Salt::zeroed();
 
-        getters_work!(
-            contract,
-            expected_contract_id,
-            expected_state_root,
-            expected_code_root,
-            expected_salt,
-            contract_binary
-        );
+        assert_eq!(contract.contract_id()?, expected_contract_id);
+        assert_eq!(contract.state_root()?, expected_state_root);
+        assert_eq!(contract.code_root()?, expected_code_root);
+        assert_eq!(contract.salt(), expected_salt);
+        assert_eq!(contract.code()?, contract_binary);
 
         Ok(())
+    }
+
+    macro_rules! getters_work {
+        ($contract: ident, $contract_id: expr, $state_root: expr, $code_root: expr, $salt: expr, $code: expr) => {
+            assert_eq!($contract.contract_id(), $contract_id);
+            assert_eq!($contract.state_root(), $state_root);
+            assert_eq!($contract.code_root(), $code_root);
+            assert_eq!($contract.salt(), $salt);
+            assert_eq!($contract.code(), $code);
+        };
     }
 
     #[test]
@@ -302,11 +299,11 @@ mod tests {
 
         getters_work!(
             loader,
-            manual_loader.contract_id(),
-            manual_loader.state_root(),
-            manual_loader.code_root(),
+            manual_loader.contract_id()?,
+            manual_loader.state_root()?,
+            manual_loader.code_root()?,
             manual_loader.salt(),
-            manual_loader.code()
+            manual_loader.code()?
         );
 
         Ok(())
@@ -347,11 +344,11 @@ mod tests {
 
         getters_work!(
             loader,
-            manual_loader.contract_id(),
-            manual_loader.state_root(),
-            manual_loader.code_root(),
+            manual_loader.contract_id()?,
+            manual_loader.state_root()?,
+            manual_loader.code_root()?,
             manual_loader.salt(),
-            manual_loader.code()
+            manual_loader.code()?
         );
 
         Ok(())

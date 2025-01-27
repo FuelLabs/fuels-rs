@@ -20,7 +20,7 @@ async fn can_debug_single_call_tx() -> Result<()> {
         "sway/types/contracts/nested_structs/out/release/nested_structs.bin",
         Default::default(),
     )?
-    .contract_id();
+    .contract_id()?;
 
     let call_handler = MyContract::new(contract_id, wallet)
         .methods()
@@ -137,7 +137,7 @@ async fn can_debug_multi_call_tx() -> Result<()> {
         "sway/types/contracts/nested_structs/out/release/nested_structs.bin",
         Default::default(),
     )?
-    .contract_id();
+    .contract_id()?;
 
     let call1 = MyContract::new(contract_id, wallet.clone())
         .methods()
@@ -441,7 +441,7 @@ async fn can_detect_a_loader_script_w_data_section() -> Result<()> {
             .unwrap();
 
     let expected_blob_id = executable.blob().id();
-    let script = executable.code();
+    let script = executable.code()?;
 
     let ScriptType::Loader { script, blob_id } = ScriptType::detect(&script, &script_data).unwrap()
     else {
@@ -488,7 +488,7 @@ async fn can_detect_a_loader_script_wo_data_section() -> Result<()> {
         .unwrap();
 
     let expected_blob_id = executable.blob().id();
-    let script = executable.code();
+    let script = executable.code()?;
 
     let ScriptType::Loader { blob_id, .. } = ScriptType::detect(&script, &[]).unwrap() else {
         panic!("expected a loader script")

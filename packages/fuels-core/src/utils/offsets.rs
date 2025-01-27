@@ -28,3 +28,24 @@ pub fn call_script_data_offset(
     })?;
     Ok(base_offset_script(consensus_parameters) + padded_len)
 }
+
+pub fn extract_data_offset(binary: &[u8]) -> Result<usize> {
+    extract_offset_at(binary, 8)
+}
+
+pub fn extract_offset_at(binary: &[u8], offset: usize) -> Result<usize> {
+    if binary.len() < offset + 8 {
+        return Err(crate::error!(
+            Other,
+            "given binary with len: `{}` is too short to contain an offset at:`{}`",
+            binary.len(),
+            offset
+        ));
+    }
+
+    let data_offset: [u8; 8] = binary[offset..offset + 8]
+        .try_into()
+        .expect("checked above");
+
+    Ok(u64::from_be_bytes(data_offset) as usize)
+}
