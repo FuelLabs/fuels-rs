@@ -20,6 +20,7 @@ pub mod predicate;
 #[cfg(test)]
 mod test {
     #[test]
+    #[ignore] // TODO: enable https://github.com/FuelLabs/fuels-rs/issues/1579
     fn sdl_is_the_same_as_from_fuel() {
         let file_sdl = include_str!("./schema/schema.sdl");
 

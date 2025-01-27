@@ -4,8 +4,8 @@ use async_trait::async_trait;
 use fuel_crypto::{Message, Signature};
 use fuel_tx::{
     field::{
-        Inputs, Maturity, MintAmount, MintAssetId, Outputs, Policies as PoliciesField,
-        Script as ScriptField, ScriptData, ScriptGasLimit, WitnessLimit, Witnesses,
+        Inputs, MintAmount, MintAssetId, Outputs, Policies as PoliciesField, Script as ScriptField,
+        ScriptData, ScriptGasLimit, WitnessLimit, Witnesses,
     },
     input::{
         coin::{CoinPredicate, CoinSigned},
@@ -256,9 +256,7 @@ pub trait Transaction:
 
     fn id(&self, chain_id: ChainId) -> Bytes32;
 
-    fn maturity(&self) -> u32;
-
-    fn with_maturity(self, maturity: u32) -> Self;
+    fn maturity(&self) -> Option<u64>;
 
     fn expiration(&self) -> Option<u64>;
 

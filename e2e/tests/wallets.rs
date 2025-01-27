@@ -296,7 +296,7 @@ async fn send_transfer_transactions() -> Result<()> {
     };
     // Transfer scripts uses set `script_gas_limit` despite not having script code
     assert_eq!(script.gas_limit(), script_gas_limit);
-    assert_eq!(script.maturity(), maturity as u32);
+    assert_eq!(script.maturity().unwrap(), maturity);
 
     let wallet_1_spendable_resources = wallet_1
         .get_spendable_resources(base_asset_id, 1, None)

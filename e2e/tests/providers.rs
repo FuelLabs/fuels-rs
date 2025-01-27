@@ -1134,7 +1134,8 @@ async fn tx_respects_policies() -> Result<()> {
         _ => panic!("expected script transaction"),
     };
 
-    assert_eq!(script.maturity(), maturity as u32);
+    assert_eq!(script.maturity().unwrap(), maturity);
+    assert_eq!(script.expiration().unwrap(), expiration);
     assert_eq!(script.tip().unwrap(), tip);
     assert_eq!(script.witness_limit().unwrap(), witness_limit);
     assert_eq!(script.max_fee().unwrap(), max_fee);
