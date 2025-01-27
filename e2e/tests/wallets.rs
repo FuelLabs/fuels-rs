@@ -78,18 +78,21 @@ async fn adjust_fee_empty_transaction() -> Result<()> {
     let wallet = launch_provider_and_get_wallet().await?;
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(vec![], vec![], TxPolicies::default());
-    assert_eq!(tb.inputs().len(), 0); // no inputs
-    assert_eq!(tb.outputs().len(), 0); // no outputs
+    assert!(tb.inputs().is_empty());
+    assert!(tb.outputs().is_empty());
 
     tb.add_signer(wallet.clone())?;
     wallet.adjust_for_fee(&mut tb, 0).await?;
-    assert!(!tb.inputs().empty()); // inputs added
-    assert_eq!(tb.outputs().len(), 1); // output added
+    assert!(!tb.inputs().is_empty(), "inputs should be added");
+    assert_eq!(tb.outputs().len(), 1, "output should be added");
 
     let tx = tb.build(wallet.try_provider()?).await?;
 
     let total_amount_inputs: u64 = tx.inputs().iter().map(|i| i.amount().unwrap()).sum();
-    assert!(total_amount_inputs > tx.max_fee().unwrap(), "can cover tx");
+    assert!(
+        total_amount_inputs > tx.max_fee().unwrap(),
+        "amount should cover tx"
+    );
 
     let expected_outputs = vec![Output::change(
         wallet.address().into(),
