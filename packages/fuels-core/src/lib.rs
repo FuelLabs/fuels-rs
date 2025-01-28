@@ -74,19 +74,19 @@ impl ConfigurablesReader {
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Configurables {
     offsets_with_data: Vec<OffsetWithData>,
-    sorted_indirect_configurables: Vec<u64>,
+    sorted_indirect_offsets: Vec<u64>,
 }
 
 impl Configurables {
     pub fn new(offsets_with_data: Vec<OffsetWithData>, indirect_configurables: Vec<u64>) -> Self {
-        let sorted_indirect_configurables = indirect_configurables
+        let sorted_indirect_offsets = indirect_configurables
             .into_iter()
             .sorted_unstable()
             .collect();
 
         Self {
             offsets_with_data,
-            sorted_indirect_configurables,
+            sorted_indirect_offsets,
         }
     }
 
@@ -98,14 +98,14 @@ impl Configurables {
             .collect::<Result<Vec<_>>>()?;
 
         let new_sorted_indirect_configurables = self
-            .sorted_indirect_configurables
+            .sorted_indirect_offsets
             .into_iter()
             .map(|offset| Self::shift_offset(offset, shift))
             .collect::<Result<Vec<_>>>()?;
 
         Ok(Self {
             offsets_with_data: new_offsets_with_data,
-            sorted_indirect_configurables: new_sorted_indirect_configurables,
+            sorted_indirect_offsets: new_sorted_indirect_configurables,
         })
     }
 
@@ -142,11 +142,7 @@ impl Configurables {
         self.offsets_with_data
             .iter()
             .map(|(offset, data)| (*offset, data.as_slice()))
-            .partition(|(offset, _)| {
-                self.sorted_indirect_configurables
-                    .binary_search(offset)
-                    .is_err()
-            })
+            .partition(|(offset, _)| self.sorted_indirect_offsets.binary_search(offset).is_err())
     }
 
     fn apply_direct_configurables(
@@ -184,7 +180,7 @@ impl Configurables {
 
         let sorted_dyn_offsets = self.extract_sorted_dyn_offsets(binary, data_offset)?;
 
-        for offset in &self.sorted_indirect_configurables {
+        for offset in &self.sorted_indirect_offsets {
             if change_map.contains_key(offset) {
                 continue;
             }
@@ -212,16 +208,16 @@ impl Configurables {
         // cut old binary and append the updated dynamic data
         let mut new_binary = binary[..min_offset].to_vec();
 
-        for offset in &self.sorted_indirect_configurables {
+        for offset in &self.sorted_indirect_offsets {
             if let Some((_, data)) = change_map.get(offset) {
-                let new_offset = new_binary.len().saturating_sub(data_offset) as u64;
-                let new_offset_encoded =
-                    ABIEncoder::default().encode(&[new_offset.into_token()])?;
+                let new_dyn_offset = new_binary.len().saturating_sub(data_offset) as u64;
+                let new_dyn_offset_encoded =
+                    ABIEncoder::default().encode(&[new_dyn_offset.into_token()])?;
 
                 Self::write(
                     new_binary.as_mut_slice(),
                     *offset as usize,
-                    &new_offset_encoded,
+                    &new_dyn_offset_encoded,
                 )?;
 
                 new_binary.extend(*data);
@@ -235,7 +231,7 @@ impl Configurables {
 
     fn extract_sorted_dyn_offsets(&self, binary: &[u8], data_offset: usize) -> Result<Vec<usize>> {
         Ok(self
-            .sorted_indirect_configurables
+            .sorted_indirect_offsets
             .iter()
             .cloned()
             .map(|offset| Ok(extract_offset_at(binary, offset as usize)? + data_offset))
@@ -288,7 +284,7 @@ mod tests {
             expected_offsets_with_data
         );
         assert_eq!(
-            shifted_configurables.sorted_indirect_configurables,
+            shifted_configurables.sorted_indirect_offsets,
             expected_sorted_indirect_configurables
         );
     }
@@ -308,7 +304,7 @@ mod tests {
             expected_offsets_with_data
         );
         assert_eq!(
-            shifted_configurables.sorted_indirect_configurables,
+            shifted_configurables.sorted_indirect_offsets,
             expected_sorted_indirect_configurables
         );
     }
@@ -328,7 +324,7 @@ mod tests {
             expected_offsets_with_data
         );
         assert_eq!(
-            shifted_configurables.sorted_indirect_configurables,
+            shifted_configurables.sorted_indirect_offsets,
             expected_sorted_indirect_configurables
         );
     }
