@@ -26,6 +26,7 @@ pub fn call_script_data_offset(
             "call script data len overflow: {calls_instructions_len}"
         )
     })?;
+
     Ok(base_offset_script(consensus_parameters) + padded_len)
 }
 

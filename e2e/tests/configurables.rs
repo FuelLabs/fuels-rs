@@ -394,6 +394,29 @@ async fn configurable_encoder_config_is_applied() {
 }
 
 #[tokio::test]
+async fn contract_configurables_reader_manual() -> Result<()> {
+    let configurables_reader = ConfigurablesReader::load_from(
+        "sway/contracts/dyn_configurables/out/release/dyn_configurables.bin",
+    )?;
+
+    let some_bool: bool = configurables_reader.decode_direct(3264)?;
+    let some_u8: u8 = configurables_reader.decode_direct(3304)?;
+    let some_str: AsciiString = configurables_reader.decode_indirect(3280)?;
+    let some_str2: AsciiString = configurables_reader.decode_indirect(3288)?;
+    let some_str3: AsciiString = configurables_reader.decode_indirect(3296)?;
+    let some_last_u8: u8 = configurables_reader.decode_direct(3272)?;
+
+    assert!(some_bool);
+    assert_eq!(some_u8, 8);
+    assert_eq!(some_str, "sway");
+    assert_eq!(some_str2, "forc");
+    assert_eq!(some_str3, "fuel");
+    assert_eq!(some_last_u8, 16);
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn contract_configurables_reader() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
@@ -418,33 +441,54 @@ async fn contract_configurables_reader() -> Result<()> {
     assert_eq!(some_str3, "fuel");
     assert_eq!(some_last_u8, 16);
 
-    // let offset = 2555;
-    // let some_u8: u8 = fuels::core::ConfigurablesReader::load_from(
-    //     "sway/contracts/dyn_configurables/out/release/dyn_configurables.bin",
-    // )?
-    // .decode_direct(offset)?;
+    Ok(())
+}
 
-    // let offset = 2555;
-    // let some_str: fuels::types::AsciiString = fuels::core::ConfigurablesReader::load_from(
-    //     "sway/contracts/dyn_configurables/out/release/dyn_configurables.bin",
-    // )?
-    // .decode_indirect(offset)?;
+#[tokio::test]
+async fn script_configurables_reader() -> Result<()> {
+    abigen!(Script(
+        name = "MyScript",
+        abi = "e2e/sway/scripts/script_dyn_configurables/out/release/script_dyn_configurables-abi.json"
+    ));
+
+    let configurables_reader = MyScriptConfigurablesReader::load_from(
+        "sway/scripts/script_dyn_configurables/out/release/script_dyn_configurables.bin",
+    )?;
+
+    let some_bool = configurables_reader.BOOL()?;
+    let some_u8 = configurables_reader.U8()?;
+    let some_str = configurables_reader.STR()?;
+    let some_str2 = configurables_reader.STR_2()?;
+    let some_str3 = configurables_reader.STR_3()?;
+    let some_last_u8 = configurables_reader.LAST_U8()?;
+
+    assert!(some_bool);
+    assert_eq!(some_u8, 8);
+    assert_eq!(some_str, "sway");
+    assert_eq!(some_str2, "forc");
+    assert_eq!(some_str3, "fuel");
+    assert_eq!(some_last_u8, 16);
 
     Ok(())
 }
 
 #[tokio::test]
-async fn contract_configurables_reader_manual() -> Result<()> {
-    let configurables_reader = ConfigurablesReader::load_from(
-        "sway/contracts/dyn_configurables/out/release/dyn_configurables.bin",
+async fn predicate_configurables_reader() -> Result<()> {
+    abigen!(Predicate(
+        name = "MyPredicate",
+        abi = "e2e/sway/predicates/predicate_dyn_configurables/out/release/predicate_dyn_configurables-abi.json"
+    ));
+
+    let configurables_reader = MyPredicateConfigurablesReader::load_from(
+        "sway/predicates/predicate_dyn_configurables/out/release/predicate_dyn_configurables.bin",
     )?;
 
-    let some_bool: bool = configurables_reader.decode_direct(3264)?;
-    let some_u8: u8 = configurables_reader.decode_direct(3304)?;
-    let some_str: AsciiString = configurables_reader.decode_indirect(3280)?;
-    let some_str2: AsciiString = configurables_reader.decode_indirect(3288)?;
-    let some_str3: AsciiString = configurables_reader.decode_indirect(3296)?;
-    let some_last_u8: u8 = configurables_reader.decode_direct(3272)?;
+    let some_bool = configurables_reader.BOOL()?;
+    let some_u8 = configurables_reader.U8()?;
+    let some_str = configurables_reader.STR()?;
+    let some_str2 = configurables_reader.STR_2()?;
+    let some_str3 = configurables_reader.STR_3()?;
+    let some_last_u8 = configurables_reader.LAST_U8()?;
 
     assert!(some_bool);
     assert_eq!(some_u8, 8);

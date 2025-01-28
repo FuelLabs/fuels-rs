@@ -1,6 +1,6 @@
 use fuels_core::{
     types::{
-        errors::Result,
+        errors::{Context, Result},
         transaction_builders::{Blob, BlobTransactionBuilder},
     },
     Configurables,
@@ -76,7 +76,10 @@ impl Executable<Regular> {
     /// The bytecode of the executable with configurables updated.
     pub fn code(&self) -> Result<Vec<u8>> {
         let mut code = self.state.code.clone();
-        self.state.configurables.update_constants_in(&mut code)?;
+        self.state
+            .configurables
+            .update_constants_in(&mut code)
+            .context("applying configurables to executable's code")?;
 
         Ok(code)
     }

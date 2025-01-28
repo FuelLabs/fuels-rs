@@ -3,13 +3,20 @@ use std::{collections::HashMap, io::Read};
 use fuel_abi_types::abi::unified_program::UnifiedProgramABI;
 use itertools::Itertools;
 
-use crate::{error, types::param_types::ParamType, Result};
+use crate::{error, offsets::extract_offset_at, types::param_types::ParamType, Result};
 
 use super::{ABIDecoder, DecoderConfig};
 
+struct FormatterConfigurable {
+    name: String,
+    param_type: ParamType,
+    offset: u64,
+    indirect: bool,
+}
+
 pub struct ABIFormatter {
     functions: HashMap<String, Vec<ParamType>>,
-    configurables: Vec<(String, ParamType)>,
+    configurables: Vec<FormatterConfigurable>,
     decoder: ABIDecoder,
 }
 
@@ -59,7 +66,12 @@ impl ABIFormatter {
                 let param_type =
                     ParamType::try_from_type_application(&c.application, &type_lookup)?;
 
-                Ok((c.name, param_type))
+                Ok(FormatterConfigurable {
+                    name: c.name,
+                    param_type,
+                    offset: c.offset,
+                    indirect: c.indirect,
+                })
             })
             .collect::<Result<Vec<_>>>()?;
 
@@ -84,26 +96,31 @@ impl ABIFormatter {
         self.decoder.decode_multiple_as_debug_str(args, data)
     }
 
-    pub fn decode_configurables<R: Read>(
-        &self,
-        configurable_data: R,
-    ) -> Result<Vec<(String, String)>> {
-        let param_types = self
+    pub fn decode_configurables(&self, configurable_data: &[u8]) -> Result<Vec<(String, String)>> {
+        let min_offset = self
             .configurables
             .iter()
-            .map(|(_, param_type)| param_type)
-            .cloned()
-            .collect::<Vec<_>>();
+            .map(|c| c.offset)
+            .min()
+            .unwrap_or_default() as usize;
 
-        let decoded = self
-            .decoder
-            .decode_multiple_as_debug_str(&param_types, configurable_data)?
-            .into_iter()
-            .zip(&self.configurables)
-            .map(|(value, (name, _))| (name.clone(), value))
-            .collect();
+        self.configurables
+            .iter()
+            .map(|c| {
+                let offset = (c.offset as usize).saturating_sub(min_offset);
 
-        Ok(decoded)
+                let decoded_string = if c.indirect {
+                    let dyn_offset = extract_offset_at(configurable_data, offset)?;
+                    self.decoder
+                        .decode_as_debug_str(&c.param_type, &configurable_data[dyn_offset..])?
+                } else {
+                    self.decoder
+                        .decode_as_debug_str(&c.param_type, &configurable_data[offset..])?
+                };
+
+                Ok((c.name.clone(), decoded_string))
+            })
+            .collect()
     }
 }
 

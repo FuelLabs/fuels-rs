@@ -341,7 +341,7 @@ where
     T: Parameterize + Tokenizable + Debug,
 {
     pub fn new_script_call(
-        script_binary: Vec<u8>,
+        script_binary: Result<Vec<u8>>,
         encoded_args: Result<Vec<u8>>,
         account: A,
         log_decoder: LogDecoder,

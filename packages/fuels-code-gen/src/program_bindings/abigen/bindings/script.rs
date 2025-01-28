@@ -9,7 +9,9 @@ use crate::{
     program_bindings::{
         abigen::{
             bindings::{function_generator::FunctionGenerator, utils::extract_main_fn},
-            configurables::generate_code_for_configurable_constants,
+            configurables::{
+                generate_code_for_configurable_constants, generate_code_for_configurable_reader,
+            },
             logs::log_formatters_instantiation_code,
         },
         generated_code::GeneratedCode,
@@ -37,6 +39,10 @@ pub(crate) fn script_bindings(
     let configuration_struct_name = ident(&format!("{name}Configurables"));
     let constant_configuration_code =
         generate_code_for_configurable_constants(&configuration_struct_name, &abi.configurables)?;
+
+    let configuration_reader_name = ident(&format!("{name}ConfigurablesReader"));
+    let constant_configuration_reader_code =
+        generate_code_for_configurable_reader(&configuration_reader_name, &abi.configurables)?;
 
     let code = quote! {
         #[derive(Debug,Clone)]
@@ -126,10 +132,11 @@ pub(crate) fn script_bindings(
         }
 
         #constant_configuration_code
+        #constant_configuration_reader_code
     };
 
     // All publicly available types generated above should be listed here.
-    let type_paths = [name, &configuration_struct_name]
+    let type_paths = [name, &configuration_struct_name, &configuration_reader_name]
         .map(|type_name| TypePath::new(type_name).expect("We know the given types are not empty"))
         .into_iter()
         .collect();
@@ -146,7 +153,7 @@ fn expand_fn(fn_abi: &FullABIFunction) -> Result<TokenStream> {
             let encoded_args = ::fuels::core::codec::ABIEncoder::new(self.encoder_config).encode(&#arg_tokens);
 
             ::fuels::programs::calls::CallHandler::new_script_call(
-                self.code().expect("TODO: @hal3e deal with result type"),
+                self.code(),
                 encoded_args,
                 self.account.clone(),
                 self.log_decoder.clone()
@@ -225,7 +232,7 @@ mod tests {
                 let encoded_args=::fuels::core::codec::ABIEncoder::new(self.encoder_config)
                     .encode(&[::fuels::core::traits::Tokenizable::into_token(bimbam)]);
                  ::fuels::programs::calls::CallHandler::new_script_call(
-                    self.code().expect("TODO: @hal3e deal with result type"),
+                    self.code(),
                     encoded_args,
                     self.account.clone(),
                     self.log_decoder.clone()

@@ -356,6 +356,10 @@ async fn can_debug_sway_script() -> Result<()> {
         vec![
             ("A_NUMBER".to_owned(), "11".to_owned()),
             (
+                "A_STR".to_owned(),
+                "AsciiString { data: \"fuel\" }".to_owned()
+            ),
+            (
                 "MY_STRUCT".to_owned(),
                 "MyStruct { number: 10, boolean: true }".to_owned()
             ),
@@ -465,6 +469,10 @@ async fn can_detect_a_loader_script_w_data_section() -> Result<()> {
             .unwrap(),
         vec![
             ("A_NUMBER".to_owned(), "11".to_owned()),
+            (
+                "A_STR".to_owned(),
+                "AsciiString { data: \"fuel\" }".to_owned()
+            ),
             (
                 "MY_STRUCT".to_owned(),
                 "MyStruct { number: 10, boolean: true }".to_owned()
