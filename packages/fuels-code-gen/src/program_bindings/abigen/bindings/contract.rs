@@ -38,9 +38,9 @@ pub(crate) fn contract_bindings(
     let constant_configuration_code =
         generate_code_for_configurable_constants(&configuration_struct_name, &abi.configurables)?;
 
-    let configuration_struct_name2 = ident(&format!("{name}ConfigurablesReader"));
-    let constant_configuration_code2 =
-        generate_code_for_configurable_reader(&configuration_struct_name2, &abi.configurables)?;
+    let configuration_reader_name = ident(&format!("{name}ConfigurablesReader"));
+    let constant_configuration_reader_code =
+        generate_code_for_configurable_reader(&configuration_reader_name, &abi.configurables)?;
 
     let code = quote! {
         #[derive(Debug, Clone)]
@@ -130,7 +130,7 @@ pub(crate) fn contract_bindings(
         }
 
         #constant_configuration_code
-        #constant_configuration_code2
+        #constant_configuration_reader_code
     };
 
     // All publicly available types generated above should be listed here.
@@ -138,7 +138,7 @@ pub(crate) fn contract_bindings(
         name,
         &methods_name,
         &configuration_struct_name,
-        &configuration_struct_name2,
+        &configuration_reader_name,
     ]
     .map(|type_name| TypePath::new(type_name).expect("We know the given types are not empty"))
     .into_iter()

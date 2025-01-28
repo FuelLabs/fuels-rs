@@ -166,23 +166,23 @@ pub(crate) fn generate_code_for_configurable_reader(
     })
 }
 
-fn generate_struct_decl_reader(configurable_struct_name: &Ident) -> TokenStream {
+fn generate_struct_decl_reader(struct_name: &Ident) -> TokenStream {
     quote! {
         #[derive(Clone, Debug)]
-        pub struct #configurable_struct_name {
+        pub struct #struct_name {
             reader: ::fuels::core::ConfigurablesReader,
         }
     }
 }
 
 fn generate_struct_impl_reader(
-    configurable_struct_name: &Ident,
+    struct_name: &Ident,
     resolved_configurables: &[ResolvedConfigurable],
 ) -> TokenStream {
     let methods = generate_methods_reader(resolved_configurables);
 
     quote! {
-        impl #configurable_struct_name {
+        impl #struct_name {
             pub fn load_from(
                 binary_filepath: impl ::std::convert::AsRef<::std::path::Path>,
             ) -> ::fuels::prelude::Result<Self> {

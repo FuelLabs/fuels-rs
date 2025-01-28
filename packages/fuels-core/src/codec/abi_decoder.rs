@@ -31,7 +31,7 @@ impl Default for DecoderConfig {
 }
 // ANCHOR_END: default_decoder_config
 
-#[derive(Default, Clone, Debug)]
+#[derive(Default)]
 pub struct ABIDecoder {
     pub config: DecoderConfig,
 }

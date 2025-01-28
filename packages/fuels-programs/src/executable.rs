@@ -104,8 +104,7 @@ impl Executable<Regular> {
 
 pub struct Loader {
     code: Vec<u8>,
-    configurables: Configurables, //TODO: @hal3e maybe apply configurables on spot instead on
-                                  //holding onto it
+    configurables: Configurables,
 }
 
 impl Executable<Loader> {
