@@ -399,12 +399,12 @@ async fn contract_configurables_reader_manual() -> Result<()> {
         "sway/contracts/dyn_configurables/out/release/dyn_configurables.bin",
     )?;
 
-    let some_bool: bool = configurables_reader.decode_direct(3264)?;
-    let some_u8: u8 = configurables_reader.decode_direct(3304)?;
-    let some_str: AsciiString = configurables_reader.decode_indirect(3280)?;
-    let some_str2: AsciiString = configurables_reader.decode_indirect(3288)?;
-    let some_str3: AsciiString = configurables_reader.decode_indirect(3296)?;
-    let some_last_u8: u8 = configurables_reader.decode_direct(3272)?;
+    let some_bool: bool = configurables_reader.decode_direct(2094)?;
+    let some_u8: u8 = configurables_reader.decode_direct(2944)?;
+    let some_str: AsciiString = configurables_reader.decode_indirect(2920)?;
+    let some_str2: AsciiString = configurables_reader.decode_indirect(2928)?;
+    let some_str3: AsciiString = configurables_reader.decode_indirect(2936)?;
+    let some_last_u8: u8 = configurables_reader.decode_direct(2912)?;
 
     assert!(some_bool);
     assert_eq!(some_u8, 8);
