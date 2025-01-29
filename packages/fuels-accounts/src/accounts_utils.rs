@@ -57,8 +57,13 @@ pub fn available_base_assets_and_amount(
                         resource.id()
                     }
                     CoinType::Message(message) => {
-                        sum += message.amount; // TODO: @hal3e not if the message has data!
-                        resource.id()
+                        if message.data.is_empty() {
+                            sum += message.amount;
+
+                            resource.id()
+                        } else {
+                            None
+                        }
                     }
                     _ => None,
                 },
