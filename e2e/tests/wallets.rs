@@ -111,7 +111,7 @@ async fn adjust_fee_empty_transaction() -> Result<()> {
 #[tokio::test]
 async fn adjust_for_fee_with_message_data_input() -> Result<()> {
     let mut wallet = WalletUnlocked::new_random(None);
-    let mut reciever = WalletUnlocked::new_random(None);
+    let mut receiver = WalletUnlocked::new_random(None);
 
     let messages = setup_single_message(
         &Bech32Address::default(),
@@ -124,12 +124,12 @@ async fn adjust_for_fee_with_message_data_input() -> Result<()> {
     let coins = setup_single_asset_coins(wallet.address(), asset_id, 1, 100);
     let provider = setup_test_provider(coins, vec![messages], None, None).await?;
     wallet.set_provider(provider.clone());
-    reciever.set_provider(provider.clone());
+    receiver.set_provider(provider.clone());
 
     let amount_to_send = 14;
     let message = wallet.get_messages().await?.pop().unwrap();
     let input = Input::resource_signed(CoinType::Message(message));
-    let outputs = wallet.get_asset_outputs_for_amount(reciever.address(), asset_id, amount_to_send);
+    let outputs = wallet.get_asset_outputs_for_amount(receiver.address(), asset_id, amount_to_send);
 
     let mut tb =
         ScriptTransactionBuilder::prepare_transfer(vec![input], outputs, TxPolicies::default());
@@ -139,11 +139,11 @@ async fn adjust_for_fee_with_message_data_input() -> Result<()> {
 
     let tx = tb.build(wallet.try_provider()?).await?;
 
-    assert_eq!(reciever.get_asset_balance(&asset_id).await?, 0);
+    assert_eq!(receiver.get_asset_balance(&asset_id).await?, 0);
 
     provider.send_transaction_and_await_commit(tx).await?;
 
-    assert_eq!(reciever.get_asset_balance(&asset_id).await?, amount_to_send);
+    assert_eq!(receiver.get_asset_balance(&asset_id).await?, amount_to_send);
 
     Ok(())
 }
