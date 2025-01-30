@@ -7,6 +7,7 @@ use fuel_tx::{
 use fuels::{
     core::codec::{calldata, encode_fn_selector, DecoderConfig, EncoderConfig},
     prelude::*,
+    programs::DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE,
     tx::ContractParameters,
     types::{errors::transaction::Reason, input::Input, Bits256, Identity},
 };
@@ -2114,8 +2115,8 @@ async fn max_fee_estimation_respects_tolerance() -> Result<()> {
                 .unwrap();
 
             assert_eq!(
-                builder.max_fee_estimation_tolerance, 0.05,
-                "Expected pre-set tolerance of 0.05"
+                builder.max_fee_estimation_tolerance, DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE,
+                "Expected pre-set tolerance"
             );
 
             builder
