@@ -456,7 +456,7 @@ pub(crate) fn estimate_max_fee_w_tolerance<T: Chargeable>(
 
     let max_fee_w_tolerance = tx_fee.max_fee() as f64 * (1.0 + f64::from(tolerance));
 
-    Ok(max_fee_w_tolerance as u64)
+    Ok(max_fee_w_tolerance.ceil() as u64)
 }
 
 impl Debug for dyn Signer + Send + Sync {

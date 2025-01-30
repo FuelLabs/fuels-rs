@@ -12,7 +12,7 @@ use fuels_core::{
     },
 };
 
-use crate::assembly::contract_call::loader_contract_asm;
+use crate::{assembly::contract_call::loader_contract_asm, DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE};
 
 use super::{compute_contract_id_and_state_root, Contract, Regular};
 
@@ -138,7 +138,7 @@ impl Contract<Loader<BlobsNotUploaded>> {
             let mut tb = BlobTransactionBuilder::default()
                 .with_blob(blob)
                 .with_tx_policies(tx_policies)
-                .with_max_fee_estimation_tolerance(0.05);
+                .with_max_fee_estimation_tolerance(DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE);
 
             account.adjust_for_fee(&mut tb, 0).await?;
             account.add_witnesses(&mut tb)?;

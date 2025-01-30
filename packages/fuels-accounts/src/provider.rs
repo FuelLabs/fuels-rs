@@ -758,7 +758,7 @@ impl Provider {
         let receipts = self.dry_run_opt(tx, false, None).await?.take_receipts();
         let gas_used = self.get_script_gas_used(&receipts);
 
-        Ok((gas_used as f64 * (1.0 + tolerance)) as u64)
+        Ok((gas_used as f64 * (1.0 + tolerance)).ceil() as u64)
     }
 
     fn get_script_gas_used(&self, receipts: &[Receipt]) -> u64 {
