@@ -7,9 +7,12 @@ use fuels_core::types::{
     },
 };
 
-use crate::calls::{
-    utils::{build_tx_from_contract_calls, sealed, transaction_builder_from_contract_calls},
-    ContractCall, ScriptCall,
+use crate::{
+    calls::{
+        utils::{build_tx_from_contract_calls, sealed, transaction_builder_from_contract_calls},
+        ContractCall, ScriptCall,
+    },
+    DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE,
 };
 
 #[async_trait::async_trait]
@@ -79,8 +82,8 @@ impl TransactionTuner for ScriptCall {
             .with_script_data(self.compute_script_data()?)
             .with_inputs(inputs)
             .with_outputs(outputs)
-            .with_gas_estimation_tolerance(0.05)
-            .with_max_fee_estimation_tolerance(0.05))
+            .with_gas_estimation_tolerance(DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE)
+            .with_max_fee_estimation_tolerance(DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE))
     }
 
     async fn build_tx<T: Account>(
