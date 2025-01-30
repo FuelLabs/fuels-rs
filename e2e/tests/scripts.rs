@@ -2,13 +2,14 @@ use std::time::Duration;
 
 use fuel_tx::Output;
 use fuels::{
+    client::{PageDirection, PaginationRequest},
     core::{
         codec::{DecoderConfig, EncoderConfig},
         traits::Tokenizable,
         Configurables,
     },
     prelude::*,
-    programs::executable::Executable,
+    programs::{executable::Executable, DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE},
     types::{Bits256, Identity},
 };
 
@@ -485,6 +486,72 @@ async fn can_be_run_in_blobs_high_level() -> Result<()> {
         .value;
 
     assert_eq!(secret, 10001);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn high_level_blob_upload_sets_max_fee_tolerance() -> Result<()> {
+    let node_config = NodeConfig {
+        starting_gas_price: 1000000000,
+        ..Default::default()
+    };
+    let mut wallet = WalletUnlocked::new_random(None);
+    let coins = setup_single_asset_coins(wallet.address(), AssetId::zeroed(), 1, u64::MAX);
+    let provider = setup_test_provider(coins, vec![], Some(node_config), None).await?;
+    wallet.set_provider(provider.clone());
+
+    setup_program_test!(
+        Abigen(Script(
+            project = "e2e/sway/scripts/script_blobs",
+            name = "MyScript"
+        )),
+        LoadScript(name = "my_script", script = "MyScript", wallet = "wallet")
+    );
+
+    let loader = Executable::from_bytes(std::fs::read(
+        "sway/scripts/script_blobs/out/release/script_blobs.bin",
+    )?)
+    .convert_to_loader()?;
+
+    let zero_tolerance_fee = {
+        let mut tb = BlobTransactionBuilder::default()
+            .with_blob(loader.blob())
+            .with_max_fee_estimation_tolerance(0.);
+
+        wallet.adjust_for_fee(&mut tb, 0).await?;
+
+        wallet.add_witnesses(&mut tb)?;
+        let tx = tb.build(&provider).await?;
+        tx.max_fee().unwrap()
+    };
+
+    let mut my_script = my_script;
+    my_script.convert_into_loader().await?;
+
+    let max_fee_of_sent_blob_tx = provider
+        .get_transactions(PaginationRequest {
+            cursor: None,
+            results: 100,
+            direction: PageDirection::Forward,
+        })
+        .await?
+        .results
+        .into_iter()
+        .find_map(|tx| {
+            if let TransactionType::Blob(blob_transaction) = tx.transaction {
+                blob_transaction.max_fee()
+            } else {
+                None
+            }
+        })
+        .unwrap();
+
+    assert_eq!(
+        max_fee_of_sent_blob_tx,
+        (zero_tolerance_fee as f32 * (1.0 + DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE)).ceil() as u64,
+        "the blob upload tx should have had the max fee increased by the default estimation tolerance"
+    );
 
     Ok(())
 }

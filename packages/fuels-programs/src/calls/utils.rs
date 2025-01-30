@@ -22,6 +22,7 @@ use itertools::{chain, Itertools};
 use crate::{
     assembly::contract_call::{CallOpcodeParamsOffset, ContractCallInstructions},
     calls::ContractCall,
+    DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE,
 };
 
 pub(crate) mod sealed {
@@ -73,8 +74,8 @@ pub(crate) async fn transaction_builder_from_contract_calls(
         .with_script_data(script_data.clone())
         .with_inputs(inputs)
         .with_outputs(outputs)
-        .with_gas_estimation_tolerance(0.05)
-        .with_max_fee_estimation_tolerance(0.05))
+        .with_gas_estimation_tolerance(DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE)
+        .with_max_fee_estimation_tolerance(DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE))
 }
 
 /// Creates a [`ScriptTransaction`] from contract calls. The internal [Transaction] is
