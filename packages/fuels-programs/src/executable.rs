@@ -272,7 +272,7 @@ mod tests {
             offset.clone(),
             some_random_instruction.clone(),
             data_section.clone(),
-            configurable_section
+            configurable_section,
         ]
         .concat();
 
@@ -282,7 +282,8 @@ mod tests {
         let loader = executable.convert_to_loader().unwrap();
 
         let blob = loader.blob();
-        let configurable_stripped_code = [padding, offset, some_random_instruction, data_section].concat();
+        let configurable_stripped_code =
+            [padding, offset, some_random_instruction, data_section].concat();
         assert_eq!(blob.as_ref(), configurable_stripped_code);
 
         let loader_code = loader.code();
