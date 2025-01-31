@@ -54,7 +54,6 @@ pub async fn get_changelog_info(
         .map_or("misc", |title| title.split(':').next().unwrap_or("misc"))
         .to_string();
     let is_breaking = pr.title.as_ref().is_some_and(|title| title.contains('!'));
-
     let title_description = pr
         .title
         .as_ref()
