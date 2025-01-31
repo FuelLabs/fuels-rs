@@ -6,7 +6,7 @@ use fuels_core::{
     Configurables,
 };
 
-use crate::assembly::script_and_predicate_loader::{extract_data_offset, LoaderCode};
+use crate::assembly::script_and_predicate_loader::{extract_configurable_offset, LoaderCode};
 
 /// This struct represents a standard executable with its associated bytecode and configurables.
 #[derive(Debug, Clone, PartialEq)]
@@ -66,7 +66,7 @@ impl Executable<Regular> {
     }
 
     pub fn data_offset_in_code(&self) -> Result<usize> {
-        extract_data_offset(&self.state.code)
+        extract_configurable_offset(&self.state.code)
     }
 
     /// Returns the code of the executable with configurables applied.
@@ -262,25 +262,28 @@ mod tests {
     #[test]
     fn test_loader_extracts_code_and_data_section_correctly() {
         // Given: An Executable<Regular> with valid code
-        let padding = vec![0; 8];
-        let offset = 20u64.to_be_bytes().to_vec();
+        let padding = vec![0; 16];
+        let offset = 32u64.to_be_bytes().to_vec();
         let some_random_instruction = vec![1, 2, 3, 4];
         let data_section = vec![5, 6, 7, 8];
+        let configurable_section = vec![9, 9, 9, 9];
         let code = [
             padding.clone(),
             offset.clone(),
             some_random_instruction.clone(),
-            data_section,
+            data_section.clone(),
+            configurable_section
         ]
         .concat();
+
         let executable = Executable::<Regular>::from_bytes(code.clone());
 
         // When: Converting to a loader
         let loader = executable.convert_to_loader().unwrap();
 
         let blob = loader.blob();
-        let data_stripped_code = [padding, offset, some_random_instruction].concat();
-        assert_eq!(blob.as_ref(), data_stripped_code);
+        let configurable_stripped_code = [padding, offset, some_random_instruction, data_section].concat();
+        assert_eq!(blob.as_ref(), configurable_stripped_code);
 
         let loader_code = loader.code();
         assert_eq!(
@@ -308,7 +311,7 @@ mod tests {
         // that there is no data section
         let data_section_offset = 16u64;
 
-        let code = [vec![0; 8], data_section_offset.to_be_bytes().to_vec()].concat();
+        let code = [vec![0; 16], data_section_offset.to_be_bytes().to_vec()].concat();
 
         Executable::from_bytes(code).convert_to_loader().unwrap();
     }

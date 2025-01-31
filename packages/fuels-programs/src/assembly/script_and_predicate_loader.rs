@@ -15,7 +15,7 @@ impl LoaderCode {
     // nostd friendly
     #[cfg(feature = "std")]
     pub fn from_normal_binary(binary: Vec<u8>) -> Result<Self> {
-        let (original_code, data_section) = split_at_data_offset(&binary)?;
+        let (original_code, data_section) = split_at_configurable_offset(&binary)?;
 
         let blob_id =
             fuels_core::types::transaction_builders::Blob::from(original_code.to_vec()).id();
@@ -42,7 +42,7 @@ impl LoaderCode {
 
     #[cfg(feature = "std")]
     pub fn extract_blob(binary: &[u8]) -> Result<fuels_core::types::transaction_builders::Blob> {
-        let (code, _) = split_at_data_offset(binary)?;
+        let (code, _) = split_at_configurable_offset(binary)?;
         Ok(code.to_vec().into())
     }
 
@@ -273,26 +273,26 @@ pub fn loader_instructions_w_data_section() -> [Instruction; 12] {
     instructions
 }
 
-pub fn extract_data_offset(binary: &[u8]) -> Result<usize> {
-    if binary.len() < 16 {
+pub fn extract_configurable_offset(binary: &[u8]) -> Result<usize> {
+    if binary.len() < 24 {
         return Err(fuels_core::error!(
             Other,
-            "given binary is too short to contain a data offset, len: {}",
+            "given binary is too short to contain a configurable offset, len: {}",
             binary.len()
         ));
     }
 
-    let data_offset: [u8; 8] = binary[8..16].try_into().expect("checked above");
+    let configurable_offset: [u8; 8] = binary[16..24].try_into().expect("checked above");
 
-    Ok(u64::from_be_bytes(data_offset) as usize)
+    Ok(u64::from_be_bytes(configurable_offset) as usize)
 }
 
-pub fn split_at_data_offset(binary: &[u8]) -> Result<(&[u8], &[u8])> {
-    let offset = extract_data_offset(binary)?;
+pub fn split_at_configurable_offset(binary: &[u8]) -> Result<(&[u8], &[u8])> {
+    let offset = extract_configurable_offset(binary)?;
     if binary.len() < offset {
         return Err(fuels_core::error!(
             Other,
-            "data section offset is out of bounds, offset: {offset}, binary len: {}",
+            "configurable section offset is out of bounds, offset: {offset}, binary len: {}",
             binary.len()
         ));
     }
