@@ -805,9 +805,9 @@ async fn predicate_adjust_fee_persists_message_w_data() -> Result<()> {
     let mut tb = ScriptTransactionBuilder::prepare_transfer(
         vec![message_input.clone()],
         vec![],
-        TxPolicies::default().with_tip(1),
+        TxPolicies::default(),
     );
-    predicate.adjust_for_fee(&mut tb, 1000).await?;
+    predicate.adjust_for_fee(&mut tb, 0).await?;
 
     let tx = tb.build(&provider).await?;
 

@@ -1,4 +1,7 @@
-use fuels::{prelude::*, types::output::Output};
+use fuels::{
+    prelude::*,
+    types::{coin_type::CoinType, input::Input, output::Output},
+};
 
 #[tokio::test]
 async fn test_wallet_balance_api_multi_asset() -> Result<()> {
@@ -101,6 +104,72 @@ async fn adjust_fee_empty_transaction() -> Result<()> {
     )];
 
     assert_eq!(tx.outputs(), &expected_outputs);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn adjust_for_fee_with_message_data_input() -> Result<()> {
+    let mut wallet = WalletUnlocked::new_random(None);
+    let mut receiver = WalletUnlocked::new_random(None);
+
+    let messages = setup_single_message(
+        &Bech32Address::default(),
+        wallet.address(),
+        100,
+        0.into(),
+        vec![1, 2, 3], // has data
+    );
+    let asset_id = AssetId::zeroed();
+    let coins = setup_single_asset_coins(wallet.address(), asset_id, 1, 50);
+    let provider = setup_test_provider(coins, vec![messages], None, None).await?;
+    wallet.set_provider(provider.clone());
+    receiver.set_provider(provider.clone());
+
+    let amount_to_send = 14;
+    let message = wallet.get_messages().await?.pop().unwrap();
+    let input = Input::resource_signed(CoinType::Message(message));
+    let outputs = wallet.get_asset_outputs_for_amount(receiver.address(), asset_id, amount_to_send);
+
+    {
+        // message with data as only input - without adjust for fee
+        let mut tb = ScriptTransactionBuilder::prepare_transfer(
+            vec![input.clone()],
+            outputs.clone(),
+            TxPolicies::default(),
+        );
+        tb.add_signer(wallet.clone())?;
+
+        let tx = tb.build(wallet.try_provider()?).await?;
+        let err = provider
+            .send_transaction_and_await_commit(tx)
+            .await
+            .unwrap_err();
+
+        assert!(err.to_string().contains("Validity(NoSpendableInput)"));
+    }
+    {
+        // message with data as only input - with adjust for fee
+        let mut tb = ScriptTransactionBuilder::prepare_transfer(
+            vec![input.clone()],
+            outputs.clone(),
+            TxPolicies::default(),
+        );
+
+        tb.add_signer(wallet.clone())?;
+        wallet.adjust_for_fee(&mut tb, 0).await.unwrap();
+
+        let tx = tb.build(wallet.try_provider()?).await?;
+
+        assert_eq!(receiver.get_asset_balance(&asset_id).await?, 0);
+
+        provider
+            .send_transaction_and_await_commit(tx)
+            .await
+            .unwrap();
+
+        assert_eq!(receiver.get_asset_balance(&asset_id).await?, amount_to_send);
+    }
 
     Ok(())
 }
