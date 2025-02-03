@@ -659,9 +659,6 @@ impl_tx_builder_trait!(UpgradeTransactionBuilder, UpgradeTransaction);
 
 impl ScriptTransactionBuilder {
     async fn build(mut self, provider: impl DryRunner) -> Result<ScriptTransaction> {
-        let consensus_parameters = provider.consensus_parameters().await?;
-        self.intercept_burn(consensus_parameters.base_asset_id())?;
-
         let is_using_predicates = self.is_using_predicates();
 
         let tx = match self.build_strategy {
