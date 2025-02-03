@@ -7,7 +7,10 @@ use fuels_core::{
     Configurables,
 };
 
-use crate::assembly::script_and_predicate_loader::{extract_data_offset, LoaderCode};
+use crate::{
+    assembly::script_and_predicate_loader::{extract_data_offset, LoaderCode},
+    DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE,
+};
 
 /// This struct represents a standard executable with its associated bytecode and configurables.
 #[derive(Debug, Clone, PartialEq)]
@@ -155,7 +158,10 @@ impl Executable<Loader> {
             return Ok(None);
         }
 
-        let mut tb = BlobTransactionBuilder::default().with_blob(self.blob());
+        let mut tb = BlobTransactionBuilder::default()
+            .with_blob(self.blob())
+            .with_max_fee_estimation_tolerance(DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE);
+
         account.adjust_for_fee(&mut tb, 0).await?;
         account.add_witnesses(&mut tb)?;
 

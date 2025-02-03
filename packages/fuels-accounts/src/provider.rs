@@ -731,7 +731,7 @@ impl Provider {
     async fn gas_used_with_tolerance(&self, tx_status: &TxStatus, tolerance: f64) -> Result<u64> {
         let gas_used = tx_status.total_gas();
 
-        Ok((gas_used as f64 * (1.0 + tolerance)) as u64)
+        Ok((gas_used as f64 * (1.0 + tolerance)).ceil() as u64)
     }
 
     // Increase estimated total fee by the provided tolerance
