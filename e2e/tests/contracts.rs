@@ -386,22 +386,21 @@ async fn mult_call_has_same_estimated_and_used_gas() -> Result<()> {
 
 #[tokio::test]
 async fn contract_method_call_respects_maturity_and_expiration() -> Result<()> {
-    abigen!(Contract(
-        name = "MyContract",
-        abi = "e2e/sway/contracts/transaction_block_height/out/release/transaction_block_height-abi.json"
-    ));
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Contract(
+            name = "BlockHeightContract",
+            project = "e2e/sway/contracts/transaction_block_height"
+        )),
+        Deploy(
+            name = "contract_instance",
+            contract = "BlockHeightContract",
+            wallet = "wallet",
+            random_salt = false,
+        ),
+    );
+    let provider = wallet.try_provider()?;
 
-    let wallet = launch_provider_and_get_wallet().await?;
-    let provider = wallet.try_provider()?.clone();
-
-    let contract_id = Contract::load_from(
-        "sway/contracts/transaction_block_height/out/release/transaction_block_height.bin",
-        LoadConfiguration::default(),
-    )?
-    .deploy_if_not_exists(&wallet, TxPolicies::default())
-    .await?;
-
-    let contract_instance = MyContract::new(contract_id, wallet);
     let maturity = 10;
     let expiration = 20;
     let call_handler = contract_instance

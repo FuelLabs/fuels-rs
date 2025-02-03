@@ -1000,7 +1000,6 @@ async fn tx_id_not_changed_after_adding_witnesses() -> Result<()> {
     tx.append_witness(witness2.into())?;
     let tx_id_after_witnesses = tx.id(chain_id);
 
-    provider.produce_blocks(20, None).await?;
     let tx_id_from_provider = provider.send_transaction(tx).await?;
 
     assert_eq!(tx_id, tx_id_after_witnesses);
