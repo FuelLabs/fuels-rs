@@ -1245,3 +1245,80 @@ async fn predicate_configurables_in_blobs() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn predicate_transfer_respects_maturity_and_expiration() -> Result<()> {
+    abigen!(Predicate(
+        name = "MyPredicate",
+        abi = "e2e/sway/predicates/basic_predicate/out/release/basic_predicate-abi.json"
+    ));
+
+    let predicate_data = MyPredicateEncoder::default().encode_data(4097, 4097)?;
+
+    let mut predicate: Predicate =
+        Predicate::load_from("sway/predicates/basic_predicate/out/release/basic_predicate.bin")?
+            .with_data(predicate_data);
+
+    let num_coins = 4;
+    let num_messages = 8;
+    let amount = 16;
+    let (provider, predicate_balance, receiver, receiver_balance, asset_id, _) =
+        setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
+
+    predicate.set_provider(provider.clone());
+
+    let maturity = 10;
+    let expiration = 20;
+    let tx_policies = TxPolicies::default()
+        .with_maturity(maturity)
+        .with_expiration(expiration);
+    let amount_to_send = 10;
+
+    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
+    let expected_fee = 1;
+
+    {
+        let err = predicate
+            .transfer(receiver.address(), amount_to_send, asset_id, tx_policies)
+            .await
+            .expect_err("maturity not reached");
+
+        assert!(err.to_string().contains("TransactionMaturity"));
+    }
+    {
+        provider.produce_blocks(15, None).await?;
+        predicate
+            .transfer(receiver.address(), amount_to_send, asset_id, tx_policies)
+            .await
+            .expect("should succeed. Block height between `maturity` and `expiration`");
+    }
+    {
+        provider.produce_blocks(15, None).await?;
+        let err = predicate
+            .transfer(receiver.address(), amount_to_send, asset_id, tx_policies)
+            .await
+            .expect_err("expiration reached");
+
+        assert!(err.to_string().contains("TransactionExpiration"));
+    }
+
+    // The predicate has spent the funds
+    assert_address_balance(
+        predicate.address(),
+        &provider,
+        asset_id,
+        predicate_balance - amount_to_send - expected_fee,
+    )
+    .await;
+
+    // Funds were transferred
+    assert_address_balance(
+        receiver.address(),
+        &provider,
+        asset_id,
+        receiver_balance + amount_to_send,
+    )
+    .await;
+
+    Ok(())
+}
