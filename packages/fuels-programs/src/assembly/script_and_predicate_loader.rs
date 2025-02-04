@@ -19,7 +19,8 @@ impl LoaderCode {
 
         let blob_id =
             fuels_core::types::transaction_builders::Blob::from(original_code.to_vec()).id();
-        let (loader_code, section_offset) = Self::generate_loader_code(blob_id, configurable_section);
+        let (loader_code, section_offset) =
+            Self::generate_loader_code(blob_id, configurable_section);
 
         Ok(Self {
             blob_id,
