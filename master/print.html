@@ -1408,7 +1408,8 @@ pub use abigen_bindings::my_contract_mod::MyContractMethods;
         let tx_policies = TxPolicies::default()
             .with_tip(1)
             .with_script_gas_limit(1_000_000)
-            .with_maturity(0);
+            .with_maturity(0)
+            .with_expiration(10_000);
 
         let contract_id_2 = Contract::load_from(
             &quot;../../e2e/sway/contracts/contract_test/out/release/contract_test.bin&quot;,
@@ -1838,6 +1839,7 @@ half-word   byte   op                raw           notes
     tip: Option&lt;u64&gt;,
     witness_limit: Option&lt;u64&gt;,
     maturity: Option&lt;u64&gt;,
+    expiration: Option&lt;u64&gt;,
     max_fee: Option&lt;u64&gt;,
     script_gas_limit: Option&lt;u64&gt;,
 }
@@ -1847,6 +1849,7 @@ half-word   byte   op                raw           notes
 <li><strong>Tip</strong> - amount to pay the block producer to prioritize the transaction.</li>
 <li><strong>Witness Limit</strong> - The maximum amount of witness data allowed for the transaction.</li>
 <li><strong>Maturity</strong> - Block until which the transaction cannot be included.</li>
+<li><strong>Expiration</strong> - Block after which the transaction cannot be included.</li>
 <li><strong>Max Fee</strong> - The maximum fee payable by this transaction.</li>
 <li><strong>Script Gas Limit</strong> - The maximum amount of gas the transaction may consume for executing its script code.</li>
 </ol>
@@ -1859,7 +1862,8 @@ half-word   byte   op                raw           notes
         let tx_policies = TxPolicies::default()
             .with_tip(1)
             .with_script_gas_limit(1_000_000)
-            .with_maturity(0);
+            .with_maturity(0)
+            .with_expiration(10_000);
 
         let response = contract_methods
             .initialize_counter(42) // Our contract method
@@ -2151,7 +2155,8 @@ let is_error = response.is_err();
 <p>Next, you provide the prepared calls to your <code>CallHandler</code> and optionally configure transaction policies:</p>
 <pre><code class="language-rust ignore">        let multi_call_handler = CallHandler::new_multi_call(wallet.clone())
             .add_call(call_handler_1)
-            .add_call(call_handler_2);
+            .add_call(call_handler_2)
+            .with_tx_policies(TxPolicies::default());
 </code></pre>
 <blockquote>
 <p><strong>Note:</strong> any transaction policies configured on separate contract calls are disregarded in favor of the parameters provided to the multi-call <code>CallHandler</code>.</p>
@@ -2841,8 +2846,8 @@ from subsequent callers.</p>
 <blockquote>
 <p><strong>Note</strong> It is recommended to add signers before calling <code>adjust_for_fee()</code> as the estimation will include the size of the witnesses.</p>
 </blockquote>
-<p>We can also define transaction policies. For example, we can limit the gas price by doing the following:</p>
-<pre><code class="language-rust ignore">        let tx_policies = TxPolicies::default().with_tip(1);
+<p>We can also define transaction policies. For example, we can set the maturity and expiration with:</p>
+<pre><code class="language-rust ignore">        let tx_policies = TxPolicies::default().with_maturity(64).with_expiration(128);
         let tb = tb.with_tx_policies(tx_policies);
 </code></pre>
 <p>Our builder needs a signature from the hot wallet to unlock its coins before we call <code>build()</code> and submit the resulting transaction through the provider:</p>

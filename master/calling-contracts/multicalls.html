@@ -148,7 +148,8 @@
 <p>Next, you provide the prepared calls to your <code>CallHandler</code> and optionally configure transaction policies:</p>
 <pre><code class="language-rust ignore">        let multi_call_handler = CallHandler::new_multi_call(wallet.clone())
             .add_call(call_handler_1)
-            .add_call(call_handler_2);
+            .add_call(call_handler_2)
+            .with_tx_policies(TxPolicies::default());
 </code></pre>
 <blockquote>
 <p><strong>Note:</strong> any transaction policies configured on separate contract calls are disregarded in favor of the parameters provided to the multi-call <code>CallHandler</code>.</p>

@@ -145,6 +145,7 @@
     tip: Option&lt;u64&gt;,
     witness_limit: Option&lt;u64&gt;,
     maturity: Option&lt;u64&gt;,
+    expiration: Option&lt;u64&gt;,
     max_fee: Option&lt;u64&gt;,
     script_gas_limit: Option&lt;u64&gt;,
 }
@@ -154,6 +155,7 @@
 <li><strong>Tip</strong> - amount to pay the block producer to prioritize the transaction.</li>
 <li><strong>Witness Limit</strong> - The maximum amount of witness data allowed for the transaction.</li>
 <li><strong>Maturity</strong> - Block until which the transaction cannot be included.</li>
+<li><strong>Expiration</strong> - Block after which the transaction cannot be included.</li>
 <li><strong>Max Fee</strong> - The maximum fee payable by this transaction.</li>
 <li><strong>Script Gas Limit</strong> - The maximum amount of gas the transaction may consume for executing its script code.</li>
 </ol>
@@ -166,7 +168,8 @@
         let tx_policies = TxPolicies::default()
             .with_tip(1)
             .with_script_gas_limit(1_000_000)
-            .with_maturity(0);
+            .with_maturity(0)
+            .with_expiration(10_000);
 
         let response = contract_methods
             .initialize_counter(42) // Our contract method

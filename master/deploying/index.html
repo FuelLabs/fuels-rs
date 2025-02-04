@@ -194,7 +194,8 @@
         let tx_policies = TxPolicies::default()
             .with_tip(1)
             .with_script_gas_limit(1_000_000)
-            .with_maturity(0);
+            .with_maturity(0)
+            .with_expiration(10_000);
 
         let contract_id_2 = Contract::load_from(
             &quot;../../e2e/sway/contracts/contract_test/out/release/contract_test.bin&quot;,
