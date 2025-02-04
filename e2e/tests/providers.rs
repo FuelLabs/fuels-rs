@@ -283,38 +283,51 @@ async fn can_retrieve_latest_block_time() -> Result<()> {
 }
 
 #[tokio::test]
-async fn contract_deployment_respects_maturity() -> Result<()> {
+async fn contract_deployment_respects_maturity_and_expiration() -> Result<()> {
     abigen!(Contract(name="MyContract", abi="e2e/sway/contracts/transaction_block_height/out/release/transaction_block_height-abi.json"));
 
-    let wallets =
-        launch_custom_provider_and_get_wallets(WalletsConfig::default(), None, None).await?;
-    let wallet = &wallets[0];
-    let provider = wallet.try_provider()?;
+    let wallet = launch_provider_and_get_wallet().await?;
+    let provider = wallet.try_provider()?.clone();
 
-    let deploy_w_maturity = |maturity| {
+    let maturity = 10;
+    let expiration = 20;
+
+    let deploy_w_maturity_and_expiration = || {
         Contract::load_from(
             "sway/contracts/transaction_block_height/out/release/transaction_block_height.bin",
             LoadConfiguration::default(),
         )
         .map(|loaded_contract| {
-            loaded_contract
-                .deploy_if_not_exists(wallet, TxPolicies::default().with_maturity(maturity))
+            loaded_contract.deploy(
+                &wallet,
+                TxPolicies::default()
+                    .with_maturity(maturity)
+                    .with_expiration(expiration),
+            )
         })
     };
 
-    let err = deploy_w_maturity(1)?.await.expect_err(
-        "should not deploy contract since block height `0` is less than the requested maturity `1`",
-    );
+    {
+        let err = deploy_w_maturity_and_expiration()?
+            .await
+            .expect_err("maturity not reached");
 
-    let Error::Provider(s) = err else {
-        panic!("expected `Validation`, got: `{err}`");
-    };
-    assert!(s.contains("TransactionMaturity"));
+        assert!(err.to_string().contains("TransactionMaturity"));
+    }
+    {
+        provider.produce_blocks(15, None).await?;
+        deploy_w_maturity_and_expiration()?
+            .await
+            .expect("should succeed. Block height between `maturity` and `expiration`");
+    }
+    {
+        provider.produce_blocks(15, None).await?;
+        let err = deploy_w_maturity_and_expiration()?
+            .await
+            .expect_err("expiration reached");
 
-    provider.produce_blocks(1, None).await?;
-    deploy_w_maturity(1)?
-        .await
-        .expect("Should deploy contract since maturity `1` is <= than the block height `1`");
+        assert!(err.to_string().contains("TransactionExpiration"));
+    }
 
     Ok(())
 }
@@ -1087,12 +1100,14 @@ async fn tx_respects_policies() -> Result<()> {
     let tip = 22;
     let witness_limit = 1000;
     let maturity = 4;
+    let expiration = 128;
     let max_fee = 10_000;
     let script_gas_limit = 3000;
     let tx_policies = TxPolicies::new(
         Some(tip),
         Some(witness_limit),
         Some(maturity),
+        Some(expiration),
         Some(max_fee),
         Some(script_gas_limit),
     );
@@ -1119,7 +1134,8 @@ async fn tx_respects_policies() -> Result<()> {
         _ => panic!("expected script transaction"),
     };
 
-    assert_eq!(script.maturity(), maturity as u32);
+    assert_eq!(script.maturity().unwrap(), maturity);
+    assert_eq!(script.expiration().unwrap(), expiration);
     assert_eq!(script.tip().unwrap(), tip);
     assert_eq!(script.witness_limit().unwrap(), witness_limit);
     assert_eq!(script.max_fee().unwrap(), max_fee);
