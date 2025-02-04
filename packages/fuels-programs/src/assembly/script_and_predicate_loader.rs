@@ -340,5 +340,5 @@ pub fn is_legacy_binary(binary: &[u8]) -> Result<bool> {
             binary.len()
         ));
     }
-    Ok(binary[4] != 0x74 || binary[7] == 0x02)
+    Ok(!(binary[4] == 0x74 && binary[7] == 0x04))
 }
