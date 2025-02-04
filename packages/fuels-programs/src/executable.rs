@@ -367,7 +367,10 @@ mod tests {
         // that there is no data section
         let data_section_offset = 16u64;
 
-        let code = [vec![0; 16], data_section_offset.to_be_bytes().to_vec()].concat();
+        let mut initial_bytes = vec![0; 16];
+        initial_bytes[4..8].copy_from_slice(&[0x74, 0x00, 0x00, 0x02]); // Insert JMPF at position 4
+
+        let code = [initial_bytes, data_section_offset.to_be_bytes().to_vec()].concat();
 
         Executable::from_bytes(code).convert_to_loader().unwrap();
     }
