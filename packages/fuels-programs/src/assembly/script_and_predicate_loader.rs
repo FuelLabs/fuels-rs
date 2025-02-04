@@ -327,14 +327,14 @@ pub fn split_at_data_offset(binary: &[u8]) -> Result<(&[u8], &[u8])> {
 
 pub fn split_for_loader(binary: &[u8]) -> Result<(&[u8], &[u8])> {
     // First determine if it's a legacy binary
-    if has_configurable_section(binary)? {
+    if has_configurable_section_offset(binary)? {
         split_at_configurable_offset(binary)
     } else {
         split_at_data_offset(binary)
     }
 }
 
-pub fn has_configurable_section(binary: &[u8]) -> Result<bool> {
+pub fn has_configurable_section_offset(binary: &[u8]) -> Result<bool> {
     if binary.len() < 8 {
         return Err(fuels_core::error!(
             Other,
