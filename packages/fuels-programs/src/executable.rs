@@ -265,17 +265,61 @@ mod tests {
     }
 
     #[test]
-    fn test_loader_extracts_code_and_data_section_correctly() {
-        // Given: An Executable<Regular> with valid code
-        let padding = vec![0; 16];
-        let offset = 32u64.to_be_bytes().to_vec();
+    fn test_loader_extracts_code_and_data_section_legacy_format() {
+        let padding = vec![0; 4];
+        let jmpf = vec![0x74, 0x00, 0x00, 0x02];
+        let data_offset = 28u64.to_be_bytes().to_vec();
+        let remaining_padding = vec![0; 8];
         let some_random_instruction = vec![1, 2, 3, 4];
         let data_section = vec![5, 6, 7, 8];
-        let configurable_section = vec![9, 9, 9, 9];
+
         let code = [
             padding.clone(),
-            offset.clone(),
+            jmpf.clone(),
+            data_offset.clone(),
+            remaining_padding.clone(),
             some_random_instruction.clone(),
+            data_section.clone(),
+        ]
+        .concat();
+
+        let executable = Executable::<Regular>::from_bytes(code.clone());
+
+        let loader = executable.convert_to_loader().unwrap();
+
+        let blob = loader.blob();
+        let data_stripped_code = [
+            padding,
+            jmpf.clone(),
+            data_offset,
+            remaining_padding.clone(),
+            some_random_instruction,
+        ]
+        .concat();
+        assert_eq!(blob.as_ref(), data_stripped_code);
+
+        // And: Loader code should match expected binary
+        let loader_code = loader.code();
+        assert_eq!(
+            loader_code,
+            LoaderCode::from_normal_binary(code).unwrap().as_bytes()
+        );
+    }
+
+    #[test]
+    fn test_loader_extracts_code_and_configurable_section_new_format() {
+        let padding = vec![0; 4];
+        let jmpf = vec![0x74, 0x00, 0x00, 0x02];
+        let data_offset = 28u64.to_be_bytes().to_vec();
+        let configurable_offset = vec![0; 8];
+        let data_section = vec![5, 6, 7, 8];
+        let configurable_section = vec![9, 9, 9, 9];
+
+        let code = [
+            padding.clone(),
+            jmpf.clone(),
+            data_offset.clone(),
+            configurable_offset.clone(),
             data_section.clone(),
             configurable_section,
         ]
@@ -283,19 +327,25 @@ mod tests {
 
         let executable = Executable::<Regular>::from_bytes(code.clone());
 
-        // When: Converting to a loader
         let loader = executable.convert_to_loader().unwrap();
 
         let blob = loader.blob();
-        let configurable_stripped_code =
-            [padding, offset, some_random_instruction, data_section].concat();
+        let configurable_stripped_code = [
+            padding,
+            jmpf,
+            data_offset,
+            configurable_offset,
+            data_section,
+        ]
+        .concat();
         assert_eq!(blob.as_ref(), configurable_stripped_code);
 
+        // And: Loader code should match expected binary
         let loader_code = loader.code();
         assert_eq!(
             loader_code,
             LoaderCode::from_normal_binary(code).unwrap().as_bytes()
-        )
+        );
     }
 
     #[test]

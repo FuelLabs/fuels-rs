@@ -15,11 +15,11 @@ impl LoaderCode {
     // nostd friendly
     #[cfg(feature = "std")]
     pub fn from_normal_binary(binary: Vec<u8>) -> Result<Self> {
-        let (original_code, data_section) = split_at_configurable_offset(&binary)?;
+        let (original_code, configurable_section) = split_binary(&binary)?;
 
         let blob_id =
             fuels_core::types::transaction_builders::Blob::from(original_code.to_vec()).id();
-        let (loader_code, data_offset) = Self::generate_loader_code(blob_id, data_section);
+        let (loader_code, data_offset) = Self::generate_loader_code(blob_id, configurable_section);
 
         Ok(Self {
             blob_id,
@@ -42,7 +42,7 @@ impl LoaderCode {
 
     #[cfg(feature = "std")]
     pub fn extract_blob(binary: &[u8]) -> Result<fuels_core::types::transaction_builders::Blob> {
-        let (code, _) = split_at_configurable_offset(binary)?;
+        let (code, _) = split_binary(binary)?;
         Ok(code.to_vec().into())
     }
 
@@ -283,7 +283,6 @@ pub fn extract_configurable_offset(binary: &[u8]) -> Result<usize> {
     }
 
     let configurable_offset: [u8; 8] = binary[16..24].try_into().expect("checked above");
-
     Ok(u64::from_be_bytes(configurable_offset) as usize)
 }
 
@@ -298,4 +297,48 @@ pub fn split_at_configurable_offset(binary: &[u8]) -> Result<(&[u8], &[u8])> {
     }
 
     Ok(binary.split_at(offset))
+}
+
+pub fn extract_data_offset(binary: &[u8]) -> Result<usize> {
+    if binary.len() < 16 {
+        return Err(fuels_core::error!(
+            Other,
+            "given binary is too short to contain a data offset, len: {}",
+            binary.len()
+        ));
+    }
+
+    let data_offset: [u8; 8] = binary[8..16].try_into().expect("checked above");
+    Ok(u64::from_be_bytes(data_offset) as usize)
+}
+
+pub fn split_at_data_offset(binary: &[u8]) -> Result<(&[u8], &[u8])> {
+    let offset = extract_data_offset(binary)?;
+    if binary.len() < offset {
+        return Err(fuels_core::error!(
+            Other,
+            "data section offset is out of bounds, offset: {offset}, binary len: {}",
+            binary.len()
+        ));
+    }
+    Ok(binary.split_at(offset))
+}
+
+pub fn split_binary(binary: &[u8]) -> Result<(&[u8], &[u8])> {
+    // First determine if it's a legacy binary
+    match is_legacy_binary(binary)? {
+        true => split_at_data_offset(binary),
+        false => split_at_configurable_offset(binary),
+    }
+}
+
+pub fn is_legacy_binary(binary: &[u8]) -> Result<bool> {
+    if binary.len() < 8 {
+        return Err(fuels_core::error!(
+            Other,
+            "binary too short to check JMPF instruction, need at least 8 bytes but got: {}",
+            binary.len()
+        ));
+    }
+    Ok(binary[4] != 0x74 || binary[7] == 0x02)
 }
