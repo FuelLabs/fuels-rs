@@ -340,5 +340,19 @@ pub fn is_legacy_binary(binary: &[u8]) -> Result<bool> {
             binary.len()
         ));
     }
-    Ok(!(binary[4] == 0x74 && binary[7] == 0x04))
+
+    match (binary[4], binary[7]) {
+        (0x74, 0x02) => Ok(true),
+        (0x74, 0x04) => Ok(false),
+        (0x74, other) => Err(fuels_core::error!(
+            Other,
+            "invalid JMPF offset, expected 0x02 or 0x04, got: {:#04x}",
+            other
+        )),
+        (other, _) => Err(fuels_core::error!(
+            Other,
+            "expected JMPF instruction (0x74), got: {:#04x}",
+            other
+        )),
+    }
 }
