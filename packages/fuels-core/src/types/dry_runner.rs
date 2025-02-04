@@ -16,7 +16,7 @@ impl DryRun {
     pub fn gas_with_tolerance(&self, tolerance: f32) -> u64 {
         let gas_used = self.script_gas as f64;
         let adjusted_gas = gas_used * (1.0 + f64::from(tolerance));
-        adjusted_gas as u64
+        adjusted_gas.ceil() as u64
     }
 }
 

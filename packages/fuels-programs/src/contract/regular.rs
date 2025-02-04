@@ -14,6 +14,8 @@ use fuels_core::{
     Configurables,
 };
 
+use crate::DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE;
+
 use super::{
     compute_contract_id_and_state_root, validate_path_and_extension, BlobsNotUploaded, Contract,
     Loader, StorageConfiguration,
@@ -152,7 +154,7 @@ impl Contract<Regular> {
             storage_slots.to_vec(),
             tx_policies,
         )
-        .with_max_fee_estimation_tolerance(0.05);
+        .with_max_fee_estimation_tolerance(DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE);
 
         account.add_witnesses(&mut tb)?;
         account.adjust_for_fee(&mut tb, 0).await?;

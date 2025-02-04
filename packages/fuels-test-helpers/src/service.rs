@@ -90,6 +90,7 @@ impl FuelService {
                 max_fds: 512,
                 columns_policy: ColumnsPolicy::Lazy,
             },
+            #[cfg(feature = "rocksdb")]
             state_rewind_policy: Default::default(),
         };
         ServiceConfig {
