@@ -51,6 +51,7 @@ impl LoaderCode {
         &self.code
     }
 
+    #[deprecated]
     pub fn data_section_offset(&self) -> usize {
         self.section_offset
     }

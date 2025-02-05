@@ -130,6 +130,7 @@ impl Executable<Loader> {
         }
     }
 
+    #[allow(deprecated)]
     pub fn data_offset_in_code(&self) -> usize {
         self.loader_code().data_section_offset()
     }
