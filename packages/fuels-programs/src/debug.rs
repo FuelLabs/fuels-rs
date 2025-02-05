@@ -156,6 +156,7 @@ fn parse_loader_script(script: &[u8], data: &[u8]) -> Result<Option<(ScriptCallD
         ScriptCallData {
             code: script.to_vec(),
             data: data.to_vec(),
+            #[allow(deprecated)]
             data_section_offset: Some(loader_code.data_section_offset() as u64),
         },
         loader_code.blob_id(),

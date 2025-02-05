@@ -7,7 +7,7 @@ use crate::assembly::cursor::WasmFriendlyCursor;
 pub struct LoaderCode {
     blob_id: [u8; 32],
     code: Vec<u8>,
-    data_offset: usize,
+    section_offset: usize,
 }
 
 impl LoaderCode {
@@ -15,23 +15,24 @@ impl LoaderCode {
     // nostd friendly
     #[cfg(feature = "std")]
     pub fn from_normal_binary(binary: Vec<u8>) -> Result<Self> {
-        let (original_code, data_section) = split_at_data_offset(&binary)?;
+        let (original_code, configurable_section) = split_for_loader(&binary)?;
 
         let blob_id =
             fuels_core::types::transaction_builders::Blob::from(original_code.to_vec()).id();
-        let (loader_code, data_offset) = Self::generate_loader_code(blob_id, data_section);
+        let (loader_code, section_offset) =
+            Self::generate_loader_code(blob_id, configurable_section);
 
         Ok(Self {
             blob_id,
             code: loader_code,
-            data_offset,
+            section_offset,
         })
     }
 
     pub fn from_loader_binary(binary: &[u8]) -> Result<Option<Self>> {
-        if let Some((blob_id, data_section_offset)) = extract_blob_id_and_data_offset(binary)? {
+        if let Some((blob_id, section_offset)) = extract_blob_id_and_data_offset(binary)? {
             Ok(Some(Self {
-                data_offset: data_section_offset,
+                section_offset,
                 code: binary.to_vec(),
                 blob_id,
             }))
@@ -42,7 +43,7 @@ impl LoaderCode {
 
     #[cfg(feature = "std")]
     pub fn extract_blob(binary: &[u8]) -> Result<fuels_core::types::transaction_builders::Blob> {
-        let (code, _) = split_at_data_offset(binary)?;
+        let (code, _) = split_for_loader(binary)?;
         Ok(code.to_vec().into())
     }
 
@@ -50,8 +51,9 @@ impl LoaderCode {
         &self.code
     }
 
+    #[deprecated]
     pub fn data_section_offset(&self) -> usize {
-        self.data_offset
+        self.section_offset
     }
 
     fn generate_loader_code(blob_id: [u8; 32], data_section: &[u8]) -> (Vec<u8>, usize) {
@@ -273,6 +275,32 @@ pub fn loader_instructions_w_data_section() -> [Instruction; 12] {
     instructions
 }
 
+pub fn extract_configurable_offset(binary: &[u8]) -> Result<usize> {
+    if binary.len() < 24 {
+        return Err(fuels_core::error!(
+            Other,
+            "given binary is too short to contain a configurable offset, len: {}",
+            binary.len()
+        ));
+    }
+
+    let configurable_offset: [u8; 8] = binary[16..24].try_into().expect("checked above");
+    Ok(u64::from_be_bytes(configurable_offset) as usize)
+}
+
+pub fn split_at_configurable_offset(binary: &[u8]) -> Result<(&[u8], &[u8])> {
+    let offset = extract_configurable_offset(binary)?;
+    if binary.len() < offset {
+        return Err(fuels_core::error!(
+            Other,
+            "configurable section offset is out of bounds, offset: {offset}, binary len: {}",
+            binary.len()
+        ));
+    }
+
+    Ok(binary.split_at(offset))
+}
+
 pub fn extract_data_offset(binary: &[u8]) -> Result<usize> {
     if binary.len() < 16 {
         return Err(fuels_core::error!(
@@ -283,7 +311,6 @@ pub fn extract_data_offset(binary: &[u8]) -> Result<usize> {
     }
 
     let data_offset: [u8; 8] = binary[8..16].try_into().expect("checked above");
-
     Ok(u64::from_be_bytes(data_offset) as usize)
 }
 
@@ -296,6 +323,49 @@ pub fn split_at_data_offset(binary: &[u8]) -> Result<(&[u8], &[u8])> {
             binary.len()
         ));
     }
-
     Ok(binary.split_at(offset))
+}
+
+pub fn split_for_loader(binary: &[u8]) -> Result<(&[u8], &[u8])> {
+    // First determine if it's a legacy binary
+    if has_configurable_section_offset(binary)? {
+        split_at_configurable_offset(binary)
+    } else {
+        split_at_data_offset(binary)
+    }
+}
+
+pub fn has_configurable_section_offset(binary: &[u8]) -> Result<bool> {
+    if binary.len() < 8 {
+        return Err(fuels_core::error!(
+            Other,
+            "binary too short to check JMPF instruction, need at least 8 bytes but got: {}",
+            binary.len()
+        ));
+    }
+
+    let instruction = Instruction::try_from([binary[4], binary[5], binary[6], binary[7]])
+        .map_err(|e| fuels_core::error!(Other, "Invalid instruction at byte 4: {:?}", e))?;
+
+    let Instruction::JMPF(offset) = instruction else {
+        return Err(fuels_core::error!(
+            Other,
+            "expected JMPF instruction , got: {:?}",
+            instruction
+        ));
+    };
+
+    let has_configurable_section = match offset.imm18().to_u32() {
+        0x04 => true,
+        0x02 => false,
+        other => {
+            return Err(fuels_core::error!(
+                Other,
+                "invalid JMPF offset, expected 0x02 or 0x04, got: {:#04x}",
+                other
+            ))
+        }
+    };
+
+    Ok(has_configurable_section)
 }
