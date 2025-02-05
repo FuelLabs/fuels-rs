@@ -134,7 +134,7 @@ mod tests {
 
         let wallet = launch_provider_and_get_wallet().await?;
 
-        let contract_id = Contract::load_from(
+        let contract_id_1 = Contract::load_from(
             "../../e2e/sway/contracts/contract_test/out/release/contract_test.bin",
             LoadConfiguration::default(),
         )?
@@ -174,7 +174,7 @@ mod tests {
         println!("Contract deployed @ {contract_id_2}");
         // ANCHOR_END: deploy_with_parameters
 
-        assert_ne!(contract_id, contract_id_2);
+        assert_ne!(contract_id_1, contract_id_2);
 
         // ANCHOR: use_deployed_contract
         // This will generate your contract's methods onto `MyContract`.
@@ -235,7 +235,7 @@ mod tests {
         let wallets =
             launch_custom_provider_and_get_wallets(WalletsConfig::default(), None, None).await?;
 
-        let contract_id = Contract::load_from(
+        let contract_id_1 = Contract::load_from(
             "../../e2e/sway/contracts/contract_test/out/release/contract_test.bin",
             LoadConfiguration::default(),
         )?
@@ -243,7 +243,7 @@ mod tests {
         .await?
         .contract_id;
 
-        let contract_instance_1 = MyContract::new(contract_id, wallets[0].clone());
+        let contract_instance_1 = MyContract::new(contract_id_1, wallets[0].clone());
 
         let response = contract_instance_1
             .methods()
