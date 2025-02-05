@@ -343,21 +343,28 @@ pub fn has_configurable_section_offset(binary: &[u8]) -> Result<bool> {
         ));
     }
 
-    let opcode = Opcode::try_from(binary[4])
-        .map_err(|e| fuels_core::error!(Other, "Invalid opcode at byte 4: {:?}", e))?;
+    let instruction = Instruction::try_from([binary[4], binary[5], binary[6], binary[7]])
+        .map_err(|e| fuels_core::error!(Other, "Invalid instruction at byte 4: {:?}", e))?;
 
-    match (opcode, binary[7]) {
-        (Opcode::JMPF, 0x04) => Ok(true),
-        (Opcode::JMPF, 0x02) => Ok(false),
-        (Opcode::JMPF, other) => Err(fuels_core::error!(
+    let Instruction::JMPF(offset) = instruction else {
+        return Err(fuels_core::error!(
             Other,
-            "invalid JMPF offset, expected 0x02 or 0x04, got: {:#04x}",
-            other
-        )),
-        (other, _) => Err(fuels_core::error!(
-            Other,
-            "expected JMPF instruction (0x74), got: {:?}",
-            other
-        )),
-    }
+            "expected JMPF instruction , got: {:?}",
+            instruction
+        ));
+    };
+
+    let has_configurable_section = match offset.imm18().to_u32() {
+        0x04 => true,
+        0x02 => false,
+        other => {
+            return Err(fuels_core::error!(
+                Other,
+                "invalid JMPF offset, expected 0x02 or 0x04, got: {:#04x}",
+                other
+            ))
+        }
+    };
+
+    Ok(has_configurable_section)
 }
