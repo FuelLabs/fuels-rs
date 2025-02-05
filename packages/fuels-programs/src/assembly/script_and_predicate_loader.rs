@@ -1,4 +1,4 @@
-use fuel_asm::{op, Instruction, Opcode, RegId};
+use fuel_asm::{op, Instruction, RegId};
 use fuels_core::{constants::WORD_SIZE, types::errors::Result};
 use itertools::Itertools;
 

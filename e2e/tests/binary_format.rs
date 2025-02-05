@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use fuel_asm::Opcode;
-    use fuels::programs::executable::{Executable, Regular};
+    use fuels::programs::executable::Executable;
 
     fn test_binary_format(path: &str, expected_jump_offset: u8) {
         let binary =
