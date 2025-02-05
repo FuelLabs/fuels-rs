@@ -39,6 +39,13 @@ jobs:
         # before the cache plugin, as it uses the current rustc version as its cache key
       - uses: buildjet/cache@v3
         with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           prefix-key: "v1-rust"
 
       - name: Set git config
