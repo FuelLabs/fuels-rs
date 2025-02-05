@@ -367,8 +367,9 @@ mod tests {
         // that there is no data section
         let data_section_offset = 16u64;
 
+        let jmpf = fuel_asm::op::jmpf(0x0, 0x02).to_bytes();
         let mut initial_bytes = vec![0; 16];
-        initial_bytes[4..8].copy_from_slice(&[0x74, 0x00, 0x00, 0x02]); // Insert JMPF at position 4
+        initial_bytes[4..8].copy_from_slice(&jmpf);
 
         let code = [initial_bytes, data_section_offset.to_be_bytes().to_vec()].concat();
 
