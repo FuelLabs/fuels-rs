@@ -171,7 +171,7 @@ impl Contract<Loader<BlobsNotUploaded>> {
         self,
         account: &impl Account,
         tx_policies: TxPolicies,
-    ) -> Result<Option<DeployResponse>> {
+    ) -> Result<DeployResponse> {
         self.upload_blobs(account, tx_policies)
             .await?
             .deploy_if_not_exists(account, tx_policies)
@@ -257,7 +257,7 @@ impl Contract<Loader<BlobsUploaded>> {
         self,
         account: &impl Account,
         tx_policies: TxPolicies,
-    ) -> Result<Option<DeployResponse>> {
+    ) -> Result<DeployResponse> {
         Contract::regular(self.code(), self.salt, self.storage_slots)
             .deploy_if_not_exists(account, tx_policies)
             .await

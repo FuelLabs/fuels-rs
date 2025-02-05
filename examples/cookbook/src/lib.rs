@@ -51,12 +51,13 @@ mod tests {
         // ANCHOR_END: liquidity_wallet
 
         // ANCHOR: liquidity_deploy
-        let (contract_id, _) = Contract::load_from(
+        let contract_id = Contract::load_from(
             "../../e2e/sway/contracts/liquidity_pool/out/release/liquidity_pool.bin",
             LoadConfiguration::default(),
         )?
         .deploy(wallet, TxPolicies::default())
-        .await?;
+        .await?
+        .contract_id;
 
         let contract_methods = MyContract::new(contract_id.clone(), wallet.clone()).methods();
         // ANCHOR_END: liquidity_deploy

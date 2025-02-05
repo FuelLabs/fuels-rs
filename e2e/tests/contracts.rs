@@ -341,6 +341,7 @@ async fn contract_call_has_same_estimated_and_used_gas() -> Result<()> {
         .initialize_counter(42)
         .call()
         .await?
+        .tx
         .gas_used;
 
     assert_eq!(estimated_gas_used, gas_used);
@@ -378,7 +379,11 @@ async fn mult_call_has_same_estimated_and_used_gas() -> Result<()> {
         .await?
         .gas_used;
 
-    let gas_used = multi_call_handler.call::<(u64, [u64; 2])>().await?.gas_used;
+    let gas_used = multi_call_handler
+        .call::<(u64, [u64; 2])>()
+        .await?
+        .tx
+        .gas_used;
 
     assert_eq!(estimated_gas_used, gas_used);
     Ok(())
@@ -679,12 +684,13 @@ async fn setup_output_variable_estimation_test() -> Result<(
     let wallet_config = WalletsConfig::new(Some(3), None, None);
     let wallets = launch_custom_provider_and_get_wallets(wallet_config, None, None).await?;
 
-    let (contract_id, _) = Contract::load_from(
+    let contract_id = Contract::load_from(
         "sway/contracts/token_ops/out/release/token_ops.bin",
         LoadConfiguration::default(),
     )?
     .deploy_if_not_exists(&wallets[0], TxPolicies::default())
-    .await?;
+    .await?
+    .contract_id;
 
     let mint_asset_id = contract_id.asset_id(&Bits256::zeroed());
     let addresses = wallets
@@ -1751,12 +1757,13 @@ async fn contract_encoder_config_is_applied() -> Result<()> {
         )),
         Wallets("wallet")
     );
-    let (contract_id, _) = Contract::load_from(
+    let contract_id = Contract::load_from(
         "sway/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
     .deploy_if_not_exists(&wallet, TxPolicies::default())
-    .await?;
+    .await?
+    .contract_id;
 
     let instance = TestContract::new(contract_id.clone(), wallet.clone());
 
@@ -1960,12 +1967,13 @@ async fn simulations_can_be_made_without_coins() -> Result<()> {
     let wallets = setup_node_with_high_price().await?;
     let wallet = wallets.first().expect("has wallet");
 
-    let (contract_id, _) = Contract::load_from(
+    let contract_id = Contract::load_from(
         "sway/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
     .deploy_if_not_exists(wallet, TxPolicies::default())
-    .await?;
+    .await?
+    .contract_id;
 
     let provider = wallet.provider().cloned();
     let no_funds_wallet = WalletUnlocked::new_random(provider);
@@ -1991,12 +1999,13 @@ async fn simulations_can_be_made_without_coins_multicall() -> Result<()> {
     let wallets = setup_node_with_high_price().await?;
     let wallet = wallets.first().expect("has wallet");
 
-    let (contract_id, _) = Contract::load_from(
+    let contract_id = Contract::load_from(
         "sway/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
     .deploy_if_not_exists(wallet, TxPolicies::default())
-    .await?;
+    .await?
+    .contract_id;
 
     let provider = wallet.provider().cloned();
     let no_funds_wallet = WalletUnlocked::new_random(provider);
@@ -2050,12 +2059,13 @@ async fn contract_call_with_non_zero_base_asset_id_and_tip() -> Result<()> {
     let wallets = launch_custom_provider_and_get_wallets(wallet_config, None, Some(config)).await?;
     let wallet = wallets.first().expect("has wallet");
 
-    let (contract_id, _) = Contract::load_from(
+    let contract_id = Contract::load_from(
         "sway/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
     .deploy_if_not_exists(wallet, TxPolicies::default())
-    .await?;
+    .await?
+    .contract_id;
 
     let contract_instance = MyContract::new(contract_id, wallet.clone());
 
@@ -2228,10 +2238,11 @@ async fn blob_contract_deployment() -> Result<()> {
 
     let contract = Contract::load_from(contract_binary, LoadConfiguration::default())?;
 
-    let (contract_id, _) = contract
+    let contract_id = contract
         .convert_to_loader(100_000)?
         .deploy_if_not_exists(&wallets[0], TxPolicies::default())
-        .await?;
+        .await?
+        .contract_id;
 
     let contract_instance = MyContract::new(contract_id, wallets[0].clone());
 
@@ -2256,9 +2267,10 @@ async fn regular_contract_can_be_deployed() -> Result<()> {
     let contract_binary = "sway/contracts/contract_test/out/release/contract_test.bin";
 
     // when
-    let (contract_id, _) = Contract::load_from(contract_binary, LoadConfiguration::default())?
+    let contract_id = Contract::load_from(contract_binary, LoadConfiguration::default())?
         .deploy_if_not_exists(&wallet, TxPolicies::default())
-        .await?;
+        .await?
+        .contract_id;
 
     // then
     let contract_instance = MyContract::new(contract_id, wallet);
@@ -2287,10 +2299,11 @@ async fn unuploaded_loader_can_be_deployed_directly() -> Result<()> {
 
     let contract_binary = "sway/contracts/huge_contract/out/release/huge_contract.bin";
 
-    let (contract_id, _) = Contract::load_from(contract_binary, LoadConfiguration::default())?
+    let contract_id = Contract::load_from(contract_binary, LoadConfiguration::default())?
         .convert_to_loader(1024)?
         .deploy_if_not_exists(&wallet, TxPolicies::default())
-        .await?;
+        .await?
+        .contract_id;
 
     let contract_instance = MyContract::new(contract_id, wallet);
 
@@ -2323,13 +2336,15 @@ async fn unuploaded_loader_can_upload_blobs_separately_then_deploy() -> Result<(
     // if this were an example for the user we'd just call `deploy` on the contract above
     // this way we are testing that the blobs were really deployed above, otherwise the following
     // would fail
-    let (contract_id, _) = Contract::loader_from_blob_ids(
+
+    let contract_id = Contract::loader_from_blob_ids(
         blob_ids.to_vec(),
         contract.salt(),
         contract.storage_slots().to_vec(),
     )?
     .deploy_if_not_exists(&wallet, TxPolicies::default())
-    .await?;
+    .await?
+    .contract_id;
 
     let contract_instance = MyContract::new(contract_id, wallet);
     let response = contract_instance.methods().something().call().await?.value;
@@ -2359,9 +2374,10 @@ async fn loader_blob_already_uploaded_not_an_issue() -> Result<()> {
         .await?;
 
     // this will try to upload the blobs but skip upon encountering an error
-    let (contract_id, _) = contract
+    let contract_id = contract
         .deploy_if_not_exists(&wallet, TxPolicies::default())
-        .await?;
+        .await?
+        .contract_id;
 
     let contract_instance = MyContract::new(contract_id, wallet);
     let response = contract_instance.methods().something().call().await?.value;
@@ -2389,16 +2405,18 @@ async fn loader_works_via_proxy() -> Result<()> {
 
     let contract = Contract::load_from(contract_binary, LoadConfiguration::default())?;
 
-    let (contract_id, _) = contract
+    let contract_id = contract
         .convert_to_loader(100)?
         .deploy_if_not_exists(&wallet, TxPolicies::default())
-        .await?;
+        .await?
+        .contract_id;
 
     let contract_binary = "sway/contracts/proxy/out/release/proxy.bin";
 
-    let (proxy_id, _) = Contract::load_from(contract_binary, LoadConfiguration::default())?
+    let proxy_id = Contract::load_from(contract_binary, LoadConfiguration::default())?
         .deploy_if_not_exists(&wallet, TxPolicies::default())
-        .await?;
+        .await?
+        .contract_id;
 
     let proxy = MyProxy::new(proxy_id, wallet.clone());
     proxy
@@ -2440,20 +2458,22 @@ async fn loader_storage_works_via_proxy() -> Result<()> {
     let contract = Contract::load_from(contract_binary, LoadConfiguration::default())?;
     let contract_storage_slots = contract.storage_slots().to_vec();
 
-    let (contract_id, _) = contract
+    let contract_id = contract
         .convert_to_loader(100)?
         .deploy_if_not_exists(&wallet, TxPolicies::default())
-        .await?;
+        .await?
+        .contract_id;
 
     let contract_binary = "sway/contracts/proxy/out/release/proxy.bin";
     let proxy_contract = Contract::load_from(contract_binary, LoadConfiguration::default())?;
 
     let combined_storage_slots = [&contract_storage_slots, proxy_contract.storage_slots()].concat();
 
-    let (proxy_id, _) = proxy_contract
+    let proxy_id = proxy_contract
         .with_storage_slots(combined_storage_slots)
         .deploy_if_not_exists(&wallet, TxPolicies::default())
-        .await?;
+        .await?
+        .contract_id;
 
     let proxy = MyProxy::new(proxy_id, wallet.clone());
     proxy

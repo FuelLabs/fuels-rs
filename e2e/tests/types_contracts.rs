@@ -76,12 +76,13 @@ async fn call_with_structs() -> Result<()> {
 
     let wallet = launch_provider_and_get_wallet().await?;
 
-    let (contract_id, _) = Contract::load_from(
+    let contract_id = Contract::load_from(
         "sway/types/contracts/complex_types_contract/out/release/complex_types_contract.bin",
         LoadConfiguration::default(),
     )?
     .deploy_if_not_exists(&wallet, TxPolicies::default())
-    .await?;
+    .await?
+    .contract_id;
 
     let contract_methods = MyContract::new(contract_id, wallet).methods();
 

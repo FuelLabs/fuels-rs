@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use fuels::prelude::*;
+    use fuels::{prelude::*, programs::contract::DeployResponse};
 
     #[tokio::test]
     async fn create_random_wallet() -> Result<()> {
@@ -135,7 +135,7 @@ mod tests {
         // Transfer the base asset with amount 1 from wallet 1 to wallet 2
         let transfer_amount = 1;
         let asset_id = Default::default();
-        let (_tx_id, _receipts) = wallets[0]
+        let _res = wallets[0]
             .transfer(
                 wallets[1].address(),
                 transfer_amount,
@@ -180,7 +180,7 @@ mod tests {
             .pop()
             .unwrap();
 
-        let (contract_id, _) = Contract::load_from(
+        let DeployResponse { contract_id, .. } = Contract::load_from(
             "../../e2e/sway/contracts/contract_test/out/release/contract_test.bin",
             LoadConfiguration::default(),
         )?
@@ -198,7 +198,7 @@ mod tests {
         // Transfer an amount of 300 to the contract
         let amount = 300;
         let asset_id = random_asset_id;
-        let (_tx_id, _receipts) = wallet
+        let _res = wallet
             .force_transfer_to_contract(&contract_id, amount, asset_id, TxPolicies::default())
             .await?;
 
@@ -369,7 +369,7 @@ mod tests {
         )?;
         let base_layer_address = Bech32Address::from(base_layer_address);
         // Transfer an amount of 1000 to the specified base layer address
-        let (tx_id, msg_id, _receipts) = wallet
+        let response = wallet
             .withdraw_to_base_layer(&base_layer_address, amount, TxPolicies::default())
             .await?;
 
@@ -378,7 +378,7 @@ mod tests {
         // Retrieve a message proof from the provider
         let proof = wallet
             .try_provider()?
-            .get_message_proof(&tx_id, &msg_id, None, Some(2))
+            .get_message_proof(&response.tx.id, &response.nonce, None, Some(2))
             .await?;
 
         // Verify the amount and recipient

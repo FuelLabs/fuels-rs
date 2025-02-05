@@ -1,9 +1,9 @@
-use fuel_tx::{Receipt, TxId};
 use fuels_core::{
     types::{
         errors::Result,
         transaction::Transaction,
         transaction_builders::{Blob, BlobTransactionBuilder},
+        tx_status::TxResponse,
     },
     Configurables,
 };
@@ -27,14 +27,6 @@ impl Regular {
             configurables,
         }
     }
-}
-
-#[derive(Clone, Debug)]
-pub struct UploadBlobResponse {
-    pub receipts: Vec<Receipt>,
-    pub gas_used: u64,
-    pub total_fee: u64,
-    pub tx_id: TxId,
 }
 
 /// Used to transform Script or Predicate code into a loader variant, where the code is uploaded as
@@ -159,7 +151,7 @@ impl Executable<Loader> {
     pub async fn upload_blob(
         &self,
         account: impl fuels_accounts::Account,
-    ) -> Result<Option<UploadBlobResponse>> {
+    ) -> Result<Option<TxResponse>> {
         let blob = self.blob();
         let provider = account.try_provider()?;
         let consensus_parameters = provider.consensus_parameters().await?;
@@ -180,11 +172,11 @@ impl Executable<Loader> {
 
         let tx_status = provider.send_transaction_and_await_commit(tx).await?;
 
-        Ok(Some(UploadBlobResponse {
+        Ok(Some(TxResponse {
             gas_used: tx_status.total_gas(),
             total_fee: tx_status.total_fee(),
             receipts: tx_status.take_receipts_checked(None)?,
-            tx_id,
+            id: tx_id,
         }))
     }
 }

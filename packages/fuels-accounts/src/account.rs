@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use async_trait::async_trait;
 use fuel_core_client::client::pagination::{PaginatedResult, PaginationRequest};
-use fuel_tx::{Output, Receipt, TxId, TxPointer, UtxoId};
+use fuel_tx::{Output, TxPointer, UtxoId};
 use fuel_types::{AssetId, Bytes32, ContractId, Nonce};
 use fuels_core::types::{
     bech32::{Bech32Address, Bech32ContractId},
@@ -15,6 +15,7 @@ use fuels_core::types::{
     transaction::{Transaction, TxPolicies},
     transaction_builders::{BuildableTransaction, ScriptTransactionBuilder, TransactionBuilder},
     transaction_response::TransactionResponse,
+    tx_status::TxResponse,
 };
 
 use crate::{
@@ -26,19 +27,8 @@ use crate::{
 };
 
 #[derive(Clone, Debug)]
-pub struct TransferResponse {
-    pub receipts: Vec<Receipt>,
-    pub gas_used: u64,
-    pub total_fee: u64,
-    pub tx_id: TxId,
-}
-
-#[derive(Clone, Debug)]
 pub struct WithdrawToBaseResponse {
-    pub receipts: Vec<Receipt>,
-    pub gas_used: u64,
-    pub total_fee: u64,
-    pub tx_id: TxId,
+    pub tx: TxResponse,
     pub nonce: Nonce,
 }
 
@@ -186,7 +176,7 @@ pub trait Account: ViewOnlyAccount {
         amount: u64,
         asset_id: AssetId,
         tx_policies: TxPolicies,
-    ) -> Result<TransferResponse> {
+    ) -> Result<TxResponse> {
         let provider = self.try_provider()?;
 
         let inputs = self
@@ -213,11 +203,11 @@ pub trait Account: ViewOnlyAccount {
 
         let tx_status = provider.send_transaction_and_await_commit(tx).await?;
 
-        Ok(TransferResponse {
+        Ok(TxResponse {
             gas_used: tx_status.total_gas(),
             total_fee: tx_status.total_fee(),
             receipts: tx_status.take_receipts_checked(None)?,
-            tx_id,
+            id: tx_id,
         })
     }
 
@@ -236,7 +226,7 @@ pub trait Account: ViewOnlyAccount {
         balance: u64,
         asset_id: AssetId,
         tx_policies: TxPolicies,
-    ) -> Result<TransferResponse> {
+    ) -> Result<TxResponse> {
         let provider = self.try_provider()?;
 
         let zeroes = Bytes32::zeroed();
@@ -280,11 +270,11 @@ pub trait Account: ViewOnlyAccount {
 
         let tx_status = provider.send_transaction_and_await_commit(tx).await?;
 
-        Ok(TransferResponse {
+        Ok(TxResponse {
             gas_used: tx_status.total_gas(),
             total_fee: tx_status.total_fee(),
             receipts: tx_status.take_receipts_checked(None)?,
-            tx_id,
+            id: tx_id,
         })
     }
 
@@ -328,10 +318,12 @@ pub trait Account: ViewOnlyAccount {
             .expect("MessageId could not be retrieved from tx receipts.");
 
         Ok(WithdrawToBaseResponse {
-            receipts,
-            gas_used,
-            total_fee,
-            tx_id,
+            tx: TxResponse {
+                receipts,
+                gas_used,
+                total_fee,
+                id: tx_id,
+            },
             nonce,
         })
     }

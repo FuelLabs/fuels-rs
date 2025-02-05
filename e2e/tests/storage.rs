@@ -19,12 +19,13 @@ async fn test_storage_initialization() -> Result<()> {
     let storage_vec = vec![storage_slot.clone()];
     let storage_configuration = StorageConfiguration::default().add_slot_overrides(storage_vec);
 
-    let (contract_id, _) = Contract::load_from(
+    let contract_id = Contract::load_from(
         "sway/contracts/storage/out/release/storage.bin",
         LoadConfiguration::default().with_storage_configuration(storage_configuration),
     )?
     .deploy_if_not_exists(&wallet, TxPolicies::default())
-    .await?;
+    .await?
+    .contract_id;
 
     let contract_instance = MyContract::new(contract_id, wallet.clone());
 
@@ -48,12 +49,13 @@ async fn test_init_storage_automatically() -> Result<()> {
 
     let wallet = launch_provider_and_get_wallet().await?;
 
-    let (contract_id, _) = Contract::load_from(
+    let contract_id = Contract::load_from(
         "sway/contracts/storage/out/release/storage.bin",
         LoadConfiguration::default(),
     )?
     .deploy_if_not_exists(&wallet, TxPolicies::default())
-    .await?;
+    .await?
+    .contract_id;
 
     let contract_methods = MyContract::new(contract_id, wallet.clone()).methods();
     {

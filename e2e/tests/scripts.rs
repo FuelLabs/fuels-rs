@@ -65,7 +65,7 @@ async fn script_call_has_same_estimated_and_used_gas() -> Result<()> {
         .await?
         .gas_used;
 
-    let gas_used = script_instance.main(a, b).call().await?.gas_used;
+    let gas_used = script_instance.main(a, b).call().await?.tx.gas_used;
 
     assert_eq!(estimated_gas_used, gas_used);
 
@@ -595,17 +595,19 @@ async fn loader_script_calling_loader_proxy() -> Result<()> {
 
     let contract = Contract::load_from(contract_binary, LoadConfiguration::default())?;
 
-    let (contract_id, _) = contract
+    let contract_id = contract
         .convert_to_loader(100)?
         .deploy_if_not_exists(&wallet, TxPolicies::default())
-        .await?;
+        .await?
+        .contract_id;
 
     let contract_binary = "sway/contracts/proxy/out/release/proxy.bin";
 
-    let (proxy_id, _) = Contract::load_from(contract_binary, LoadConfiguration::default())?
+    let proxy_id = Contract::load_from(contract_binary, LoadConfiguration::default())?
         .convert_to_loader(100)?
         .deploy_if_not_exists(&wallet, TxPolicies::default())
-        .await?;
+        .await?
+        .contract_id;
 
     let proxy = MyProxy::new(proxy_id.clone(), wallet.clone());
     proxy

@@ -259,14 +259,14 @@ async fn send_transfer_transactions() -> Result<()> {
     // Transfer 1 from wallet 1 to wallet 2.
     const SEND_AMOUNT: u64 = 1;
     let base_asset_id = AssetId::zeroed();
-    let (tx_id, _tx_status) = wallet_1
+    let tx_response = wallet_1
         .transfer(wallet_2.address(), SEND_AMOUNT, base_asset_id, tx_policies)
         .await?;
 
     // Assert that the transaction was properly configured.
     let res = wallet_1
         .try_provider()?
-        .get_transaction_by_id(&tx_id)
+        .get_transaction_by_id(&tx_response.id)
         .await?
         .unwrap();
 
@@ -304,7 +304,7 @@ async fn transfer_coins_with_change() -> Result<()> {
 
     // Transfer 2 from wallet 1 to wallet 2.
     const SEND_AMOUNT: u64 = 2;
-    let (_tx_id, tx_status) = wallet_1
+    let tx_response = wallet_1
         .transfer(
             wallet_2.address(),
             SEND_AMOUNT,
@@ -320,7 +320,7 @@ async fn transfer_coins_with_change() -> Result<()> {
 
     // Assert that we've sent 2 from wallet 1, resulting in an amount of 3 in wallet 1.
     let resulting_amount = wallet_1_final_coins.first().unwrap();
-    let fee = tx_status.total_fee();
+    let fee = tx_response.total_fee;
     assert_eq!(resulting_amount.amount(), AMOUNT - SEND_AMOUNT - fee);
 
     let wallet_2_final_coins = wallet_2.get_coins(base_asset_id).await?;

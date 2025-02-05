@@ -35,12 +35,13 @@ async fn test_provider_launch_and_connect() -> Result<()> {
     let provider = setup_test_provider(coins, vec![], None, None).await?;
     wallet.set_provider(provider.clone());
 
-    let (contract_id, _) = Contract::load_from(
+    let contract_id = Contract::load_from(
         "sway/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
     .deploy_if_not_exists(&wallet, TxPolicies::default())
-    .await?;
+    .await?
+    .contract_id;
 
     let contract_instance_connected = MyContract::new(contract_id.clone(), wallet.clone());
 
@@ -176,26 +177,26 @@ async fn test_input_message_pays_fee() -> Result<()> {
         abi = "e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
     ));
 
-    let (contract_id, deploy_tx_status) = Contract::load_from(
+    let deploy_response = Contract::load_from(
         "sway/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
     .deploy_if_not_exists(&wallet, TxPolicies::default())
     .await?;
 
-    let contract_instance = MyContract::new(contract_id, wallet.clone());
+    let contract_instance = MyContract::new(deploy_response.contract_id, wallet.clone());
 
-    let response = contract_instance
+    let call_response = contract_instance
         .methods()
         .initialize_counter(42)
         .call()
         .await?;
 
-    assert_eq!(42, response.value);
+    assert_eq!(42, call_response.value);
 
     let balance = wallet.get_asset_balance(base_asset_id).await?;
-    let deploy_fee = deploy_tx_status.unwrap().total_fee();
-    let call_fee = response.total_fee;
+    let deploy_fee = deploy_response.tx.unwrap().total_fee;
+    let call_fee = call_response.tx.total_fee;
     assert_eq!(balance, DEFAULT_COIN_AMOUNT - deploy_fee - call_fee);
 
     Ok(())
@@ -347,6 +348,7 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<()> {
         .await?;
 
     let gas_forwarded = response
+        .tx
         .receipts
         .iter()
         .find(|r| matches!(r, Receipt::Call { .. }))
@@ -407,6 +409,7 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
     assert_eq!(response.value, 1_000_000);
 
     let call_response = response
+        .tx
         .receipts
         .iter()
         .find(|&r| matches!(r, Receipt::Call { .. }));
@@ -444,6 +447,7 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
     assert_eq!(response.value, 0);
 
     let call_response = response
+        .tx
         .receipts
         .iter()
         .find(|&r| matches!(r, Receipt::Call { .. }));
@@ -587,6 +591,7 @@ async fn test_get_gas_used() -> Result<()> {
         .initialize_counter(42)
         .call()
         .await?
+        .tx
         .gas_used;
 
     assert!(gas_used > 0);
@@ -603,13 +608,13 @@ async fn test_parse_block_time() -> Result<()> {
     let tx_policies = TxPolicies::default().with_script_gas_limit(2000);
 
     let wallet_2 = WalletUnlocked::new_random(None).lock();
-    let (tx_id, _) = wallet
+    let tx_response = wallet
         .transfer(wallet_2.address(), 100, asset_id, tx_policies)
         .await?;
 
     let tx_response = wallet
         .try_provider()?
-        .get_transaction_by_id(&tx_id)
+        .get_transaction_by_id(&tx_response.id)
         .await?
         .unwrap();
     assert!(tx_response.time.is_some());
@@ -1112,7 +1117,7 @@ async fn tx_respects_policies() -> Result<()> {
         .await?;
 
     let tx_response = provider
-        .get_transaction_by_id(&response.tx_id.unwrap())
+        .get_transaction_by_id(&response.tx.id.unwrap())
         .await?
         .expect("tx should exist");
     let script = match tx_response.transaction {
@@ -1246,12 +1251,13 @@ async fn contract_call_with_impersonation() -> Result<()> {
         abi = "e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
     ));
 
-    let (contract_id, _) = Contract::load_from(
+    let contract_id = Contract::load_from(
         "sway/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
     .deploy_if_not_exists(&wallet, TxPolicies::default())
-    .await?;
+    .await?
+    .contract_id;
 
     let contract_instance = MyContract::new(contract_id, impersonator.clone());
 

@@ -1,6 +1,6 @@
 use std::{default::Default, fmt::Debug, path::Path};
 
-use fuel_tx::{Bytes32, ContractId, Receipt, Salt, StorageSlot, TxId};
+use fuel_tx::{Bytes32, ContractId, Salt, StorageSlot};
 use fuels_accounts::Account;
 use fuels_core::{
     constants::WORD_SIZE,
@@ -10,6 +10,7 @@ use fuels_core::{
         errors::Result,
         transaction::{Transaction, TxPolicies},
         transaction_builders::{Blob, CreateTransactionBuilder},
+        tx_status::TxResponse,
     },
     Configurables,
 };
@@ -23,10 +24,7 @@ use super::{
 
 #[derive(Clone, Debug)]
 pub struct DeployResponse {
-    pub receipts: Vec<Receipt>,
-    pub gas_used: u64,
-    pub total_fee: u64,
-    pub tx_id: TxId,
+    pub tx: Option<TxResponse>,
     pub contract_id: Bech32ContractId,
 }
 
@@ -177,10 +175,12 @@ impl Contract<Regular> {
         let tx_status = provider.send_transaction_and_await_commit(tx).await?;
 
         Ok(DeployResponse {
-            gas_used: tx_status.total_gas(),
-            total_fee: tx_status.total_fee(),
-            receipts: tx_status.take_receipts_checked(None)?,
-            tx_id,
+            tx: Some(TxResponse {
+                gas_used: tx_status.total_gas(),
+                total_fee: tx_status.total_fee(),
+                receipts: tx_status.take_receipts_checked(None)?,
+                id: tx_id,
+            }),
             contract_id: contract_id.into(),
         })
     }
@@ -191,13 +191,16 @@ impl Contract<Regular> {
         self,
         account: &impl Account,
         tx_policies: TxPolicies,
-    ) -> Result<Option<DeployResponse>> {
+    ) -> Result<DeployResponse> {
         let contract_id = Bech32ContractId::from(self.contract_id());
         let provider = account.try_provider()?;
         if provider.contract_exists(&contract_id).await? {
-            Ok(None)
+            Ok(DeployResponse {
+                tx: None,
+                contract_id,
+            })
         } else {
-            Ok(Some(self.deploy(account, tx_policies).await?))
+            self.deploy(account, tx_policies).await
         }
     }
 

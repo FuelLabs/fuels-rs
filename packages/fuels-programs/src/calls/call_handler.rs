@@ -15,7 +15,7 @@ use fuels_core::{
             BuildableTransaction, ScriptBuildStrategy, ScriptTransactionBuilder,
             VariableOutputPolicy,
         },
-        tx_status::TxStatus,
+        tx_status::{TxResponse, TxStatus},
         Selector, Token,
     },
 };
@@ -220,11 +220,13 @@ where
 
         Ok(CallResponse {
             value: T::from_token(token)?,
-            receipts,
-            gas_used,
-            total_fee,
             log_decoder: self.log_decoder.clone(),
-            tx_id: self.cached_tx_id,
+            tx: TxResponse {
+                receipts,
+                gas_used,
+                total_fee,
+                id: self.cached_tx_id,
+            },
         })
     }
 
@@ -503,11 +505,13 @@ where
 
         Ok(CallResponse {
             value: T::from_token(tokens_as_tuple)?,
-            receipts,
-            gas_used,
-            total_fee,
             log_decoder: self.log_decoder.clone(),
-            tx_id: self.cached_tx_id,
+            tx: TxResponse {
+                receipts,
+                gas_used,
+                total_fee,
+                id: self.cached_tx_id,
+            },
         })
     }
 

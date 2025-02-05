@@ -13,12 +13,13 @@ async fn contract_default_configurables() -> Result<()> {
 
     let wallet = launch_provider_and_get_wallet().await?;
 
-    let (contract_id, _) = Contract::load_from(
+    let contract_id = Contract::load_from(
         "sway/contracts/configurables/out/release/configurables.bin",
         LoadConfiguration::default(),
     )?
     .deploy_if_not_exists(&wallet, TxPolicies::default())
-    .await?;
+    .await?
+    .contract_id;
 
     let contract_instance = MyContract::new(contract_id, wallet.clone());
 
@@ -125,12 +126,13 @@ async fn contract_configurables() -> Result<()> {
         .with_STRUCT(new_struct.clone())?
         .with_ENUM(new_enum.clone())?;
 
-    let (contract_id, _) = Contract::load_from(
+    let contract_id = Contract::load_from(
         "sway/contracts/configurables/out/release/configurables.bin",
         LoadConfiguration::default().with_configurables(configurables),
     )?
     .deploy_if_not_exists(&wallet, TxPolicies::default())
-    .await?;
+    .await?
+    .contract_id;
 
     let contract_instance = MyContract::new(contract_id, wallet.clone());
     // ANCHOR_END: contract_configurables
@@ -192,13 +194,14 @@ async fn contract_manual_configurables() -> Result<()> {
         .with_STRUCT(new_struct.clone())?
         .with_ENUM(new_enum.clone())?;
 
-    let (contract_id, _) = Contract::load_from(
+    let contract_id = Contract::load_from(
         "sway/contracts/configurables/out/release/configurables.bin",
         LoadConfiguration::default(),
     )?
     .with_configurables(configurables)
     .deploy_if_not_exists(&wallet, TxPolicies::default())
-    .await?;
+    .await?
+    .contract_id;
 
     let contract_instance = MyContract::new(contract_id, wallet.clone());
 
