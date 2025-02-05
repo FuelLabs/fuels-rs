@@ -254,6 +254,8 @@ mod tests {
         )
         .await?;
 
+        provider.produce_blocks(100, None).await?;
+
         hot_wallet.set_provider(provider.clone());
         cold_wallet.set_provider(provider.clone());
         predicate.set_provider(provider.clone());
@@ -313,7 +315,7 @@ mod tests {
         // ANCHOR_END: custom_tx_adjust
 
         // ANCHOR: custom_tx_policies
-        let tx_policies = TxPolicies::default().with_tip(1);
+        let tx_policies = TxPolicies::default().with_maturity(64).with_expiration(128);
         let tb = tb.with_tx_policies(tx_policies);
         // ANCHOR_END: custom_tx_policies
 

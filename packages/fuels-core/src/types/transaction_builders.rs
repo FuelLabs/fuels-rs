@@ -329,6 +329,7 @@ macro_rules! impl_tx_builder_trait {
                 policies.set(PolicyType::MaxFee, self.tx_policies.tip().or(Some(0)));
                 policies.set(PolicyType::Maturity, self.tx_policies.maturity());
                 policies.set(PolicyType::Tip, self.tx_policies.tip());
+                policies.set(PolicyType::Expiration, self.tx_policies.expiration());
 
                 Ok(policies)
             }
