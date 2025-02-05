@@ -1,6 +1,6 @@
 use std::{default::Default, fmt::Debug, path::Path};
 
-use fuel_tx::{Bytes32, ContractId, Salt, StorageSlot};
+use fuel_tx::{Bytes32, ContractId, Receipt, Salt, StorageSlot, TxId};
 use fuels_accounts::Account;
 use fuels_core::{
     constants::WORD_SIZE,
@@ -8,9 +8,8 @@ use fuels_core::{
     types::{
         bech32::Bech32ContractId,
         errors::Result,
-        transaction::TxPolicies,
+        transaction::{Transaction, TxPolicies},
         transaction_builders::{Blob, CreateTransactionBuilder},
-        tx_status::TxStatus,
     },
     Configurables,
 };
@@ -21,6 +20,15 @@ use super::{
     compute_contract_id_and_state_root, validate_path_and_extension, BlobsNotUploaded, Contract,
     Loader, StorageConfiguration,
 };
+
+#[derive(Clone, Debug)]
+pub struct DeployResponse {
+    pub receipts: Vec<Receipt>,
+    pub gas_used: u64,
+    pub total_fee: u64,
+    pub tx_id: TxId,
+    pub contract_id: Bech32ContractId,
+}
 
 // In a mod so that we eliminate the footgun of getting the private `code` field without applying
 // configurables
@@ -141,7 +149,7 @@ impl Contract<Regular> {
         self,
         account: &impl Account,
         tx_policies: TxPolicies,
-    ) -> Result<(Bech32ContractId, TxStatus)> {
+    ) -> Result<DeployResponse> {
         let contract_id = self.contract_id();
         let state_root = self.state_root();
         let salt = self.salt;
@@ -161,13 +169,20 @@ impl Contract<Regular> {
         account.adjust_for_fee(&mut tb, 0).await?;
 
         let provider = account.try_provider()?;
+        let consensus_parameters = provider.consensus_parameters().await?;
 
         let tx = tb.build(provider).await?;
+        let tx_id = tx.id(consensus_parameters.chain_id());
 
         let tx_status = provider.send_transaction_and_await_commit(tx).await?;
-        tx_status.check(None)?;
 
-        Ok((contract_id.into(), tx_status))
+        Ok(DeployResponse {
+            gas_used: tx_status.total_gas(),
+            total_fee: tx_status.total_fee(),
+            receipts: tx_status.take_receipts_checked(None)?,
+            tx_id,
+            contract_id: contract_id.into(),
+        })
     }
 
     /// Deploys a compiled contract to a running node if a contract with
@@ -176,15 +191,13 @@ impl Contract<Regular> {
         self,
         account: &impl Account,
         tx_policies: TxPolicies,
-    ) -> Result<(Bech32ContractId, Option<TxStatus>)> {
+    ) -> Result<Option<DeployResponse>> {
         let contract_id = Bech32ContractId::from(self.contract_id());
         let provider = account.try_provider()?;
         if provider.contract_exists(&contract_id).await? {
-            Ok((contract_id, None))
+            Ok(None)
         } else {
-            let (contract_id, tx_status) = self.deploy(account, tx_policies).await?;
-
-            Ok((contract_id, Some(tx_status)))
+            Ok(Some(self.deploy(account, tx_policies).await?))
         }
     }
 
@@ -211,7 +224,7 @@ impl Contract<Regular> {
         account: &impl Account,
         tx_policies: TxPolicies,
         max_words_per_blob: usize,
-    ) -> Result<(Bech32ContractId, TxStatus)> {
+    ) -> Result<DeployResponse> {
         let provider = account.try_provider()?;
         let max_contract_size = provider
             .consensus_parameters()

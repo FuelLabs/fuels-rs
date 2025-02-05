@@ -10,7 +10,7 @@ use fuels_core::{
 /// [`CallResponse`] is a struct that is returned by a call to the contract or script. Its value
 /// field holds the decoded typed value returned by the contract's method. The other field holds all
 /// the receipts returned by the call.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 // ANCHOR: call_response
 pub struct CallResponse<D> {
     pub value: D,

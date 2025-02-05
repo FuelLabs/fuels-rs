@@ -1,8 +1,9 @@
+use fuel_tx::{Receipt, TxId};
 use fuels_core::{
     types::{
         errors::Result,
+        transaction::Transaction,
         transaction_builders::{Blob, BlobTransactionBuilder},
-        tx_status::TxStatus,
     },
     Configurables,
 };
@@ -26,6 +27,14 @@ impl Regular {
             configurables,
         }
     }
+}
+
+#[derive(Clone, Debug)]
+pub struct UploadBlobResponse {
+    pub receipts: Vec<Receipt>,
+    pub gas_used: u64,
+    pub total_fee: u64,
+    pub tx_id: TxId,
 }
 
 /// Used to transform Script or Predicate code into a loader variant, where the code is uploaded as
@@ -146,13 +155,14 @@ impl Executable<Loader> {
             .expect("checked before turning into a Executable<Loader>")
     }
 
-    /// Uploads a blob containing the original executable code minus the data section.
+    /// If not previously uploaded, uploads a blob containing the original executable code minus the data section.
     pub async fn upload_blob(
         &self,
         account: impl fuels_accounts::Account,
-    ) -> Result<Option<TxStatus>> {
+    ) -> Result<Option<UploadBlobResponse>> {
         let blob = self.blob();
         let provider = account.try_provider()?;
+        let consensus_parameters = provider.consensus_parameters().await?;
 
         if provider.blob_exists(blob.id()).await? {
             return Ok(None);
@@ -166,10 +176,16 @@ impl Executable<Loader> {
         account.add_witnesses(&mut tb)?;
 
         let tx = tb.build(provider).await?;
-        let tx_status = provider.send_transaction_and_await_commit(tx).await?;
-        tx_status.check(None)?;
+        let tx_id = tx.id(consensus_parameters.chain_id());
 
-        Ok(Some(tx_status))
+        let tx_status = provider.send_transaction_and_await_commit(tx).await?;
+
+        Ok(Some(UploadBlobResponse {
+            gas_used: tx_status.total_gas(),
+            total_fee: tx_status.total_fee(),
+            receipts: tx_status.take_receipts_checked(None)?,
+            tx_id,
+        }))
     }
 }
 

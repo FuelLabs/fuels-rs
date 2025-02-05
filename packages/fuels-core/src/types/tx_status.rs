@@ -6,7 +6,7 @@ use fuel_abi_types::error_codes::{
 use fuel_core_client::client::types::TransactionStatus as ClientTransactionStatus;
 #[cfg(feature = "std")]
 use fuel_core_types::services::executor::{TransactionExecutionResult, TransactionExecutionStatus};
-use fuel_tx::Receipt;
+use fuel_tx::{Receipt, TxId};
 #[cfg(feature = "std")]
 use fuel_vm::state::ProgramState;
 
