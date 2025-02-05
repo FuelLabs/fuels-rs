@@ -6,7 +6,7 @@ mod tests {
     fn test_binary_format(path: &str, expected_jump_offset: u8) {
         let binary =
             std::fs::read(path).unwrap_or_else(|_| panic!("Could not read binary file: {}", path));
-        let executable = Executable::<Regular>::from_bytes(binary);
+        let executable = Executable::from_bytes(binary);
         let loader = executable.convert_to_loader().unwrap();
         let blob = loader.blob();
 
