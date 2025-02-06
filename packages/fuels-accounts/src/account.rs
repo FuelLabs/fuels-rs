@@ -15,7 +15,7 @@ use fuels_core::types::{
     transaction::{Transaction, TxPolicies},
     transaction_builders::{BuildableTransaction, ScriptTransactionBuilder, TransactionBuilder},
     transaction_response::TransactionResponse,
-    tx_status::TxResponse,
+    tx_response::TxResponse,
 };
 
 use crate::{

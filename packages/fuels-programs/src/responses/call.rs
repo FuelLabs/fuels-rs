@@ -4,7 +4,7 @@ use fuel_tx::TxId;
 use fuels_core::{
     codec::{LogDecoder, LogResult},
     traits::{Parameterize, Tokenizable},
-    types::{errors::Result, tx_status::TxResponse},
+    types::{errors::Result, tx_response::TxResponse},
 };
 
 /// [`CallResponse`] is a struct that is returned by a call to the contract or script. Its value

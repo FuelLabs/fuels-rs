@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use fuels::{prelude::*, programs::contract::DeployResponse};
+    use fuels::prelude::*;
 
     #[tokio::test]
     async fn create_random_wallet() -> Result<()> {
@@ -180,12 +180,13 @@ mod tests {
             .pop()
             .unwrap();
 
-        let DeployResponse { contract_id, .. } = Contract::load_from(
+        let contract_id = Contract::load_from(
             "../../e2e/sway/contracts/contract_test/out/release/contract_test.bin",
             LoadConfiguration::default(),
         )?
         .deploy(&wallet, TxPolicies::default())
-        .await?;
+        .await?
+        .contract_id;
 
         // ANCHOR: wallet_contract_transfer
         // Check the current balance of the contract with id 'contract_id'

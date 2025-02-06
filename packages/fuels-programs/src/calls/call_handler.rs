@@ -15,7 +15,8 @@ use fuels_core::{
             BuildableTransaction, ScriptBuildStrategy, ScriptTransactionBuilder,
             VariableOutputPolicy,
         },
-        tx_status::{TxResponse, TxStatus},
+        tx_response::TxResponse,
+        tx_status::TxStatus,
         Selector, Token,
     },
 };

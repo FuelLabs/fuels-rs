@@ -3,7 +3,7 @@ use fuels_core::{
         errors::Result,
         transaction::Transaction,
         transaction_builders::{Blob, BlobTransactionBuilder},
-        tx_status::TxResponse,
+        tx_response::TxResponse,
     },
     Configurables,
 };
