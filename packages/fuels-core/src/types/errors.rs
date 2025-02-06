@@ -75,6 +75,18 @@ impl Error {
 
 pub type Result<T> = std::result::Result<T, Error>;
 
+/// Provides `context` and `with_context` to `Result`.
+///
+/// # Examples
+/// ```
+/// use fuels_core::types:: errors::{Context, Error, Result};
+///
+/// let res_with_context: Result<()> =
+/// Err(Error::Other("some error".to_owned())).context("some context");
+///
+/// let res_with_context: Result<()> =
+/// Err(Error::Other("some error".to_owned())).with_context(|| "some context");
+/// ```
 pub trait Context<T>: Sealed {
     fn context<C>(self, context: C) -> Result<T>
     where
