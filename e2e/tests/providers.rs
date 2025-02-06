@@ -263,6 +263,7 @@ async fn can_set_custom_block_time() -> Result<()> {
     assert_eq!(blocks[1].header.time.unwrap().timestamp(), 20);
     assert_eq!(blocks[2].header.time.unwrap().timestamp(), 40);
     assert_eq!(blocks[3].header.time.unwrap().timestamp(), 60);
+
     Ok(())
 }
 
@@ -1313,7 +1314,7 @@ async fn is_account_query_test() -> Result<()> {
             "sway/contracts/contract_test/out/release/contract_test.bin",
             LoadConfiguration::default(),
         )?;
-        let contract_id = contract.contract_id();
+        let contract_id = contract.contract_id()?;
 
         let is_account = provider.is_user_account(*contract_id).await?;
         assert!(is_account);

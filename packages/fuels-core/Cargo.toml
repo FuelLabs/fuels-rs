@@ -35,6 +35,7 @@ uint = { workspace = true, default-features = false }
 [dev-dependencies]
 fuel-tx = { workspace = true, features = ["test-helpers", "random"] }
 tokio = { workspace = true, features = ["test-util", "macros"] }
+pretty_assertions = { workspace = true, features = ["alloc"] }
 
 [features]
 default = ["std"]

@@ -7,7 +7,9 @@ use crate::{
     program_bindings::{
         abigen::{
             bindings::{function_generator::FunctionGenerator, utils::extract_main_fn},
-            configurables::generate_code_for_configurable_constants,
+            configurables::{
+                generate_code_for_configurable_constants, generate_code_for_configurable_reader,
+            },
         },
         generated_code::GeneratedCode,
     },
@@ -27,6 +29,10 @@ pub(crate) fn predicate_bindings(
     let constant_configuration_code =
         generate_code_for_configurable_constants(&configuration_struct_name, &abi.configurables)?;
 
+    let configuration_reader_name = ident(&format!("{name}ConfigurablesReader"));
+    let constant_configuration_reader_code =
+        generate_code_for_configurable_reader(&configuration_reader_name, &abi.configurables)?;
+
     let code = quote! {
         #[derive(Default)]
         pub struct #encoder_struct_name{
@@ -44,12 +50,17 @@ pub(crate) fn predicate_bindings(
         }
 
         #constant_configuration_code
+        #constant_configuration_reader_code
     };
     // All publicly available types generated above should be listed here.
-    let type_paths = [&encoder_struct_name, &configuration_struct_name]
-        .map(|type_name| TypePath::new(type_name).expect("We know the given types are not empty"))
-        .into_iter()
-        .collect();
+    let type_paths = [
+        &encoder_struct_name,
+        &configuration_struct_name,
+        &configuration_reader_name,
+    ]
+    .map(|type_name| TypePath::new(type_name).expect("We know the given types are not empty"))
+    .into_iter()
+    .collect();
 
     Ok(GeneratedCode::new(code, type_paths, no_std))
 }
