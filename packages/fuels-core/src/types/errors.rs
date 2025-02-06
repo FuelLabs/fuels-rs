@@ -40,6 +40,9 @@ pub mod transaction {
     }
 }
 
+use crate::sealed::Sealed;
+use std::fmt::Display;
+
 #[derive(thiserror::Error, Debug, Clone)]
 pub enum Error {
     #[error("io: {0}")]
@@ -114,8 +117,6 @@ macro_rules! error {
     $crate::types::errors::Error::$err_variant(format!($fmt_str,$($arg),*))
    }
 }
-use std::fmt::Display;
-
 pub use error;
 
 /// This macro can only be used for `Error::Transaction` variants that have a `String` field.
@@ -128,8 +129,6 @@ macro_rules! error_transaction {
    }
 }
 pub use error_transaction;
-
-use crate::sealed::Sealed;
 
 impl From<fuel_vm::checked_transaction::CheckError> for Error {
     fn from(err: fuel_vm::checked_transaction::CheckError) -> Error {
