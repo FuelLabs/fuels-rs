@@ -1278,4 +1278,33 @@ mod tests {
 
         Ok(())
     }
+
+    #[tokio::test]
+    async fn contract_configurables_reader() -> Result<()> {
+        use fuels::prelude::*;
+
+        // ANCHOR: contract_configurables_reader
+        abigen!(Contract(
+            name = "MyContract",
+            abi = "e2e/sway/contracts/configurables/out/release/configurables-abi.json"
+        ));
+
+        let configurables_reader = MyContractConfigurablesReader::load_from(
+            "../../e2e/sway/contracts/configurables/out/release/configurables.bin",
+        )?;
+
+        let some_bool = configurables_reader.BOOL()?;
+        let some_u8 = configurables_reader.U8()?;
+        let some_str_4 = configurables_reader.STR_4()?;
+        let some_array = configurables_reader.ARRAY()?;
+        // ANCHOR_END: contract_configurables_reader
+
+        let str_4: fuels::types::SizedAsciiString<4> = "fuel".try_into()?;
+        assert!(some_bool);
+        assert_eq!(some_u8, 8);
+        assert_eq!(some_str_4, str_4);
+        assert_eq!(some_array, [253, 254, 255]);
+
+        Ok(())
+    }
 }

@@ -1,6 +1,6 @@
 use fuels_accounts::Account;
 use fuels_core::types::{
-    errors::{error, Context, Result},
+    errors::{error, Result},
     transaction::{ScriptTransaction, TxPolicies},
     transaction_builders::{
         BuildableTransaction, ScriptTransactionBuilder, TransactionBuilder, VariableOutputPolicy,
@@ -74,7 +74,7 @@ impl TransactionTuner for ScriptCall {
         _account: &T,
     ) -> Result<ScriptTransactionBuilder> {
         let (inputs, outputs) = self.prepare_inputs_outputs()?;
-        let script_binary = self.script_binary.clone().context("script binary")?;
+        let script_binary = self.script_binary.clone()?;
 
         Ok(ScriptTransactionBuilder::default()
             .with_variable_output_policy(variable_output_policy)

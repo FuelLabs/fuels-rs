@@ -1,6 +1,4 @@
 pub mod transaction {
-    use std::fmt::Display;
-
     #[derive(thiserror::Error, Debug, Clone)]
     pub enum Reason {
         #[error("builder: {0}")]
@@ -17,26 +15,6 @@ pub mod transaction {
         },
         #[error(": {0}")]
         Other(String),
-    }
-
-    impl Reason {
-        pub(crate) fn context(self, context: impl Display) -> Self {
-            match self {
-                Reason::Builder(msg) => Reason::Builder(format!("{context}: {msg}")),
-                Reason::Validation(msg) => Reason::Validation(format!("{context}: {msg}")),
-                Reason::SqueezedOut(msg) => Reason::SqueezedOut(format!("{context}: {msg}")),
-                Reason::Reverted {
-                    reason,
-                    revert_id,
-                    receipts,
-                } => Reason::Reverted {
-                    reason: format!("{context}: {reason}"),
-                    revert_id,
-                    receipts,
-                },
-                Reason::Other(msg) => Reason::Other(format!("{context}: {msg}")),
-            }
-        }
     }
 }
 
@@ -60,49 +38,7 @@ impl From<std::io::Error> for Error {
     }
 }
 
-impl Error {
-    pub(crate) fn context(self, context: impl Display) -> Self {
-        match self {
-            Error::IO(msg) => Error::IO(format!("{context}: {msg}")),
-            Error::Codec(msg) => Error::Codec(format!("{context}: {msg}")),
-            Error::Transaction(reason) => Error::Transaction(reason.context(context)),
-            Error::Provider(msg) => Error::Provider(format!("{context}: {msg}")),
-            Error::Other(msg) => Error::Other(format!("{context}: {msg}")),
-        }
-    }
-}
-
 pub type Result<T> = std::result::Result<T, Error>;
-
-pub trait Context<T>: Sealed {
-    fn context<C>(self, context: C) -> Result<T>
-    where
-        C: Display + Send + Sync + 'static;
-
-    fn with_context<C, F>(self, f: F) -> Result<T>
-    where
-        C: Display + Send + Sync + 'static,
-        F: FnOnce() -> C;
-}
-
-impl<T> Sealed for Result<T> {}
-
-impl<T> Context<T> for Result<T> {
-    fn context<C>(self, context: C) -> Result<T>
-    where
-        C: Display + Send + Sync + 'static,
-    {
-        self.map_err(|e| e.context(context))
-    }
-
-    fn with_context<C, F>(self, context: F) -> Result<T>
-    where
-        C: Display + Send + Sync + 'static,
-        F: FnOnce() -> C,
-    {
-        self.context(context())
-    }
-}
 
 /// This macro can only be used for `Error` variants that have a `String` field.
 /// Those are: `IO`, `Codec`, `Provider`, `Other`.
@@ -112,8 +48,6 @@ macro_rules! error {
     $crate::types::errors::Error::$err_variant(format!($fmt_str,$($arg),*))
    }
 }
-use std::fmt::Display;
-
 pub use error;
 
 /// This macro can only be used for `Error::Transaction` variants that have a `String` field.
@@ -126,8 +60,6 @@ macro_rules! error_transaction {
    }
 }
 pub use error_transaction;
-
-use crate::sealed::Sealed;
 
 impl From<fuel_vm::checked_transaction::CheckError> for Error {
     fn from(err: fuel_vm::checked_transaction::CheckError) -> Error {

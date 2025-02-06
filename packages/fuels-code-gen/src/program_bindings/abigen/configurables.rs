@@ -207,9 +207,9 @@ fn generate_methods_reader(resolved_configurables: &[ResolvedConfigurable]) -> T
             let name = safe_ident(name);
 
             let reader_code = if *indirect {
-                quote! { self.reader.decode_indirect(#offset as usize) }
+                quote! { self.reader.try_from_indirect(#offset as usize) }
             } else {
-                quote! { self.reader.decode_direct(#offset as usize) }
+                quote! { self.reader.try_from_direct(#offset as usize) }
             };
 
             quote! {

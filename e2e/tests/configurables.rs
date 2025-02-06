@@ -1,5 +1,9 @@
 use fuels::{
-    core::{codec::EncoderConfig, ConfigurablesReader},
+    core::{
+        codec::EncoderConfig,
+        traits::{Parameterize, Tokenizable},
+        ConfigurablesReader,
+    },
     prelude::*,
     types::{AsciiString, Bits256, SizedAsciiString, U256},
 };
@@ -394,29 +398,6 @@ async fn configurable_encoder_config_is_applied() {
 }
 
 #[tokio::test]
-async fn contract_configurables_reader_manual() -> Result<()> {
-    let configurables_reader = ConfigurablesReader::load_from(
-        "sway/contracts/dyn_configurables/out/release/dyn_configurables.bin",
-    )?;
-
-    let some_bool: bool = configurables_reader.decode_direct(2094)?;
-    let some_u8: u8 = configurables_reader.decode_direct(2944)?;
-    let some_str: AsciiString = configurables_reader.decode_indirect(2920)?;
-    let some_str2: AsciiString = configurables_reader.decode_indirect(2928)?;
-    let some_str3: AsciiString = configurables_reader.decode_indirect(2936)?;
-    let some_last_u8: u8 = configurables_reader.decode_direct(2912)?;
-
-    assert!(some_bool);
-    assert_eq!(some_u8, 8);
-    assert_eq!(some_str, "sway");
-    assert_eq!(some_str2, "forc");
-    assert_eq!(some_str3, "fuel");
-    assert_eq!(some_last_u8, 16);
-
-    Ok(())
-}
-
-#[tokio::test]
 async fn contract_configurables_reader() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
@@ -440,6 +421,60 @@ async fn contract_configurables_reader() -> Result<()> {
     assert_eq!(some_str2, "forc");
     assert_eq!(some_str3, "fuel");
     assert_eq!(some_last_u8, 16);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn contract_configurables_reader_manual() -> Result<()> {
+    // TODO: add documentatio
+    let configurables_reader = ConfigurablesReader::load_from(
+        "sway/contracts/dyn_configurables/out/release/dyn_configurables.bin",
+    )?;
+
+    let some_bool: bool = configurables_reader.try_from_direct(2094)?;
+    let some_u8: u8 = configurables_reader.try_from_direct(2944)?;
+    let some_str: AsciiString = configurables_reader.try_from_indirect(2920)?;
+    let some_str2: AsciiString = configurables_reader.try_from_indirect(2928)?;
+    let some_str3: AsciiString = configurables_reader.try_from_indirect(2936)?;
+    let some_last_u8: u8 = configurables_reader.try_from_direct(2912)?;
+
+    assert!(some_bool);
+    assert_eq!(some_u8, 8);
+    assert_eq!(some_str, "sway");
+    assert_eq!(some_str2, "forc");
+    assert_eq!(some_str3, "fuel");
+    assert_eq!(some_last_u8, 16);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn contract_configurables_reader_runtime() -> Result<()> {
+    // TODO: add documentatio
+    let configurables_reader = ConfigurablesReader::load_from(
+        "sway/contracts/dyn_configurables/out/release/dyn_configurables.bin",
+    )?;
+
+    let some_bool = configurables_reader.decode_direct(2094, &bool::param_type())?;
+    let some_u8 = configurables_reader.decode_direct(2944, &u8::param_type())?;
+    let some_str = configurables_reader.decode_indirect(2920, &AsciiString::param_type())?;
+    let some_str2 = configurables_reader.decode_indirect(2928, &AsciiString::param_type())?;
+    let some_str3 = configurables_reader.decode_indirect(2936, &AsciiString::param_type())?;
+    let some_last_u8 = configurables_reader.decode_direct(2912, &u8::param_type())?;
+
+    assert_eq!(some_bool, true.into_token());
+    assert_eq!(some_u8, 8u8.into_token());
+    assert_eq!(some_str, AsciiString::new("sway".to_string())?.into_token());
+    assert_eq!(
+        some_str2,
+        AsciiString::new("forc".to_string())?.into_token()
+    );
+    assert_eq!(
+        some_str3,
+        AsciiString::new("fuel".to_string())?.into_token()
+    );
+    assert_eq!(some_last_u8, 16u8.into_token());
 
     Ok(())
 }

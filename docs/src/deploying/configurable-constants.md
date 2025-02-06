@@ -11,3 +11,8 @@ Each of the configurable constants will get a dedicated `with` method in the SDK
 ```rust,ignore
 {{#include ../../../examples/contracts/src/lib.rs:contract_configurables}}
 ```
+In addition to writing, you are able to read the configurable constants directly from the binary:
+
+```rust,ignore
+{{#include ../../../examples/contracts/src/lib.rs:contract_configurables_reader}}
+```

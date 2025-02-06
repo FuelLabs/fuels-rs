@@ -5,10 +5,11 @@ mod utils;
 
 use std::{collections::HashMap, iter, path::Path};
 
-use codec::{try_from_bytes, ABIEncoder, DecoderConfig};
+use codec::{try_from_bytes, ABIDecoder, ABIEncoder, DecoderConfig};
 use itertools::Itertools;
 use offsets::{extract_data_offset, extract_offset_at};
 use traits::{Parameterize, Tokenizable};
+use types::{param_types::ParamType, Token};
 pub use utils::*;
 
 use crate::types::errors::Result;
@@ -52,13 +53,13 @@ impl ConfigurablesReader {
         self
     }
 
-    pub fn decode_direct<T: Tokenizable + Parameterize>(&self, offset: usize) -> Result<T> {
+    pub fn try_from_direct<T: Tokenizable + Parameterize>(&self, offset: usize) -> Result<T> {
         check_binary_len(&self.binary, offset)?;
 
         try_from_bytes(&self.binary[offset..], self.decoder_config)
     }
 
-    pub fn decode_indirect<T: Tokenizable + Parameterize>(&self, offset: usize) -> Result<T> {
+    pub fn try_from_indirect<T: Tokenizable + Parameterize>(&self, offset: usize) -> Result<T> {
         let data_offset = extract_data_offset(&self.binary)?;
         let dyn_offset = extract_offset_at(&self.binary, offset)?;
 
@@ -68,6 +69,22 @@ impl ConfigurablesReader {
             &self.binary[data_offset + dyn_offset..],
             self.decoder_config,
         )
+    }
+
+    pub fn decode_direct(&self, offset: usize, param_type: &ParamType) -> Result<Token> {
+        check_binary_len(&self.binary, offset)?;
+
+        ABIDecoder::new(self.decoder_config).decode(param_type, &self.binary[offset..])
+    }
+
+    pub fn decode_indirect(&self, offset: usize, param_type: &ParamType) -> Result<Token> {
+        let data_offset = extract_data_offset(&self.binary)?;
+        let dyn_offset = extract_offset_at(&self.binary, offset)?;
+
+        check_binary_len(&self.binary, data_offset + dyn_offset)?;
+
+        ABIDecoder::new(self.decoder_config)
+            .decode(param_type, &self.binary[data_offset + dyn_offset..])
     }
 }
 
@@ -269,7 +286,6 @@ fn check_binary_len(binary: &[u8], offset: usize) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-
     use super::*;
 
     #[test]
@@ -372,6 +388,42 @@ mod tests {
         let indirect_configurables = vec![22, 30, 38];
 
         Configurables::new(offsets_with_data, indirect_configurables)
+    }
+
+    #[test]
+    fn try_from_direct() {
+        let configurables_reader = ConfigurablesReader::load(TEST_BINARY.to_vec());
+        let value: u16 = configurables_reader.try_from_direct(16).unwrap();
+
+        assert_eq!(4370, value);
+    }
+
+    #[test]
+    fn try_from_indirect() {
+        let configurables_reader = ConfigurablesReader::load(TEST_BINARY.to_vec());
+        let value: [u8; 3] = configurables_reader.try_from_indirect(22).unwrap();
+
+        assert_eq!([50, 51, 52], value);
+    }
+
+    #[test]
+    fn decode_direct() {
+        let configurables_reader = ConfigurablesReader::load(TEST_BINARY.to_vec());
+        let token = configurables_reader
+            .decode_direct(16, &u16::param_type())
+            .unwrap();
+
+        assert_eq!(4370u16.into_token(), token);
+    }
+
+    #[test]
+    fn decode_indirect() {
+        let configurables_reader = ConfigurablesReader::load(TEST_BINARY.to_vec());
+        let token = configurables_reader
+            .decode_indirect(22, &<[u8; 3]>::param_type())
+            .unwrap();
+
+        assert_eq!([50u8, 51, 52].into_token(), token);
     }
 
     #[test]
