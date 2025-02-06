@@ -1,7 +1,9 @@
 use fuels_core::{
     types::{
         errors::Result,
+        transaction::Transaction,
         transaction_builders::{Blob, BlobTransactionBuilder},
+        tx_response::TxResponse,
     },
     Configurables,
 };
@@ -145,13 +147,17 @@ impl Executable<Loader> {
             .expect("checked before turning into a Executable<Loader>")
     }
 
-    /// Uploads a blob containing the original executable code minus the data section.
-    pub async fn upload_blob(&self, account: impl fuels_accounts::Account) -> Result<()> {
+    /// If not previously uploaded, uploads a blob containing the original executable code minus the data section.
+    pub async fn upload_blob(
+        &self,
+        account: impl fuels_accounts::Account,
+    ) -> Result<Option<TxResponse>> {
         let blob = self.blob();
         let provider = account.try_provider()?;
+        let consensus_parameters = provider.consensus_parameters().await?;
 
         if provider.blob_exists(blob.id()).await? {
-            return Ok(());
+            return Ok(None);
         }
 
         let mut tb = BlobTransactionBuilder::default()
@@ -159,17 +165,19 @@ impl Executable<Loader> {
             .with_max_fee_estimation_tolerance(DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE);
 
         account.adjust_for_fee(&mut tb, 0).await?;
-
         account.add_witnesses(&mut tb)?;
 
         let tx = tb.build(provider).await?;
+        let tx_id = tx.id(consensus_parameters.chain_id());
 
-        provider
-            .send_transaction_and_await_commit(tx)
-            .await?
-            .check(None)?;
+        let tx_status = provider.send_transaction_and_await_commit(tx).await?;
 
-        Ok(())
+        Ok(Some(TxResponse {
+            gas_used: tx_status.total_gas(),
+            total_fee: tx_status.total_fee(),
+            receipts: tx_status.take_receipts_checked(None)?,
+            id: tx_id,
+        }))
     }
 }
 

@@ -65,7 +65,7 @@ async fn script_call_has_same_estimated_and_used_gas() -> Result<()> {
         .await?
         .gas_used;
 
-    let gas_used = script_instance.main(a, b).call().await?.gas_used;
+    let gas_used = script_instance.main(a, b).call().await?.tx.gas_used;
 
     assert_eq!(estimated_gas_used, gas_used);
 
@@ -326,7 +326,7 @@ async fn test_script_transaction_builder() -> Result<()> {
     tokio::time::sleep(Duration::from_millis(500)).await;
     let tx_status = provider.tx_status(&tx_id).await?;
 
-    let response = script_call_handler.get_response_from(tx_status)?;
+    let response = script_call_handler.get_response(tx_status)?;
 
     assert_eq!(response.value, "hello");
     // ANCHOR_END: script_call_tb
@@ -598,14 +598,16 @@ async fn loader_script_calling_loader_proxy() -> Result<()> {
     let contract_id = contract
         .convert_to_loader(100)?
         .deploy_if_not_exists(&wallet, TxPolicies::default())
-        .await?;
+        .await?
+        .contract_id;
 
     let contract_binary = "sway/contracts/proxy/out/release/proxy.bin";
 
     let proxy_id = Contract::load_from(contract_binary, LoadConfiguration::default())?
         .convert_to_loader(100)?
         .deploy_if_not_exists(&wallet, TxPolicies::default())
-        .await?;
+        .await?
+        .contract_id;
 
     let proxy = MyProxy::new(proxy_id.clone(), wallet.clone());
     proxy

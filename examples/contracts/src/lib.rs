@@ -50,7 +50,8 @@ mod tests {
             LoadConfiguration::default(),
         )?
         .deploy(&wallet, TxPolicies::default())
-        .await?;
+        .await?
+        .contract_id;
 
         println!("Contract deployed @ {contract_id}");
         // ANCHOR_END: deploy_contract
@@ -104,7 +105,8 @@ mod tests {
             LoadConfiguration::default(),
         )?
         .deploy(&wallet, TxPolicies::default())
-        .await?;
+        .await?
+        .contract_id;
 
         // ANCHOR: contract_call_cost_estimation
         let contract_instance = MyContract::new(contract_id, wallet);
@@ -118,7 +120,7 @@ mod tests {
             .await?;
         // ANCHOR_END: contract_call_cost_estimation
 
-        let expected_gas = 2816;
+        let expected_gas = 9068;
 
         assert_eq!(transaction_cost.gas_used, expected_gas);
 
@@ -137,9 +139,8 @@ mod tests {
             LoadConfiguration::default(),
         )?
         .deploy(&wallet, TxPolicies::default())
-        .await?;
-
-        println!("Contract deployed @ {contract_id_1}");
+        .await?
+        .contract_id;
 
         // ANCHOR: deploy_with_parameters
         // Optional: Add `Salt`
@@ -168,7 +169,8 @@ mod tests {
             configuration,
         )?
         .deploy(&wallet, tx_policies)
-        .await?;
+        .await?
+        .contract_id;
 
         println!("Contract deployed @ {contract_id_2}");
         // ANCHOR_END: deploy_with_parameters
@@ -239,9 +241,9 @@ mod tests {
             LoadConfiguration::default(),
         )?
         .deploy(&wallets[0], TxPolicies::default())
-        .await?;
+        .await?
+        .contract_id;
 
-        println!("Contract deployed @ {contract_id_1}");
         let contract_instance_1 = MyContract::new(contract_id_1, wallets[0].clone());
 
         let response = contract_instance_1
@@ -257,9 +259,9 @@ mod tests {
             LoadConfiguration::default().with_salt([1; 32]),
         )?
         .deploy(&wallets[1], TxPolicies::default())
-        .await?;
+        .await?
+        .contract_id;
 
-        println!("Contract deployed @ {contract_id_2}");
         let contract_instance_2 = MyContract::new(contract_id_2, wallets[1].clone());
 
         let response = contract_instance_2
@@ -289,9 +291,9 @@ mod tests {
             LoadConfiguration::default(),
         )?
         .deploy(&wallet, TxPolicies::default())
-        .await?;
+        .await?
+        .contract_id;
 
-        println!("Contract deployed @ {contract_id}");
         // ANCHOR: tx_policies
         let contract_methods = MyContract::new(contract_id.clone(), wallet.clone()).methods();
 
@@ -360,9 +362,9 @@ mod tests {
             LoadConfiguration::default(),
         )?
         .deploy(&wallet, TxPolicies::default())
-        .await?;
+        .await?
+        .contract_id;
 
-        println!("Contract deployed @ {contract_id}");
         let contract_methods = MyContract::new(contract_id.clone(), wallet.clone()).methods();
         // ANCHOR: simulate
         // you would mint 100 coins if the transaction wasn't simulated
@@ -416,13 +418,15 @@ mod tests {
         )?
         .deploy(&wallet, TxPolicies::default())
         .await?
+        .contract_id
         .into();
 
         let bin_path =
             "../../e2e/sway/contracts/lib_contract_caller/out/release/lib_contract_caller.bin";
         let caller_contract_id = Contract::load_from(bin_path, LoadConfiguration::default())?
             .deploy(&wallet, TxPolicies::default())
-            .await?;
+            .await?
+            .contract_id;
 
         let contract_methods =
             MyContract::new(caller_contract_id.clone(), wallet.clone()).methods();
@@ -520,7 +524,8 @@ mod tests {
             LoadConfiguration::default(),
         )?
         .deploy(&wallet, TxPolicies::default())
-        .await?;
+        .await?
+        .contract_id;
 
         let contract_methods = MyContract::new(contract_id, wallet.clone()).methods();
 
@@ -558,7 +563,8 @@ mod tests {
             LoadConfiguration::default(),
         )?
         .deploy(&wallet, TxPolicies::default())
-        .await?;
+        .await?
+        .contract_id;
 
         // ANCHOR: multi_call_prepare
         let contract_methods = MyContract::new(contract_id, wallet.clone()).methods();
@@ -617,7 +623,8 @@ mod tests {
             LoadConfiguration::default(),
         )?
         .deploy(&wallet, TxPolicies::default())
-        .await?;
+        .await?
+        .contract_id;
 
         let contract_methods = MyContract::new(contract_id, wallet.clone()).methods();
 
@@ -636,7 +643,7 @@ mod tests {
             .await?;
         // ANCHOR_END: multi_call_cost_estimation
 
-        let expected_gas = 4402;
+        let expected_gas = 11231;
 
         assert_eq!(transaction_cost.gas_used, expected_gas);
 
@@ -662,7 +669,8 @@ mod tests {
             LoadConfiguration::default(),
         )?
         .deploy(&wallet_1, TxPolicies::default())
-        .await?;
+        .await?
+        .contract_id;
 
         // ANCHOR: connect_wallet
         // Create contract instance with wallet_1
@@ -896,7 +904,7 @@ mod tests {
 
         let tx_status = provider.tx_status(&tx_id).await?;
 
-        let response = call_handler.get_response_from(tx_status)?;
+        let response = call_handler.get_response(tx_status)?;
 
         assert_eq!(counter, response.value);
         // ANCHOR_END: contract_call_tb
@@ -971,7 +979,8 @@ mod tests {
             LoadConfiguration::default(),
         )?
         .deploy(&wallet, TxPolicies::default())
-        .await?;
+        .await?
+        .contract_id;
 
         // ANCHOR: contract_call_impersonation
         // create impersonator for an address
@@ -1065,7 +1074,8 @@ mod tests {
 
         let contract_id = Contract::loader_from_blob_ids(all_blob_ids, random_salt(), vec![])?
             .deploy(&wallet, TxPolicies::default())
-            .await?;
+            .await?
+            .contract_id;
         // ANCHOR_END: manual_blob_upload_then_deploy
 
         // ANCHOR: deploy_via_loader
@@ -1076,7 +1086,8 @@ mod tests {
         )?
         .convert_to_loader(max_words_per_blob)?
         .deploy(&wallet, TxPolicies::default())
-        .await?;
+        .await?
+        .contract_id;
         // ANCHOR_END: deploy_via_loader
 
         // ANCHOR: auto_convert_to_loader
@@ -1086,7 +1097,8 @@ mod tests {
             LoadConfiguration::default().with_salt(random_salt()),
         )?
         .smart_deploy(&wallet, TxPolicies::default(), max_words_per_blob)
-        .await?;
+        .await?
+        .contract_id;
         // ANCHOR_END: auto_convert_to_loader
 
         // ANCHOR: upload_blobs_then_deploy
@@ -1098,7 +1110,8 @@ mod tests {
         .upload_blobs(&wallet, TxPolicies::default())
         .await?
         .deploy(&wallet, TxPolicies::default())
-        .await?;
+        .await?
+        .contract_id;
         // ANCHOR_END: upload_blobs_then_deploy
 
         let wallet = main_wallet.clone();
@@ -1139,7 +1152,8 @@ mod tests {
 
         let contract_id = Contract::loader_from_blobs(blobs, random_salt(), vec![])?
             .deploy(&wallet, TxPolicies::default())
-            .await?;
+            .await?
+            .contract_id;
         // ANCHOR_END: manual_blobs_then_deploy
 
         // ANCHOR: estimate_max_blob_size
@@ -1174,7 +1188,8 @@ mod tests {
             .initialize_counter(42)
             .call()
             .await?
-            .tx_id
+            .tx
+            .id
             .unwrap();
 
         let provider: &Provider = wallet.try_provider()?;
