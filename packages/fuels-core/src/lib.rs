@@ -267,6 +267,7 @@ fn check_binary_len(binary: &[u8], offset: usize) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
+
     use super::*;
 
     #[test]
@@ -357,146 +358,162 @@ mod tests {
         }
     }
 
-    fn generate_test_binary() -> Vec<u8> {
-        let mut binary = vec![0, 1, 2, 3, 4, 5, 6];
-
-        let direct_offsets = [7, 9, 11];
-        let direct_data = [[7, 8], [9, 10], [11, 12]];
-
-        // Write direct configurables
-        for data in direct_data {
-            binary.extend(data);
-        }
-
-        let indirect_offsets = [13, 14, 15];
-        let indirect_data = [vec![13, 14, 15], vec![16, 17, 18], vec![19, 20, 21]];
-
-        let data_section_offset = 180; // Arbitrary offset for dynamic data
-
-        // Write indirect configurable pointers
-        for (i, &offset) in indirect_offsets.iter().enumerate() {
-            let pointer = (data_section_offset + (i * 4)) as u64;
-            let encoded_offset = ABIEncoder::default()
-                .encode(&[pointer.into_token()])
-                .unwrap();
-            binary[offset..offset + encoded_offset.len()].copy_from_slice(&encoded_offset);
-        }
-
-        // Write dynamic data
-        for (i, data) in indirect_data.iter().enumerate() {
-            let data_position = data_section_offset + (i * 4);
-            binary[data_position..data_position + data.len()].copy_from_slice(data);
-        }
-
-        binary
-    }
+    const TEST_BINARY: [u8; 55] = [
+        0, 1, 2, 3, 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 16, 17, 18, 19, 20, 21, 22, 0, 0, 0, 0, 0, 0,
+        0, 30, 0, 0, 0, 0, 0, 0, 0, 33, 0, 0, 0, 0, 0, 0, 0, 36, 50, 51, 52, 53, 54, 55, 56, 57,
+        58,
+    ];
 
     fn setup_configurables() -> Configurables {
-        let offsets_with_data = vec![
-            OffsetWithData {
-                offset: 20,
-                data: vec![0xAA, 0xBB],
-            },
-            OffsetWithData {
-                offset: 50,
-                data: vec![0xCC, 0xDD],
-            },
-            OffsetWithData {
-                offset: 120,
-                data: vec![0xEE, 0xFF],
-            },
-            OffsetWithData {
-                offset: 30,
-                data: vec![1, 2, 3, 4],
-            },
-            OffsetWithData {
-                offset: 80,
-                data: vec![5, 6, 7, 8],
-            },
-            OffsetWithData {
-                offset: 160,
-                data: vec![9, 10, 11, 12],
-            },
-        ];
+        let offsets_with_data = vec![(16, vec![34, 36]), (18, vec![38, 40]), (20, vec![42, 44])];
 
-        let indirect_configurables = vec![30, 80, 160]; // These are pointers
+        let indirect_configurables = vec![22, 30, 38];
 
         Configurables::new(offsets_with_data, indirect_configurables)
     }
 
     #[test]
-    fn test_update_first_indirect_configurable() {
-        let mut binary = generate_test_binary();
+    fn update_first_indirect_configurable_less_data() {
+        let mut binary = TEST_BINARY.to_vec();
         let mut configurables = setup_configurables();
 
-        // Modify first indirect configurable data
-        configurables.offsets_with_data[3].data = vec![99, 98, 97, 96];
+        // Modify first indirect configurable with less data
+        configurables.offsets_with_data.push((22, vec![100, 102]));
 
         configurables.update_constants_in(&mut binary).unwrap();
 
-        let new_offset = extract_offset_at(&binary, 30).unwrap();
-        let new_data = &binary[new_offset as usize..(new_offset as usize) + 4];
+        let expected_binary: [u8; 54] = [
+            0, 1, 2, 3, 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 16, 34, 36, 38, 40, 42, 44, 0, 0, 0, 0, 0,
+            0, 0, 30, 0, 0, 0, 0, 0, 0, 0, 32, 0, 0, 0, 0, 0, 0, 0, 35, 100, 102, 53, 54, 55, 56,
+            57, 58,
+        ];
 
-        assert_eq!(new_data, &[99, 98, 97, 96]);
+        pretty_assertions::assert_eq!(&expected_binary, binary.as_slice());
     }
 
     #[test]
-    fn test_update_middle_indirect_configurable() {
-        let mut binary = generate_test_binary();
+    fn update_first_indirect_configurable_more_data() {
+        let mut binary = TEST_BINARY.to_vec();
         let mut configurables = setup_configurables();
 
-        // Modify middle indirect configurable data
-        configurables.offsets_with_data[4].data = vec![55, 66, 77, 88];
+        // Modify first indirect configurable with more data
+        configurables
+            .offsets_with_data
+            .push((22, vec![100, 102, 103, 104]));
 
         configurables.update_constants_in(&mut binary).unwrap();
 
-        let new_offset = extract_offset_at(&binary, 80).unwrap();
-        let new_data = &binary[new_offset as usize..(new_offset as usize) + 4];
+        let expected_binary: [u8; 56] = [
+            0, 1, 2, 3, 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 16, 34, 36, 38, 40, 42, 44, 0, 0, 0, 0, 0,
+            0, 0, 30, 0, 0, 0, 0, 0, 0, 0, 34, 0, 0, 0, 0, 0, 0, 0, 37, 100, 102, 103, 104, 53, 54,
+            55, 56, 57, 58,
+        ];
 
-        assert_eq!(new_data, &[55, 66, 77, 88]);
+        pretty_assertions::assert_eq!(&expected_binary, binary.as_slice());
     }
 
     #[test]
-    fn test_update_last_indirect_configurable() {
-        let mut binary = generate_test_binary();
+    fn update_second_indirect_configurable_less_data() {
+        let mut binary = TEST_BINARY.to_vec();
         let mut configurables = setup_configurables();
 
-        // Modify last indirect configurable data
-        configurables.offsets_with_data[5].data = vec![42, 43, 44, 45];
+        // Modify second indirect configurable with less data
+        configurables.offsets_with_data.push((30, vec![106, 108]));
 
         configurables.update_constants_in(&mut binary).unwrap();
 
-        let new_offset = extract_offset_at(&binary, 160).unwrap();
-        let new_data = &binary[new_offset as usize..(new_offset as usize) + 4];
+        let expected_binary: [u8; 54] = [
+            0, 1, 2, 3, 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 16, 34, 36, 38, 40, 42, 44, 0, 0, 0, 0, 0,
+            0, 0, 30, 0, 0, 0, 0, 0, 0, 0, 33, 0, 0, 0, 0, 0, 0, 0, 35, 50, 51, 52, 106, 108, 56,
+            57, 58,
+        ];
 
-        assert_eq!(new_data, &[42, 43, 44, 45]);
+        pretty_assertions::assert_eq!(&expected_binary, binary.as_slice());
     }
 
     #[test]
-    fn test_update_all_indirect_configurables() {
-        let mut binary = generate_test_binary();
+    fn update_second_indirect_configurable_more_data() {
+        let mut binary = TEST_BINARY.to_vec();
         let mut configurables = setup_configurables();
 
-        // Modify all indirect configurable data
-        configurables.offsets_with_data[3].data = vec![99, 98, 97, 96];
-        configurables.offsets_with_data[4].data = vec![55, 66, 77, 88];
-        configurables.offsets_with_data[5].data = vec![42, 43, 44, 45];
+        // Modify second indirect configurable with more data
+        configurables
+            .offsets_with_data
+            .push((30, vec![106, 108, 110, 112]));
 
         configurables.update_constants_in(&mut binary).unwrap();
 
-        // Validate all indirect configurables
-        for (i, &offset) in [30, 80, 160].iter().enumerate() {
-            let expected_data = match i {
-                0 => &[99, 98, 97, 96],
-                1 => &[55, 66, 77, 88],
-                2 => &[42, 43, 44, 45],
-                _ => unreachable!(),
-            };
+        let expected_binary: [u8; 56] = [
+            0, 1, 2, 3, 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 16, 34, 36, 38, 40, 42, 44, 0, 0, 0, 0, 0,
+            0, 0, 30, 0, 0, 0, 0, 0, 0, 0, 33, 0, 0, 0, 0, 0, 0, 0, 37, 50, 51, 52, 106, 108, 110,
+            112, 56, 57, 58,
+        ];
 
-            let new_offset = extract_offset_at(&binary, offset).unwrap();
-            let new_data = &binary[new_offset as usize..(new_offset as usize) + 4];
+        pretty_assertions::assert_eq!(&expected_binary, binary.as_slice());
+    }
 
-            assert_eq!(new_data, expected_data);
-        }
+    #[test]
+    fn update_last_indirect_configurable_less_data() {
+        let mut binary = TEST_BINARY.to_vec();
+        let mut configurables = setup_configurables();
+
+        // Modify last indirect configurable with less data
+        configurables.offsets_with_data.push((38, vec![112, 114]));
+
+        configurables.update_constants_in(&mut binary).unwrap();
+
+        let expected_binary: [u8; 54] = [
+            0, 1, 2, 3, 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 16, 34, 36, 38, 40, 42, 44, 0, 0, 0, 0, 0,
+            0, 0, 30, 0, 0, 0, 0, 0, 0, 0, 33, 0, 0, 0, 0, 0, 0, 0, 36, 50, 51, 52, 53, 54, 55,
+            112, 114,
+        ];
+
+        pretty_assertions::assert_eq!(&expected_binary, binary.as_slice());
+    }
+
+    #[test]
+    fn update_last_indirect_configurable_more_data() {
+        let mut binary = TEST_BINARY.to_vec();
+        let mut configurables = setup_configurables();
+
+        // Modify last indirect configurable with more data
+        configurables
+            .offsets_with_data
+            .push((38, vec![112, 114, 116, 118]));
+
+        configurables.update_constants_in(&mut binary).unwrap();
+
+        let expected_binary: [u8; 56] = [
+            0, 1, 2, 3, 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 16, 34, 36, 38, 40, 42, 44, 0, 0, 0, 0, 0,
+            0, 0, 30, 0, 0, 0, 0, 0, 0, 0, 33, 0, 0, 0, 0, 0, 0, 0, 36, 50, 51, 52, 53, 54, 55,
+            112, 114, 116, 118,
+        ];
+
+        pretty_assertions::assert_eq!(&expected_binary, binary.as_slice());
+    }
+
+    #[test]
+    fn update_all_indirect_configurables() {
+        let mut binary = TEST_BINARY.to_vec();
+        let mut configurables = setup_configurables();
+
+        // Modify all indirect configurables
+        configurables.offsets_with_data.push((22, vec![100, 101]));
+        configurables
+            .offsets_with_data
+            .push((30, vec![102, 103, 104, 105]));
+        configurables
+            .offsets_with_data
+            .push((38, vec![106, 107, 108]));
+
+        configurables.update_constants_in(&mut binary).unwrap();
+
+        let expected_binary: [u8; 55] = [
+            0, 1, 2, 3, 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 16, 34, 36, 38, 40, 42, 44, 0, 0, 0, 0, 0,
+            0, 0, 30, 0, 0, 0, 0, 0, 0, 0, 32, 0, 0, 0, 0, 0, 0, 0, 36, 100, 101, 102, 103, 104,
+            105, 106, 107, 108,
+        ];
+
+        pretty_assertions::assert_eq!(&expected_binary, binary.as_slice());
     }
 }
