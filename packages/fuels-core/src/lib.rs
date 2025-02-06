@@ -163,7 +163,8 @@ impl Configurables {
     ) -> Result<()> {
         let data_offset = extract_data_offset(binary)?;
 
-        let mut change_map: HashMap<u64, (usize, &[u8])> = indirect_configurables
+        // prepare user defined indirect configurables for update
+        let mut indirect_for_update: HashMap<u64, (usize, &[u8])> = indirect_configurables
             .iter()
             .map(|(offset, data)| {
                 let dyn_offset = extract_offset_at(binary, *offset as usize)? + data_offset;
@@ -172,7 +173,7 @@ impl Configurables {
             })
             .collect::<Result<HashMap<_, _>>>()?;
 
-        let min_offset = change_map
+        let min_dyn_offset = indirect_for_update
             .values()
             .map(|(dyn_offset, _)| *dyn_offset)
             .min()
@@ -180,36 +181,37 @@ impl Configurables {
 
         let sorted_dyn_offsets = self.extract_sorted_dyn_offsets(binary, data_offset)?;
 
+        // check if other indirect configurables are affected and prepare them for update
         for offset in &self.sorted_indirect_offsets {
-            if change_map.contains_key(offset) {
+            if indirect_for_update.contains_key(offset) {
                 continue;
             }
 
             let dyn_offset = extract_offset_at(binary, *offset as usize)? + data_offset;
 
-            if dyn_offset < min_offset {
+            if dyn_offset < min_dyn_offset {
                 continue;
             }
 
             // use the next dyn offset to know where the data ends
             let idx = sorted_dyn_offsets
                 .binary_search(&dyn_offset)
-                .expect("is there as we created the sorted vec");
-            let end_offset = sorted_dyn_offsets[idx + 1]; // is there as we created the sorted vec
+                .expect("exists as we created the sorted vec");
+            let end_offset = sorted_dyn_offsets[idx + 1]; // exists as we created the sorted vec
 
             check_binary_len(binary, dyn_offset)?;
             check_binary_len(binary, end_offset)?;
 
             let data = &binary[dyn_offset..end_offset];
 
-            change_map.insert(*offset, (dyn_offset, data));
+            indirect_for_update.insert(*offset, (dyn_offset, data));
         }
 
         // cut old binary and append the updated dynamic data
-        let mut new_binary = binary[..min_offset].to_vec();
+        let mut new_binary = binary[..min_dyn_offset].to_vec();
 
         for offset in &self.sorted_indirect_offsets {
-            if let Some((_, data)) = change_map.get(offset) {
+            if let Some((_, data)) = indirect_for_update.get(offset) {
                 let new_dyn_offset = new_binary.len().saturating_sub(data_offset) as u64;
                 let new_dyn_offset_encoded =
                     ABIEncoder::default().encode(&[new_dyn_offset.into_token()])?;
