@@ -385,7 +385,7 @@ async fn mult_call_has_same_estimated_and_used_gas() -> Result<()> {
 }
 
 #[tokio::test]
-async fn contract_method_call_respects_maturity() -> Result<()> {
+async fn contract_method_call_respects_maturity_and_expiration() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
@@ -399,23 +399,42 @@ async fn contract_method_call_respects_maturity() -> Result<()> {
             random_salt = false,
         ),
     );
+    let provider = wallet.try_provider()?;
 
-    let call_w_maturity = |maturity| {
-        contract_instance
-            .methods()
-            .calling_this_will_produce_a_block()
-            .with_tx_policies(TxPolicies::default().with_maturity(maturity))
-    };
+    let maturity = 10;
+    let expiration = 20;
+    let call_handler = contract_instance
+        .methods()
+        .calling_this_will_produce_a_block()
+        .with_tx_policies(
+            TxPolicies::default()
+                .with_maturity(maturity)
+                .with_expiration(expiration),
+        );
 
-    call_w_maturity(1).call().await.expect(
-        "should have passed since we're calling with a maturity \
-         that is less or equal to the current block height",
-    );
+    {
+        let err = call_handler
+            .clone()
+            .call()
+            .await
+            .expect_err("maturity not reached");
 
-    call_w_maturity(3).call().await.expect_err(
-        "should have failed since we're calling with a maturity \
-         that is greater than the current block height",
-    );
+        assert!(err.to_string().contains("TransactionMaturity"));
+    }
+    {
+        provider.produce_blocks(15, None).await?;
+        call_handler
+            .clone()
+            .call()
+            .await
+            .expect("should succeed. Block height between `maturity` and `expiration`");
+    }
+    {
+        provider.produce_blocks(15, None).await?;
+        let err = call_handler.call().await.expect_err("expiration reached");
+
+        assert!(err.to_string().contains("TransactionExpiration"));
+    }
 
     Ok(())
 }

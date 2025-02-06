@@ -682,3 +682,50 @@ async fn loader_can_be_presented_as_a_normal_script_with_shifted_configurables()
 
     Ok(())
 }
+
+#[tokio::test]
+async fn script_call_respects_maturity_and_expiration() -> Result<()> {
+    abigen!(Script(
+        name = "MyScript",
+        abi = "e2e/sway/scripts/basic_script/out/release/basic_script-abi.json"
+    ));
+    let wallet = launch_provider_and_get_wallet().await.expect("");
+    let provider = wallet.try_provider()?.clone();
+    let bin_path = "sway/scripts/basic_script/out/release/basic_script.bin";
+
+    let script_instance = MyScript::new(wallet, bin_path);
+
+    let maturity = 10;
+    let expiration = 20;
+    let call_handler = script_instance.main(1, 2).with_tx_policies(
+        TxPolicies::default()
+            .with_maturity(maturity)
+            .with_expiration(expiration),
+    );
+
+    {
+        let err = call_handler
+            .clone()
+            .call()
+            .await
+            .expect_err("maturity not reached");
+
+        assert!(err.to_string().contains("TransactionMaturity"));
+    }
+    {
+        provider.produce_blocks(15, None).await?;
+        call_handler
+            .clone()
+            .call()
+            .await
+            .expect("should succeed. Block height between `maturity` and `expiration`");
+    }
+    {
+        provider.produce_blocks(15, None).await?;
+        let err = call_handler.call().await.expect_err("expiration reached");
+
+        assert!(err.to_string().contains("TransactionExpiration"));
+    }
+
+    Ok(())
+}

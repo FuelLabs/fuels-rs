@@ -160,7 +160,8 @@ mod tests {
         let tx_policies = TxPolicies::default()
             .with_tip(1)
             .with_script_gas_limit(1_000_000)
-            .with_maturity(0);
+            .with_maturity(0)
+            .with_expiration(10_000);
 
         let contract_id_2 = Contract::load_from(
             "../../e2e/sway/contracts/contract_test/out/release/contract_test.bin",
@@ -297,7 +298,8 @@ mod tests {
         let tx_policies = TxPolicies::default()
             .with_tip(1)
             .with_script_gas_limit(1_000_000)
-            .with_maturity(0);
+            .with_maturity(0)
+            .with_expiration(10_000);
 
         let response = contract_methods
             .initialize_counter(42) // Our contract method
@@ -568,7 +570,8 @@ mod tests {
         // ANCHOR: multi_call_build
         let multi_call_handler = CallHandler::new_multi_call(wallet.clone())
             .add_call(call_handler_1)
-            .add_call(call_handler_2);
+            .add_call(call_handler_2)
+            .with_tx_policies(TxPolicies::default());
         // ANCHOR_END: multi_call_build
         let multi_call_handler_tmp = multi_call_handler.clone();
 
