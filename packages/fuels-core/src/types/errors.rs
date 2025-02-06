@@ -1,6 +1,4 @@
 pub mod transaction {
-    use std::fmt::Display;
-
     #[derive(thiserror::Error, Debug, Clone)]
     pub enum Reason {
         #[error("builder: {0}")]
@@ -20,7 +18,7 @@ pub mod transaction {
     }
 
     impl Reason {
-        pub(crate) fn context(self, context: impl Display) -> Self {
+        pub(crate) fn context(self, context: impl std::fmt::Display) -> Self {
             match self {
                 Reason::Builder(msg) => Reason::Builder(format!("{context}: {msg}")),
                 Reason::Validation(msg) => Reason::Validation(format!("{context}: {msg}")),
