@@ -2,6 +2,7 @@ use fuel_asm::{Instruction, Opcode};
 use fuels_core::{error, types::errors::Result};
 use itertools::Itertools;
 
+use crate::assembly::script_and_predicate_loader::get_offset_for_section_containing_configurables;
 use crate::{
     assembly::{
         contract_call::{ContractCallData, ContractCallInstructions},
@@ -13,6 +14,8 @@ use crate::{
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ScriptCallData {
     pub code: Vec<u8>,
+    /// This will be renamed in next breaking release. For binary generated with sway 0.66.5 this will be data_offset
+    /// and for binary generated with sway 0.66.6 and above this will probably be data_section_offset and configurable_section_offset.
     pub data_section_offset: Option<u64>,
     pub data: Vec<u8>,
 }
@@ -36,23 +39,27 @@ pub enum ScriptType {
     Other(ScriptCallData),
 }
 
-fn parse_script_call(script: &[u8], script_data: &[u8]) -> ScriptCallData {
+fn parse_script_call(script: &[u8], script_data: &[u8]) -> Result<ScriptCallData> {
     let data_section_offset = if script.len() >= 16 {
-        let data_offset = u64::from_be_bytes(script[8..16].try_into().expect("will have 8 bytes"));
-        if data_offset as usize >= script.len() {
+        let offset = get_offset_for_section_containing_configurables(script)?;
+
+        dbg!(offset);
+        dbg!(script.len());
+
+        if offset >= script.len() {
             None
         } else {
-            Some(data_offset)
+            Some(offset as u64)
         }
     } else {
         None
     };
 
-    ScriptCallData {
+    Ok(ScriptCallData {
         data: script_data.to_vec(),
         data_section_offset,
         code: script.to_vec(),
-    }
+    })
 }
 
 fn parse_contract_calls(
@@ -141,7 +148,7 @@ impl ScriptType {
             return Ok(Self::Loader { script, blob_id });
         }
 
-        Ok(Self::Other(parse_script_call(script, data)))
+        Ok(Self::Other(parse_script_call(script, data)?))
     }
 }
 
@@ -223,6 +230,7 @@ mod tests {
         // given
         let handwritten_script = [
             fuel_asm::op::movi(0x10, 100),
+            fuel_asm::op::jmpf(0x0, 0x4),
             fuel_asm::op::movi(0x10, 100),
             fuel_asm::op::movi(0x10, 100),
             fuel_asm::op::movi(0x10, 100),

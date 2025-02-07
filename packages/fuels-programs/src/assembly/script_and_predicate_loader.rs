@@ -19,8 +19,7 @@ impl LoaderCode {
 
         let blob_id =
             fuels_core::types::transaction_builders::Blob::from(original_code.to_vec()).id();
-        let (loader_code, section_offset) =
-            Self::generate_loader_code(blob_id, split_section);
+        let (loader_code, section_offset) = Self::generate_loader_code(blob_id, split_section);
 
         Ok(Self {
             blob_id,
@@ -69,16 +68,17 @@ impl LoaderCode {
 }
 
 fn extract_blob_id_and_section_offset(binary: &[u8]) -> Result<Option<([u8; 32], usize)>> {
-    let (has_configurables, mut cursor) =
-        if let Some(cursor) = consume_instructions(binary, &loader_instructions_w_configurables()) {
-            (true, cursor)
-        } else if let Some(cursor) =
-            consume_instructions(binary, &loader_instructions_no_configurables())
-        {
-            (false, cursor)
-        } else {
-            return Ok(None);
-        };
+    let (has_configurables, mut cursor) = if let Some(cursor) =
+        consume_instructions(binary, &loader_instructions_w_configurables())
+    {
+        (true, cursor)
+    } else if let Some(cursor) =
+        consume_instructions(binary, &loader_instructions_no_configurables())
+    {
+        (false, cursor)
+    } else {
+        return Ok(None);
+    };
 
     let blob_id = cursor.consume_fixed("blob id")?;
     if has_configurables {
@@ -129,7 +129,10 @@ fn generate_loader_wo_configurables(blob_id: [u8; 32]) -> (Vec<u8>, usize) {
     (code, new_section_offset)
 }
 
-fn generate_loader_w_configurables(blob_id: [u8; 32], section_w_configurables: &[u8]) -> (Vec<u8>, usize) {
+fn generate_loader_w_configurables(
+    blob_id: [u8; 32],
+    section_w_configurables: &[u8],
+) -> (Vec<u8>, usize) {
     // The final code is going to have this structure:
     // 1. loader instructions
     // 2. blob id
@@ -331,6 +334,15 @@ pub fn split_for_loader(binary: &[u8]) -> Result<(&[u8], &[u8])> {
         split_at_configurables_offset(binary)
     } else {
         split_at_data_offset(binary)
+    }
+}
+
+pub fn get_offset_for_section_containing_configurables(binary: &[u8]) -> Result<usize> {
+    // First determine if it's a legacy binary
+    if has_configurables_section_offset(binary)? {
+        extract_configurables_offset(binary)
+    } else {
+        extract_data_offset(binary)
     }
 }
 
