@@ -15,12 +15,12 @@ impl LoaderCode {
     // nostd friendly
     #[cfg(feature = "std")]
     pub fn from_normal_binary(binary: Vec<u8>) -> Result<Self> {
-        let (original_code, configurable_section) = split_for_loader(&binary)?;
+        let (original_code, split_section) = split_for_loader(&binary)?;
 
         let blob_id =
             fuels_core::types::transaction_builders::Blob::from(original_code.to_vec()).id();
         let (loader_code, section_offset) =
-            Self::generate_loader_code(blob_id, configurable_section);
+            Self::generate_loader_code(blob_id, split_section);
 
         Ok(Self {
             blob_id,
@@ -30,7 +30,7 @@ impl LoaderCode {
     }
 
     pub fn from_loader_binary(binary: &[u8]) -> Result<Option<Self>> {
-        if let Some((blob_id, section_offset)) = extract_blob_id_and_data_offset(binary)? {
+        if let Some((blob_id, section_offset)) = extract_blob_id_and_section_offset(binary)? {
             Ok(Some(Self {
                 section_offset,
                 code: binary.to_vec(),
@@ -51,16 +51,15 @@ impl LoaderCode {
         &self.code
     }
 
-    #[deprecated]
-    pub fn data_section_offset(&self) -> usize {
+    pub fn configurables_section_offset(&self) -> usize {
         self.section_offset
     }
 
-    fn generate_loader_code(blob_id: [u8; 32], data_section: &[u8]) -> (Vec<u8>, usize) {
-        if !data_section.is_empty() {
-            generate_loader_w_data_section(blob_id, data_section)
+    fn generate_loader_code(blob_id: [u8; 32], split_section: &[u8]) -> (Vec<u8>, usize) {
+        if !split_section.is_empty() {
+            generate_loader_w_configurables(blob_id, split_section)
         } else {
-            generate_loader_wo_data_section(blob_id)
+            generate_loader_wo_configurables(blob_id)
         }
     }
 
@@ -69,12 +68,12 @@ impl LoaderCode {
     }
 }
 
-fn extract_blob_id_and_data_offset(binary: &[u8]) -> Result<Option<([u8; 32], usize)>> {
-    let (has_data_section, mut cursor) =
-        if let Some(cursor) = consume_instructions(binary, &loader_instructions_w_data_section()) {
+fn extract_blob_id_and_section_offset(binary: &[u8]) -> Result<Option<([u8; 32], usize)>> {
+    let (has_configurables, mut cursor) =
+        if let Some(cursor) = consume_instructions(binary, &loader_instructions_w_configurables()) {
             (true, cursor)
         } else if let Some(cursor) =
-            consume_instructions(binary, &loader_instructions_no_data_section())
+            consume_instructions(binary, &loader_instructions_no_configurables())
         {
             (false, cursor)
         } else {
@@ -82,16 +81,16 @@ fn extract_blob_id_and_data_offset(binary: &[u8]) -> Result<Option<([u8; 32], us
         };
 
     let blob_id = cursor.consume_fixed("blob id")?;
-    if has_data_section {
-        let _data_section_len = cursor.consume(WORD_SIZE, "data section len")?;
+    if has_configurables {
+        let _section_len = cursor.consume(WORD_SIZE, "section with configurables len")?;
     }
 
-    let data_section_offset = binary
+    let section_offset = binary
         .len()
         .checked_sub(cursor.unconsumed())
         .expect("must be less or eq");
 
-    Ok(Some((blob_id, data_section_offset)))
+    Ok(Some((blob_id, section_offset)))
 }
 
 fn consume_instructions<'a>(
@@ -116,8 +115,8 @@ fn consume_instructions<'a>(
         .then_some(script_cursor)
 }
 
-fn generate_loader_wo_data_section(blob_id: [u8; 32]) -> (Vec<u8>, usize) {
-    let instruction_bytes = loader_instructions_no_data_section()
+fn generate_loader_wo_configurables(blob_id: [u8; 32]) -> (Vec<u8>, usize) {
+    let instruction_bytes = loader_instructions_no_configurables()
         .into_iter()
         .flat_map(|instruction| instruction.to_bytes());
 
@@ -125,45 +124,45 @@ fn generate_loader_wo_data_section(blob_id: [u8; 32]) -> (Vec<u8>, usize) {
         .chain(blob_id.iter().copied())
         .collect_vec();
     // there is no data section, so we point the offset to the end of the file
-    let new_data_section_offset = code.len();
+    let new_section_offset = code.len();
 
-    (code, new_data_section_offset)
+    (code, new_section_offset)
 }
 
-fn generate_loader_w_data_section(blob_id: [u8; 32], data_section: &[u8]) -> (Vec<u8>, usize) {
+fn generate_loader_w_configurables(blob_id: [u8; 32], section_w_configurables: &[u8]) -> (Vec<u8>, usize) {
     // The final code is going to have this structure:
     // 1. loader instructions
     // 2. blob id
-    // 3. length_of_data_section
-    // 4. the data_section (updated with configurables as needed)
+    // 3. length_of_section_containing_configurables
+    // 4. the section with configurables (updated with configurables as needed)
 
-    let instruction_bytes = loader_instructions_w_data_section()
+    let instruction_bytes = loader_instructions_w_configurables()
         .into_iter()
         .flat_map(|instruction| instruction.to_bytes())
         .collect_vec();
 
     let blob_bytes = blob_id.iter().copied().collect_vec();
 
-    let original_data_section_len_encoded = u64::try_from(data_section.len())
+    let original_section_len_encoded = u64::try_from(section_w_configurables.len())
         .expect("data section to be less than u64::MAX")
         .to_be_bytes();
 
-    // The data section is placed after all of the instructions, the BlobId, and the number representing
+    // The section with configurables is placed after all of the instructions, the BlobId, and the number representing
     // how big the data section is.
-    let new_data_section_offset =
-        instruction_bytes.len() + blob_bytes.len() + original_data_section_len_encoded.len();
+    let new_section_offset =
+        instruction_bytes.len() + blob_bytes.len() + original_section_len_encoded.len();
 
     let code = instruction_bytes
         .into_iter()
         .chain(blob_bytes)
-        .chain(original_data_section_len_encoded)
-        .chain(data_section.to_vec())
+        .chain(original_section_len_encoded)
+        .chain(section_w_configurables.to_vec())
         .collect();
 
-    (code, new_data_section_offset)
+    (code, new_section_offset)
 }
 
-fn loader_instructions_no_data_section() -> [Instruction; 8] {
+fn loader_instructions_no_configurables() -> [Instruction; 8] {
     const REG_ADDRESS_OF_DATA_AFTER_CODE: u8 = 0x10;
     const REG_START_OF_LOADED_CODE: u8 = 0x11;
     const REG_GENERAL_USE: u8 = 0x12;
@@ -209,7 +208,7 @@ fn loader_instructions_no_data_section() -> [Instruction; 8] {
     instructions
 }
 
-pub fn loader_instructions_w_data_section() -> [Instruction; 12] {
+pub fn loader_instructions_w_configurables() -> [Instruction; 12] {
     const BLOB_ID_SIZE: u16 = 32;
     const REG_ADDRESS_OF_DATA_AFTER_CODE: u8 = 0x10;
     const REG_START_OF_LOADED_CODE: u8 = 0x11;
@@ -275,7 +274,7 @@ pub fn loader_instructions_w_data_section() -> [Instruction; 12] {
     instructions
 }
 
-pub fn extract_configurable_offset(binary: &[u8]) -> Result<usize> {
+pub fn extract_configurables_offset(binary: &[u8]) -> Result<usize> {
     if binary.len() < 24 {
         return Err(fuels_core::error!(
             Other,
@@ -288,12 +287,12 @@ pub fn extract_configurable_offset(binary: &[u8]) -> Result<usize> {
     Ok(u64::from_be_bytes(configurable_offset) as usize)
 }
 
-pub fn split_at_configurable_offset(binary: &[u8]) -> Result<(&[u8], &[u8])> {
-    let offset = extract_configurable_offset(binary)?;
+pub fn split_at_configurables_offset(binary: &[u8]) -> Result<(&[u8], &[u8])> {
+    let offset = extract_configurables_offset(binary)?;
     if binary.len() < offset {
         return Err(fuels_core::error!(
             Other,
-            "configurable section offset is out of bounds, offset: {offset}, binary len: {}",
+            "configurables section offset is out of bounds, offset: {offset}, binary len: {}",
             binary.len()
         ));
     }
@@ -328,14 +327,14 @@ pub fn split_at_data_offset(binary: &[u8]) -> Result<(&[u8], &[u8])> {
 
 pub fn split_for_loader(binary: &[u8]) -> Result<(&[u8], &[u8])> {
     // First determine if it's a legacy binary
-    if has_configurable_section_offset(binary)? {
-        split_at_configurable_offset(binary)
+    if has_configurables_section_offset(binary)? {
+        split_at_configurables_offset(binary)
     } else {
         split_at_data_offset(binary)
     }
 }
 
-pub fn has_configurable_section_offset(binary: &[u8]) -> Result<bool> {
+pub fn has_configurables_section_offset(binary: &[u8]) -> Result<bool> {
     if binary.len() < 8 {
         return Err(fuels_core::error!(
             Other,
@@ -355,7 +354,7 @@ pub fn has_configurable_section_offset(binary: &[u8]) -> Result<bool> {
         ));
     };
 
-    let has_configurable_section = match offset.imm18().to_u32() {
+    let has_configurables_section = match offset.imm18().to_u32() {
         0x04 => true,
         0x02 => false,
         other => {
@@ -367,5 +366,5 @@ pub fn has_configurable_section_offset(binary: &[u8]) -> Result<bool> {
         }
     };
 
-    Ok(has_configurable_section)
+    Ok(has_configurables_section)
 }

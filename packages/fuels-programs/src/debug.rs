@@ -156,8 +156,7 @@ fn parse_loader_script(script: &[u8], data: &[u8]) -> Result<Option<(ScriptCallD
         ScriptCallData {
             code: script.to_vec(),
             data: data.to_vec(),
-            #[allow(deprecated)]
-            data_section_offset: Some(loader_code.data_section_offset() as u64),
+            data_section_offset: Some(loader_code.configurables_section_offset() as u64),
         },
         loader_code.blob_id(),
     )))
@@ -173,7 +172,7 @@ mod tests {
 
     use crate::assembly::{
         contract_call::{CallOpcodeParamsOffset, ContractCallInstructions},
-        script_and_predicate_loader::loader_instructions_w_data_section,
+        script_and_predicate_loader::loader_instructions_w_configurables,
     };
 
     use super::*;
@@ -343,7 +342,7 @@ mod tests {
     #[test]
     fn loader_script_without_a_blob() {
         // given
-        let script = loader_instructions_w_data_section()
+        let script = loader_instructions_w_configurables()
             .iter()
             .flat_map(|i| i.to_bytes())
             .collect::<Vec<_>>();
@@ -364,7 +363,7 @@ mod tests {
     #[test]
     fn loader_script_with_almost_matching_instructions() {
         // given
-        let mut loader_instructions = loader_instructions_w_data_section().to_vec();
+        let mut loader_instructions = loader_instructions_w_configurables().to_vec();
 
         loader_instructions.insert(
             loader_instructions.len() - 2,

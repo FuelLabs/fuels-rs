@@ -7,10 +7,10 @@ use fuels_core::{
 };
 
 use crate::assembly::script_and_predicate_loader::{
-    extract_data_offset, has_configurable_section_offset,
+    extract_data_offset, has_configurables_section_offset,
 };
 use crate::{
-    assembly::script_and_predicate_loader::{extract_configurable_offset, LoaderCode},
+    assembly::script_and_predicate_loader::{extract_configurables_offset, LoaderCode},
     DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE,
 };
 
@@ -76,8 +76,8 @@ impl Executable<Regular> {
     }
 
     pub fn configurables_offset_in_code(&self) -> Result<Option<usize>> {
-        if has_configurable_section_offset(&self.state.code)? {
-            Ok(Some(extract_configurable_offset(&self.state.code)?))
+        if has_configurables_section_offset(&self.state.code)? {
+            Ok(Some(extract_configurables_offset(&self.state.code)?))
         } else {
             Ok(None)
         }
@@ -130,9 +130,13 @@ impl Executable<Loader> {
         }
     }
 
-    #[allow(deprecated)]
+    #[deprecated(note = "Use `configurables_offset_in_code` instead")]
     pub fn data_offset_in_code(&self) -> usize {
-        self.loader_code().data_section_offset()
+        self.loader_code().configurables_section_offset()
+    }
+
+    pub fn configurables_offset_in_code(&self) -> usize {
+        self.loader_code().configurables_section_offset()
     }
 
     fn loader_code(&self) -> LoaderCode {
