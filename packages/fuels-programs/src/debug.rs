@@ -205,15 +205,15 @@ mod tests {
 
     #[test]
     fn is_fine_with_malformed_scripts() {
-        // given
         let mut script = vec![0; 100 * Instruction::SIZE];
+        let jmpf = fuel_asm::op::jmpf(0x0, 0x04).to_bytes();
+
         let mut rng = rand::rngs::StdRng::from_seed([0; 32]);
         rng.fill_bytes(&mut script);
+        script[4..8].copy_from_slice(&jmpf);
 
-        // when
         let script_type = ScriptType::detect(&script, &[]).unwrap();
 
-        // then
         assert_eq!(
             script_type,
             ScriptType::Other(ScriptCallData {
@@ -223,6 +223,7 @@ mod tests {
             })
         );
     }
+
 
     // Mostly to do with the script binary not having the script data offset in the second word
     #[test]
