@@ -359,6 +359,7 @@ pub fn has_configurables_section_offset(binary: &[u8]) -> Result<bool> {
         .map_err(|e| fuels_core::error!(Other, "Invalid instruction at byte 4: {:?}", e))?;
 
     let Instruction::JMPF(offset) = instruction else {
+        // return Ok(true); // ife its not JMPF, then its contract is m
         return Err(fuels_core::error!(
             Other,
             "expected JMPF instruction , got: {:?}",

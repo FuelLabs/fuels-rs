@@ -73,9 +73,11 @@ fn parse_contract_calls(
         return Ok(None);
     };
 
+
     let Some(call_instructions) = extract_call_instructions(&instructions) else {
         return Ok(None);
     };
+
 
     let Some(minimum_call_offset) = call_instructions.iter().map(|i| i.call_data_offset()).min()
     else {
@@ -123,8 +125,12 @@ fn extract_call_instructions(
         debug_assert!(num_instructions > 0);
 
         instructions = &instructions[num_instructions..];
+
+        dbg!(&extracted_instructions);
+
         call_instructions.push(extracted_instructions);
     }
+
 
     if !instructions.is_empty() {
         match instructions {
@@ -132,6 +138,8 @@ fn extract_call_instructions(
             _ => return None,
         }
     }
+
+    dbg!(&call_instructions);
 
     Some(call_instructions)
 }
@@ -141,6 +149,7 @@ impl ScriptType {
         if let Some(contract_calls) = parse_contract_calls(script, data)
             .map_err(prepend_msg("while decoding contract call"))?
         {
+            dbg!(&contract_calls);
             return Ok(Self::ContractCall(contract_calls));
         }
 
@@ -173,6 +182,7 @@ fn parse_loader_script(script: &[u8], data: &[u8]) -> Result<Option<(ScriptCallD
 mod tests {
 
     use fuel_asm::RegId;
+    use fuel_types::canonical::Serialize;
     use fuels_core::types::errors::Error;
     use rand::{RngCore, SeedableRng};
     use test_case::test_case;
