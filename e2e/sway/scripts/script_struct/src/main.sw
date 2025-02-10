@@ -5,6 +5,7 @@ configurable {
         number: 10,
         boolean: true,
     },
+    A_STR: str = "fuel",
     A_NUMBER: u64 = 11,
 }
 
@@ -15,5 +16,6 @@ struct MyStruct {
 
 fn main(arg: MyStruct) -> u64 {
     let _calc = MY_STRUCT.number + A_NUMBER;
+    let _b = A_STR;
     if arg.boolean { arg.number } else { 0 }
 }
