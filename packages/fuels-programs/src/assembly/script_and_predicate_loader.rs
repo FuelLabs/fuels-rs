@@ -54,12 +54,13 @@ impl LoaderCode {
         self.section_offset
     }
 
-    fn generate_loader_code(blob_id: [u8; 32], split_section: &[u8]) -> (Vec<u8>, usize) {
-        if !split_section.is_empty() {
-            generate_loader_w_configurables(blob_id, split_section)
-        } else {
-            generate_loader_wo_configurables(blob_id)
-        }
+    fn generate_loader_code(blob_id: [u8; 32], split_section: Option<&[u8]>) -> (Vec<u8>, usize) {
+        split_section
+            .filter(|section| !section.is_empty())
+            .map_or_else(
+                || generate_loader_wo_configurables(blob_id),
+                |section| generate_loader_w_configurables(blob_id, section),
+            )
     }
 
     pub fn blob_id(&self) -> [u8; 32] {
@@ -328,25 +329,32 @@ pub fn split_at_data_offset(binary: &[u8]) -> Result<(&[u8], &[u8])> {
     Ok(binary.split_at(offset))
 }
 
-pub fn split_for_loader(binary: &[u8]) -> Result<(&[u8], &[u8])> {
-    // First determine if it's a legacy binary
-    if has_configurables_section_offset(binary)? {
-        split_at_configurables_offset(binary)
-    } else {
-        split_at_data_offset(binary)
-    }
+pub fn split_for_loader(binary: &[u8]) -> Result<(&[u8], Option<&[u8]>)> {
+    has_configurables_section_offset(binary)?.map_or_else(
+        || Ok((binary, None)),
+        |has_configurables| {
+            if has_configurables {
+                split_at_configurables_offset(binary).map(|(code, section)| (code, Some(section)))
+            } else {
+                split_at_data_offset(binary).map(|(code, section)| (code, Some(section)))
+            }
+        },
+    )
 }
 
-pub fn get_offset_for_section_containing_configurables(binary: &[u8]) -> Result<usize> {
-    // First determine if it's a legacy binary
-    if has_configurables_section_offset(binary)? {
-        extract_configurables_offset(binary)
-    } else {
-        extract_data_offset(binary)
-    }
+pub fn get_offset_for_section_containing_configurables(binary: &[u8]) -> Result<Option<usize>> {
+    has_configurables_section_offset(binary)?
+        .map(|is_legacy| {
+            if is_legacy {
+                extract_configurables_offset(binary)
+            } else {
+                extract_data_offset(binary)
+            }
+        })
+        .transpose()
 }
 
-pub fn has_configurables_section_offset(binary: &[u8]) -> Result<bool> {
+pub fn has_configurables_section_offset(binary: &[u8]) -> Result<Option<bool>> {
     if binary.len() < 8 {
         return Err(fuels_core::error!(
             Other,
@@ -358,26 +366,15 @@ pub fn has_configurables_section_offset(binary: &[u8]) -> Result<bool> {
     let instruction = Instruction::try_from([binary[4], binary[5], binary[6], binary[7]])
         .map_err(|e| fuels_core::error!(Other, "Invalid instruction at byte 4: {:?}", e))?;
 
-    let Instruction::JMPF(offset) = instruction else {
-        // return Ok(true); // ife its not JMPF, then its contract is m
-        return Err(fuels_core::error!(
-            Other,
-            "expected JMPF instruction , got: {:?}",
-            instruction
-        ));
-    };
-
-    let has_configurables_section = match offset.imm18().to_u32() {
-        0x04 => true,
-        0x02 => false,
-        other => {
-            return Err(fuels_core::error!(
-                Other,
-                "invalid JMPF offset, expected 0x02 or 0x04, got: {:#04x}",
-                other
-            ))
-        }
-    };
-
-    Ok(has_configurables_section)
+    if let Instruction::JMPF(offset) = instruction {
+        let offset_val = offset.imm18().to_u32();
+        let result = match offset_val {
+            0x04 => Some(true),
+            0x02 => Some(false),
+            _ => None,
+        };
+        Ok(result)
+    } else {
+        Ok(None)
+    }
 }

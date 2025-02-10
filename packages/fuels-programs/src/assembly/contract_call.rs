@@ -43,7 +43,7 @@ impl ContractCallInstructions {
     ///
     /// Note that these are soft rules as we're picking this addresses simply because they
     /// non-reserved register.
-    fn  generate_instructions(offsets: CallOpcodeParamsOffset) -> Vec<Instruction> {
+    fn generate_instructions(offsets: CallOpcodeParamsOffset) -> Vec<Instruction> {
         let call_data_offset = offsets
             .call_data_offset
             .try_into()

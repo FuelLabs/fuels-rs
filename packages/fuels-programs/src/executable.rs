@@ -76,11 +76,10 @@ impl Executable<Regular> {
     }
 
     pub fn configurables_offset_in_code(&self) -> Result<Option<usize>> {
-        if has_configurables_section_offset(&self.state.code)? {
-            Ok(Some(extract_configurables_offset(&self.state.code)?))
-        } else {
-            Ok(None)
-        }
+        has_configurables_section_offset(&self.state.code)?
+            .filter(|&is_configurable| is_configurable)
+            .map(|_| extract_configurables_offset(&self.state.code))
+            .transpose()
     }
 
     /// Returns the code of the executable with configurables applied.

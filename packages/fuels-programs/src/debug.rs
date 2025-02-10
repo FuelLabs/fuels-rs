@@ -40,19 +40,12 @@ pub enum ScriptType {
 }
 
 fn parse_script_call(script: &[u8], script_data: &[u8]) -> Result<ScriptCallData> {
-    let data_section_offset = if script.len() >= 16 {
-        let offset = get_offset_for_section_containing_configurables(script)?;
-
-        dbg!(offset);
-        dbg!(script.len());
-
-        if offset >= script.len() {
-            None
-        } else {
-            Some(offset as u64)
-        }
-    } else {
+    let data_section_offset = if script.len() < 16 {
         None
+    } else {
+        get_offset_for_section_containing_configurables(script)?
+            .filter(|&offset| offset < script.len())
+            .map(|offset| offset as u64)
     };
 
     Ok(ScriptCallData {
@@ -73,11 +66,9 @@ fn parse_contract_calls(
         return Ok(None);
     };
 
-
     let Some(call_instructions) = extract_call_instructions(&instructions) else {
         return Ok(None);
     };
-
 
     let Some(minimum_call_offset) = call_instructions.iter().map(|i| i.call_data_offset()).min()
     else {
@@ -125,12 +116,8 @@ fn extract_call_instructions(
         debug_assert!(num_instructions > 0);
 
         instructions = &instructions[num_instructions..];
-
-        dbg!(&extracted_instructions);
-
         call_instructions.push(extracted_instructions);
     }
-
 
     if !instructions.is_empty() {
         match instructions {
@@ -138,8 +125,6 @@ fn extract_call_instructions(
             _ => return None,
         }
     }
-
-    dbg!(&call_instructions);
 
     Some(call_instructions)
 }
@@ -149,7 +134,6 @@ impl ScriptType {
         if let Some(contract_calls) = parse_contract_calls(script, data)
             .map_err(prepend_msg("while decoding contract call"))?
         {
-            dbg!(&contract_calls);
             return Ok(Self::ContractCall(contract_calls));
         }
 
@@ -182,7 +166,6 @@ fn parse_loader_script(script: &[u8], data: &[u8]) -> Result<Option<(ScriptCallD
 mod tests {
 
     use fuel_asm::RegId;
-    use fuel_types::canonical::Serialize;
     use fuels_core::types::errors::Error;
     use rand::{RngCore, SeedableRng};
     use test_case::test_case;
@@ -233,7 +216,6 @@ mod tests {
             })
         );
     }
-
 
     // Mostly to do with the script binary not having the script data offset in the second word
     #[test]
