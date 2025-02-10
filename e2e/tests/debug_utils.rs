@@ -386,21 +386,11 @@ async fn debugs_sway_script_with_no_configurables() -> Result<()> {
         .await
         .unwrap();
 
-    let abi =
-        std::fs::read_to_string("./sway/scripts/basic_script/out/release/basic_script-abi.json")?;
-
-    let decoder = ABIFormatter::from_json_abi(abi)?;
-
     let ScriptType::Other(desc) = ScriptType::detect(&tb.script, &tb.script_data).unwrap() else {
         panic!("expected a script")
     };
 
-    assert_eq!(
-        decoder
-            .decode_configurables(desc.data_section().unwrap())
-            .unwrap(),
-        vec![]
-    );
+    assert!(desc.data_section().is_none());
 
     Ok(())
 }
@@ -408,7 +398,8 @@ async fn debugs_sway_script_with_no_configurables() -> Result<()> {
 #[tokio::test]
 async fn data_section_offset_not_set_if_out_of_bounds() -> Result<()> {
     let mut custom_script = vec![0; 1000];
-    custom_script[8..16].copy_from_slice(&u64::MAX.to_be_bytes());
+    custom_script[4..8].copy_from_slice(&[0x74, 0x00, 0x00, 0x04]);
+    custom_script[16..24].copy_from_slice(&u64::MAX.to_be_bytes());
 
     let ScriptType::Other(desc) = ScriptType::detect(&custom_script, &[]).unwrap() else {
         panic!("expected a script")
