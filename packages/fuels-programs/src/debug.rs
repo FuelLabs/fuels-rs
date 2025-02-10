@@ -14,8 +14,9 @@ use crate::{
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ScriptCallData {
     pub code: Vec<u8>,
-    /// This will be renamed in next breaking release. For binary generated with sway 0.66.5 this will be data_offset
-    /// and for binary generated with sway 0.66.6 and above this will probably be data_section_offset and configurable_section_offset.
+/// In binaries generated with Sway <= 0.66.5, this corresponds to the data offset.
+/// Starting from Sway 0.66.6, it holds the configurables offset.
+/// This will probably be split into two fields in the next breaking release.
     pub data_section_offset: Option<u64>,
     pub data: Vec<u8>,
 }
