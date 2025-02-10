@@ -1,40 +1,80 @@
 #[cfg(test)]
 mod tests {
-    use fuel_asm::Opcode;
-    use fuels::programs::executable::Executable;
+    use fuels::programs::executable::{Executable, Regular};
+    use std::convert::TryInto;
+    use std::ops::Range;
 
-    fn test_binary_format(path: &str, expected_jump_offset: u8) {
-        let binary =
-            std::fs::read(path).unwrap_or_else(|_| panic!("Could not read binary file: {}", path));
-        let executable = Executable::from_bytes(binary);
-        let loader = executable.convert_to_loader().unwrap();
-        let blob = loader.blob();
+    const DATA_OFFSET_LOCATION: Range<usize> = 8..16;
+    const CONFIGURABLES_OFFSET_LOCATION: Range<usize> = 16..24;
 
-        let op = Opcode::try_from(blob.as_ref()[4])
-            .unwrap_or_else(|_| panic!("Invalid opcode at byte 4 in {}", path));
-        let jump_offset = blob.as_ref()[7];
+    const LEGACY_BINARY_PATH: &str =
+        "../e2e/assets/precompiled_sway/legacy_format_simple_contract.bin";
+    const NEW_BINARY_PATH: &str =
+        "../e2e/sway/bindings/simple_contract/out/release/simple_contract.bin";
 
-        assert_eq!(op, Opcode::JMPF, "Unexpected opcode at byte 4 in {}", path);
-        assert_eq!(
-            jump_offset, expected_jump_offset,
-            "Unexpected jump offset in {}",
-            path
-        );
+    #[test]
+    fn no_configurables_offset_for_old_sway_binaries() {
+        // given
+        let (_, executable) = load(LEGACY_BINARY_PATH);
+
+        // when
+        let configurables_offset = executable.configurables_offset_in_code().unwrap();
+
+        // then
+        assert_eq!(configurables_offset, None);
     }
 
     #[test]
-    fn test_legacy_binary_format() {
-        test_binary_format(
-            "../e2e/assets/precompiled_sway/legacy_format_simple_contract.bin",
-            0x02,
-        );
+    fn correct_data_offset_for_old_sway_binaries() {
+        // given
+        let (binary, executable) = load(LEGACY_BINARY_PATH);
+        let expected_data_offset = read_offset(&binary, DATA_OFFSET_LOCATION);
+
+        // when
+        let data_offset = executable.data_offset_in_code().unwrap();
+
+        // then
+        assert_eq!(data_offset, expected_data_offset);
     }
 
     #[test]
-    fn test_new_binary_format() {
-        test_binary_format(
-            "../e2e/sway/bindings/simple_contract/out/release/simple_contract.bin",
-            0x04,
-        );
+    fn correct_data_offset_for_new_sway_binaries() {
+        // given
+        let (binary, executable) = load(NEW_BINARY_PATH);
+        let expected_data_offset = read_offset(&binary, DATA_OFFSET_LOCATION);
+
+        // when
+        let data_offset = executable.data_offset_in_code().unwrap();
+
+        // then
+        assert_eq!(data_offset, expected_data_offset);
+    }
+
+    #[test]
+    fn correct_configurables_offset_for_new_sway_binaries() {
+        // given
+        let (binary, executable) = load(NEW_BINARY_PATH);
+        let expected_configurables_offset = read_offset(&binary, CONFIGURABLES_OFFSET_LOCATION);
+
+        // when
+        let configurables_offset = executable.configurables_offset_in_code();
+
+        // then
+        let configurables_offset = configurables_offset
+            .expect("to successfully detect a modern binary is used")
+            .expect("to extract the configurables_offset");
+        assert_eq!(configurables_offset, expected_configurables_offset);
+    }
+
+    pub fn read_offset(binary: &[u8], range: Range<usize>) -> usize {
+        assert_eq!(range.clone().count(), 8, "must be a range of 8 B");
+        let data: [u8; 8] = binary[range].try_into().unwrap();
+        u64::from_be_bytes(data) as usize
+    }
+
+    fn load(path: &str) -> (Vec<u8>, Executable<Regular>) {
+        let binary = std::fs::read(path).unwrap();
+        let executable = Executable::from_bytes(binary.clone());
+        (binary, executable)
     }
 }
