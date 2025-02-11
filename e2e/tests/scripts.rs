@@ -59,15 +59,15 @@ async fn script_call_has_same_estimated_and_used_gas() -> Result<()> {
 
     let a = 4u64;
     let b = 2u32;
-    let estimated_gas_used = script_instance
+    let estimated_total_gas = script_instance
         .main(a, b)
         .estimate_transaction_cost(tolerance, block_horizon)
         .await?
-        .gas_used;
+        .total_gas;
 
-    let gas_used = script_instance.main(a, b).call().await?.tx.gas_used;
+    let total_gas = script_instance.main(a, b).call().await?.tx_status.total_gas;
 
-    assert_eq!(estimated_gas_used, gas_used);
+    assert_eq!(estimated_total_gas, total_gas);
 
     Ok(())
 }

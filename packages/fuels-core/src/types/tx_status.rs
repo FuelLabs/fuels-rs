@@ -16,12 +16,15 @@ use crate::{
 };
 
 #[derive(Debug, Clone)]
+pub struct Success {
+    pub receipts: Vec<Receipt>,
+    pub total_gas: u64,
+    pub total_fee: u64,
+}
+
+#[derive(Debug, Clone)]
 pub enum TxStatus {
-    Success {
-        receipts: Vec<Receipt>,
-        total_gas: u64,
-        total_fee: u64,
-    },
+    Success(Success),
     Submitted,
     SqueezedOut {
         reason: String,
@@ -46,21 +49,43 @@ impl TxStatus {
                 reason,
                 revert_id: id,
                 ..
-            } => Self::map_revert_error(receipts, reason, *id, log_decoder),
+            } => Err(Self::map_revert_error(receipts, reason, *id, log_decoder)),
             _ => Ok(()),
+        }
+    }
+
+    pub fn take_success_checked(self, log_decoder: Option<&LogDecoder>) -> Result<Success> {
+        match self {
+            Self::SqueezedOut { reason } => {
+                Err(Error::Transaction(Reason::SqueezedOut(reason.clone())))
+            }
+            Self::Revert {
+                receipts,
+                reason,
+                revert_id: id,
+                ..
+            } => Err(Self::map_revert_error(&receipts, &reason, id, log_decoder)),
+            Self::Submitted => Err(Error::Transaction(Reason::SqueezedOut(
+                "can not take `success` status from `Submitted` transaction".to_owned(),
+            ))),
+            Self::Success(success) => Ok(success),
         }
     }
 
     pub fn total_gas(&self) -> u64 {
         match self {
-            TxStatus::Success { total_gas, .. } | TxStatus::Revert { total_gas, .. } => *total_gas,
+            TxStatus::Success(Success { total_gas, .. }) | TxStatus::Revert { total_gas, .. } => {
+                *total_gas
+            }
             _ => 0,
         }
     }
 
     pub fn total_fee(&self) -> u64 {
         match self {
-            TxStatus::Success { total_fee, .. } | TxStatus::Revert { total_fee, .. } => *total_fee,
+            TxStatus::Success(Success { total_fee, .. }) | TxStatus::Revert { total_fee, .. } => {
+                *total_fee
+            }
             _ => 0,
         }
     }
@@ -70,7 +95,7 @@ impl TxStatus {
         reason: &str,
         id: u64,
         log_decoder: Option<&LogDecoder>,
-    ) -> Result<()> {
+    ) -> Error {
         let reason = match (id, log_decoder) {
             (FAILED_REQUIRE_SIGNAL, Some(log_decoder)) => log_decoder
                 .decode_last_log(receipts)
@@ -104,11 +129,11 @@ impl TxStatus {
             _ => reason.to_string(),
         };
 
-        Err(Error::Transaction(Reason::Reverted {
+        Error::Transaction(Reason::Reverted {
             reason,
             revert_id: id,
             receipts: receipts.to_vec(),
-        }))
+        })
     }
 
     pub fn take_receipts_checked(self, log_decoder: Option<&LogDecoder>) -> Result<Vec<Receipt>> {
@@ -118,7 +143,9 @@ impl TxStatus {
 
     pub fn take_receipts(self) -> Vec<Receipt> {
         match self {
-            TxStatus::Success { receipts, .. } | TxStatus::Revert { receipts, .. } => receipts,
+            TxStatus::Success(Success { receipts, .. }) | TxStatus::Revert { receipts, .. } => {
+                receipts
+            }
             _ => vec![],
         }
     }
@@ -134,11 +161,11 @@ impl From<ClientTransactionStatus> for TxStatus {
                 total_gas,
                 total_fee,
                 ..
-            } => TxStatus::Success {
+            } => TxStatus::Success(Success {
                 receipts,
                 total_gas,
                 total_fee,
-            },
+            }),
             ClientTransactionStatus::Failure {
                 reason,
                 program_state,
@@ -175,11 +202,11 @@ impl From<TransactionExecutionStatus> for TxStatus {
                 total_gas,
                 total_fee,
                 ..
-            } => Self::Success {
+            } => Self::Success(Success {
                 receipts,
                 total_gas,
                 total_fee,
-            },
+            }),
             TransactionExecutionResult::Failed {
                 result,
                 receipts,

@@ -166,18 +166,27 @@ async fn spend_predicate_coins_messages_basic() -> Result<()> {
 
     predicate.set_provider(provider.clone());
 
-    let amount_to_send = predicate_balance - 1;
-    predicate
+    let amount_to_send = 128;
+    let fee = predicate
         .transfer(
             receiver.address(),
             amount_to_send,
             asset_id,
             TxPolicies::default(),
         )
-        .await?;
+        .await?
+        .tx_status
+        .total_fee;
 
     // The predicate has spent the funds
-    assert_address_balance(predicate.address(), &provider, asset_id, 0).await;
+    let predicate_current_balance = predicate_balance - amount_to_send - fee;
+    assert_address_balance(
+        predicate.address(),
+        &provider,
+        asset_id,
+        predicate_current_balance,
+    )
+    .await;
 
     // Funds were transferred
     assert_address_balance(
@@ -229,7 +238,7 @@ async fn pay_with_predicate() -> Result<()> {
         MyContract::new(deploy_response.contract_id.clone(), predicate.clone()).methods();
 
     let consensus_parameters = provider.consensus_parameters().await?;
-    let deploy_fee = deploy_response.tx.unwrap().total_fee;
+    let deploy_fee = deploy_response.tx_status.unwrap().total_fee;
     assert_eq!(
         predicate
             .get_asset_balance(consensus_parameters.base_asset_id())
@@ -247,7 +256,7 @@ async fn pay_with_predicate() -> Result<()> {
         predicate
             .get_asset_balance(consensus_parameters.base_asset_id())
             .await?,
-        predicate_balance - deploy_fee - response.tx.total_fee
+        predicate_balance - deploy_fee - response.tx_status.total_fee
     );
 
     Ok(())
@@ -293,7 +302,7 @@ async fn pay_with_predicate_vector_data() -> Result<()> {
         MyContract::new(deploy_response.contract_id.clone(), predicate.clone()).methods();
 
     let consensus_parameters = provider.consensus_parameters().await?;
-    let deploy_fee = deploy_response.tx.unwrap().total_fee;
+    let deploy_fee = deploy_response.tx_status.unwrap().total_fee;
     assert_eq!(
         predicate
             .get_asset_balance(consensus_parameters.base_asset_id())
@@ -308,7 +317,7 @@ async fn pay_with_predicate_vector_data() -> Result<()> {
         predicate
             .get_asset_balance(consensus_parameters.base_asset_id())
             .await?,
-        predicate_balance - deploy_fee - response.tx.total_fee
+        predicate_balance - deploy_fee - response.tx_status.total_fee
     );
 
     Ok(())
@@ -408,7 +417,7 @@ async fn predicate_transfer_to_base_layer() -> Result<()> {
     let proof = predicate
         .try_provider()?
         .get_message_proof(
-            &withdraw_response.tx.id,
+            &withdraw_response.tx_id,
             &withdraw_response.nonce,
             None,
             Some(2),
@@ -553,8 +562,8 @@ async fn contract_tx_and_call_params_with_predicate() -> Result<()> {
             .call()
             .await?;
 
-        let deploy_fee = deploy_response.tx.unwrap().total_fee;
-        let call_fee = call_response.tx.total_fee;
+        let deploy_fee = deploy_response.tx_status.unwrap().total_fee;
+        let call_fee = call_response.tx_status.total_fee;
         assert_eq!(
             predicate.get_asset_balance(&AssetId::zeroed()).await?,
             predicate_balance - deploy_fee - call_params_amount - call_fee
@@ -733,20 +742,21 @@ async fn predicate_configurables() -> Result<()> {
     predicate.set_provider(provider.clone());
 
     let amount_to_send = predicate_balance - 1;
-    let tx_response = predicate
+    let fee = predicate
         .transfer(
             receiver.address(),
             amount_to_send,
             asset_id,
             TxPolicies::default(),
         )
-        .await?;
+        .await?
+        .tx_status
+        .total_fee;
 
     // The predicate has spent the funds
     assert_address_balance(predicate.address(), &provider, asset_id, 0).await;
 
     // Funds were transferred
-    let fee = tx_response.total_fee;
     assert_address_balance(
         receiver.address(),
         &provider,

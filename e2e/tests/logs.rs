@@ -830,7 +830,7 @@ async fn test_script_logs_with_contract_logs() -> Result<()> {
 
     {
         let num_contract_logs = response
-            .tx
+            .tx_status
             .receipts
             .iter()
             .filter(|receipt| matches!(receipt, Receipt::LogData { id, .. } | Receipt::Log { id, .. } if *id == contract_id))

@@ -62,9 +62,10 @@ const NUM_RESULTS_PER_REQUEST: i32 = 100;
 // ANCHOR: transaction_cost
 pub struct TransactionCost {
     pub gas_price: u64,
-    pub gas_used: u64,
     pub metered_bytes_size: u64,
     pub total_fee: u64,
+    pub script_gas: u64,
+    pub total_gas: u64,
 }
 // ANCHOR_END: transaction_cost
 
@@ -716,32 +717,25 @@ impl Provider {
         let EstimateGasPrice { gas_price, .. } = self.estimate_gas_price(block_horizon).await?;
         let tx_status = self.dry_run_opt(tx.clone(), false, None).await?;
 
-        let gas_used = self.gas_used_with_tolerance(&tx_status, tolerance).await?;
-        let total_fee = self.total_fee_with_tolerance(&tx_status, tolerance).await?;
+        let total_gas = Self::apply_tolerance(tx_status.total_gas(), tolerance);
+        let total_fee = Self::apply_tolerance(tx_status.total_fee(), tolerance);
+
+        let receipts = tx_status.take_receipts();
 
         Ok(TransactionCost {
             gas_price,
-            gas_used,
             metered_bytes_size: tx.metered_bytes_size() as u64,
             total_fee,
+            total_gas,
+            script_gas: Self::get_script_gas_used(&receipts),
         })
     }
 
-    // Increase estimated gas by the provided tolerance
-    async fn gas_used_with_tolerance(&self, tx_status: &TxStatus, tolerance: f64) -> Result<u64> {
-        let gas_used = tx_status.total_gas();
-
-        Ok((gas_used as f64 * (1.0 + tolerance)).ceil() as u64)
+    fn apply_tolerance(value: u64, tolerance: f64) -> u64 {
+        (value as f64 * (1.0 + tolerance)).ceil() as u64
     }
 
-    // Increase estimated total fee by the provided tolerance
-    async fn total_fee_with_tolerance(&self, tx_status: &TxStatus, tolerance: f64) -> Result<u64> {
-        let fee = tx_status.total_fee();
-
-        Ok((fee as f64 * (1.0 + tolerance)) as u64)
-    }
-
-    fn get_script_gas_used(&self, receipts: &[Receipt]) -> u64 {
+    fn get_script_gas_used(receipts: &[Receipt]) -> u64 {
         receipts
             .iter()
             .rfind(|r| matches!(r, Receipt::ScriptResult { .. }))
@@ -839,7 +833,7 @@ impl DryRunner for Provider {
             .expect("should have only one element");
 
         let receipts = tx_execution_status.result.receipts();
-        let script_gas = self.get_script_gas_used(receipts);
+        let script_gas = Self::get_script_gas_used(receipts);
 
         let variable_outputs = receipts
             .iter()

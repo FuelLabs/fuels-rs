@@ -173,10 +173,8 @@ impl Executable<Loader> {
         let tx_status = provider.send_transaction_and_await_commit(tx).await?;
 
         Ok(Some(TxResponse {
-            gas_used: tx_status.total_gas(),
-            total_fee: tx_status.total_fee(),
-            receipts: tx_status.take_receipts_checked(None)?,
-            id: tx_id,
+            tx_status: tx_status.take_success_checked(None)?,
+            tx_id,
         }))
     }
 }

@@ -15,7 +15,6 @@ use fuels_core::{
             BuildableTransaction, ScriptBuildStrategy, ScriptTransactionBuilder,
             VariableOutputPolicy,
         },
-        tx_response::TxResponse,
         tx_status::TxStatus,
         Selector, Token,
     },
@@ -210,24 +209,17 @@ where
 
     /// Create a [`CallResponse`] from `TxStatus`
     pub fn get_response(&self, tx_status: TxStatus) -> Result<CallResponse<T>> {
-        let gas_used = tx_status.total_gas();
-        let total_fee = tx_status.total_fee();
+        let success = tx_status.take_success_checked(Some(&self.log_decoder))?;
 
-        let receipts = tx_status.take_receipts_checked(Some(&self.log_decoder))?;
-
-        let token = self
-            .call
-            .parse_call(&receipts, self.decoder_config, &T::param_type())?;
+        let token =
+            self.call
+                .parse_call(&success.receipts, self.decoder_config, &T::param_type())?;
 
         Ok(CallResponse {
             value: T::from_token(token)?,
             log_decoder: self.log_decoder.clone(),
-            tx: TxResponse {
-                receipts,
-                gas_used,
-                total_fee,
-                id: self.cached_tx_id,
-            },
+            tx_id: self.cached_tx_id,
+            tx_status: success,
         })
     }
 
@@ -490,11 +482,8 @@ where
         &self,
         tx_status: TxStatus,
     ) -> Result<CallResponse<T>> {
-        let gas_used = tx_status.total_gas();
-        let total_fee = tx_status.total_fee();
-
-        let receipts = tx_status.take_receipts_checked(Some(&self.log_decoder))?;
-        let mut receipt_parser = ReceiptParser::new(&receipts, self.decoder_config);
+        let success = tx_status.take_success_checked(Some(&self.log_decoder))?;
+        let mut receipt_parser = ReceiptParser::new(&success.receipts, self.decoder_config);
 
         let final_tokens = self
             .call
@@ -507,12 +496,8 @@ where
         Ok(CallResponse {
             value: T::from_token(tokens_as_tuple)?,
             log_decoder: self.log_decoder.clone(),
-            tx: TxResponse {
-                receipts,
-                gas_used,
-                total_fee,
-                id: self.cached_tx_id,
-            },
+            tx_id: self.cached_tx_id,
+            tx_status: success,
         })
     }
 

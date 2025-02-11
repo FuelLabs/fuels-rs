@@ -1,19 +1,8 @@
-use fuel_tx::{Receipt, TxId};
-
-use crate::sealed::Sealed;
+use super::tx_status::Success;
+use fuel_tx::TxId;
 
 #[derive(Clone, Debug)]
-pub struct TxResponse<T: TxResponseType = TxId> {
-    pub receipts: Vec<Receipt>,
-    pub gas_used: u64,
-    pub total_fee: u64,
-    pub id: T,
+pub struct TxResponse {
+    pub tx_status: Success,
+    pub tx_id: TxId,
 }
-
-impl Sealed for TxId {}
-impl Sealed for Option<TxId> {}
-
-pub trait TxResponseType: Sealed {}
-
-impl TxResponseType for TxId {}
-impl TxResponseType for Option<TxId> {}

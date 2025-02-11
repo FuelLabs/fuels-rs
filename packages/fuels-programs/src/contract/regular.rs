@@ -1,6 +1,6 @@
 use std::{default::Default, fmt::Debug, path::Path};
 
-use fuel_tx::{Bytes32, ContractId, Salt, StorageSlot};
+use fuel_tx::{Bytes32, ContractId, Salt, StorageSlot, TxId};
 use fuels_accounts::Account;
 use fuels_core::{
     constants::WORD_SIZE,
@@ -10,7 +10,7 @@ use fuels_core::{
         errors::Result,
         transaction::{Transaction, TxPolicies},
         transaction_builders::{Blob, CreateTransactionBuilder},
-        tx_response::TxResponse,
+        tx_status::Success,
     },
     Configurables,
 };
@@ -24,7 +24,8 @@ use super::{
 
 #[derive(Clone, Debug)]
 pub struct DeployResponse {
-    pub tx: Option<TxResponse>,
+    pub tx_status: Option<Success>,
+    pub tx_id: Option<TxId>,
     pub contract_id: Bech32ContractId,
 }
 
@@ -170,17 +171,13 @@ impl Contract<Regular> {
         let consensus_parameters = provider.consensus_parameters().await?;
 
         let tx = tb.build(provider).await?;
-        let tx_id = tx.id(consensus_parameters.chain_id());
+        let tx_id = Some(tx.id(consensus_parameters.chain_id()));
 
         let tx_status = provider.send_transaction_and_await_commit(tx).await?;
 
         Ok(DeployResponse {
-            tx: Some(TxResponse {
-                gas_used: tx_status.total_gas(),
-                total_fee: tx_status.total_fee(),
-                receipts: tx_status.take_receipts_checked(None)?,
-                id: tx_id,
-            }),
+            tx_status: Some(tx_status.take_success_checked(None)?),
+            tx_id,
             contract_id: contract_id.into(),
         })
     }
@@ -196,7 +193,8 @@ impl Contract<Regular> {
         let provider = account.try_provider()?;
         if provider.contract_exists(&contract_id).await? {
             Ok(DeployResponse {
-                tx: None,
+                tx_status: None,
+                tx_id: None,
                 contract_id,
             })
         } else {

@@ -120,9 +120,11 @@ mod tests {
             .await?;
         // ANCHOR_END: contract_call_cost_estimation
 
-        let expected_gas = 9068;
+        let expected_script_gas = 2816;
+        let expected_total_gas = 9068;
 
-        assert_eq!(transaction_cost.gas_used, expected_gas);
+        assert_eq!(transaction_cost.script_gas, expected_script_gas);
+        assert_eq!(transaction_cost.total_gas, expected_total_gas);
 
         Ok(())
     }
@@ -643,9 +645,11 @@ mod tests {
             .await?;
         // ANCHOR_END: multi_call_cost_estimation
 
-        let expected_gas = 11231;
+        let expected_script_gas = 4402;
+        let expected_total_gas = 11231;
 
-        assert_eq!(transaction_cost.gas_used, expected_gas);
+        assert_eq!(transaction_cost.script_gas, expected_script_gas);
+        assert_eq!(transaction_cost.total_gas, expected_total_gas);
 
         Ok(())
     }
@@ -1188,8 +1192,7 @@ mod tests {
             .initialize_counter(42)
             .call()
             .await?
-            .tx
-            .id
+            .tx_id
             .unwrap();
 
         let provider: &Provider = wallet.try_provider()?;

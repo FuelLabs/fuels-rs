@@ -292,7 +292,8 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
     let gas_limit = 800;
     let tolerance = Some(0.2);
     let block_horizon = Some(1);
-    let expected_gas_used = 8463;
+    let expected_script_gas = 800;
+    let expected_total_gas = 8463;
     let expected_metered_bytes_size = 824;
 
     let estimated_transaction_cost = contract_instance
@@ -302,7 +303,8 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
         .estimate_transaction_cost(tolerance, block_horizon)
         .await?;
 
-    assert_eq!(estimated_transaction_cost.gas_used, expected_gas_used);
+    assert_eq!(estimated_transaction_cost.script_gas, expected_script_gas);
+    assert_eq!(estimated_transaction_cost.total_gas, expected_total_gas);
     assert_eq!(
         estimated_transaction_cost.metered_bytes_size,
         expected_metered_bytes_size
@@ -331,20 +333,20 @@ async fn contract_call_has_same_estimated_and_used_gas() -> Result<()> {
     let tolerance = Some(0.0);
     let block_horizon = Some(1);
 
-    let estimated_gas_used = contract_methods
+    let estimated_total_gas = contract_methods
         .initialize_counter(42)
         .estimate_transaction_cost(tolerance, block_horizon)
         .await?
-        .gas_used;
+        .total_gas;
 
     let gas_used = contract_methods
         .initialize_counter(42)
         .call()
         .await?
-        .tx
-        .gas_used;
+        .tx_status
+        .total_gas;
 
-    assert_eq!(estimated_gas_used, gas_used);
+    assert_eq!(estimated_total_gas, gas_used);
     Ok(())
 }
 
@@ -374,18 +376,19 @@ async fn mult_call_has_same_estimated_and_used_gas() -> Result<()> {
 
     let tolerance = Some(0.0);
     let block_horizon = Some(1);
-    let estimated_gas_used = multi_call_handler
+    let estimated_total_gas = multi_call_handler
         .estimate_transaction_cost(tolerance, block_horizon)
         .await?
-        .gas_used;
+        .total_gas;
 
-    let gas_used = multi_call_handler
+    let total_gas = multi_call_handler
         .call::<(u64, [u64; 2])>()
         .await?
-        .tx
-        .gas_used;
+        .tx_status
+        .total_gas;
 
-    assert_eq!(estimated_gas_used, gas_used);
+    assert_eq!(estimated_total_gas, total_gas);
+
     Ok(())
 }
 

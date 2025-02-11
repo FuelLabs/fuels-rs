@@ -379,7 +379,7 @@ mod tests {
         // Retrieve a message proof from the provider
         let proof = wallet
             .try_provider()?
-            .get_message_proof(&response.tx.id, &response.nonce, None, Some(2))
+            .get_message_proof(&response.tx_id, &response.nonce, None, Some(2))
             .await?;
 
         // Verify the amount and recipient

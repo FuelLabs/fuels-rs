@@ -18,18 +18,24 @@ async fn assert_predicate_spendable(data: Vec<u8>, project_path: impl AsRef<Path
 
     predicate.set_provider(provider.clone());
 
-    let amount_to_send = 42;
-    let tx_response = predicate
-        .transfer(receiver.address(), 42, asset_id, TxPolicies::default())
-        .await?;
+    let amount_to_send = 136;
+    let fee = predicate
+        .transfer(
+            receiver.address(),
+            amount_to_send,
+            asset_id,
+            TxPolicies::default(),
+        )
+        .await?
+        .tx_status
+        .total_fee;
 
     // The predicate has spent the funds
-    let fee = tx_response.total_fee;
     assert_address_balance(
         predicate.address(),
         &provider,
         asset_id,
-        predicate_balance - (amount_to_send + fee),
+        predicate_balance - amount_to_send - fee,
     )
     .await;
 
