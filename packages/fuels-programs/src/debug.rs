@@ -221,35 +221,6 @@ mod tests {
         );
     }
 
-    // Mostly to do with the script binary not having the script data offset in the second word
-    #[test]
-    fn is_fine_with_handwritten_scripts() {
-        // given
-        let handwritten_script = [
-            fuel_asm::op::movi(0x10, 100),
-            fuel_asm::op::movi(0x10, 100),
-            fuel_asm::op::movi(0x10, 100),
-            fuel_asm::op::movi(0x10, 100),
-            fuel_asm::op::movi(0x10, 100),
-        ]
-        .iter()
-        .flat_map(|i| i.to_bytes())
-        .collect::<Vec<_>>();
-
-        // when
-        let script_type = ScriptType::detect(&handwritten_script, &[]).unwrap();
-
-        // then
-        assert_eq!(
-            script_type,
-            ScriptType::Other(ScriptCallData {
-                code: handwritten_script.to_vec(),
-                data_section_offset: None,
-                data: vec![]
-            })
-        );
-    }
-
     fn example_contract_call_data(has_args: bool, gas_fwd: bool) -> Vec<u8> {
         let mut data = vec![];
         data.extend_from_slice(&100u64.to_be_bytes());

@@ -347,7 +347,7 @@ pub fn split_for_loader(binary: &[u8]) -> Result<(&[u8], &[u8])> {
 }
 
 pub fn get_offset_for_section_containing_configurables(binary: &[u8]) -> Result<usize> {
-    if has_configurables_section_offset(binary).unwrap_or(false) {
+    if has_configurables_section_offset(binary).unwrap_or(true) {
         extract_configurables_offset(binary)
     } else {
         extract_data_offset(binary)
