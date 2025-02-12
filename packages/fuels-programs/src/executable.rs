@@ -207,6 +207,10 @@ mod tests {
     use std::io::Write;
     use tempfile::NamedTempFile;
 
+    fn legacy_indicating_instruction() -> Vec<u8> {
+        fuel_asm::op::jmpf(0x0, 0x02).to_bytes().to_vec()
+    }
+
     #[test]
     fn test_executable_regular_from_bytes() {
         // Given: Some bytecode
@@ -283,7 +287,7 @@ mod tests {
     #[test]
     fn test_loader_extracts_code_and_data_section_legacy_format() {
         let padding = vec![0; 4];
-        let jmpf = vec![0x74, 0x00, 0x00, 0x02];
+        let jmpf = legacy_indicating_instruction();
         let data_offset = 28u64.to_be_bytes().to_vec();
         let remaining_padding = vec![0; 8];
         let some_random_instruction = vec![1, 2, 3, 4];
@@ -326,7 +330,7 @@ mod tests {
     #[test]
     fn test_loader_extracts_code_and_configurable_section_new_format() {
         let padding = vec![0; 4];
-        let jmpf = vec![0x74, 0x00, 0x00, 0x02];
+        let jmpf = legacy_indicating_instruction();
         let data_offset = 28u64.to_be_bytes().to_vec();
         let configurable_offset = vec![0; 8];
         let data_section = vec![5, 6, 7, 8];
@@ -384,7 +388,7 @@ mod tests {
         // that there is no data section
         let data_section_offset = 16u64;
 
-        let jmpf = fuel_asm::op::jmpf(0x0, 0x02).to_bytes();
+        let jmpf = legacy_indicating_instruction();
         let mut initial_bytes = vec![0; 16];
         initial_bytes[4..8].copy_from_slice(&jmpf);
 
