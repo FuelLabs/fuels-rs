@@ -12,6 +12,9 @@ pub mod wallet;
 #[cfg(feature = "std")]
 pub use account::*;
 
+#[cfg(feature = "std")]
+pub mod aws_signer;
+
 #[cfg(feature = "coin-cache")]
 mod coin_cache;
 

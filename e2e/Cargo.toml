@@ -24,6 +24,28 @@ tai64 = { workspace = true }
 tempfile = { workspace = true }
 tokio = { workspace = true, features = ["test-util"] }
 
+itertools = { workspace = true }
+futures = { workspace = true }
+rand = { workspace = true }
+portpicker = { workspace = true }
+
+fuel-core-chain-config = { workspace = true, features = [
+    "std",
+    "test-helpers",
+] }
+
+fuel-core-types = { workspace = true, features = [
+    "da-compression",
+] }
+
+testcontainers = { workspace = true }
+k256 = { workspace = true, features = ["ecdsa-core"] }
+aws-config = { workspace = true, features = ["rustls"] }
+aws-sdk-kms = { workspace = true, features = ["rustls"] }
+fuel-core-client = { workspace = true }
+
+
+
 [build-dependencies]
 anyhow = { workspace = true, features = ["std"] }
 flate2 = { workspace = true, features = ["zlib"] }
@@ -37,3 +59,6 @@ default = ["fuels/default", "coin-cache"]
 fuel-core-lib = ["fuels/fuel-core-lib"]
 rocksdb = ["fuels/rocksdb"]
 coin-cache = ["fuels/coin-cache"]
+[dependencies]
+anyhow = "1.0.86"
+url = "2.5.2"
