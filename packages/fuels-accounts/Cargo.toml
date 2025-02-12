@@ -34,7 +34,7 @@ k256 = { workspace = true, features = ["ecdsa-core"] }
 aws-config = { workspace = true, features = [
   "behavior-version-latest",
 ] }
-aws-sdk-kms = { workspace = true }
+aws-sdk-kms = { workspace = true, features = ["default"] }
 
 [dev-dependencies]
 mockall = { workspace = true, default-features = false }

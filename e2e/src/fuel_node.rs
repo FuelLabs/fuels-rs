@@ -8,11 +8,12 @@ use fuel_core_types::{
     fuel_types::Address,
 };
 use fuels::crypto::{PublicKey, SecretKey};
-use fuels::prelude::{Provider, WalletUnlocked};
+use fuels::prelude::{Bech32Address, Provider, TxPolicies, WalletUnlocked};
 use itertools::Itertools;
 use rand::Rng;
 use std::path::PathBuf;
 use std::str::FromStr;
+use anyhow::Context;
 use url::Url;
 use fuels::accounts::Account;
 use fuels::accounts::aws_signer::AwsWallet;
@@ -172,35 +173,31 @@ impl FuelNodeProcess {
 
     pub async fn fund(
         &self,
-        address: Address,
-        amount: U256
+        address: Bech32Address,
+        amount: u64
     ) -> anyhow::Result<()> {
-        let fuels_provider = Provider::connect(self.url()).await.unwrap();
+        let fuels_provider = Provider::connect(self.url()).await?;
 
         let mut default_wallet = WalletUnlocked::new_from_private_key(
             SecretKey::from_str(
                 "0xde97d8624a438121b86a1956544bd72ed68cd69f2c99555b08b1e8c51ffd511c",
             )
-            .unwrap(),
+            ?,
             None,
         );
-
         default_wallet.set_provider(fuels_provider.clone());
-        // let wallet = AwsWallet::from_kms_key_id(key.id, provider).await?;
 
-        // default_wallet
-        //     .transfer(
-        //         wallet.address(),
-        //         1_000_000_000, // Amount to transfer
-        //         AssetId::default(), // Using the base asset
-        //         TxParams::default(),
-        //     )
-        //     .await?;
-        // if succeeded {
-        //     Ok(())
-        // } else {
-        //     Err(anyhow::anyhow!("Failed to fund address {address}"))
-        // }
+        default_wallet
+            .transfer(
+                &address,
+                amount, // Amount to transfer
+                AssetId::from_str("f8f8b6283d7fa5b672b530cbb84fcccb4ff8dc40f8176ef4544ddb1f1952ad07").expect("AssetId to be well formed"),
+                TxPolicies::default(),
+            )
+            .await.context("Failed to transfer funds")?;
+
+        self.client().produce_blocks(1).await?;
+
         Ok(())
     }
 }
