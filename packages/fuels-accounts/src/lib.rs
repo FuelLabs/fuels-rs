@@ -11,14 +11,14 @@ pub mod wallet;
 
 #[cfg(feature = "std")]
 pub use account::*;
-
 #[cfg(feature = "std")]
-pub mod aws_signer;
+pub mod aws;
 
 #[cfg(feature = "coin-cache")]
 mod coin_cache;
 
 pub mod predicate;
+
 
 #[cfg(test)]
 mod test {

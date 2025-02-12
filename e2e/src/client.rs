@@ -1,10 +1,6 @@
 use url::Url;
 
-use fuel_core_client::client::types::CoinType;
-use fuel_core_client::client::{types::Block, FuelClient};
-use fuel_core_types::fuel_tx::Transaction;
-use fuel_core_types::fuel_types::{Address, AssetId};
-use fuels::types::coin::Coin;
+use fuel_core_client::client::FuelClient;
 use fuels::types::errors::Error;
 use fuels::types::errors::Result;
 #[derive(Clone)]
@@ -26,30 +22,6 @@ impl HttpClient {
             .map_err(|e| Error::Other(e.to_string()))?;
 
         Ok(())
-    }
-
-    pub async fn send_tx(&self, tx: &Transaction) -> Result<()> {
-        self.client
-            .submit_and_await_commit(tx)
-            .await
-            .map_err(|e| Error::Other(e.to_string()))?;
-
-        Ok(())
-    }
-
-    pub async fn get_coin(&self, address: Address, asset_id: AssetId) -> Result<Coin> {
-        let coin_type = self
-            .client
-            .coins_to_spend(&address, vec![(asset_id, 1, None)], None)
-            .await
-            .map_err(|e| Error::Other(e.to_string()))?[0][0];
-
-        let coin = match coin_type {
-            CoinType::Coin(c) => Ok(c),
-            _ => Err(Error::Other("Couldn't get coin".to_string())),
-        }?;
-
-        Ok(Coin::from(coin))
     }
 
     pub async fn health(&self) -> Result<bool> {

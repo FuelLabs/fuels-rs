@@ -1,10 +1,8 @@
 use anyhow::Context;
-use aws_config::Region;
-use aws_sdk_kms::{config::Credentials, Client as AWSClient};
-use aws_sdk_kms::config::BehaviorVersion;
 use testcontainers::{core::ContainerPort, runners::AsyncRunner};
 use tokio::io::AsyncBufReadExt;
-use fuels::accounts::aws_signer::KmsData;
+use fuels::accounts::aws::{AwsClient, AwsConfig, KmsData};
+
 #[derive(Default)]
 pub struct Kms {
     show_logs: bool,
@@ -49,28 +47,8 @@ impl Kms {
         let port = container.get_host_port_ipv4(4566).await?;
         let url = format!("http://localhost:{}", port);
 
-        // Configure AWS SDK
-        // let config = aws_config::from_env()
-        //     .endpoint_url(url.clone())
-        //     .region("us-east-1")
-        //     .credentials_provider(Credentials::new("test", "test", None, None, "test"))
-        //     .load()
-        //     .await;
-
-        let config = aws_config::defaults(BehaviorVersion::latest())
-            .credentials_provider(Credentials::new(
-                "test",
-                "test",
-                None,
-                None,
-                "Static Credentials",
-            ))
-            .endpoint_url(url.clone())
-            .region(Region::new("us-east-1")) // placeholder region for test
-            .load()
-            .await;
-
-        let client = AWSClient::new(&config);
+        let config = AwsConfig::for_testing(url.clone()).await;
+        let client = AwsClient::new(config);
 
         Ok(KmsProcess {
             _container: container,
@@ -121,14 +99,15 @@ fn spawn_log_printer(container: &testcontainers::ContainerAsync<KmsImage>) {
 
 pub struct KmsProcess {
     _container: testcontainers::ContainerAsync<KmsImage>,
-    client: AWSClient,
+    client: AwsClient,
     url: String,
 }
 
 impl KmsProcess {
     pub async fn create_key(&self) -> anyhow::Result<KmsKey> {
         let response = self
-            .client
+            .client.
+            inner()
             .create_key()
             .key_usage(aws_sdk_kms::types::KeyUsageType::SignVerify)
             .key_spec(aws_sdk_kms::types::KeySpec::EccSecgP256K1)
@@ -145,12 +124,11 @@ impl KmsProcess {
 
         Ok(KmsKey {
             id,
-            kms_data,// todo fix this
+            kms_data,
             url: self.url.clone(),
         })
     }
 }
-
 
 #[derive(Debug, Clone)]
 pub struct KmsKey {

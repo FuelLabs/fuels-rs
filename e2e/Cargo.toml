@@ -33,6 +33,7 @@ fuel-core-chain-config = { workspace = true, features = [
     "std",
     "test-helpers",
 ] }
+fuels-accounts = { workspace = true, features = ["test-helpers"] }
 
 fuel-core-types = { workspace = true, features = [
     "da-compression",
@@ -46,10 +47,12 @@ fuel-core-client = { workspace = true }
 
 
 
+
 [build-dependencies]
 anyhow = { workspace = true, features = ["std"] }
 flate2 = { workspace = true, features = ["zlib"] }
 fuels-accounts = { workspace = true, features = ["std"] }
+
 reqwest = { workspace = true, features = ["blocking", "default-tls"] }
 semver = { workspace = true }
 tar = { workspace = true }
