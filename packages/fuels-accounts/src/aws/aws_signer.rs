@@ -1,7 +1,6 @@
 use aws_sdk_kms::{
     primitives::Blob,
     types::{KeySpec, MessageType, SigningAlgorithmSpec},
-    // Client as AwsClient,
 };
 use fuel_crypto::{Message, PublicKey, Signature};
 use fuel_types::AssetId;
@@ -21,8 +20,8 @@ use k256::{
     PublicKey as K256PublicKey,
 };
 
-use crate::{provider::Provider, wallet::Wallet, Account, ViewOnlyAccount};
 use crate::aws::{AwsClient, AwsConfig};
+use crate::{provider::Provider, wallet::Wallet, Account, ViewOnlyAccount};
 
 const AWS_KMS_ERROR_PREFIX: &str = "AWS KMS Error";
 
@@ -36,7 +35,7 @@ pub struct AwsWallet {
 pub struct KmsData {
     id: String,
     client: AwsClient,
-    pub public_key: Vec<u8>,
+    public_key: Vec<u8>,
     pub address: Bech32Address,
 }
 
@@ -74,7 +73,12 @@ impl KmsData {
     }
 
     async fn fetch_public_key(client: &AwsClient, key_id: &str) -> anyhow::Result<Vec<u8>> {
-        let response = client.inner().get_public_key().key_id(key_id).send().await?;
+        let response = client
+            .inner()
+            .get_public_key()
+            .key_id(key_id)
+            .send()
+            .await?;
 
         let public_key = response
             .public_key()

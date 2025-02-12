@@ -1,21 +1,20 @@
 #[cfg(test)]
 mod client;
 #[cfg(test)]
+mod e2e_helpers;
+#[cfg(test)]
 mod fuel_node;
 #[cfg(test)]
 mod kms;
-#[cfg(test)]
-mod e2e_helpers;
-
 
 #[cfg(test)]
 mod tests {
+    use crate::e2e_helpers::{create_and_fund_kms_keys, start_fuel_node, start_kms};
     use anyhow::Result;
     use fuels::prelude::{AssetId, Provider};
-    use std::str::FromStr;
     use fuels_accounts::aws::AwsWallet;
     use fuels_accounts::ViewOnlyAccount;
-    use crate::e2e_helpers::{create_and_fund_kms_keys, start_fuel_node, start_kms};
+    use std::str::FromStr;
 
     #[tokio::test]
     async fn fund_aws_wallet() -> Result<()> {
@@ -35,7 +34,12 @@ mod tests {
         let provider = Provider::connect(fuel_node.url()).await?;
         let wallet = AwsWallet::from_kms_key_id(kms_key.id, Some(provider)).await?;
 
-        let founded_coins = wallet.get_coins(asset_id).await?.first().expect("No coins found").amount;
+        let founded_coins = wallet
+            .get_coins(asset_id)
+            .await?
+            .first()
+            .expect("No coins found")
+            .amount;
         assert_eq!(founded_coins, 5000000000);
         Ok(())
     }
@@ -60,28 +64,31 @@ mod tests {
         let provider = Provider::connect(fuel_node.url()).await?;
         let wallet = AwsWallet::from_kms_key_id(kms_key.id, Some(provider)).await?;
 
-        let founded_coins = wallet.get_coins(asset_id).await?.first().expect("No coins found").amount;
+        let founded_coins = wallet
+            .get_coins(asset_id)
+            .await?
+            .first()
+            .expect("No coins found")
+            .amount;
         assert_eq!(founded_coins, 5000000000);
 
         let contract_id = Contract::load_from(
             "../e2e/sway/contracts/contract_test/out/release/contract_test.bin",
             LoadConfiguration::default(),
         )?
-            .deploy(&wallet, TxPolicies::default())
-            .await?;
+        .deploy(&wallet, TxPolicies::default())
+        .await?;
 
         println!("Contract deployed @ {contract_id}");
 
-        let founded_coins = wallet.get_coins(asset_id).await?.first().expect("No coins found").amount;
+        let founded_coins = wallet
+            .get_coins(asset_id)
+            .await?
+            .first()
+            .expect("No coins found")
+            .amount;
         assert_eq!(founded_coins, 4999983198);
 
         Ok(())
     }
-
-
-
-
-
-
-
 }

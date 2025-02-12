@@ -19,7 +19,6 @@ mod coin_cache;
 
 pub mod predicate;
 
-
 #[cfg(test)]
 mod test {
     #[test]

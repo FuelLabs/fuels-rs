@@ -1,7 +1,7 @@
 use anyhow::Context;
+use fuels::accounts::aws::{AwsClient, AwsConfig, KmsData};
 use testcontainers::{core::ContainerPort, runners::AsyncRunner};
 use tokio::io::AsyncBufReadExt;
-use fuels::accounts::aws::{AwsClient, AwsConfig, KmsData};
 
 #[derive(Default)]
 pub struct Kms {
@@ -106,8 +106,8 @@ pub struct KmsProcess {
 impl KmsProcess {
     pub async fn create_key(&self) -> anyhow::Result<KmsKey> {
         let response = self
-            .client.
-            inner()
+            .client
+            .inner()
             .create_key()
             .key_usage(aws_sdk_kms::types::KeyUsageType::SignVerify)
             .key_spec(aws_sdk_kms::types::KeySpec::EccSecgP256K1)

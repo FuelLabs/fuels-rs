@@ -557,10 +557,3 @@ async fn wallet_transfer_respects_maturity_and_expiration() -> Result<()> {
 
     Ok(())
 }
-
-#[tokio::test]
-async fn aws_kms() -> Result<()> {
-    FuelNode::start().await.expect("TODO: panic message");
-
-    Ok(())
-}

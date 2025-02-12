@@ -1,8 +1,6 @@
 use crate::client::HttpClient;
 use anyhow::Context;
-use fuel_core_types::{
-    fuel_tx::AssetId,
-};
+use fuel_core_types::fuel_tx::AssetId;
 use fuels::accounts::Account;
 use fuels::crypto::SecretKey;
 use fuels::prelude::{Bech32Address, Provider, TxPolicies, WalletUnlocked};
