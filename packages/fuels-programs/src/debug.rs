@@ -14,9 +14,8 @@ use crate::{
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ScriptCallData {
     pub code: Vec<u8>,
-/// In binaries generated with Sway <= 0.66.5, this corresponds to the data offset.
-/// Starting from Sway 0.66.6, it holds the configurables offset.
-/// This will probably be split into two fields in the next breaking release.
+    /// This will be renamed in next breaking release. For binary generated with sway 0.66.5 this will be data_offset
+    /// and for binary generated with sway 0.66.6 and above this will probably be data_section_offset and configurable_section_offset.
     pub data_section_offset: Option<u64>,
     pub data: Vec<u8>,
 }
@@ -41,12 +40,16 @@ pub enum ScriptType {
 }
 
 fn parse_script_call(script: &[u8], script_data: &[u8]) -> Result<ScriptCallData> {
-    let data_section_offset = if script.len() < 16 {
-        None
+    let data_section_offset = if script.len() >= 16 {
+        let offset = get_offset_for_section_containing_configurables(script)?;
+
+        if offset >= script.len() {
+            None
+        } else {
+            Some(offset as u64)
+        }
     } else {
-        get_offset_for_section_containing_configurables(script)?
-            .filter(|&offset| offset < script.len())
-            .map(|offset| offset as u64)
+        None
     };
 
     Ok(ScriptCallData {
@@ -224,7 +227,6 @@ mod tests {
         // given
         let handwritten_script = [
             fuel_asm::op::movi(0x10, 100),
-            fuel_asm::op::jmpf(0x0, 0x4),
             fuel_asm::op::movi(0x10, 100),
             fuel_asm::op::movi(0x10, 100),
             fuel_asm::op::movi(0x10, 100),

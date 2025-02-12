@@ -76,10 +76,11 @@ impl Executable<Regular> {
     }
 
     pub fn configurables_offset_in_code(&self) -> Result<Option<usize>> {
-        has_configurables_section_offset(&self.state.code)?
-            .filter(|&has_configurables_offset| has_configurables_offset)
-            .map(|_| extract_configurables_offset(&self.state.code))
-            .transpose()
+        if has_configurables_section_offset(&self.state.code)? {
+            Ok(Some(extract_configurables_offset(&self.state.code)?))
+        } else {
+            Ok(None)
+        }
     }
 
     /// Returns the code of the executable with configurables applied.
@@ -315,6 +316,7 @@ mod tests {
 
         // And: Loader code should match expected binary
         let loader_code = loader.code();
+
         assert_eq!(
             loader_code,
             LoaderCode::from_normal_binary(code).unwrap().as_bytes()
