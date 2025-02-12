@@ -1,6 +1,6 @@
 use crate::{
     fuel_node::{FuelNode, FuelNodeProcess},
-    kms::{Kms, KmsKey, KmsProcess},
+    kms::{Kms, KmsProcess, KmsTestKey},
 };
 
 pub async fn start_kms(logs: bool) -> anyhow::Result<KmsProcess> {
@@ -9,10 +9,10 @@ pub async fn start_kms(logs: bool) -> anyhow::Result<KmsProcess> {
 pub async fn create_and_fund_kms_keys(
     kms: &KmsProcess,
     fuel_node: &FuelNodeProcess,
-) -> anyhow::Result<KmsKey> {
+) -> anyhow::Result<KmsTestKey> {
     let amount = 5_000_000_000;
     let key = kms.create_key().await?;
-    let address = key.kms_data.address.clone();
+    let address = key.kms_key.address().clone();
     fuel_node.fund(address, amount).await?;
 
     Ok(key)

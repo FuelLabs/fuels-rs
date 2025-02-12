@@ -1,5 +1,6 @@
 use anyhow::Context;
-use fuels::accounts::aws::{AwsClient, AwsConfig, KmsData};
+use fuels::accounts::kms::{AwsClient, AwsConfig};
+use fuels_accounts::kms::KmsKey;
 use testcontainers::{core::ContainerPort, runners::AsyncRunner};
 use tokio::io::AsyncBufReadExt;
 
@@ -47,8 +48,8 @@ impl Kms {
         let port = container.get_host_port_ipv4(4566).await?;
         let url = format!("http://localhost:{}", port);
 
-        let config = AwsConfig::for_testing(url.clone()).await;
-        let client = AwsClient::new(config);
+        let config = AwsConfig::for_local_testing(url.clone()).await;
+        let client = AwsClient::new(&config);
 
         Ok(KmsProcess {
             _container: container,
@@ -104,7 +105,7 @@ pub struct KmsProcess {
 }
 
 impl KmsProcess {
-    pub async fn create_key(&self) -> anyhow::Result<KmsKey> {
+    pub async fn create_key(&self) -> anyhow::Result<KmsTestKey> {
         let response = self
             .client
             .inner()
@@ -120,19 +121,19 @@ impl KmsProcess {
             .and_then(|metadata| metadata.arn)
             .ok_or_else(|| anyhow::anyhow!("key arn missing from response"))?;
 
-        let kms_data = KmsData::new(id.clone(), self.client.clone()).await?;
+        let kms_key = KmsKey::new(id.clone(), self.client.clone()).await?;
 
-        Ok(KmsKey {
+        Ok(KmsTestKey {
             id,
-            kms_data,
+            kms_key,
             url: self.url.clone(),
         })
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct KmsKey {
+pub struct KmsTestKey {
     pub id: String,
-    pub kms_data: KmsData,
+    pub kms_key: KmsKey,
     pub url: String,
 }

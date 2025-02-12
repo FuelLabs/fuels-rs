@@ -1,7 +1,6 @@
-use aws_config::{default_provider::credentials::DefaultCredentialsChain, Region, SdkConfig};
-#[cfg(feature = "test-helpers")]
-use aws_sdk_kms::config::Credentials;
-use aws_sdk_kms::{config::BehaviorVersion, Client};
+use aws_config::{
+    default_provider::credentials::DefaultCredentialsChain, BehaviorVersion, Region, SdkConfig,
+};
 
 #[derive(Debug, Clone)]
 pub struct AwsConfig {
@@ -9,7 +8,7 @@ pub struct AwsConfig {
 }
 
 impl AwsConfig {
-    pub async fn from_env() -> Self {
+    pub async fn from_environment() -> Self {
         let loader = aws_config::defaults(BehaviorVersion::latest())
             .credentials_provider(DefaultCredentialsChain::builder().build().await);
 
@@ -19,24 +18,24 @@ impl AwsConfig {
     }
 
     #[cfg(feature = "test-helpers")]
-    pub async fn for_testing(url: String) -> Self {
+    pub async fn for_local_testing(endpoint_url: String) -> Self {
         let sdk_config = aws_config::defaults(BehaviorVersion::latest())
-            .credentials_provider(Credentials::new(
+            .credentials_provider(aws_sdk_kms::config::Credentials::new(
                 "test",
                 "test",
                 None,
                 None,
-                "Static Credentials",
+                "Static Test Credentials",
             ))
-            .endpoint_url(url)
-            .region(Region::new("us-east-1")) // placeholder region for test
+            .endpoint_url(endpoint_url)
+            .region(Region::new("us-east-1")) // Test region
             .load()
             .await;
 
         Self { sdk_config }
     }
 
-    pub fn url(&self) -> Option<&str> {
+    pub fn endpoint_url(&self) -> Option<&str> {
         self.sdk_config.endpoint_url()
     }
 
@@ -47,17 +46,17 @@ impl AwsConfig {
 
 #[derive(Clone, Debug)]
 pub struct AwsClient {
-    client: Client,
+    inner: aws_sdk_kms::Client,
 }
 
 impl AwsClient {
-    pub fn new(config: AwsConfig) -> Self {
-        let config = config.sdk_config;
-        let client = Client::new(&config);
-
-        Self { client }
+    pub fn new(config: &AwsConfig) -> Self {
+        Self {
+            inner: aws_sdk_kms::Client::new(&config.sdk_config),
+        }
     }
-    pub fn inner(&self) -> &Client {
-        &self.client
+
+    pub fn inner(&self) -> &aws_sdk_kms::Client {
+        &self.inner
     }
 }

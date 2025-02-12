@@ -12,11 +12,11 @@ mod tests {
     use crate::e2e_helpers::{create_and_fund_kms_keys, start_fuel_node, start_kms};
     use anyhow::Result;
     use fuels::prelude::{AssetId, Provider};
-    use fuels_accounts::aws::AwsWallet;
+    use fuels_accounts::kms::AwsWallet;
     use fuels_accounts::ViewOnlyAccount;
     use std::str::FromStr;
 
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn fund_aws_wallet() -> Result<()> {
         let kms = start_kms(false).await?;
         let fuel_node = start_fuel_node(false).await?;
@@ -32,7 +32,7 @@ mod tests {
                 .expect("AssetId to be well formed");
 
         let provider = Provider::connect(fuel_node.url()).await?;
-        let wallet = AwsWallet::from_kms_key_id(kms_key.id, Some(provider)).await?;
+        let wallet = AwsWallet::with_kms_key(kms_key.id, Some(provider)).await?;
 
         let founded_coins = wallet
             .get_coins(asset_id)
@@ -44,7 +44,7 @@ mod tests {
         Ok(())
     }
 
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn deploy_contract() -> anyhow::Result<()> {
         use fuels::prelude::*;
 
@@ -62,7 +62,7 @@ mod tests {
                 .expect("AssetId to be well formed");
 
         let provider = Provider::connect(fuel_node.url()).await?;
-        let wallet = AwsWallet::from_kms_key_id(kms_key.id, Some(provider)).await?;
+        let wallet = AwsWallet::with_kms_key(kms_key.id, Some(provider)).await?;
 
         let founded_coins = wallet
             .get_coins(asset_id)

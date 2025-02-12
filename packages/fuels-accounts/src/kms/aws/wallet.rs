@@ -1,3 +1,7 @@
+use crate::kms::aws::client::{AwsClient, AwsConfig};
+use crate::provider::Provider;
+use crate::wallet::Wallet;
+use crate::{Account, ViewOnlyAccount};
 use aws_sdk_kms::{
     primitives::Blob,
     types::{KeySpec, MessageType, SigningAlgorithmSpec},
@@ -20,123 +24,123 @@ use k256::{
     PublicKey as K256PublicKey,
 };
 
-use crate::aws::{AwsClient, AwsConfig};
-use crate::{provider::Provider, wallet::Wallet, Account, ViewOnlyAccount};
-
 const AWS_KMS_ERROR_PREFIX: &str = "AWS KMS Error";
 
 #[derive(Clone, Debug)]
 pub struct AwsWallet {
-    wallet: Wallet,
-    kms_data: KmsData,
+    view_account: Wallet,
+    kms_key: KmsKey,
 }
 
 #[derive(Clone, Debug)]
-pub struct KmsData {
-    id: String,
+pub struct KmsKey {
+    key_id: String,
     client: AwsClient,
     public_key: Vec<u8>,
-    pub address: Bech32Address,
+    fuel_address: Bech32Address,
 }
 
-impl KmsData {
-    pub async fn new(id: String, client: AwsClient) -> anyhow::Result<Self> {
-        Self::validate_key_type(&client, &id).await?;
-        let public_key = Self::fetch_public_key(&client, &id).await?;
-        let address = Self::create_bech32_address(&public_key)?;
+impl KmsKey {
+    pub async fn new(key_id: String, client: AwsClient) -> Result<Self> {
+        Self::validate_key_type(&client, &key_id).await?;
+        let public_key = Self::fetch_public_key(&client, &key_id).await?;
+        let fuel_address = Self::derive_fuel_address(&public_key)?;
 
         Ok(Self {
-            id,
+            key_id,
             client,
             public_key,
-            address,
+            fuel_address,
         })
     }
 
-    async fn validate_key_type(client: &AwsClient, key_id: &str) -> anyhow::Result<()> {
+    async fn validate_key_type(client: &AwsClient, key_id: &str) -> Result<()> {
         let key_spec = client
             .inner()
             .get_public_key()
             .key_id(key_id)
             .send()
-            .await?
+            .await
+            .map_err(|e| Error::Other(format!("{}: {}", AWS_KMS_ERROR_PREFIX, e)))?
             .key_spec;
 
         match key_spec {
             Some(KeySpec::EccSecgP256K1) => Ok(()),
-            other => anyhow::bail!(
-                "{}: Invalid key type, expected EccSecgP256K1, got {:?}",
-                AWS_KMS_ERROR_PREFIX,
-                other
-            ),
+            other => Err(Error::Other(format!(
+                "{}: Invalid key type {:?}, expected ECC_SECG_P256K1",
+                AWS_KMS_ERROR_PREFIX, other
+            ))),
         }
     }
 
-    async fn fetch_public_key(client: &AwsClient, key_id: &str) -> anyhow::Result<Vec<u8>> {
+    async fn fetch_public_key(client: &AwsClient, key_id: &str) -> Result<Vec<u8>> {
         let response = client
             .inner()
             .get_public_key()
             .key_id(key_id)
             .send()
-            .await?;
+            .await
+            .map_err(|e| Error::Other(format!("{}: {}", AWS_KMS_ERROR_PREFIX, e)))?;
 
-        let public_key = response
+        response
             .public_key()
-            .ok_or_else(|| anyhow::anyhow!("{}: No public key returned", AWS_KMS_ERROR_PREFIX))?;
-
-        Ok(public_key.clone().into_inner())
+            .map(|blob| blob.as_ref().to_vec())
+            .ok_or_else(|| {
+                Error::Other(format!(
+                    "{}: Empty public key response",
+                    AWS_KMS_ERROR_PREFIX
+                ))
+            })
     }
 
-    fn create_bech32_address(public_key_bytes: &[u8]) -> anyhow::Result<Bech32Address> {
-        let k256_public_key = K256PublicKey::from_public_key_der(public_key_bytes)
-            .map_err(|_| anyhow::anyhow!("{}: Invalid DER public key", AWS_KMS_ERROR_PREFIX))?;
+    fn derive_fuel_address(public_key: &[u8]) -> Result<Bech32Address> {
+        let k256_key = K256PublicKey::from_public_key_der(public_key)
+            .map_err(|_| Error::Other(format!("{}: Invalid DER encoding", AWS_KMS_ERROR_PREFIX)))?;
 
-        let public_key = PublicKey::from(k256_public_key);
-        let fuel_address = public_key.hash();
-
-        Ok(Bech32Address::new(FUEL_BECH32_HRP, fuel_address))
+        let fuel_public_key = PublicKey::from(k256_key);
+        Ok(Bech32Address::new(FUEL_BECH32_HRP, fuel_public_key.hash()))
     }
 
     async fn sign_message(&self, message: Message) -> Result<Signature> {
-        let signature_der = self.request_signature(message).await?;
-        let (signature, recovery_id) = self.process_signature(&signature_der, message)?;
+        let signature_der = self.request_kms_signature(message).await?;
+        let (sig, recovery_id) = self.normalize_signature(&signature_der, message)?;
 
-        Ok(self.create_fuel_signature(signature, recovery_id))
+        Ok(self.format_fuel_signature(sig, recovery_id))
     }
 
-    async fn request_signature(&self, message: Message) -> Result<Vec<u8>> {
-        let reply = self
-            .client
+    async fn request_kms_signature(&self, message: Message) -> Result<Vec<u8>> {
+        self.client
             .inner()
             .sign()
-            .key_id(&self.id)
+            .key_id(&self.key_id)
             .signing_algorithm(SigningAlgorithmSpec::EcdsaSha256)
             .message_type(MessageType::Digest)
-            .message(Blob::new(*message))
+            .message(Blob::new(message.as_ref().to_vec()))
             .send()
             .await
-            .map_err(|e| {
-                Error::Other(format!("{}: Failed to sign: {:?}", AWS_KMS_ERROR_PREFIX, e))
-            })?;
-
-        reply
+            .map_err(|e| Error::Other(format!("{}: Signing failed - {}", AWS_KMS_ERROR_PREFIX, e)))?
             .signature
-            .map(|sig| sig.into_inner())
-            .ok_or_else(|| Error::Other(format!("{}: No signature returned", AWS_KMS_ERROR_PREFIX)))
+            .map(|blob| blob.into_inner())
+            .ok_or_else(|| {
+                Error::Other(format!(
+                    "{}: Empty signature response",
+                    AWS_KMS_ERROR_PREFIX
+                ))
+            })
     }
 
-    fn process_signature(
+    fn normalize_signature(
         &self,
         signature_der: &[u8],
         message: Message,
     ) -> Result<(K256Signature, RecoveryId)> {
-        let sig = K256Signature::from_der(signature_der).map_err(|_| {
+        let mut sig = K256Signature::from_der(signature_der).map_err(|_| {
             Error::Other(format!("{}: Invalid DER signature", AWS_KMS_ERROR_PREFIX))
         })?;
-        let sig = sig.normalize_s().unwrap_or(sig);
+
+        sig = sig.normalize_s().unwrap_or(sig);
 
         let recovery_id = self.determine_recovery_id(&sig, message)?;
-
         Ok((sig, recovery_id))
     }
 
@@ -168,68 +172,66 @@ impl KmsData {
         }
     }
 
-    fn create_fuel_signature(
+    fn format_fuel_signature(
         &self,
         signature: K256Signature,
         recovery_id: RecoveryId,
     ) -> Signature {
-        debug_assert!(
-            !recovery_id.is_x_reduced(),
-            "reduced-x form coordinates should be caught earlier"
-        );
+        let recovery_byte = recovery_id.is_y_odd() as u8;
+        let mut bytes: [u8; 64] = signature.to_bytes().into();
+        bytes[63] = (recovery_byte << 7) | (bytes[63] & 0x7F);
+        Signature::from_bytes(bytes)
+    }
 
-        let v = recovery_id.is_y_odd() as u8;
-        let mut signature_bytes = <[u8; 64]>::from(signature.to_bytes());
-        signature_bytes[32] = (v << 7) | (signature_bytes[32] & 0x7f);
-
-        Signature::from_bytes(signature_bytes)
+    pub fn address(&self) -> &Bech32Address {
+        &self.fuel_address
     }
 }
 
 impl AwsWallet {
-    pub async fn from_kms_key_id(
-        kms_key_id: String,
+    pub async fn with_kms_key(
+        key_id: impl Into<String>,
         provider: Option<Provider>,
-    ) -> anyhow::Result<Self> {
-        let config = AwsConfig::from_env().await;
-        let client = AwsClient::new(config);
-        let kms_data = KmsData::new(kms_key_id, client).await?;
+    ) -> Result<Self> {
+        let config = AwsConfig::from_environment().await;
+        let client = AwsClient::new(&config);
+        let kms_key = KmsKey::new(key_id.into(), client).await?;
 
         Ok(Self {
-            wallet: Wallet::from_address(kms_data.address.clone(), provider),
-            kms_data,
+            view_account: Wallet::from_address(kms_key.fuel_address.clone(), provider),
+            kms_key,
         })
     }
 
     pub fn address(&self) -> &Bech32Address {
-        self.wallet.address()
+        &self.kms_key.fuel_address
     }
 
     pub fn provider(&self) -> Option<&Provider> {
-        self.wallet.provider()
+        self.view_account.provider()
     }
 }
 
 #[async_trait::async_trait]
 impl Signer for AwsWallet {
     async fn sign(&self, message: Message) -> Result<Signature> {
-        self.kms_data.sign_message(message).await
+        self.kms_key.sign_message(message).await
     }
 
     fn address(&self) -> &Bech32Address {
-        &self.kms_data.address
+        self.address()
     }
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 impl ViewOnlyAccount for AwsWallet {
     fn address(&self) -> &Bech32Address {
-        self.wallet.address()
+        &self.kms_key.fuel_address
     }
 
     fn try_provider(&self) -> Result<&Provider> {
-        self.wallet.provider().ok_or_else(|| {
-            Error::Other("No provider available. Make sure to use `set_provider`".to_owned())
+        self.provider().ok_or_else(|| {
+            Error::Other("Provider required - use `.with_provider()` when creating wallet".into())
         })
     }
 
@@ -239,7 +241,7 @@ impl ViewOnlyAccount for AwsWallet {
         amount: u64,
         excluded_coins: Option<Vec<CoinTypeId>>,
     ) -> Result<Vec<Input>> {
-        self.wallet
+        self.view_account
             .get_asset_inputs_for_amount(asset_id, amount, excluded_coins)
             .await
     }
