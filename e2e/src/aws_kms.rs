@@ -5,13 +5,13 @@ use testcontainers::{core::ContainerPort, runners::AsyncRunner};
 use tokio::io::AsyncBufReadExt;
 
 #[derive(Default)]
-pub struct Kms {
+pub struct AwsKms {
     show_logs: bool,
 }
 
-struct KmsImage;
+struct AwsKmsImage;
 
-impl testcontainers::Image for KmsImage {
+impl testcontainers::Image for AwsKmsImage {
     fn name(&self) -> &str {
         "localstack/localstack"
     }
@@ -29,14 +29,14 @@ impl testcontainers::Image for KmsImage {
     }
 }
 
-impl Kms {
+impl AwsKms {
     pub fn with_show_logs(mut self, show_logs: bool) -> Self {
         self.show_logs = show_logs;
         self
     }
 
-    pub async fn start(self) -> anyhow::Result<KmsProcess> {
-        let container = KmsImage
+    pub async fn start(self) -> anyhow::Result<AwsKmsProcess> {
+        let container = AwsKmsImage
             .start()
             .await
             .with_context(|| "Failed to start KMS container")?;
@@ -51,7 +51,7 @@ impl Kms {
         let config = AwsConfig::for_local_testing(url.clone()).await;
         let client = AwsClient::new(&config);
 
-        Ok(KmsProcess {
+        Ok(AwsKmsProcess {
             _container: container,
             client,
             url,
@@ -59,7 +59,7 @@ impl Kms {
     }
 }
 
-fn spawn_log_printer(container: &testcontainers::ContainerAsync<KmsImage>) {
+fn spawn_log_printer(container: &testcontainers::ContainerAsync<AwsKmsImage>) {
     let stderr = container.stderr(true);
     let stdout = container.stdout(true);
     tokio::spawn(async move {
@@ -98,13 +98,13 @@ fn spawn_log_printer(container: &testcontainers::ContainerAsync<KmsImage>) {
     });
 }
 
-pub struct KmsProcess {
-    _container: testcontainers::ContainerAsync<KmsImage>,
+pub struct AwsKmsProcess {
+    _container: testcontainers::ContainerAsync<AwsKmsImage>,
     client: AwsClient,
     url: String,
 }
 
-impl KmsProcess {
+impl AwsKmsProcess {
     pub async fn create_key(&self) -> anyhow::Result<KmsTestKey> {
         let response = self
             .client

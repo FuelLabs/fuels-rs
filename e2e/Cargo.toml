@@ -46,6 +46,9 @@ aws-sdk-kms = { workspace = true, features = ["rustls"] }
 fuel-core-client = { workspace = true }
 
 
+google-cloud-kms = { version = "0.6.0"}
+tonic = { version = "0.12.3", features = ["tls"] }
+tonic-types = { version = "0.12.3"  }
 
 
 [build-dependencies]
@@ -65,3 +68,7 @@ coin-cache = ["fuels/coin-cache"]
 [dependencies]
 anyhow = "1.0.86"
 url = "2.5.2"
+serde_json = "1.0.120"
+reqwest = "0.12.5"
+tokio-stream = "0.1.17"
+async-stream = "0.3.5"
