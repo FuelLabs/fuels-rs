@@ -18,53 +18,59 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct Success {
     pub receipts: Vec<Receipt>,
-    pub total_gas: u64,
     pub total_fee: u64,
+    pub total_gas: u64,
+}
+
+#[derive(Debug, Clone)]
+pub struct SqueezedOut {
+    pub reason: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct Revert {
+    pub reason: String,
+    pub receipts: Vec<Receipt>,
+    pub revert_id: u64,
+    pub total_fee: u64,
+    pub total_gas: u64,
 }
 
 #[derive(Debug, Clone)]
 pub enum TxStatus {
     Success(Success),
     Submitted,
-    SqueezedOut {
-        reason: String,
-    },
-    Revert {
-        receipts: Vec<Receipt>,
-        reason: String,
-        revert_id: u64,
-        total_gas: u64,
-        total_fee: u64,
-    },
+    SqueezedOut(SqueezedOut),
+    Revert(Revert),
 }
 
 impl TxStatus {
     pub fn check(&self, log_decoder: Option<&LogDecoder>) -> Result<()> {
         match self {
-            Self::SqueezedOut { reason } => {
+            Self::SqueezedOut(SqueezedOut { reason }) => {
                 Err(Error::Transaction(Reason::SqueezedOut(reason.clone())))
             }
-            Self::Revert {
+            Self::Revert(Revert {
                 receipts,
                 reason,
                 revert_id: id,
                 ..
-            } => Err(Self::map_revert_error(receipts, reason, *id, log_decoder)),
+            }) => Err(Self::map_revert_error(receipts, reason, *id, log_decoder)),
             _ => Ok(()),
         }
     }
 
     pub fn take_success_checked(self, log_decoder: Option<&LogDecoder>) -> Result<Success> {
         match self {
-            Self::SqueezedOut { reason } => {
+            Self::SqueezedOut(SqueezedOut { reason }) => {
                 Err(Error::Transaction(Reason::SqueezedOut(reason.clone())))
             }
-            Self::Revert {
+            Self::Revert(Revert {
                 receipts,
                 reason,
                 revert_id: id,
                 ..
-            } => Err(Self::map_revert_error(&receipts, &reason, id, log_decoder)),
+            }) => Err(Self::map_revert_error(&receipts, &reason, id, log_decoder)),
             Self::Submitted => Err(Error::Transaction(Reason::SqueezedOut(
                 "can not take `success` status from `Submitted` transaction".to_owned(),
             ))),
@@ -74,18 +80,16 @@ impl TxStatus {
 
     pub fn total_gas(&self) -> u64 {
         match self {
-            TxStatus::Success(Success { total_gas, .. }) | TxStatus::Revert { total_gas, .. } => {
-                *total_gas
-            }
+            TxStatus::Success(Success { total_gas, .. })
+            | TxStatus::Revert(Revert { total_gas, .. }) => *total_gas,
             _ => 0,
         }
     }
 
     pub fn total_fee(&self) -> u64 {
         match self {
-            TxStatus::Success(Success { total_fee, .. }) | TxStatus::Revert { total_fee, .. } => {
-                *total_fee
-            }
+            TxStatus::Success(Success { total_fee, .. })
+            | TxStatus::Revert(Revert { total_fee, .. }) => *total_fee,
             _ => 0,
         }
     }
@@ -143,9 +147,8 @@ impl TxStatus {
 
     pub fn take_receipts(self) -> Vec<Receipt> {
         match self {
-            TxStatus::Success(Success { receipts, .. }) | TxStatus::Revert { receipts, .. } => {
-                receipts
-            }
+            TxStatus::Success(Success { receipts, .. })
+            | TxStatus::Revert(Revert { receipts, .. }) => receipts,
             _ => vec![],
         }
     }
@@ -180,15 +183,17 @@ impl From<ClientTransactionStatus> for TxStatus {
                         _ => None,
                     })
                     .expect("Transaction failed without a `revert_id`");
-                TxStatus::Revert {
+                TxStatus::Revert(Revert {
                     receipts,
                     reason,
                     revert_id,
                     total_gas,
                     total_fee,
-                }
+                })
             }
-            ClientTransactionStatus::SqueezedOut { reason } => TxStatus::SqueezedOut { reason },
+            ClientTransactionStatus::SqueezedOut { reason } => {
+                TxStatus::SqueezedOut(SqueezedOut { reason })
+            }
         }
     }
 }
@@ -221,13 +226,13 @@ impl From<TransactionExecutionStatus> for TxStatus {
                     })
                     .expect("Transaction failed without a `revert_id`");
                 let reason = TransactionExecutionResult::reason(&receipts, &result);
-                Self::Revert {
+                Self::Revert(Revert {
                     receipts,
                     reason,
                     revert_id,
                     total_gas,
                     total_fee,
-                }
+                })
             }
         }
     }
