@@ -1272,7 +1272,8 @@ async fn low_level_call() -> Result<()> {
             Bytes(function_selector),
             Bytes(call_data),
         )
-        .with_contract_ids(&[target_contract_instance.id()])
+        .determine_missing_contracts(None)
+        .await?
         .call()
         .await?;
 

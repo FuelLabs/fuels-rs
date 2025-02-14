@@ -88,9 +88,9 @@ impl TestContract for Contract {
 
     #[storage(write)]
     fn set_value_multiple_complex(a: MyStruct, b: str[4]) {
-        storage.value_bool.write(a.a);
-        storage.value_str.write(b);
         storage.counter.write(a.b[1]);
+        storage.value_str.write(b);
+        storage.value_bool.write(a.a);
     }
 
     #[storage(read)]
