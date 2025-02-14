@@ -18,7 +18,8 @@ async fn contract_default_configurables() -> Result<()> {
         LoadConfiguration::default(),
     )?
     .deploy_if_not_exists(&wallet, TxPolicies::default())
-    .await?;
+    .await?
+    .contract_id;
 
     let contract_instance = MyContract::new(contract_id, wallet.clone());
 
@@ -130,7 +131,8 @@ async fn contract_configurables() -> Result<()> {
         LoadConfiguration::default().with_configurables(configurables),
     )?
     .deploy_if_not_exists(&wallet, TxPolicies::default())
-    .await?;
+    .await?
+    .contract_id;
 
     let contract_instance = MyContract::new(contract_id, wallet.clone());
     // ANCHOR_END: contract_configurables
@@ -198,7 +200,8 @@ async fn contract_manual_configurables() -> Result<()> {
     )?
     .with_configurables(configurables)
     .deploy_if_not_exists(&wallet, TxPolicies::default())
-    .await?;
+    .await?
+    .contract_id;
 
     let contract_instance = MyContract::new(contract_id, wallet.clone());
 

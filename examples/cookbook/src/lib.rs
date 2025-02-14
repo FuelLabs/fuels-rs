@@ -56,7 +56,8 @@ mod tests {
             LoadConfiguration::default(),
         )?
         .deploy(wallet, TxPolicies::default())
-        .await?;
+        .await?
+        .contract_id;
 
         let contract_methods = MyContract::new(contract_id.clone(), wallet.clone()).methods();
         // ANCHOR_END: liquidity_deploy

@@ -1,6 +1,6 @@
 use core::{fmt::Debug, marker::PhantomData};
 
-use fuel_tx::{AssetId, Bytes32, Receipt};
+use fuel_tx::{AssetId, Bytes32};
 use fuels_accounts::{provider::TransactionCost, Account};
 use fuels_core::{
     codec::{ABIEncoder, DecoderConfig, EncoderConfig, LogDecoder},
@@ -172,9 +172,7 @@ where
 
         let tx_status = provider.send_transaction_and_await_commit(tx).await?;
 
-        let receipts = tx_status.take_receipts_checked(Some(&self.log_decoder))?;
-
-        self.get_response(receipts)
+        self.get_response(tx_status)
     }
 
     pub async fn submit(mut self) -> Result<SubmitResponse<A, C, T>> {
@@ -205,30 +203,24 @@ where
             let tx = self.build_tx().await?;
             provider.dry_run(tx).await?
         };
-        let receipts = tx_status.take_receipts_checked(Some(&self.log_decoder))?;
 
-        self.get_response(receipts)
-    }
-
-    /// Create a [`CallResponse`] from call receipts
-    pub fn get_response(&self, receipts: Vec<Receipt>) -> Result<CallResponse<T>> {
-        let token = self
-            .call
-            .parse_call(&receipts, self.decoder_config, &T::param_type())?;
-
-        Ok(CallResponse::new(
-            T::from_token(token)?,
-            receipts,
-            self.log_decoder.clone(),
-            self.cached_tx_id,
-        ))
+        self.get_response(tx_status)
     }
 
     /// Create a [`CallResponse`] from `TxStatus`
-    pub fn get_response_from(&self, tx_status: TxStatus) -> Result<CallResponse<T>> {
-        let receipts = tx_status.take_receipts_checked(Some(&self.log_decoder))?;
+    pub fn get_response(&self, tx_status: TxStatus) -> Result<CallResponse<T>> {
+        let success = tx_status.take_success_checked(Some(&self.log_decoder))?;
 
-        self.get_response(receipts)
+        let token =
+            self.call
+                .parse_call(&success.receipts, self.decoder_config, &T::param_type())?;
+
+        Ok(CallResponse {
+            value: T::from_token(token)?,
+            log_decoder: self.log_decoder.clone(),
+            tx_id: self.cached_tx_id,
+            tx_status: success,
+        })
     }
 
     pub async fn determine_missing_contracts(mut self, max_attempts: Option<u64>) -> Result<Self> {
@@ -434,8 +426,7 @@ where
 
         let tx_status = provider.send_transaction_and_await_commit(tx).await?;
 
-        let receipts = tx_status.take_receipts_checked(Some(&self.log_decoder))?;
-        self.get_response(receipts)
+        self.get_response(tx_status)
     }
 
     pub async fn submit(mut self) -> Result<SubmitResponse<A, Vec<ContractCall>, ()>> {
@@ -472,9 +463,8 @@ where
             let tx = self.build_tx().await?;
             provider.dry_run(tx).await?
         };
-        let receipts = tx_status.take_receipts_checked(Some(&self.log_decoder))?;
 
-        self.get_response(receipts)
+        self.get_response(tx_status)
     }
 
     /// Simulates a call without needing to resolve the generic for the return type
@@ -487,12 +477,13 @@ where
         Ok(())
     }
 
-    /// Create a [`CallResponse`] from call receipts
+    /// Create a [`CallResponse`] from `TxStatus`
     pub fn get_response<T: Tokenizable + Debug>(
         &self,
-        receipts: Vec<Receipt>,
+        tx_status: TxStatus,
     ) -> Result<CallResponse<T>> {
-        let mut receipt_parser = ReceiptParser::new(&receipts, self.decoder_config);
+        let success = tx_status.take_success_checked(Some(&self.log_decoder))?;
+        let mut receipt_parser = ReceiptParser::new(&success.receipts, self.decoder_config);
 
         let final_tokens = self
             .call
@@ -501,14 +492,13 @@ where
             .collect::<Result<Vec<_>>>()?;
 
         let tokens_as_tuple = Token::Tuple(final_tokens);
-        let response = CallResponse::<T>::new(
-            T::from_token(tokens_as_tuple)?,
-            receipts,
-            self.log_decoder.clone(),
-            self.cached_tx_id,
-        );
 
-        Ok(response)
+        Ok(CallResponse {
+            value: T::from_token(tokens_as_tuple)?,
+            log_decoder: self.log_decoder.clone(),
+            tx_id: self.cached_tx_id,
+            tx_status: success,
+        })
     }
 
     /// Simulates the call and attempts to resolve missing contract outputs.
