@@ -6,8 +6,11 @@ use fuels_core::{
     Configurables,
 };
 
+use crate::assembly::script_and_predicate_loader::{
+    extract_data_offset, has_configurables_section_offset,
+};
 use crate::{
-    assembly::script_and_predicate_loader::{extract_data_offset, LoaderCode},
+    assembly::script_and_predicate_loader::{extract_configurables_offset, LoaderCode},
     DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE,
 };
 
@@ -72,6 +75,14 @@ impl Executable<Regular> {
         extract_data_offset(&self.state.code)
     }
 
+    pub fn configurables_offset_in_code(&self) -> Result<Option<usize>> {
+        if has_configurables_section_offset(&self.state.code)? {
+            Ok(Some(extract_configurables_offset(&self.state.code)?))
+        } else {
+            Ok(None)
+        }
+    }
+
     /// Returns the code of the executable with configurables applied.
     ///
     /// # Returns
@@ -119,8 +130,13 @@ impl Executable<Loader> {
         }
     }
 
+    #[deprecated(note = "Use `configurables_offset_in_code` instead")]
     pub fn data_offset_in_code(&self) -> usize {
-        self.loader_code().data_section_offset()
+        self.loader_code().configurables_section_offset()
+    }
+
+    pub fn configurables_offset_in_code(&self) -> usize {
+        self.loader_code().configurables_section_offset()
     }
 
     fn loader_code(&self) -> LoaderCode {
@@ -190,6 +206,10 @@ mod tests {
     use fuels_core::Configurables;
     use std::io::Write;
     use tempfile::NamedTempFile;
+
+    fn legacy_indicating_instruction() -> Vec<u8> {
+        fuel_asm::op::jmpf(0x0, 0x02).to_bytes().to_vec()
+    }
 
     #[test]
     fn test_executable_regular_from_bytes() {
@@ -265,33 +285,88 @@ mod tests {
     }
 
     #[test]
-    fn test_loader_extracts_code_and_data_section_correctly() {
-        // Given: An Executable<Regular> with valid code
-        let padding = vec![0; 8];
-        let offset = 20u64.to_be_bytes().to_vec();
+    fn test_loader_extracts_code_and_data_section_legacy_format() {
+        let padding = vec![0; 4];
+        let jmpf = legacy_indicating_instruction();
+        let data_offset = 28u64.to_be_bytes().to_vec();
+        let remaining_padding = vec![0; 8];
         let some_random_instruction = vec![1, 2, 3, 4];
         let data_section = vec![5, 6, 7, 8];
+
         let code = [
             padding.clone(),
-            offset.clone(),
+            jmpf.clone(),
+            data_offset.clone(),
+            remaining_padding.clone(),
             some_random_instruction.clone(),
-            data_section,
+            data_section.clone(),
         ]
         .concat();
+
         let executable = Executable::<Regular>::from_bytes(code.clone());
 
-        // When: Converting to a loader
         let loader = executable.convert_to_loader().unwrap();
 
         let blob = loader.blob();
-        let data_stripped_code = [padding, offset, some_random_instruction].concat();
+        let data_stripped_code = [
+            padding,
+            jmpf.clone(),
+            data_offset,
+            remaining_padding.clone(),
+            some_random_instruction,
+        ]
+        .concat();
         assert_eq!(blob.as_ref(), data_stripped_code);
 
+        // And: Loader code should match expected binary
+        let loader_code = loader.code();
+
+        assert_eq!(
+            loader_code,
+            LoaderCode::from_normal_binary(code).unwrap().as_bytes()
+        );
+    }
+
+    #[test]
+    fn test_loader_extracts_code_and_configurable_section_new_format() {
+        let padding = vec![0; 4];
+        let jmpf = legacy_indicating_instruction();
+        let data_offset = 28u64.to_be_bytes().to_vec();
+        let configurable_offset = vec![0; 8];
+        let data_section = vec![5, 6, 7, 8];
+        let configurable_section = vec![9, 9, 9, 9];
+
+        let code = [
+            padding.clone(),
+            jmpf.clone(),
+            data_offset.clone(),
+            configurable_offset.clone(),
+            data_section.clone(),
+            configurable_section,
+        ]
+        .concat();
+
+        let executable = Executable::<Regular>::from_bytes(code.clone());
+
+        let loader = executable.convert_to_loader().unwrap();
+
+        let blob = loader.blob();
+        let configurable_stripped_code = [
+            padding,
+            jmpf,
+            data_offset,
+            configurable_offset,
+            data_section,
+        ]
+        .concat();
+        assert_eq!(blob.as_ref(), configurable_stripped_code);
+
+        // And: Loader code should match expected binary
         let loader_code = loader.code();
         assert_eq!(
             loader_code,
             LoaderCode::from_normal_binary(code).unwrap().as_bytes()
-        )
+        );
     }
 
     #[test]
@@ -313,7 +388,11 @@ mod tests {
         // that there is no data section
         let data_section_offset = 16u64;
 
-        let code = [vec![0; 8], data_section_offset.to_be_bytes().to_vec()].concat();
+        let jmpf = legacy_indicating_instruction();
+        let mut initial_bytes = vec![0; 16];
+        initial_bytes[4..8].copy_from_slice(&jmpf);
+
+        let code = [initial_bytes, data_section_offset.to_be_bytes().to_vec()].concat();
 
         Executable::from_bytes(code).convert_to_loader().unwrap();
     }
