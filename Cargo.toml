@@ -24,10 +24,10 @@ members = [
   "packages/fuels-macros",
   "packages/fuels-programs",
   "packages/fuels-test-helpers",
+  "scripts/change-log",
   "scripts/check-docs",
   "scripts/fuel-core-version",
   "scripts/versions-replacer",
-  "scripts/change-log",
   "wasm-tests",
 ]
 
