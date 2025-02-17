@@ -16,7 +16,3 @@ tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
 octocrab = { workspace = true, features = ["default"] }
 dialoguer = { version = "0.11", features = ["fuzzy-select"] }
 serde_json = { workspace = true }
-url = { workspace = true }
-
-[dev-dependencies]
-pretty_assertions = { workspace = true, features = ["default"] }
