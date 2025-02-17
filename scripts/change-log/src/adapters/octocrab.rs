@@ -4,6 +4,7 @@ use crate::ports::github::GitHubPort;
 use octocrab::models::pulls::PullRequest;
 use octocrab::Octocrab;
 use regex::Regex;
+use serde_json::Value;
 
 pub struct OctocrabAdapter {
     client: Octocrab,
@@ -44,6 +45,71 @@ impl OctocrabAdapter {
         }
 
         Ok(pr)
+    }
+
+    pub async fn search_branches(
+        &self,
+        owner: &str,
+        repo: &str,
+        query: &str,
+    ) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+        let payload = serde_json::json!({
+            "query": r#"
+                query($owner: String!, $repo: String!, $query: String!) {
+                    repository(owner: $owner, name: $repo) {
+                        refs(refPrefix: "refs/heads/", query: $query, first: 100) {
+                            nodes {
+                                name
+                            }
+                        }
+                    }
+                }
+            "#,
+            "variables": {
+                "owner": owner,
+                "repo": repo,
+                "query": query,
+            }
+        });
+
+        let response: Value = self.client.graphql(&payload).await?;
+
+        let nodes = response["data"]["repository"]["refs"]["nodes"]
+            .as_array()
+            .ok_or("Could not parse branch nodes from response")?;
+
+        let branch_names = nodes
+            .iter()
+            .filter_map(|node| node["name"].as_str().map(|s| s.to_owned()))
+            .collect();
+
+        Ok(branch_names)
+    }
+
+    /// Query GitHub for all releases in the repository.
+    pub async fn get_releases(
+        &self,
+        owner: &str,
+        repo: &str,
+    ) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+        // List releases; we assume 100 per page is enough.
+        let releases = self
+            .client
+            .repos(owner, repo)
+            .releases()
+            .list()
+            .per_page(100)
+            .send()
+            .await?;
+
+        // Collect the tag names.
+        let release_tags = releases
+            .items
+            .into_iter()
+            .map(|release| release.tag_name)
+            .collect();
+
+        Ok(release_tags)
     }
 
     /// Build a ChangelogInfo instance from a commit.
