@@ -92,7 +92,6 @@ impl OctocrabAdapter {
         owner: &str,
         repo: &str,
     ) -> Result<Vec<String>, Box<dyn std::error::Error>> {
-        // List releases; we assume 100 per page is enough.
         let releases = self
             .client
             .repos(owner, repo)
@@ -102,7 +101,6 @@ impl OctocrabAdapter {
             .send()
             .await?;
 
-        // Collect the tag names.
         let release_tags = releases
             .items
             .into_iter()
@@ -185,10 +183,6 @@ impl OctocrabAdapter {
             bullet_point,
             migration_note,
             release_notes,
-            pr_number,
-            pr_title: title_description,
-            pr_author,
-            pr_url,
         })
     }
 }
@@ -210,18 +204,16 @@ impl GitHubPort for OctocrabAdapter {
 
         let mut changelogs = Vec::new();
 
-        // For each commit in the comparison, try to build changelog info.
         for commit in comparison.commits {
             match self.build_changelog_info(owner, repo, &commit.sha).await {
                 Ok(info) => changelogs.push(info),
                 Err(e) => {
-                    println!("Error retrieving PR for commit {}: {}", commit.sha, e);
+                    eprintln!("Error retrieving PR for commit {}: {}", commit.sha, e);
                     continue;
                 }
             }
         }
 
-        // Sort by PR type (you can adjust the sort criteria as needed)
         changelogs.sort_by(|a, b| a.pr_type.cmp(&b.pr_type));
 
         Ok(changelogs)

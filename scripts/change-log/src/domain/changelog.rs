@@ -117,10 +117,6 @@ mod tests {
             bullet_point: "- [#1](http://example.com) - Added feature, by @alice".to_string(),
             migration_note: "".to_string(),
             release_notes: "Added feature".to_string(),
-            pr_number: 1,
-            pr_title: "Added feature".to_string(),
-            pr_author: "alice".to_string(),
-            pr_url: "http://example.com".to_string(),
         };
 
         let changelog2 = ChangelogInfo {
@@ -129,10 +125,6 @@ mod tests {
             bullet_point: "- [#2](http://example.com) - Fixed bug, by @bob".to_string(),
             migration_note: "### [2 - Fixed bug](http://example.com)\n\nCritical fix".to_string(),
             release_notes: "Fixed bug".to_string(),
-            pr_number: 2,
-            pr_title: "Fixed bug".to_string(),
-            pr_author: "bob".to_string(),
-            pr_url: "http://example.com".to_string(),
         };
 
         let changelog3 = ChangelogInfo {
@@ -141,10 +133,6 @@ mod tests {
             bullet_point: "- [#3](http://example.com) - Update dependencies, by @carol".to_string(),
             migration_note: "".to_string(),
             release_notes: "".to_string(),
-            pr_number: 3,
-            pr_title: "Update dependencies".to_string(),
-            pr_author: "carol".to_string(),
-            pr_url: "http://example.com".to_string(),
         };
 
         let changelogs = vec![changelog1, changelog2, changelog3];

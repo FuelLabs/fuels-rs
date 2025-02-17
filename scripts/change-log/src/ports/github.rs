@@ -1,6 +1,5 @@
 use crate::domain::models::ChangelogInfo;
 
-/// This port abstracts all GitHub-related operations.
 #[allow(async_fn_in_trait)]
 pub trait GitHubPort {
     /// Retrieve a collection of changelog infos based on the commit comparison between `base` and `head`.
