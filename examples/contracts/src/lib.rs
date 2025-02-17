@@ -120,8 +120,8 @@ mod tests {
             .await?;
         // ANCHOR_END: contract_call_cost_estimation
 
-        let expected_script_gas = 2816;
-        let expected_total_gas = 9068;
+        let expected_script_gas = 2596;
+        let expected_total_gas = 8848;
 
         assert_eq!(transaction_cost.script_gas, expected_script_gas);
         assert_eq!(transaction_cost.total_gas, expected_total_gas);
@@ -645,8 +645,8 @@ mod tests {
             .await?;
         // ANCHOR_END: multi_call_cost_estimation
 
-        let expected_script_gas = 4402;
-        let expected_total_gas = 11231;
+        let expected_script_gas = 4200;
+        let expected_total_gas = 11029;
 
         assert_eq!(transaction_cost.script_gas, expected_script_gas);
         assert_eq!(transaction_cost.total_gas, expected_total_gas);
@@ -781,7 +781,7 @@ mod tests {
 
         let result_uint = target_contract_instance
             .methods()
-            .get_value()
+            .read_counter()
             .call()
             .await
             .unwrap()

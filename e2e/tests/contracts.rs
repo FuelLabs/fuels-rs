@@ -1288,7 +1288,7 @@ async fn low_level_call() -> Result<()> {
 
     let response = target_contract_instance
         .methods()
-        .get_counter()
+        .read_counter()
         .call()
         .await?;
     assert_eq!(response.value, 42);
@@ -1316,7 +1316,7 @@ async fn low_level_call() -> Result<()> {
 
     let result_uint = target_contract_instance
         .methods()
-        .get_counter()
+        .read_counter()
         .call()
         .await
         .unwrap()
@@ -1338,7 +1338,7 @@ async fn low_level_call() -> Result<()> {
         .unwrap()
         .value;
 
-    assert_eq!(result_uint, 42);
+    assert_eq!(result_uint, 2);
     assert!(result_bool);
     assert_eq!(result_str, "fuel");
 
@@ -2299,7 +2299,7 @@ async fn regular_contract_can_be_deployed() -> Result<()> {
 
     let response = contract_instance
         .methods()
-        .get_counter()
+        .read_counter()
         .call()
         .await?
         .value;
