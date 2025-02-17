@@ -96,3 +96,86 @@ pub fn capitalize(s: &str) -> String {
         Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domain::models::ChangelogInfo;
+
+    #[test]
+    fn test_capitalize() {
+        assert_eq!(capitalize("hello"), "Hello");
+        assert_eq!(capitalize("Hello"), "Hello");
+        assert_eq!(capitalize(""), "");
+    }
+
+    #[test]
+    fn test_generate_changelog_exact() {
+        let changelog1 = ChangelogInfo {
+            is_breaking: false,
+            pr_type: "feat".to_string(),
+            bullet_point: "- [#1](http://example.com) - Added feature, by @alice".to_string(),
+            migration_note: "".to_string(),
+            release_notes: "Added feature".to_string(),
+            pr_number: 1,
+            pr_title: "Added feature".to_string(),
+            pr_author: "alice".to_string(),
+            pr_url: "http://example.com".to_string(),
+        };
+
+        let changelog2 = ChangelogInfo {
+            is_breaking: true,
+            pr_type: "fix!".to_string(),
+            bullet_point: "- [#2](http://example.com) - Fixed bug, by @bob".to_string(),
+            migration_note: "### [2 - Fixed bug](http://example.com)\n\nCritical fix".to_string(),
+            release_notes: "Fixed bug".to_string(),
+            pr_number: 2,
+            pr_title: "Fixed bug".to_string(),
+            pr_author: "bob".to_string(),
+            pr_url: "http://example.com".to_string(),
+        };
+
+        let changelog3 = ChangelogInfo {
+            is_breaking: false,
+            pr_type: "chore".to_string(),
+            bullet_point: "- [#3](http://example.com) - Update dependencies, by @carol".to_string(),
+            migration_note: "".to_string(),
+            release_notes: "".to_string(),
+            pr_number: 3,
+            pr_title: "Update dependencies".to_string(),
+            pr_author: "carol".to_string(),
+            pr_url: "http://example.com".to_string(),
+        };
+
+        let changelogs = vec![changelog1, changelog2, changelog3];
+        let markdown = generate_changelog(changelogs);
+
+        let expected = "\
+# Summary
+
+In this release, we:
+Added feature
+Fixed bug
+
+# Breaking
+
+- Fixes
+\t- [#2](http://example.com) - Fixed bug, by @bob
+
+# Features
+
+- [#1](http://example.com) - Added feature, by @alice
+
+# Chores
+
+- [#3](http://example.com) - Update dependencies, by @carol
+
+# Migration Notes
+
+### [2 - Fixed bug](http://example.com)
+
+Critical fix";
+
+        assert_eq!(markdown, expected);
+    }
+}

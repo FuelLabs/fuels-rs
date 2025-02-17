@@ -4,7 +4,6 @@ use crate::ports::github::GitHubPort;
 use octocrab::models::pulls::PullRequest;
 use octocrab::Octocrab;
 use regex::Regex;
-use url::Url;
 
 pub struct OctocrabAdapter {
     client: Octocrab,
