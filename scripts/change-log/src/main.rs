@@ -1,34 +1,66 @@
-mod get_full_changelog;
-mod get_latest_release;
+use std::env;
 
-use get_full_changelog::{generate_changelog, get_changelogs, write_changelog_to_file};
-use get_latest_release::get_latest_release_tag;
-use octocrab::Octocrab;
+use change_log::{
+    adapters::octocrab::OctocrabAdapter, domain::changelog::generate_changelog,
+    ports::github::GitHubPort,
+};
+use dialoguer::FuzzySelect;
+use dotenv::dotenv;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    dotenv::dotenv().ok();
+    dotenv().ok();
+
     let github_token =
-        std::env::var("GITHUB_TOKEN").expect("GITHUB_TOKEN is not set in the environment");
-    let repo_owner = std::env::var("GITHUB_REPOSITORY_OWNER").expect("Repository owner not found");
-    let repo_name = std::env::var("GITHUB_REPOSITORY_NAME").expect("Repository name not found");
+        env::var("GITHUB_TOKEN").expect("GITHUB_TOKEN is not set in the environment");
+    let repo_owner = env::var("GITHUB_REPOSITORY_OWNER").unwrap_or_else(|_| "FuelLabs".to_string());
+    let repo_name = env::var("GITHUB_REPOSITORY_NAME").unwrap_or_else(|_| "fuels-rs".to_string());
 
-    let octocrab = Octocrab::builder().personal_token(github_token).build()?;
+    let github_adapter = OctocrabAdapter::new(&github_token);
 
-    let latest_release_tag = get_latest_release_tag().await?;
+    let branches = {
+        let mut branches = vec!["master".to_string()];
+        let lts_branches = github_adapter
+            .search_branches(&repo_owner, &repo_name, "lts/")
+            .await?;
+        branches.extend(lts_branches);
+        branches
+    };
 
-    let changelogs = get_changelogs(
-        &octocrab,
-        &repo_owner,
-        &repo_name,
-        &latest_release_tag,
-        "master",
-    )
-    .await?;
+    let branch_selection = FuzzySelect::new()
+        .with_prompt("Select the target branch (start typing to filter)")
+        .items(&branches)
+        .default(0)
+        .interact()?;
 
-    let full_changelog = generate_changelog(changelogs);
+    let target_branch = branches[branch_selection].clone();
 
-    write_changelog_to_file(&full_changelog, "output_changelog.md")?;
+    let releases = github_adapter.get_releases(&repo_owner, &repo_name).await?;
+    if releases.is_empty() {
+        return Err("No releases found for the repository".into());
+    }
+    let release_selection = FuzzySelect::new()
+        .with_prompt("Select the previous release tag")
+        .items(&releases)
+        .default(0)
+        .interact()?;
+    let previous_release_tag = releases[release_selection].clone();
+
+    eprintln!("Using branch: {}", target_branch);
+    eprintln!("Using previous release: {}", previous_release_tag);
+
+    let changelog_infos = github_adapter
+        .get_changelog_infos(
+            &repo_owner,
+            &repo_name,
+            &previous_release_tag,
+            &target_branch,
+        )
+        .await?;
+
+    let changelog_markdown = generate_changelog(changelog_infos);
+
+    println!("{changelog_markdown}");
 
     Ok(())
 }

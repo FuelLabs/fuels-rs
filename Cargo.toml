@@ -24,10 +24,10 @@ members = [
   "packages/fuels-macros",
   "packages/fuels-programs",
   "packages/fuels-test-helpers",
+  "scripts/change-log",
   "scripts/check-docs",
   "scripts/fuel-core-version",
   "scripts/versions-replacer",
-  "scripts/change-log",
   "wasm-tests",
 ]
 
@@ -44,6 +44,7 @@ version = "0.70.0"
 [workspace.dependencies]
 Inflector = "0.11.4"
 anyhow = { version = "1.0", default-features = false }
+dialoguer = { version = "0.11", default-features = false }
 async-trait = { version = "0.1.74", default-features = false }
 bech32 = "0.9.1"
 bytes = { version = "1.5.0", default-features = false }
@@ -83,7 +84,7 @@ trybuild = "1.0.85"
 uint = { version = "0.9.5", default-features = false }
 which = { version = "6.0.0", default-features = false }
 zeroize = "1.7.0"
-octocrab = { version = "0.39", default-features = false }
+octocrab = { version = "0.43", default-features = false }
 dotenv = { version = "0.15", default-features = false }
 toml = { version = "0.8", default-features = false }
 mockall = { version = "0.13", default-features = false }
