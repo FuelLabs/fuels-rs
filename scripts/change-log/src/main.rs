@@ -1,9 +1,11 @@
-use change_log::adapters::octocrab::OctocrabAdapter;
-use change_log::domain::changelog::generate_changelog;
-use change_log::ports::github::GitHubPort;
+use std::env;
+
+use change_log::{
+    adapters::octocrab::OctocrabAdapter, domain::changelog::generate_changelog,
+    ports::github::GitHubPort,
+};
 use dialoguer::FuzzySelect;
 use dotenv::dotenv;
-use std::env;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

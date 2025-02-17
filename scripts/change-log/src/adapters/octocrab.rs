@@ -1,10 +1,11 @@
-use crate::domain::changelog::capitalize;
-use crate::domain::models::ChangelogInfo;
-use crate::ports::github::GitHubPort;
-use octocrab::models::pulls::PullRequest;
-use octocrab::Octocrab;
+use octocrab::{models::pulls::PullRequest, Octocrab};
 use regex::Regex;
 use serde_json::Value;
+
+use crate::{
+    domain::{changelog::capitalize, models::ChangelogInfo},
+    ports::github::GitHubPort,
+};
 
 pub struct OctocrabAdapter {
     client: Octocrab,

@@ -1,5 +1,6 @@
-use crate::domain::models::ChangelogInfo;
 use std::collections::{HashMap, HashSet};
+
+use crate::domain::models::ChangelogInfo;
 
 fn category_from_pr_type(pr_type: &str) -> Option<&'static str> {
     match pr_type.trim_end_matches('!') {
