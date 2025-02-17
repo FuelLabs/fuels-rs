@@ -14,3 +14,4 @@ regex = { workspace = true }
 dotenv = { workspace = true }
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
 octocrab = { workspace = true, features = ["default"] }
+url = { workspace = true }

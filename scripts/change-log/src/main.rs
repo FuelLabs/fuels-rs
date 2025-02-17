@@ -1,34 +1,56 @@
-mod get_full_changelog;
-mod get_latest_release;
+// File: src/main.rs
 
-use get_full_changelog::{generate_changelog, get_changelogs, write_changelog_to_file};
-use get_latest_release::get_latest_release_tag;
-use octocrab::Octocrab;
+mod adapters;
+mod domain;
+mod ports;
+
+use adapters::file_changelog_writer::FileChangelogWriter;
+use adapters::octocrab::OctocrabAdapter;
+use domain::changelog::generate_changelog;
+use dotenv::dotenv;
+use ports::changelog_writer::ChangelogWriter;
+use ports::github::GitHubPort;
+use std::env;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    dotenv::dotenv().ok();
+    dotenv().ok();
+
+    // Read configuration from environment variables.
     let github_token =
-        std::env::var("GITHUB_TOKEN").expect("GITHUB_TOKEN is not set in the environment");
-    let repo_owner = std::env::var("GITHUB_REPOSITORY_OWNER").expect("Repository owner not found");
-    let repo_name = std::env::var("GITHUB_REPOSITORY_NAME").expect("Repository name not found");
+        env::var("GITHUB_TOKEN").expect("GITHUB_TOKEN is not set in the environment");
+    let repo_owner =
+        env::var("GITHUB_REPOSITORY_OWNER").expect("GITHUB_REPOSITORY_OWNER is not set");
+    let repo_name = env::var("GITHUB_REPOSITORY_NAME").expect("GITHUB_REPOSITORY_NAME is not set");
 
-    let octocrab = Octocrab::builder().personal_token(github_token).build()?;
+    // Create our GitHub adapter.
+    let github_adapter = OctocrabAdapter::new(&github_token);
 
-    let latest_release_tag = get_latest_release_tag().await?;
+    // Retrieve the latest release tag.
+    let latest_release_tag = github_adapter
+        .get_latest_release_tag(&repo_owner, &repo_name)
+        .await?;
 
-    let changelogs = get_changelogs(
-        &octocrab,
-        &repo_owner,
-        &repo_name,
-        &latest_release_tag,
-        "master",
-    )
-    .await?;
+    // Define the branch we’re comparing against.
+    let head_branch = "master";
 
-    let full_changelog = generate_changelog(changelogs);
+    // Get changelog infos from GitHub.
+    let changelog_infos = github_adapter
+        .get_changelog_infos(&repo_owner, &repo_name, &latest_release_tag, head_branch)
+        .await?;
 
-    write_changelog_to_file(&full_changelog, "output_changelog.md")?;
+    // Generate the markdown changelog.
+    let changelog_markdown = generate_changelog(changelog_infos);
+
+    // Create our file writer adapter.
+    let writer = FileChangelogWriter {
+        file_path: "output_changelog.md".to_string(),
+    };
+
+    // Write the changelog to the file.
+    writer.write_changelog(&changelog_markdown)?;
+
+    println!("Changelog written to output_changelog.md");
 
     Ok(())
 }
