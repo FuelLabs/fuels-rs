@@ -1,15 +1,11 @@
 // File: src/main.rs
 
-mod adapters;
-mod domain;
-mod ports;
-
-use adapters::file_changelog_writer::FileChangelogWriter;
-use adapters::octocrab::OctocrabAdapter;
-use domain::changelog::generate_changelog;
+use change_log::adapters::file_changelog_writer::FileChangelogWriter;
+use change_log::adapters::octocrab::OctocrabAdapter;
+use change_log::domain::changelog::generate_changelog;
+use change_log::ports::changelog_writer::ChangelogWriter;
+use change_log::ports::github::GitHubPort;
 use dotenv::dotenv;
-use ports::changelog_writer::ChangelogWriter;
-use ports::github::GitHubPort;
 use std::env;
 
 #[tokio::main]

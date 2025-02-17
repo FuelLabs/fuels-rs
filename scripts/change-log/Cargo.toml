@@ -15,3 +15,6 @@ dotenv = { workspace = true }
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
 octocrab = { workspace = true, features = ["default"] }
 url = { workspace = true }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true, features = ["default"] }
