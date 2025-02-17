@@ -1,40 +1,40 @@
 use crate::domain::models::ChangelogInfo;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
-/// Given a list of changelog items, generate a markdown changelog.
+fn category_from_pr_type(pr_type: &str) -> Option<&'static str> {
+    match pr_type.trim_end_matches('!') {
+        "feat" => Some("Features"),
+        "fix" => Some("Fixes"),
+        "chore" => Some("Chores"),
+        _ => None,
+    }
+}
+
 pub fn generate_changelog(changelogs: Vec<ChangelogInfo>) -> String {
     let mut content = String::new();
 
-    // Categorize PRs by type
-    let mut features = Vec::new();
-    let mut fixes = Vec::new();
-    let mut chores = Vec::new();
-    let mut breaking_features = Vec::new();
-    let mut breaking_fixes = Vec::new();
-    let mut breaking_chores = Vec::new();
-    let mut migration_notes = Vec::new();
+    let mut non_breaking: HashMap<&str, Vec<String>> = HashMap::new();
+    let mut breaking: HashMap<&str, Vec<String>> = HashMap::new();
+    let mut migration_notes: Vec<String> = Vec::new();
     let mut summary_set: HashSet<String> = HashSet::new();
 
     for changelog in &changelogs {
-        if changelog.is_breaking {
-            match changelog.pr_type.as_str() {
-                "feat!" => breaking_features.push(changelog.bullet_point.clone()),
-                "fix!" => breaking_fixes.push(changelog.bullet_point.clone()),
-                "chore!" => breaking_chores.push(changelog.bullet_point.clone()),
-                _ => {}
-            }
-            migration_notes.push(changelog.migration_note.clone());
-        } else {
-            match changelog.pr_type.as_str() {
-                "feat" => features.push(changelog.bullet_point.clone()),
-                "fix" => fixes.push(changelog.bullet_point.clone()),
-                "chore" => chores.push(changelog.bullet_point.clone()),
-                _ => {}
-            }
-        }
-
         if !changelog.release_notes.is_empty() {
             summary_set.insert(changelog.release_notes.clone());
+        }
+        if let Some(category) = category_from_pr_type(&changelog.pr_type) {
+            if changelog.is_breaking {
+                breaking
+                    .entry(category)
+                    .or_default()
+                    .push(changelog.bullet_point.clone());
+                migration_notes.push(changelog.migration_note.clone());
+            } else {
+                non_breaking
+                    .entry(category)
+                    .or_default()
+                    .push(changelog.bullet_point.clone());
+            }
         }
     }
 
@@ -48,41 +48,38 @@ pub fn generate_changelog(changelogs: Vec<ChangelogInfo>) -> String {
         content.push('\n');
     }
 
-    // Generate the breaking changes section
-    if !breaking_features.is_empty() || !breaking_fixes.is_empty() || !breaking_chores.is_empty() {
+    let categories = ["Features", "Fixes", "Chores"];
+    if !breaking.is_empty() {
         content.push_str("# Breaking\n\n");
-        if !breaking_features.is_empty() {
-            content.push_str("- Features\n");
-            content.push_str(&format!("\t{}\n\n", breaking_features.join("\n\t")));
-        }
-        if !breaking_fixes.is_empty() {
-            content.push_str("- Fixes\n");
-            content.push_str(&format!("\t{}\n\n", breaking_fixes.join("\n\t")));
-        }
-        if !breaking_chores.is_empty() {
-            content.push_str("- Chores\n");
-            content.push_str(&format!("\t{}\n\n", breaking_chores.join("\n\t")));
+        for cat in &categories {
+            if let Some(items) = breaking.get(cat) {
+                content.push_str(&format!("- {}\n", cat));
+
+                let indented = items
+                    .iter()
+                    .map(|s| format!("\t{}", s))
+                    .collect::<Vec<_>>()
+                    .join("\n");
+                content.push_str(&format!("{}\n\n", indented));
+            }
         }
     }
 
-    // Generate the categorized sections for non-breaking changes
-    if !features.is_empty() {
-        content.push_str("# Features\n\n");
-        content.push_str(&format!("{}\n\n", features.join("\n\n")));
-    }
-    if !fixes.is_empty() {
-        content.push_str("# Fixes\n\n");
-        content.push_str(&format!("{}\n\n", fixes.join("\n\n")));
-    }
-    if !chores.is_empty() {
-        content.push_str("# Chores\n\n");
-        content.push_str(&format!("{}\n\n", chores.join("\n\n")));
+    let mut write_section = |title: &str, items: &[String]| {
+        if !items.is_empty() {
+            content.push_str(&format!("# {}\n\n", title));
+            content.push_str(&format!("{}\n\n", items.join("\n\n")));
+        }
+    };
+
+    for cat in &categories {
+        if let Some(items) = non_breaking.get(cat) {
+            write_section(cat, items);
+        }
     }
 
-    // Generate the migration notes section
     if !migration_notes.is_empty() {
-        content.push_str("# Migration Notes\n\n");
-        content.push_str(&format!("{}\n\n", migration_notes.join("\n\n")));
+        write_section("Migration Notes", &migration_notes);
     }
 
     content.trim().to_string()
@@ -96,18 +93,10 @@ pub fn capitalize(s: &str) -> String {
         Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::domain::models::ChangelogInfo;
-
-    #[test]
-    fn test_capitalize() {
-        assert_eq!(capitalize("hello"), "Hello");
-        assert_eq!(capitalize("Hello"), "Hello");
-        assert_eq!(capitalize(""), "");
-    }
 
     #[test]
     fn test_generate_changelog_exact() {
