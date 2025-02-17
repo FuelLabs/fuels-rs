@@ -15,9 +15,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Read configuration from environment variables.
     let github_token =
         env::var("GITHUB_TOKEN").expect("GITHUB_TOKEN is not set in the environment");
-    let repo_owner =
-        env::var("GITHUB_REPOSITORY_OWNER").expect("GITHUB_REPOSITORY_OWNER is not set");
-    let repo_name = env::var("GITHUB_REPOSITORY_NAME").expect("GITHUB_REPOSITORY_NAME is not set");
+    let repo_owner = env::var("GITHUB_REPOSITORY_OWNER").unwrap_or("FuelLabs".to_string());
+    let repo_name = env::var("GITHUB_REPOSITORY_NAME").unwrap_or("fuels-rs".to_string());
 
     // Create our GitHub adapter.
     let github_adapter = OctocrabAdapter::new(&github_token);
