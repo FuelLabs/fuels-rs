@@ -24,9 +24,9 @@ abi TestContract {
     #[storage(write)]
     fn initialize_counter(value: u64) -> u64;
     #[storage(read, write)]
-    fn increment_counter(value: u64) -> u64;
+    fn increment_counter(amount: u64) -> u64;
     #[storage(read)]
-    fn get_counter() -> u64;
+    fn read_counter() -> u64;
     // ANCHOR: low_level_call
     #[storage(write)]
     fn set_value_multiple_complex(a: MyStruct, b: str[4]);
@@ -35,8 +35,6 @@ abi TestContract {
     fn get_str_value() -> str[4];
     #[storage(read)]
     fn get_bool_value() -> bool;
-    #[storage(read)]
-    fn get_value() -> u64;
     fn get(x: u64, y: u64) -> u64;
     fn get_alt(x: MyType) -> MyType;
     fn get_single(x: u64) -> u64;
@@ -48,10 +46,8 @@ abi TestContract {
     fn new() -> u64;
 }
 
-const COUNTER_KEY = 0x0000000000000000000000000000000000000000000000000000000000000000;
-
 storage {
-    value: u64 = 0,
+    counter: u64 = 0,
     value_str: str[4] = __to_str_array("none"),
     value_bool: bool = false,
 }
@@ -70,27 +66,29 @@ impl TestContract for Contract {
     // ANCHOR_END: msg_amount
     #[storage(write)]
     fn initialize_counter(value: u64) -> u64 {
-        write(COUNTER_KEY, 0, value);
+        storage.counter.write(value);
+
         value
     }
 
     /// This method will read the counter from storage, increment it
     /// and write the incremented value to storage
     #[storage(read, write)]
-    fn increment_counter(value: u64) -> u64 {
-        let new_value = read::<u64>(COUNTER_KEY, 0).unwrap_or(0) + value;
-        write(COUNTER_KEY, 0, new_value);
-        new_value
+    fn increment_counter(amount: u64) -> u64 {
+        let incremented = storage.counter.read() + amount;
+        storage.counter.write(incremented);
+
+        incremented
     }
 
     #[storage(read)]
-    fn get_counter() -> u64 {
-        read::<u64>(COUNTER_KEY, 0).unwrap_or(0)
+    fn read_counter() -> u64 {
+        storage.counter.read()
     }
 
     #[storage(write)]
     fn set_value_multiple_complex(a: MyStruct, b: str[4]) {
-        storage.value.write(a.b[1]);
+        storage.counter.write(a.b[1]);
         storage.value_str.write(b);
         storage.value_bool.write(a.a);
     }
@@ -103,11 +101,6 @@ impl TestContract for Contract {
     #[storage(read)]
     fn get_bool_value() -> bool {
         storage.value_bool.read()
-    }
-
-    #[storage(read)]
-    fn get_value() -> u64 {
-        storage.value.read()
     }
 
     fn get(x: u64, y: u64) -> u64 {
