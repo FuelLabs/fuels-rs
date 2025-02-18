@@ -133,10 +133,11 @@ impl Executable<Loader> {
 
     #[deprecated(note = "Use `configurables_offset_in_code` instead")]
     pub fn data_offset_in_code(&self) -> Result<usize> {
-        Ok(self.loader_code()?.data_section_offset())
+        Ok(self.loader_code()?.configurables_section_offset())
+    }
 
     pub fn configurables_offset_in_code(&self) -> Result<usize> {
-        self.loader_code()?.configurables_section_offset()
+        Ok(self.loader_code()?.configurables_section_offset())
     }
 
     fn loader_code(&self) -> Result<LoaderCode> {

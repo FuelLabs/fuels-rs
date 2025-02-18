@@ -662,10 +662,8 @@ async fn loader_can_be_presented_as_a_normal_script_with_shifted_configurables()
         .unwrap_or_else(|| regular.data_offset_in_code().unwrap());
 
     let shifted_configurables = configurables
-        .with_shifted_offsets(-(offset as i64))
-        .unwrap()
-        .with_shifted_offsets(loader.data_offset_in_code()? as i64)
-        .unwrap();
+        .with_shifted_offsets(-(offset as i64))?
+        .with_shifted_offsets(loader.configurables_offset_in_code()? as i64)?;
 
     let loader_posing_as_normal_script =
         Executable::from_bytes(loader.code()?).with_configurables(shifted_configurables);
