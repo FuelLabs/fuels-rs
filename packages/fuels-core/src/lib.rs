@@ -89,45 +89,44 @@ impl ConfigurablesReader {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
-enum OverrideConfigurable {
-    Direct { static_offset: u64, data: Vec<u8> },
-    Indirect { static_offset: u64, data: Vec<u8> },
-}
-
-impl OverrideConfigurable {
-    fn static_offset(&self) -> u64 {
-        match self {
-            Self::Direct { static_offset, .. } | Self::Indirect { static_offset, .. } => {
-                *static_offset
-            }
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Default)]
 struct OverrideConfigurables {
-    override_configurables: BTreeMap<u64, OverrideConfigurable>,
+    direct: BTreeMap<u64, Vec<u8>>,
+    indirect: BTreeMap<u64, Vec<u8>>,
 }
 
 impl OverrideConfigurables {
-    fn new(override_configurables: Vec<OverrideConfigurable>) -> Self {
-        Self {
-            override_configurables: override_configurables
-                .into_iter()
-                .map(|conf| (conf.static_offset(), conf))
-                .collect(),
-        }
+    fn new(direct: BTreeMap<u64, Vec<u8>>, indirect: BTreeMap<u64, Vec<u8>>) -> Self {
+        Self { direct, indirect }
     }
 
     fn with_overrides(mut self, configurables: OverrideConfigurables) -> Self {
-        self.override_configurables
-            .extend(configurables.override_configurables);
+        self.direct.extend(configurables.direct);
+        self.indirect.extend(configurables.indirect);
 
         self
     }
 
     fn update_binary(&self, binary: &mut Vec<u8>) -> Result<()> {
+        self.apply_direct(binary)?;
+        self.apply_indirect(binary)?;
+
+        Ok(())
+    }
+
+    fn apply_direct(&self, binary: &mut [u8]) -> Result<()> {
+        for (static_offset, data) in self.direct.iter() {
+            Self::write(binary, *static_offset as usize, data)?;
+        }
+
+        Ok(())
+    }
+
+    fn apply_indirect(&self, binary: &mut Vec<u8>) -> Result<()> {
+        if self.indirect.is_empty() {
+            return Ok(());
+        }
+
         let data_offset = extract_data_offset(binary)?;
         let start_of_dyn_section = self
             .dynamic_section_start(binary, data_offset)?
@@ -146,23 +145,9 @@ impl OverrideConfigurables {
             Result::Ok(ptr_encoded)
         };
 
-        for conf in self.override_configurables.values() {
-            match conf {
-                OverrideConfigurable::Direct {
-                    static_offset,
-                    data,
-                } => {
-                    Self::write(binary, *static_offset as usize, data)?;
-                }
-                OverrideConfigurable::Indirect {
-                    static_offset,
-                    data,
-                } => {
-                    let ptr = save_to_dyn(data)?;
-
-                    Self::write(binary, *static_offset as usize, &ptr)?;
-                }
-            }
+        for (static_offset, data) in self.indirect.iter() {
+            let ptr = save_to_dyn(data)?;
+            Self::write(binary, *static_offset as usize, &ptr)?;
         }
 
         binary.truncate(start_of_dyn_section);
@@ -182,15 +167,13 @@ impl OverrideConfigurables {
     fn dynamic_section_start(&self, binary: &[u8], data_offset: usize) -> Result<Option<usize>> {
         let mut min = None;
 
-        for conf in self.override_configurables.values() {
-            if let OverrideConfigurable::Indirect { static_offset, .. } = conf {
-                let offset =
-                    extract_offset_at(binary, *static_offset as usize)?.saturating_add(data_offset);
+        for (static_offset, _) in self.indirect.iter() {
+            let offset =
+                extract_offset_at(binary, *static_offset as usize)?.saturating_add(data_offset);
 
-                min = min
-                    .map(|current_min| std::cmp::min(current_min, offset))
-                    .or(Some(offset));
-            }
+            min = min
+                .map(|current_min| std::cmp::min(current_min, offset))
+                .or(Some(offset));
         }
 
         Ok(min)
@@ -213,26 +196,14 @@ impl Configurables {
         }
     }
 
-    fn into_overrides(self) -> OverrideConfigurables {
-        let confg = self
+    fn to_overrides(&self) -> OverrideConfigurables {
+        let (indirect_configurables, direct_configurables) = self
             .offsets_with_data
-            .into_iter()
-            .map(|(offset, data)| {
-                if self.indirect_offsets.contains(&offset) {
-                    OverrideConfigurable::Indirect {
-                        static_offset: offset,
-                        data,
-                    }
-                } else {
-                    OverrideConfigurable::Direct {
-                        static_offset: offset,
-                        data,
-                    }
-                }
-            })
-            .collect();
+            .iter()
+            .cloned()
+            .partition(|(offset, _)| self.indirect_offsets.contains(offset));
 
-        OverrideConfigurables::new(confg)
+        OverrideConfigurables::new(direct_configurables, indirect_configurables)
     }
 
     fn read_out_indirect_configurables(&self, binary: &[u8]) -> Result<OverrideConfigurables> {
@@ -241,7 +212,7 @@ impl Configurables {
         }
 
         let data_offset = extract_data_offset(binary)?;
-        let mut config = vec![];
+        let mut indirect_configurables = BTreeMap::new();
 
         let mut peekable_indirect_offset = self.indirect_offsets.iter().peekable();
 
@@ -255,13 +226,13 @@ impl Configurables {
                 binary.len()
             };
 
-            config.push(OverrideConfigurable::Indirect {
-                static_offset: *current,
-                data: binary[data_start..data_end].to_vec(),
-            });
+            indirect_configurables.insert(*current, binary[data_start..data_end].to_vec());
         }
 
-        Ok(OverrideConfigurables::new(config))
+        Ok(OverrideConfigurables::new(
+            BTreeMap::default(),
+            indirect_configurables,
+        ))
     }
 
     pub fn with_shifted_offsets(self, shift: i64) -> Result<Self> {
@@ -302,11 +273,9 @@ impl Configurables {
             return Ok(());
         }
 
-        let override_configurables = self
-            .read_out_indirect_configurables(binary)?
-            .with_overrides(self.clone().into_overrides());
-
-        override_configurables.update_binary(binary)?;
+        self.read_out_indirect_configurables(binary)?
+            .with_overrides(self.to_overrides())
+            .update_binary(binary)?;
 
         Ok(())
     }
