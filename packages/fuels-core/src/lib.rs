@@ -3,10 +3,12 @@ pub mod traits;
 pub mod types;
 mod utils;
 
-use std::{collections::HashMap, iter, path::Path};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    path::Path,
+};
 
 use codec::{try_from_bytes, ABIDecoder, ABIEncoder, DecoderConfig};
-use itertools::Itertools;
 use offsets::{extract_data_offset, extract_offset_at};
 use traits::{Parameterize, Tokenizable};
 use types::{param_types::ParamType, Token};
@@ -15,7 +17,6 @@ pub use utils::*;
 use crate::types::errors::Result;
 
 type OffsetWithData = (u64, Vec<u8>);
-type OffsetWithSlice<'a> = (u64, &'a [u8]);
 
 #[derive(Debug, Clone)]
 pub struct ConfigurablesReader {
@@ -88,41 +89,197 @@ impl ConfigurablesReader {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
+enum OverrideConfigurable {
+    Direct { static_offset: u64, data: Vec<u8> },
+    Indirect { static_offset: u64, data: Vec<u8> },
+}
+
+impl OverrideConfigurable {
+    fn static_offset(&self) -> u64 {
+        match self {
+            Self::Direct { static_offset, .. } | Self::Indirect { static_offset, .. } => {
+                *static_offset
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Default)]
+struct OverrideConfigurables {
+    override_configurables: BTreeMap<u64, OverrideConfigurable>,
+}
+
+impl OverrideConfigurables {
+    fn new(override_configurables: Vec<OverrideConfigurable>) -> Self {
+        Self {
+            override_configurables: override_configurables
+                .into_iter()
+                .map(|conf| (conf.static_offset(), conf))
+                .collect(),
+        }
+    }
+
+    fn with_overrides(mut self, configurables: OverrideConfigurables) -> Self {
+        self.override_configurables
+            .extend(configurables.override_configurables);
+
+        self
+    }
+
+    fn update_binary(&self, binary: &mut Vec<u8>) -> Result<()> {
+        let data_offset = extract_data_offset(binary)?;
+        let start_of_dyn_section = self
+            .dynamic_section_start(binary, data_offset)?
+            .unwrap_or(binary.len());
+
+        let mut new_dyn_section: Vec<u8> = vec![];
+        let mut save_to_dyn = |data| {
+            let ptr = start_of_dyn_section
+                .saturating_add(new_dyn_section.len())
+                .saturating_sub(data_offset);
+            dbg!(&ptr);
+            let ptr_encoded = ABIEncoder::default().encode(&[(ptr as u64).into_token()])?;
+
+            new_dyn_section.extend(data);
+
+            Result::Ok(ptr_encoded)
+        };
+
+        for conf in self.override_configurables.values() {
+            match conf {
+                OverrideConfigurable::Direct {
+                    static_offset,
+                    data,
+                } => {
+                    Self::write(binary, *static_offset as usize, data)?;
+                }
+                OverrideConfigurable::Indirect {
+                    static_offset,
+                    data,
+                } => {
+                    let ptr = save_to_dyn(data)?;
+
+                    Self::write(binary, *static_offset as usize, &ptr)?;
+                }
+            }
+        }
+
+        binary.truncate(start_of_dyn_section);
+        binary.extend(new_dyn_section);
+
+        Ok(())
+    }
+
+    fn write(binary: &mut [u8], offset: usize, data: &[u8]) -> Result<()> {
+        check_binary_len(binary, offset + data.len())?;
+
+        binary[offset..offset + data.len()].copy_from_slice(data);
+
+        Ok(())
+    }
+
+    fn dynamic_section_start(&self, binary: &[u8], data_offset: usize) -> Result<Option<usize>> {
+        let mut min = None;
+
+        for conf in self.override_configurables.values() {
+            if let OverrideConfigurable::Indirect { static_offset, .. } = conf {
+                let offset =
+                    extract_offset_at(binary, *static_offset as usize)?.saturating_add(data_offset);
+
+                min = min
+                    .map(|current_min| std::cmp::min(current_min, offset))
+                    .or(Some(offset));
+            }
+        }
+
+        Ok(min)
+    }
+}
+
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Configurables {
     offsets_with_data: Vec<OffsetWithData>,
-    sorted_indirect_offsets: Vec<u64>,
+    indirect_offsets: BTreeSet<u64>,
 }
 
 impl Configurables {
     pub fn new(offsets_with_data: Vec<OffsetWithData>, indirect_configurables: Vec<u64>) -> Self {
-        let sorted_indirect_offsets = indirect_configurables
-            .into_iter()
-            .sorted_unstable()
-            .collect();
+        let indirect_offsets = indirect_configurables.into_iter().collect();
 
         Self {
             offsets_with_data,
-            sorted_indirect_offsets,
+            indirect_offsets,
         }
     }
 
-    pub fn with_shifted_offsets(self, shift: i64) -> Result<Self> {
-        let new_offsets_with_data = self
+    fn into_overrides(self) -> OverrideConfigurables {
+        let confg = self
             .offsets_with_data
             .into_iter()
-            .map(|(offset, data)| Ok((Self::shift_offset(offset, shift)?, data.clone())))
+            .map(|(offset, data)| {
+                if self.indirect_offsets.contains(&offset) {
+                    OverrideConfigurable::Indirect {
+                        static_offset: offset,
+                        data,
+                    }
+                } else {
+                    OverrideConfigurable::Direct {
+                        static_offset: offset,
+                        data,
+                    }
+                }
+            })
+            .collect();
+
+        OverrideConfigurables::new(confg)
+    }
+
+    fn read_out_indirect_configurables(&self, binary: &[u8]) -> Result<OverrideConfigurables> {
+        if self.indirect_offsets.is_empty() {
+            return Ok(OverrideConfigurables::default());
+        }
+
+        let data_offset = extract_data_offset(binary)?;
+        let mut config = vec![];
+
+        let mut peekable_indirect_offset = self.indirect_offsets.iter().peekable();
+
+        while let Some(current) = peekable_indirect_offset.next() {
+            let data_start =
+                extract_offset_at(binary, *current as usize)?.saturating_add(data_offset);
+
+            let data_end = if let Some(next) = peekable_indirect_offset.peek() {
+                extract_offset_at(binary, **next as usize)?.saturating_add(data_offset)
+            } else {
+                binary.len()
+            };
+
+            config.push(OverrideConfigurable::Indirect {
+                static_offset: *current,
+                data: binary[data_start..data_end].to_vec(),
+            });
+        }
+
+        Ok(OverrideConfigurables::new(config))
+    }
+
+    pub fn with_shifted_offsets(self, shift: i64) -> Result<Self> {
+        let offsets_with_data = self
+            .offsets_with_data
+            .into_iter()
+            .map(|(offset, data)| Ok((Self::shift_offset(offset, shift)?, data)))
             .collect::<Result<Vec<_>>>()?;
 
-        let new_sorted_indirect_configurables = self
-            .sorted_indirect_offsets
+        let indirect_offsets = self
+            .indirect_offsets
             .into_iter()
             .map(|offset| Self::shift_offset(offset, shift))
-            .collect::<Result<Vec<_>>>()?;
+            .collect::<Result<BTreeSet<_>>>()?;
 
         Ok(Self {
-            offsets_with_data: new_offsets_with_data,
-            sorted_indirect_offsets: new_sorted_indirect_configurables,
+            offsets_with_data,
+            indirect_offsets,
         })
     }
 
@@ -141,131 +298,15 @@ impl Configurables {
     }
 
     pub fn update_constants_in(&self, binary: &mut Vec<u8>) -> Result<()> {
-        let (direct_configurables, indirect_configurables) =
-            self.partition_direct_indirect_configurables();
-
-        Self::apply_direct_configurables(binary, &direct_configurables)?;
-
-        if !indirect_configurables.is_empty() {
-            self.apply_indirect_configurables(binary, &indirect_configurables)?;
+        if self.offsets_with_data.is_empty() {
+            return Ok(());
         }
 
-        Ok(())
-    }
+        let override_configurables = self
+            .read_out_indirect_configurables(binary)?
+            .with_overrides(self.clone().into_overrides());
 
-    fn partition_direct_indirect_configurables(
-        &self,
-    ) -> (Vec<OffsetWithSlice>, Vec<OffsetWithSlice>) {
-        self.offsets_with_data
-            .iter()
-            .map(|(offset, data)| (*offset, data.as_slice()))
-            .partition(|(offset, _)| self.sorted_indirect_offsets.binary_search(offset).is_err())
-    }
-
-    fn apply_direct_configurables(
-        binary: &mut [u8],
-        direct_configurables: &[OffsetWithSlice],
-    ) -> Result<()> {
-        for (offset, data) in direct_configurables {
-            Self::write(binary, *offset as usize, data)?;
-        }
-
-        Ok(())
-    }
-
-    fn apply_indirect_configurables(
-        &self,
-        binary: &mut Vec<u8>,
-        indirect_configurables: &[OffsetWithSlice],
-    ) -> Result<()> {
-        let data_offset = extract_data_offset(binary)?;
-
-        // prepare user defined indirect configurables for update
-        let mut indirect_for_update: HashMap<u64, (usize, &[u8])> = indirect_configurables
-            .iter()
-            .map(|(offset, data)| {
-                let dyn_offset = extract_offset_at(binary, *offset as usize)? + data_offset;
-
-                Ok((*offset, (dyn_offset, *data)))
-            })
-            .collect::<Result<HashMap<_, _>>>()?;
-
-        let min_dyn_offset = indirect_for_update
-            .values()
-            .map(|(dyn_offset, _)| *dyn_offset)
-            .min()
-            .expect("exists");
-
-        let sorted_dyn_offsets = self.extract_sorted_dyn_offsets(binary, data_offset)?;
-
-        // check if other indirect configurables are affected and prepare them for update
-        for offset in &self.sorted_indirect_offsets {
-            if indirect_for_update.contains_key(offset) {
-                continue;
-            }
-
-            let dyn_offset = extract_offset_at(binary, *offset as usize)? + data_offset;
-
-            if dyn_offset < min_dyn_offset {
-                continue;
-            }
-
-            // use the next dyn offset to know where the data ends
-            let idx = sorted_dyn_offsets
-                .binary_search(&dyn_offset)
-                .expect("exists as we created the sorted vec");
-            let end_offset = sorted_dyn_offsets[idx + 1]; // exists as we created the sorted vec
-
-            check_binary_len(binary, dyn_offset)?;
-            check_binary_len(binary, end_offset)?;
-
-            let data = &binary[dyn_offset..end_offset];
-
-            indirect_for_update.insert(*offset, (dyn_offset, data));
-        }
-
-        // cut old binary and append the updated dynamic data
-        let mut new_binary = binary[..min_dyn_offset].to_vec();
-
-        for offset in &self.sorted_indirect_offsets {
-            if let Some((_, data)) = indirect_for_update.get(offset) {
-                let new_dyn_offset = new_binary.len().saturating_sub(data_offset) as u64;
-                let new_dyn_offset_encoded =
-                    ABIEncoder::default().encode(&[new_dyn_offset.into_token()])?;
-
-                Self::write(
-                    new_binary.as_mut_slice(),
-                    *offset as usize,
-                    &new_dyn_offset_encoded,
-                )?;
-
-                new_binary.extend(*data);
-            }
-        }
-
-        *binary = new_binary;
-
-        Ok(())
-    }
-
-    fn extract_sorted_dyn_offsets(&self, binary: &[u8], data_offset: usize) -> Result<Vec<usize>> {
-        Ok(self
-            .sorted_indirect_offsets
-            .iter()
-            .cloned()
-            .map(|offset| Ok(extract_offset_at(binary, offset as usize)? + data_offset))
-            .collect::<Result<Vec<_>>>()?
-            .into_iter()
-            .chain(iter::once(binary.len()))
-            .sorted_unstable()
-            .collect())
-    }
-
-    fn write(binary: &mut [u8], offset: usize, data: &[u8]) -> Result<()> {
-        let data_len = data.len();
-        check_binary_len(binary, offset + data_len)?;
-
-        binary[offset..offset + data.len()].copy_from_slice(data);
+        override_configurables.update_binary(binary)?;
 
         Ok(())
     }
@@ -296,15 +337,15 @@ mod tests {
 
         let shifted_configurables = configurables.with_shifted_offsets(5).unwrap();
         let expected_offsets_with_data = vec![(15, vec![1, 2, 3]), (25, vec![4, 5, 6])];
-        let expected_sorted_indirect_configurables = vec![15, 25];
+        let expected_indirect_configurables = vec![15, 25];
 
         assert_eq!(
             shifted_configurables.offsets_with_data,
             expected_offsets_with_data
         );
         assert_eq!(
-            shifted_configurables.sorted_indirect_offsets,
-            expected_sorted_indirect_configurables
+            shifted_configurables.indirect_offsets,
+            expected_indirect_configurables.into_iter().collect()
         );
     }
 
@@ -316,15 +357,15 @@ mod tests {
 
         let shifted_configurables = configurables.with_shifted_offsets(-5).unwrap();
         let expected_offsets_with_data = vec![(5, vec![4, 5, 6]), (25, vec![7, 8, 9])];
-        let expected_sorted_indirect_configurables = vec![5, 25];
+        let expected_indirect_configurables = vec![5, 25];
 
         assert_eq!(
             shifted_configurables.offsets_with_data,
             expected_offsets_with_data
         );
         assert_eq!(
-            shifted_configurables.sorted_indirect_offsets,
-            expected_sorted_indirect_configurables
+            shifted_configurables.indirect_offsets,
+            expected_indirect_configurables.into_iter().collect()
         );
     }
 
@@ -336,15 +377,15 @@ mod tests {
 
         let shifted_configurables = configurables.with_shifted_offsets(0).unwrap();
         let expected_offsets_with_data = offsets_with_data;
-        let expected_sorted_indirect_configurables = vec![20, 40];
+        let expected_indirect_configurables = vec![20, 40];
 
         assert_eq!(
             shifted_configurables.offsets_with_data,
             expected_offsets_with_data
         );
         assert_eq!(
-            shifted_configurables.sorted_indirect_offsets,
-            expected_sorted_indirect_configurables
+            shifted_configurables.indirect_offsets,
+            expected_indirect_configurables.into_iter().collect()
         );
     }
 
