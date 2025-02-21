@@ -215,10 +215,6 @@ pub trait EstimablePredicates: sealed::Sealed {
     ) -> Result<()>;
 }
 
-pub trait GasValidation: sealed::Sealed {
-    fn validate_gas(&self, _gas_used: u64) -> Result<()>;
-}
-
 pub trait ValidatablePredicates: sealed::Sealed {
     /// If a transaction contains predicates, we can verify that these predicates validate, ie
     /// that they return `true`
@@ -236,7 +232,6 @@ pub trait Transaction:
     + Into<FuelTransaction>
     + EstimablePredicates
     + ValidatablePredicates
-    + GasValidation
     + Clone
     + Debug
     + sealed::Sealed
@@ -655,45 +650,6 @@ impl EstimablePredicates for BlobTransaction {
             .await?;
 
         tx.as_blob().expect("is blob").clone_into(&mut self.tx);
-
-        Ok(())
-    }
-}
-
-impl GasValidation for CreateTransaction {
-    fn validate_gas(&self, _gas_used: u64) -> Result<()> {
-        Ok(())
-    }
-}
-
-impl GasValidation for UploadTransaction {
-    fn validate_gas(&self, _gas_used: u64) -> Result<()> {
-        Ok(())
-    }
-}
-
-impl GasValidation for UpgradeTransaction {
-    fn validate_gas(&self, _gas_used: u64) -> Result<()> {
-        Ok(())
-    }
-}
-
-impl GasValidation for BlobTransaction {
-    fn validate_gas(&self, _gas_used: u64) -> Result<()> {
-        Ok(())
-    }
-}
-
-impl GasValidation for ScriptTransaction {
-    fn validate_gas(&self, gas_used: u64) -> Result<()> {
-        if gas_used > *self.tx.script_gas_limit() {
-            return Err(error_transaction!(
-                Validation,
-                "script_gas_limit({}) is lower than the estimated gas_used({})",
-                self.tx.script_gas_limit(),
-                gas_used
-            ));
-        }
 
         Ok(())
     }

@@ -54,12 +54,9 @@ where
 
     pub async fn response(self) -> Result<CallResponse<T>> {
         let provider = self.call_handler.account.try_provider()?;
-        let receipts = provider
-            .tx_status(&self.tx_id)
-            .await?
-            .take_receipts_checked(Some(&self.call_handler.log_decoder))?;
+        let tx_status = provider.tx_status(&self.tx_id).await?;
 
-        self.call_handler.get_response(receipts)
+        self.call_handler.get_response(tx_status)
     }
 
     pub fn tx_id(&self) -> Bytes32 {
@@ -78,12 +75,9 @@ impl<A: Account> SubmitResponse<A, Vec<ContractCall>, ()> {
 
     pub async fn response<T: Tokenizable + Debug>(self) -> Result<CallResponse<T>> {
         let provider = self.call_handler.account.try_provider()?;
-        let receipts = provider
-            .tx_status(&self.tx_id)
-            .await?
-            .take_receipts_checked(Some(&self.call_handler.log_decoder))?;
+        let tx_status = provider.tx_status(&self.tx_id).await?;
 
-        self.call_handler.get_response(receipts)
+        self.call_handler.get_response(tx_status)
     }
 
     pub fn tx_id(&self) -> Bytes32 {

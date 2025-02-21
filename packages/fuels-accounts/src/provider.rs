@@ -62,9 +62,10 @@ const NUM_RESULTS_PER_REQUEST: i32 = 100;
 // ANCHOR: transaction_cost
 pub struct TransactionCost {
     pub gas_price: u64,
-    pub gas_used: u64,
     pub metered_bytes_size: u64,
     pub total_fee: u64,
+    pub script_gas: u64,
+    pub total_gas: u64,
 }
 // ANCHOR_END: transaction_cost
 
@@ -225,8 +226,6 @@ impl Provider {
                 .validate_predicates(&consensus_parameters, latest_block_height)?;
         }
 
-        self.validate_transaction(tx.clone()).await?;
-
         Ok(tx)
     }
 
@@ -241,17 +240,6 @@ impl Provider {
             .await_transaction_commit(&id)
             .await?
             .into())
-    }
-
-    async fn validate_transaction<T: Transaction>(&self, tx: T) -> Result<()> {
-        let tolerance = 0.0;
-        let TransactionCost { gas_used, .. } = self
-            .estimate_transaction_cost(tx.clone(), Some(tolerance), None)
-            .await?;
-
-        tx.validate_gas(gas_used)?;
-
-        Ok(())
     }
 
     #[cfg(not(feature = "coin-cache"))]
@@ -719,7 +707,7 @@ impl Provider {
 
     pub async fn estimate_transaction_cost<T: Transaction>(
         &self,
-        mut tx: T,
+        tx: T,
         tolerance: Option<f64>,
         block_horizon: Option<u32>,
     ) -> Result<TransactionCost> {
@@ -727,41 +715,27 @@ impl Provider {
         let tolerance = tolerance.unwrap_or(DEFAULT_GAS_ESTIMATION_TOLERANCE);
 
         let EstimateGasPrice { gas_price, .. } = self.estimate_gas_price(block_horizon).await?;
+        let tx_status = self.dry_run_opt(tx.clone(), false, None).await?;
 
-        let gas_used = self
-            .get_gas_used_with_tolerance(tx.clone(), tolerance)
-            .await?;
+        let total_gas = Self::apply_tolerance(tx_status.total_gas(), tolerance);
+        let total_fee = Self::apply_tolerance(tx_status.total_fee(), tolerance);
 
-        if tx.is_using_predicates() {
-            tx.estimate_predicates(self, None).await?;
-        }
-
-        let transaction_fee = tx
-            .clone()
-            .fee_checked_from_tx(&self.consensus_parameters().await?, gas_price)
-            .expect("Error calculating TransactionFee");
+        let receipts = tx_status.take_receipts();
 
         Ok(TransactionCost {
             gas_price,
-            gas_used,
             metered_bytes_size: tx.metered_bytes_size() as u64,
-            total_fee: transaction_fee.max_fee(),
+            total_fee,
+            total_gas,
+            script_gas: Self::get_script_gas_used(&receipts),
         })
     }
 
-    // Increase estimated gas by the provided tolerance
-    async fn get_gas_used_with_tolerance<T: Transaction>(
-        &self,
-        tx: T,
-        tolerance: f64,
-    ) -> Result<u64> {
-        let receipts = self.dry_run_opt(tx, false, None).await?.take_receipts();
-        let gas_used = self.get_script_gas_used(&receipts);
-
-        Ok((gas_used as f64 * (1.0 + tolerance)).ceil() as u64)
+    fn apply_tolerance(value: u64, tolerance: f64) -> u64 {
+        (value as f64 * (1.0 + tolerance)).ceil() as u64
     }
 
-    fn get_script_gas_used(&self, receipts: &[Receipt]) -> u64 {
+    fn get_script_gas_used(receipts: &[Receipt]) -> u64 {
         receipts
             .iter()
             .rfind(|r| matches!(r, Receipt::ScriptResult { .. }))
@@ -859,7 +833,7 @@ impl DryRunner for Provider {
             .expect("should have only one element");
 
         let receipts = tx_execution_status.result.receipts();
-        let script_gas = self.get_script_gas_used(receipts);
+        let script_gas = Self::get_script_gas_used(receipts);
 
         let variable_outputs = receipts
             .iter()
