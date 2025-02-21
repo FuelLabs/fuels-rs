@@ -197,13 +197,23 @@ pub(crate) fn get_transaction_inputs_outputs(
     let contract_ids = extract_unique_contract_ids(calls);
     let num_of_contracts = contract_ids.len();
 
-    let inputs = chain!(generate_contract_inputs(contract_ids), asset_inputs).collect();
+    // Custom `Inputs` and `Outputs` should be placed before other inputs and outputs.
+    let custom_inputs = calls.iter().flat_map(|c| c.inputs.clone()).collect_vec();
+    let custom_outputs = calls.iter().flat_map(|c| c.outputs.clone()).collect_vec();
 
-    // Note the contract_outputs need to come first since the
-    // contract_inputs are referencing them via `output_index`. The node
-    // will, upon receiving our request, use `output_index` to index the
-    // `inputs` array we've sent over.
+    let inputs = chain!(
+        custom_inputs,
+        generate_contract_inputs(contract_ids, custom_outputs.len()),
+        asset_inputs
+    )
+    .collect();
+
+    // Note the contract_outputs are placed after the custom outputs and
+    // the contract_inputs are referencing them via `output_index`. The
+    // node will, upon receiving our request, use `output_index` to index
+    // the `inputs` array we've sent over.
     let outputs = chain!(
+        custom_outputs,
         generate_contract_outputs(num_of_contracts),
         generate_asset_change_outputs(address, asset_ids),
         generate_custom_outputs(calls),
@@ -263,13 +273,17 @@ pub(crate) fn generate_contract_outputs(num_of_contracts: usize) -> Vec<Output> 
         .collect()
 }
 
-pub(crate) fn generate_contract_inputs(contract_ids: HashSet<ContractId>) -> Vec<Input> {
+/// Generate contract inputs taking in consideration already existing outputs
+pub(crate) fn generate_contract_inputs(
+    contract_ids: HashSet<ContractId>,
+    num_current_outputs: usize,
+) -> Vec<Input> {
     contract_ids
         .into_iter()
         .enumerate()
         .map(|(idx, contract_id)| {
             Input::contract(
-                UtxoId::new(Bytes32::zeroed(), idx as u16),
+                UtxoId::new(Bytes32::zeroed(), (idx + num_current_outputs) as u16),
                 Bytes32::zeroed(),
                 Bytes32::zeroed(),
                 TxPointer::default(),
@@ -337,6 +351,8 @@ mod test {
             output_param: ParamType::Unit,
             is_payable: false,
             custom_assets: Default::default(),
+            inputs: vec![],
+            outputs: vec![],
         }
     }
 
