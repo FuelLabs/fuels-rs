@@ -2510,3 +2510,34 @@ async fn loader_storage_works_via_proxy() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn adjust_for_fee_errors() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Contract(
+            name = "MyContract",
+            project = "e2e/sway/contracts/contract_test"
+        )),
+    );
+
+    let contract_binary = "sway/contracts/contract_test/out/release/contract_test.bin";
+
+    let contract_id = Contract::load_from(contract_binary, LoadConfiguration::default())?
+        .deploy_if_not_exists(&wallet, TxPolicies::default().with_tip(10_000_000_000_000))
+        .await?;
+
+    // then
+    let contract_instance = MyContract::new(contract_id, wallet);
+
+    let response = contract_instance
+        .methods()
+        .read_counter()
+        .call()
+        .await?
+        .value;
+
+    assert_eq!(response, 0);
+
+    Ok(())
+}

@@ -7,7 +7,7 @@ use fuels_core::{
     error,
     types::{
         bech32::Bech32ContractId,
-        errors::Result,
+        errors::{Context, Result},
         transaction::TxPolicies,
         transaction_builders::{Blob, CreateTransactionBuilder},
     },
@@ -157,7 +157,10 @@ impl Contract<Regular> {
         .with_max_fee_estimation_tolerance(DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE);
 
         account.add_witnesses(&mut tb)?;
-        account.adjust_for_fee(&mut tb, 0).await?;
+        account
+            .adjust_for_fee(&mut tb, 0)
+            .await
+            .context("failed to adjust for fee")?;
 
         let provider = account.try_provider()?;
 
