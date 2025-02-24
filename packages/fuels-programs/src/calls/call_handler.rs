@@ -275,6 +275,8 @@ where
             output_param: T::param_type(),
             is_payable,
             custom_assets: Default::default(),
+            inputs: vec![],
+            outputs: vec![],
         };
         CallHandler {
             account,
@@ -333,6 +335,20 @@ where
 
         Ok(self)
     }
+
+    /// Add custom outputs to the `CallHandler`. These outputs will be placed
+    /// at the beginning.
+    pub fn with_outputs(mut self, outputs: Vec<Output>) -> Self {
+        self.call = self.call.with_outputs(outputs);
+        self
+    }
+
+    /// Add custom inputs to the `CallHandler`. These inputs will be placed
+    /// at the beginning.
+    pub fn with_inputs(mut self, inputs: Vec<Input>) -> Self {
+        self.call = self.call.with_inputs(inputs);
+        self
+    }
 }
 
 impl<A, T> CallHandler<A, ScriptCall, T>
@@ -366,11 +382,15 @@ where
         }
     }
 
+    /// Add custom outputs to the `CallHandler`. These outputs will be placed
+    /// at the beginning.
     pub fn with_outputs(mut self, outputs: Vec<Output>) -> Self {
         self.call = self.call.with_outputs(outputs);
         self
     }
 
+    /// Add custom inputs to the `CallHandler`. These inputs will be placed
+    /// at the beginning.
     pub fn with_inputs(mut self, inputs: Vec<Input>) -> Self {
         self.call = self.call.with_inputs(inputs);
         self
