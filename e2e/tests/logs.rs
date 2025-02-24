@@ -387,7 +387,8 @@ async fn test_multi_call_contract_with_contract_logs() -> Result<()> {
         LoadConfiguration::default(),
     )?
     .deploy_if_not_exists(&wallet, TxPolicies::default())
-    .await?;
+    .await?
+    .contract_id;
 
     let contract_instance = MyContract::new(contract_id.clone(), wallet.clone());
 
@@ -742,7 +743,8 @@ async fn test_contract_with_contract_logs() -> Result<()> {
         LoadConfiguration::default(),
     )?
     .deploy_if_not_exists(&wallet, TxPolicies::default())
-    .await?;
+    .await?
+    .contract_id;
 
     let contract_instance = MyContract::new(contract_id.clone(), wallet.clone());
 
@@ -828,6 +830,7 @@ async fn test_script_logs_with_contract_logs() -> Result<()> {
 
     {
         let num_contract_logs = response
+            .tx_status
             .receipts
             .iter()
             .filter(|receipt| matches!(receipt, Receipt::LogData { id, .. } | Receipt::Log { id, .. } if *id == contract_id))
@@ -1025,7 +1028,8 @@ async fn test_contract_require_from_contract() -> Result<()> {
         LoadConfiguration::default(),
     )?
     .deploy_if_not_exists(&wallet, TxPolicies::default())
-    .await?;
+    .await?
+    .contract_id;
 
     let contract_instance = MyContract::new(contract_id.clone(), wallet.clone());
 
@@ -1079,7 +1083,8 @@ async fn test_multi_call_contract_require_from_contract() -> Result<()> {
         LoadConfiguration::default(),
     )?
     .deploy_if_not_exists(&wallet, TxPolicies::default())
-    .await?;
+    .await?
+    .contract_id;
 
     let lib_contract_instance = MyContract::new(contract_id.clone(), wallet.clone());
 
@@ -1169,7 +1174,8 @@ async fn test_loader_script_require_from_loader_contract() -> Result<()> {
     let contract_id = contract
         .convert_to_loader(100_000)?
         .deploy_if_not_exists(&wallet, TxPolicies::default())
-        .await?;
+        .await?
+        .contract_id;
     let contract_instance = MyContract::new(contract_id, wallet);
 
     let mut script_instance = script_instance;
