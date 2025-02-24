@@ -97,16 +97,5 @@ mod tests {
 
         Ok(())
     }
-
-    #[tokio::test(flavor = "multi_thread")]
-    async fn fund_google_wallet() -> anyhow::Result<()> {
-        let mut kms = start_google_kms(true).await?;
-        let fuel_node = start_fuel_node(false).await?;
-        let a = kms.create_key().await?;
-        // dbg!(a.name);
-        // let kms_key = create_and_fund_google_kms_key(&kms, &fuel_node).await?;
-        // let a = kms.create_key().await?;
-        // dbg!(a.name);
-        Ok(())
-    }
+    
 }
