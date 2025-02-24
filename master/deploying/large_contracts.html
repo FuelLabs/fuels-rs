@@ -159,7 +159,8 @@
         )?
         .convert_to_loader(max_words_per_blob)?
         .deploy(&amp;wallet, TxPolicies::default())
-        .await?;
+        .await?
+        .contract_id;
 </code></pre>
 <p>When you convert a standard contract into a loader contract, the following changes occur:</p>
 <ul>
@@ -179,7 +180,8 @@
             LoadConfiguration::default().with_salt(random_salt()),
         )?
         .smart_deploy(&amp;wallet, TxPolicies::default(), max_words_per_blob)
-        .await?;
+        .await?
+        .contract_id;
 </code></pre>
 <p>You also have the option to separate the blob upload from the contract deployment for more granular control:</p>
 <pre><code class="language-rust ignore">        let contract_id = Contract::load_from(
@@ -190,7 +192,8 @@
         .upload_blobs(&amp;wallet, TxPolicies::default())
         .await?
         .deploy(&amp;wallet, TxPolicies::default())
-        .await?;
+        .await?
+        .contract_id;
 </code></pre>
 <p>Alternatively, you can manually split your contract code into blobs and then create and deploy a loader:</p>
 <pre><code class="language-rust ignore">        let chunk_size = 100_000;
@@ -206,7 +209,8 @@
 
         let contract_id = Contract::loader_from_blobs(blobs, random_salt(), vec![])?
             .deploy(&amp;wallet, TxPolicies::default())
-            .await?;
+            .await?
+            .contract_id;
 </code></pre>
 <p>Or you can upload the blobs yourself and proceed with just the loader deployment:</p>
 <pre><code class="language-rust ignore">        let max_words_per_blob = 10_000;
@@ -244,7 +248,8 @@
 
         let contract_id = Contract::loader_from_blob_ids(all_blob_ids, random_salt(), vec![])?
             .deploy(&amp;wallet, TxPolicies::default())
-            .await?;
+            .await?
+            .contract_id;
 </code></pre>
 <h2 id="blob-size-considerations"><a class="header" href="#blob-size-considerations">Blob Size Considerations</a></h2>
 <p>The size of a Blob transaction is constrained by three factors:</p>

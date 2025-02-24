@@ -470,7 +470,7 @@ pub enum Backoff {
         // Transfer the base asset with amount 1 from wallet 1 to wallet 2
         let transfer_amount = 1;
         let asset_id = Default::default();
-        let (_tx_id, _receipts) = wallets[0]
+        let _res = wallets[0]
             .transfer(
                 wallets[1].address(),
                 transfer_amount,
@@ -496,7 +496,7 @@ pub enum Backoff {
         // Transfer an amount of 300 to the contract
         let amount = 300;
         let asset_id = random_asset_id;
-        let (_tx_id, _receipts) = wallet
+        let _res = wallet
             .force_transfer_to_contract(&amp;contract_id, amount, asset_id, TxPolicies::default())
             .await?;
 
@@ -529,7 +529,7 @@ pub enum Backoff {
         )?;
         let base_layer_address = Bech32Address::from(base_layer_address);
         // Transfer an amount of 1000 to the specified base layer address
-        let (tx_id, msg_id, _receipts) = wallet
+        let response = wallet
             .withdraw_to_base_layer(&amp;base_layer_address, amount, TxPolicies::default())
             .await?;
 
@@ -538,7 +538,7 @@ pub enum Backoff {
         // Retrieve a message proof from the provider
         let proof = wallet
             .try_provider()?
-            .get_message_proof(&amp;tx_id, &amp;msg_id, None, Some(2))
+            .get_message_proof(&amp;response.tx_id, &amp;response.nonce, None, Some(2))
             .await?;
 
         // Verify the amount and recipient
@@ -1376,7 +1376,8 @@ pub use abigen_bindings::my_contract_mod::MyContractMethods;
             LoadConfiguration::default(),
         )?
         .deploy(&amp;wallet, TxPolicies::default())
-        .await?;
+        .await?
+        .contract_id;
 
         println!(&quot;Contract deployed @ {contract_id}&quot;);
 </code></pre>
@@ -1416,7 +1417,8 @@ pub use abigen_bindings::my_contract_mod::MyContractMethods;
             configuration,
         )?
         .deploy(&amp;wallet, tx_policies)
-        .await?;
+        .await?
+        .contract_id;
 
         println!(&quot;Contract deployed @ {contract_id_2}&quot;);
 </code></pre>
@@ -1529,7 +1531,8 @@ impl TestContract for Contract {
         LoadConfiguration::default().with_configurables(configurables),
     )?
     .deploy_if_not_exists(&amp;wallet, TxPolicies::default())
-    .await?;
+    .await?
+    .contract_id;
 
     let contract_instance = MyContract::new(contract_id, wallet.clone());
 </code></pre>
@@ -1639,7 +1642,8 @@ half-word   byte   op                raw           notes
         )?
         .convert_to_loader(max_words_per_blob)?
         .deploy(&amp;wallet, TxPolicies::default())
-        .await?;
+        .await?
+        .contract_id;
 </code></pre>
 <p>When you convert a standard contract into a loader contract, the following changes occur:</p>
 <ul>
@@ -1659,7 +1663,8 @@ half-word   byte   op                raw           notes
             LoadConfiguration::default().with_salt(random_salt()),
         )?
         .smart_deploy(&amp;wallet, TxPolicies::default(), max_words_per_blob)
-        .await?;
+        .await?
+        .contract_id;
 </code></pre>
 <p>You also have the option to separate the blob upload from the contract deployment for more granular control:</p>
 <pre><code class="language-rust ignore">        let contract_id = Contract::load_from(
@@ -1670,7 +1675,8 @@ half-word   byte   op                raw           notes
         .upload_blobs(&amp;wallet, TxPolicies::default())
         .await?
         .deploy(&amp;wallet, TxPolicies::default())
-        .await?;
+        .await?
+        .contract_id;
 </code></pre>
 <p>Alternatively, you can manually split your contract code into blobs and then create and deploy a loader:</p>
 <pre><code class="language-rust ignore">        let chunk_size = 100_000;
@@ -1686,7 +1692,8 @@ half-word   byte   op                raw           notes
 
         let contract_id = Contract::loader_from_blobs(blobs, random_salt(), vec![])?
             .deploy(&amp;wallet, TxPolicies::default())
-            .await?;
+            .await?
+            .contract_id;
 </code></pre>
 <p>Or you can upload the blobs yourself and proceed with just the loader deployment:</p>
 <pre><code class="language-rust ignore">        let max_words_per_blob = 10_000;
@@ -1724,7 +1731,8 @@ half-word   byte   op                raw           notes
 
         let contract_id = Contract::loader_from_blob_ids(all_blob_ids, random_salt(), vec![])?
             .deploy(&amp;wallet, TxPolicies::default())
-            .await?;
+            .await?
+            .contract_id;
 </code></pre>
 <h2 id="blob-size-considerations"><a class="header" href="#blob-size-considerations">Blob Size Considerations</a></h2>
 <p>The size of a Blob transaction is constrained by three factors:</p>
@@ -1996,10 +2004,9 @@ half-word   byte   op                raw           notes
 <!-- call_resp:example:end -->
 <pre><code class="language-rust ignore">pub struct CallResponse&lt;D&gt; {
     pub value: D,
-    pub receipts: Vec&lt;Receipt&gt;,
-    pub gas_used: u64,
+    pub tx_status: Success,
+    pub tx_id: Option&lt;TxId&gt;,
     pub log_decoder: LogDecoder,
-    pub tx_id: Option&lt;Bytes32&gt;,
 }
 </code></pre>
 <!-- This section should explain the fields of the `CallResponse` struct -->
@@ -2214,11 +2221,15 @@ let is_error = response.is_err();
 <p>With the function <code>estimate_transaction_cost(tolerance: Option&lt;f64&gt;, block_horizon: Option&lt;u32&gt;)</code> provided by <code>CallHandler</code>, you can get a cost estimation for a specific call. The return type, <code>TransactionCost</code>, is a struct that contains relevant information for the estimation:</p>
 <pre><code class="language-rust ignore">pub struct TransactionCost {
     pub gas_price: u64,
-    pub gas_used: u64,
     pub metered_bytes_size: u64,
     pub total_fee: u64,
+    pub script_gas: u64,
+    pub total_gas: u64,
 }
 </code></pre>
+<blockquote>
+<p><strong>Note</strong> <code>script_gas</code> refers to the part of the gas spent on the script execution.</p>
+</blockquote>
 <p>Below are examples that show how to get the estimated transaction cost from single and multi call transactions.</p>
 <pre><code class="language-rust ignore">        let contract_instance = MyContract::new(contract_id, wallet);
 
@@ -2892,7 +2903,7 @@ from subsequent callers.</p>
 
         let tx_status = provider.tx_status(&amp;tx_id).await?;
 
-        let response = call_handler.get_response_from(tx_status)?;
+        let response = call_handler.get_response(tx_status)?;
 
         assert_eq!(counter, response.value);
 </code></pre>
@@ -2912,7 +2923,7 @@ from subsequent callers.</p>
     tokio::time::sleep(Duration::from_millis(500)).await;
     let tx_status = provider.tx_status(&amp;tx_id).await?;
 
-    let response = script_call_handler.get_response_from(tx_status)?;
+    let response = script_call_handler.get_response(tx_status)?;
 
     assert_eq!(response.value, &quot;hello&quot;);
 </code></pre>
@@ -4032,7 +4043,8 @@ impl LiquidityPool for Contract {
             LoadConfiguration::default(),
         )?
         .deploy(wallet, TxPolicies::default())
-        .await?;
+        .await?
+        .contract_id;
 
         let contract_methods = MyContract::new(contract_id.clone(), wallet.clone()).methods();
 </code></pre>

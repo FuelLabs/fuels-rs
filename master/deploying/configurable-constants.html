@@ -215,7 +215,8 @@ impl TestContract for Contract {
         LoadConfiguration::default().with_configurables(configurables),
     )?
     .deploy_if_not_exists(&amp;wallet, TxPolicies::default())
-    .await?;
+    .await?
+    .contract_id;
 
     let contract_instance = MyContract::new(contract_id, wallet.clone());
 </code></pre>

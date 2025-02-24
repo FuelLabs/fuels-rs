@@ -162,7 +162,8 @@
             LoadConfiguration::default(),
         )?
         .deploy(&amp;wallet, TxPolicies::default())
-        .await?;
+        .await?
+        .contract_id;
 
         println!(&quot;Contract deployed @ {contract_id}&quot;);
 </code></pre>
@@ -202,7 +203,8 @@
             configuration,
         )?
         .deploy(&amp;wallet, tx_policies)
-        .await?;
+        .await?
+        .contract_id;
 
         println!(&quot;Contract deployed @ {contract_id_2}&quot;);
 </code></pre>

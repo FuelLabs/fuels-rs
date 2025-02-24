@@ -153,10 +153,9 @@
 <!-- call_resp:example:end -->
 <pre><code class="language-rust ignore">pub struct CallResponse&lt;D&gt; {
     pub value: D,
-    pub receipts: Vec&lt;Receipt&gt;,
-    pub gas_used: u64,
+    pub tx_status: Success,
+    pub tx_id: Option&lt;TxId&gt;,
     pub log_decoder: LogDecoder,
-    pub tx_id: Option&lt;Bytes32&gt;,
 }
 </code></pre>
 <!-- This section should explain the fields of the `CallResponse` struct -->

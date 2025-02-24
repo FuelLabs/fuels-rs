@@ -141,11 +141,15 @@
 <p>With the function <code>estimate_transaction_cost(tolerance: Option&lt;f64&gt;, block_horizon: Option&lt;u32&gt;)</code> provided by <code>CallHandler</code>, you can get a cost estimation for a specific call. The return type, <code>TransactionCost</code>, is a struct that contains relevant information for the estimation:</p>
 <pre><code class="language-rust ignore">pub struct TransactionCost {
     pub gas_price: u64,
-    pub gas_used: u64,
     pub metered_bytes_size: u64,
     pub total_fee: u64,
+    pub script_gas: u64,
+    pub total_gas: u64,
 }
 </code></pre>
+<blockquote>
+<p><strong>Note</strong> <code>script_gas</code> refers to the part of the gas spent on the script execution.</p>
+</blockquote>
 <p>Below are examples that show how to get the estimated transaction cost from single and multi call transactions.</p>
 <pre><code class="language-rust ignore">        let contract_instance = MyContract::new(contract_id, wallet);
 

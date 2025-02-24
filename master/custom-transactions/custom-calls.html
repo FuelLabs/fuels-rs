@@ -156,7 +156,7 @@
 
         let tx_status = provider.tx_status(&amp;tx_id).await?;
 
-        let response = call_handler.get_response_from(tx_status)?;
+        let response = call_handler.get_response(tx_status)?;
 
         assert_eq!(counter, response.value);
 </code></pre>
@@ -176,7 +176,7 @@
     tokio::time::sleep(Duration::from_millis(500)).await;
     let tx_status = provider.tx_status(&amp;tx_id).await?;
 
-    let response = script_call_handler.get_response_from(tx_status)?;
+    let response = script_call_handler.get_response(tx_status)?;
 
     assert_eq!(response.value, &quot;hello&quot;);
 </code></pre>

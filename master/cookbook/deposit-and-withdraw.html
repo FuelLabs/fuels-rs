@@ -217,7 +217,8 @@ impl LiquidityPool for Contract {
             LoadConfiguration::default(),
         )?
         .deploy(wallet, TxPolicies::default())
-        .await?;
+        .await?
+        .contract_id;
 
         let contract_methods = MyContract::new(contract_id.clone(), wallet.clone()).methods();
 </code></pre>
