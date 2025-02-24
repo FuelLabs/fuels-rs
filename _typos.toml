@@ -1,5 +1,2 @@
 [files]
 extend-exclude = ["packages/fuels-accounts/src/schema/schema.sdl"]
-
-[default]
-extend-words = ["KMS", "kms", "Kms"]

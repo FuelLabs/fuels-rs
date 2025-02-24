@@ -1,4 +1,6 @@
 KMS
+kms
+Kms
 ABI
 ABIs
 ASM
