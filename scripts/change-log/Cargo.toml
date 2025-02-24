@@ -10,7 +10,9 @@ repository = { workspace = true }
 rust-version = { workspace = true }
 
 [dependencies]
-regex = { workspace = true }
+dialoguer = { version = "0.11", features = ["fuzzy-select"] }
 dotenv = { workspace = true }
-tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
 octocrab = { workspace = true, features = ["default"] }
+regex = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
