@@ -5,7 +5,6 @@ use fuels_accounts::Account;
 use fuels_core::{
     constants::WORD_SIZE,
     types::{
-        bech32::Bech32ContractId,
         errors::{error, Result},
         transaction::TxPolicies,
         transaction_builders::{Blob, BlobId, BlobTransactionBuilder, TransactionBuilder},
@@ -14,7 +13,7 @@ use fuels_core::{
 
 use crate::{assembly::contract_call::loader_contract_asm, DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE};
 
-use super::{compute_contract_id_and_state_root, Contract, Regular};
+use super::{compute_contract_id_and_state_root, Contract, DeployResponse, Regular};
 
 #[derive(Debug, Clone)]
 pub struct BlobsUploaded {
@@ -159,7 +158,7 @@ impl Contract<Loader<BlobsNotUploaded>> {
         self,
         account: &impl Account,
         tx_policies: TxPolicies,
-    ) -> Result<Bech32ContractId> {
+    ) -> Result<DeployResponse> {
         self.upload_blobs(account, tx_policies)
             .await?
             .deploy(account, tx_policies)
@@ -172,7 +171,7 @@ impl Contract<Loader<BlobsNotUploaded>> {
         self,
         account: &impl Account,
         tx_policies: TxPolicies,
-    ) -> Result<Bech32ContractId> {
+    ) -> Result<DeployResponse> {
         self.upload_blobs(account, tx_policies)
             .await?
             .deploy_if_not_exists(account, tx_policies)
@@ -248,7 +247,7 @@ impl Contract<Loader<BlobsUploaded>> {
         self,
         account: &impl Account,
         tx_policies: TxPolicies,
-    ) -> Result<Bech32ContractId> {
+    ) -> Result<DeployResponse> {
         Contract::regular(self.code(), self.salt, self.storage_slots)
             .deploy(account, tx_policies)
             .await
@@ -258,7 +257,7 @@ impl Contract<Loader<BlobsUploaded>> {
         self,
         account: &impl Account,
         tx_policies: TxPolicies,
-    ) -> Result<Bech32ContractId> {
+    ) -> Result<DeployResponse> {
         Contract::regular(self.code(), self.salt, self.storage_slots)
             .deploy_if_not_exists(account, tx_policies)
             .await
