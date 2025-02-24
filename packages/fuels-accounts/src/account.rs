@@ -9,7 +9,7 @@ use fuels_core::types::{
     coin::Coin,
     coin_type::CoinType,
     coin_type_id::CoinTypeId,
-    errors::Result,
+    errors::{Context, Result},
     input::Input,
     message::Message,
     transaction::{Transaction, TxPolicies},
@@ -141,8 +141,9 @@ pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync + Clone {
                     Some(base_assets),
                 )
                 .await
-                // if there query fails do nothing
-                .unwrap_or_default();
+                .with_context(|| {
+                    format!("failed to get base asset inputs with amount: `{missing_base_amount}`")
+                })?;
 
             tb.inputs_mut().extend(new_base_inputs);
         };
@@ -189,7 +190,8 @@ pub trait Account: ViewOnlyAccount {
             0
         };
         self.adjust_for_fee(&mut tx_builder, used_base_amount)
-            .await?;
+            .await
+            .context("failed to adjust for fee")?;
 
         let tx = tx_builder.build(provider).await?;
         let tx_id = tx.id(consensus_parameters.chain_id());
@@ -251,7 +253,9 @@ pub trait Account: ViewOnlyAccount {
         );
 
         self.add_witnesses(&mut tb)?;
-        self.adjust_for_fee(&mut tb, balance).await?;
+        self.adjust_for_fee(&mut tb, balance)
+            .await
+            .context("failed to adjust for fee")?;
 
         let tx = tb.build(provider).await?;
 
@@ -289,7 +293,9 @@ pub trait Account: ViewOnlyAccount {
         );
 
         self.add_witnesses(&mut tb)?;
-        self.adjust_for_fee(&mut tb, amount).await?;
+        self.adjust_for_fee(&mut tb, amount)
+            .await
+            .context("failed to adjust for fee")?;
 
         let tx = tb.build(provider).await?;
 

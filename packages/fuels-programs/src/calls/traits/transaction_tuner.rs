@@ -1,6 +1,6 @@
 use fuels_accounts::Account;
 use fuels_core::types::{
-    errors::{error, Result},
+    errors::{error, Context, Result},
     transaction::{ScriptTransaction, TxPolicies},
     transaction_builders::{
         BuildableTransaction, ScriptTransactionBuilder, TransactionBuilder, VariableOutputPolicy,
@@ -97,7 +97,10 @@ impl TransactionTuner for ScriptCall {
             .await?;
 
         account.add_witnesses(&mut tb)?;
-        account.adjust_for_fee(&mut tb, 0).await?;
+        account
+            .adjust_for_fee(&mut tb, 0)
+            .await
+            .context("failed to adjust for fee")?;
 
         tb.build(account.try_provider()?).await
     }

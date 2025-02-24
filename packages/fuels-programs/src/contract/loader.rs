@@ -6,7 +6,7 @@ use fuels_core::{
     constants::WORD_SIZE,
     types::{
         bech32::Bech32ContractId,
-        errors::{error, Result},
+        errors::{error, Context, Result},
         transaction::TxPolicies,
         transaction_builders::{Blob, BlobId, BlobTransactionBuilder, TransactionBuilder},
     },
@@ -140,7 +140,10 @@ impl Contract<Loader<BlobsNotUploaded>> {
                 .with_tx_policies(tx_policies)
                 .with_max_fee_estimation_tolerance(DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE);
 
-            account.adjust_for_fee(&mut tb, 0).await?;
+            account
+                .adjust_for_fee(&mut tb, 0)
+                .await
+                .context("failed to adjust for fee")?;
             account.add_witnesses(&mut tb)?;
 
             let tx = tb.build(provider).await?;
