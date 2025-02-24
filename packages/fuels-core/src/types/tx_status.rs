@@ -71,8 +71,8 @@ impl TxStatus {
                 revert_id: id,
                 ..
             }) => Err(Self::map_revert_error(&receipts, &reason, id, log_decoder)),
-            Self::Submitted => Err(Error::Transaction(Reason::SqueezedOut(
-                "can not take `success` status from `Submitted` transaction".to_owned(),
+            Self::Submitted => Err(Error::Transaction(Reason::Other(
+                "transactions was not yet included".to_owned(),
             ))),
             Self::Success(success) => Ok(success),
         }

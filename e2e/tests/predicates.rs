@@ -115,7 +115,7 @@ async fn transfer_coins_and_messages_to_predicate() -> Result<()> {
     let num_coins = 16;
     let num_messages = 32;
     let amount = 64;
-    let balance_to_send = ((num_coins + num_messages) * amount) - 1;
+    let balance_to_send = 42;
 
     let mut wallet = WalletUnlocked::new_random(None);
 
