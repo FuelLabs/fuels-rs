@@ -24,15 +24,7 @@ tai64 = { workspace = true }
 tempfile = { workspace = true }
 tokio = { workspace = true, features = ["test-util"] }
 
-itertools = { workspace = true }
-futures = { workspace = true }
-rand = { workspace = true }
 portpicker = { workspace = true }
-
-fuel-core-chain-config = { workspace = true, features = [
-    "std",
-    "test-helpers",
-] }
 fuels-accounts = { workspace = true, features = ["test-helpers"] }
 
 fuel-core-types = { workspace = true, features = [
@@ -40,15 +32,8 @@ fuel-core-types = { workspace = true, features = [
 ] }
 
 testcontainers = { workspace = true }
-k256 = { workspace = true, features = ["ecdsa-core"] }
-aws-config = { workspace = true, features = ["rustls"] }
 aws-sdk-kms = { workspace = true, features = ["rustls"] }
 fuel-core-client = { workspace = true }
-
-
-google-cloud-kms = { version = "0.6.0"}
-tonic = { version = "0.12.3", features = ["tls"] }
-tonic-types = { version = "0.12.3"  }
 
 
 [build-dependencies]
@@ -68,7 +53,3 @@ coin-cache = ["fuels/coin-cache"]
 [dependencies]
 anyhow = "1.0.86"
 url = "2.5.2"
-serde_json = "1.0.120"
-reqwest = "0.12.5"
-tokio-stream = "0.1.17"
-async-stream = "0.3.5"
