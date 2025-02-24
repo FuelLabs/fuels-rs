@@ -12,7 +12,7 @@ use fuels::{
         coin_type::CoinType,
         message::Message,
         transaction_builders::{BuildableTransaction, ScriptTransactionBuilder},
-        tx_status::TxStatus,
+        tx_status::{Success, TxStatus},
         Bits256,
     },
 };
@@ -40,7 +40,8 @@ async fn test_provider_launch_and_connect() -> Result<()> {
         LoadConfiguration::default(),
     )?
     .deploy_if_not_exists(&wallet, TxPolicies::default())
-    .await?;
+    .await?
+    .contract_id;
 
     let contract_instance_connected = MyContract::new(contract_id.clone(), wallet.clone());
 
@@ -176,27 +177,27 @@ async fn test_input_message_pays_fee() -> Result<()> {
         abi = "e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
     ));
 
-    let contract_id = Contract::load_from(
+    let deploy_response = Contract::load_from(
         "sway/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
     .deploy_if_not_exists(&wallet, TxPolicies::default())
     .await?;
 
-    let contract_instance = MyContract::new(contract_id, wallet.clone());
+    let contract_instance = MyContract::new(deploy_response.contract_id, wallet.clone());
 
-    let response = contract_instance
+    let call_response = contract_instance
         .methods()
         .initialize_counter(42)
         .call()
         .await?;
 
-    assert_eq!(42, response.value);
+    assert_eq!(42, call_response.value);
 
     let balance = wallet.get_asset_balance(base_asset_id).await?;
-    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
-    let expected_fee = 2;
-    assert_eq!(balance, DEFAULT_COIN_AMOUNT - expected_fee);
+    let deploy_fee = deploy_response.tx_status.unwrap().total_fee;
+    let call_fee = call_response.tx_status.total_fee;
+    assert_eq!(balance, DEFAULT_COIN_AMOUNT - deploy_fee - call_fee);
 
     Ok(())
 }
@@ -263,6 +264,7 @@ async fn can_set_custom_block_time() -> Result<()> {
     assert_eq!(blocks[1].header.time.unwrap().timestamp(), 20);
     assert_eq!(blocks[2].header.time.unwrap().timestamp(), 40);
     assert_eq!(blocks[3].header.time.unwrap().timestamp(), 60);
+
     Ok(())
 }
 
@@ -359,6 +361,7 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<()> {
         .await?;
 
     let gas_forwarded = response
+        .tx_status
         .receipts
         .iter()
         .find(|r| matches!(r, Receipt::Call { .. }))
@@ -419,6 +422,7 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
     assert_eq!(response.value, 1_000_000);
 
     let call_response = response
+        .tx_status
         .receipts
         .iter()
         .find(|&r| matches!(r, Receipt::Call { .. }));
@@ -456,6 +460,7 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
     assert_eq!(response.value, 0);
 
     let call_response = response
+        .tx_status
         .receipts
         .iter()
         .find(|&r| matches!(r, Receipt::Call { .. }));
@@ -500,18 +505,18 @@ async fn test_gas_errors() -> Result<()> {
     );
 
     // Test running out of gas. Gas price as `None` will be 0.
-    let gas_limit = 100;
+    let gas_limit = 42;
     let contract_instance_call = contract_instance
         .methods()
         .initialize_counter(42) // Build the ABI call
         .with_tx_policies(TxPolicies::default().with_script_gas_limit(gas_limit));
 
     //  Test that the call will use more gas than the gas limit
-    let gas_used = contract_instance_call
+    let total_gas = contract_instance_call
         .estimate_transaction_cost(None, None)
         .await?
-        .gas_used;
-    assert!(gas_used > gas_limit);
+        .total_gas;
+    assert!(total_gas > gas_limit);
 
     let response = contract_instance_call
         .call()
@@ -594,14 +599,16 @@ async fn test_get_gas_used() -> Result<()> {
         ),
     );
 
-    let gas_used = contract_instance
+    let total_gas = contract_instance
         .methods()
         .initialize_counter(42)
         .call()
         .await?
-        .gas_used;
+        .tx_status
+        .total_gas;
 
-    assert!(gas_used > 0);
+    assert!(total_gas > 0);
+
     Ok(())
 }
 
@@ -615,13 +622,13 @@ async fn test_parse_block_time() -> Result<()> {
     let tx_policies = TxPolicies::default().with_script_gas_limit(2000);
 
     let wallet_2 = WalletUnlocked::new_random(None).lock();
-    let (tx_id, _) = wallet
+    let tx_response = wallet
         .transfer(wallet_2.address(), 100, asset_id, tx_policies)
         .await?;
 
     let tx_response = wallet
         .try_provider()?
-        .get_transaction_by_id(&tx_id)
+        .get_transaction_by_id(&tx_response.tx_id)
         .await?
         .unwrap();
     assert!(tx_response.time.is_some());
@@ -1222,7 +1229,7 @@ async fn tx_with_witness_data() -> Result<()> {
     let status = provider.send_transaction_and_await_commit(tx).await?;
 
     match status {
-        TxStatus::Success { receipts } => {
+        TxStatus::Success(Success { receipts, .. }) => {
             let ret: u64 = receipts
                 .into_iter()
                 .find_map(|receipt| match receipt {
@@ -1266,7 +1273,8 @@ async fn contract_call_with_impersonation() -> Result<()> {
         LoadConfiguration::default(),
     )?
     .deploy_if_not_exists(&wallet, TxPolicies::default())
-    .await?;
+    .await?
+    .contract_id;
 
     let contract_instance = MyContract::new(contract_id, impersonator.clone());
 
