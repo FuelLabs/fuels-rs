@@ -28,6 +28,13 @@ tai64 = { workspace = true, features = ["serde"] }
 thiserror = { workspace = true, default-features = false }
 tokio = { workspace = true, features = ["full"], optional = true }
 zeroize = { workspace = true, features = ["derive"] }
+k256 = { workspace = true, features = ["ecdsa-core"] }
+
+# AWS KMS client
+aws-config = { workspace = true, features = [
+  "behavior-version-latest",
+] }
+aws-sdk-kms = { workspace = true, features = ["default"] }
 
 [dev-dependencies]
 mockall = { workspace = true, default-features = false }

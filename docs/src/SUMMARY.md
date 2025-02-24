@@ -13,6 +13,7 @@
 - [Managing wallets](./wallets/index.md)
   - [Creating a wallet from a private key](./wallets/private-keys.md)
   - [Creating a wallet from mnemonic phrases](./wallets/mnemonic-wallet.md)
+  - [KMS wallets](./wallets/kms-wallets.md)
   - [Wallet Access](./wallets/access.md)
   - [Encrypting and storing wallets](./wallets/encrypting-and-storing.md)
   - [Checking balances and coins](./wallets/checking-balances-and-coins.md)
