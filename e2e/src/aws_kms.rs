@@ -1,6 +1,5 @@
 use anyhow::Context;
-use fuels::accounts::kms::{AwsClient, AwsConfig};
-use fuels_accounts::kms::KmsKey;
+use fuels::accounts::kms::{AwsClient, AwsConfig, KmsKey};
 use testcontainers::{core::ContainerPort, runners::AsyncRunner};
 use tokio::io::AsyncBufReadExt;
 
@@ -115,7 +114,6 @@ impl AwsKmsProcess {
             .send()
             .await?;
 
-        // use arn as id to closer imitate prod behavior
         let id = response
             .key_metadata
             .and_then(|metadata| metadata.arn)
