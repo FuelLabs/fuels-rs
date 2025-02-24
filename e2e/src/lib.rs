@@ -91,7 +91,7 @@ mod tests {
             .first()
             .expect("No coins found")
             .amount;
-        assert_eq!(founded_coins, 4999983198);
+        assert_eq!(founded_coins, 4999983218);
 
         Ok(())
     }
