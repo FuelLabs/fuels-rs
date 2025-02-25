@@ -1698,7 +1698,7 @@ async fn can_configure_decoder_for_script_log_decoding() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "LogScript",
-            project = "e2e/sway/logs/script_needs_custom_decoder_logging"
+            project = "e2e/sway/scripts/script_needs_custom_decoder"
         )),
         LoadScript(
             name = "script_instance",
@@ -1710,7 +1710,7 @@ async fn can_configure_decoder_for_script_log_decoding() -> Result<()> {
     {
         // Cannot decode the produced log with too low max_tokens
         let response = script_instance
-            .main()
+            .main(true)
             .with_decoder_config(DecoderConfig {
                 max_tokens: 100,
                 ..Default::default()
@@ -1728,7 +1728,7 @@ async fn can_configure_decoder_for_script_log_decoding() -> Result<()> {
     {
         // When the token limit is bumped log decoding succeeds
         let response = script_instance
-            .main()
+            .main(true)
             .with_decoder_config(DecoderConfig {
                 max_tokens: 1001,
                 ..Default::default()
