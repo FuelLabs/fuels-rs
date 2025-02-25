@@ -187,6 +187,20 @@ impl WalletUnlocked {
             .map_err(|e| error!(Other, "{e}"))
     }
 
+    /// Encrypts the wallet's private key with the given password and saves it
+    /// to the given path named with given name.
+    pub fn encrypt_with_name<P, S>(&self, dir: P, password: S, name: &str) -> Result<String>
+    where
+        P: AsRef<Path>,
+        S: AsRef<[u8]>,
+    {
+        let mut rng = rand::thread_rng();
+
+        eth_keystore::encrypt_key(dir, &mut rng, *self.private_key, password, name)
+            .map_err(|e| error!(Other, "{e}"))
+    }
+
+
     /// Recreates a wallet from an encrypted JSON wallet given the provided path and password.
     pub fn load_keystore<P, S>(keypath: P, password: S, provider: Option<Provider>) -> Result<Self>
     where
