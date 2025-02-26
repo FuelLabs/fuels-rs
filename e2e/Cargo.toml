@@ -36,6 +36,7 @@ tar = { workspace = true }
 anyhow = { workspace = true }
 aws-sdk-kms = { workspace = true, features = ["rustls"] }
 fuels = { workspace = true }
+fuels-accounts = { workspace = true, features = ["std", "kms_signer", "test-helpers"] }
 testcontainers = { workspace = true }
 tokio = { workspace = true, features = ["test-util"] }
 

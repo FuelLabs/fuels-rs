@@ -7,8 +7,8 @@ mod tests {
         WalletsConfig,
     };
     use fuels::types::errors::Context;
-    use fuels_accounts::kms::AwsWallet;
-    use fuels_accounts::{Account, ViewOnlyAccount};
+    use fuels::accounts::kms::AwsWallet;
+    use fuels::accounts::{Account, ViewOnlyAccount};
 
     #[tokio::test(flavor = "multi_thread")]
     async fn fund_aws_wallet() -> Result<()> {
@@ -33,8 +33,6 @@ mod tests {
 
         let your_kms_key_id = key.id;
         let provider = wallet.provider().expect("No provider found").clone();
-
-        dbg!(key.kms_key.address());
 
         // ANCHOR: use_kms_wallet
         let wallet = AwsWallet::with_kms_key(your_kms_key_id, kms.client(), Some(provider)).await?;

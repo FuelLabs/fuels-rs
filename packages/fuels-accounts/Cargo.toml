@@ -15,8 +15,8 @@ async-trait = { workspace = true, default-features = false }
 # AWS KMS client
 aws-config = { workspace = true, features = [
   "behavior-version-latest",
-] }
-aws-sdk-kms = { workspace = true, features = ["default"] }
+], optional = true }
+aws-sdk-kms = { workspace = true, features = ["default"], optional = true }
 chrono = { workspace = true }
 cynic = { workspace = true, optional = true }
 elliptic-curve = { workspace = true, default-features = false }
@@ -53,3 +53,4 @@ std = [
   "dep:cynic",
 ]
 test-helpers = []
+kms_signer = ["dep:aws-sdk-kms", "dep:aws-config"]
