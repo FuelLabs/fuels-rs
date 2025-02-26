@@ -47,8 +47,8 @@ impl AwsKms {
         let port = container.get_host_port_ipv4(4566).await?;
         let url = format!("http://localhost:{}", port);
 
-        let config = AwsConfig::for_local_testing(url.clone()).await;
-        let client = AwsClient::new(&config);
+        let config = AwsConfig::for_testing(url.clone()).await;
+        let client = AwsClient::new(config);
 
         Ok(AwsKmsProcess {
             _container: container,
@@ -119,13 +119,21 @@ impl AwsKmsProcess {
             .and_then(|metadata| metadata.arn)
             .ok_or_else(|| anyhow::anyhow!("key arn missing from response"))?;
 
-        let kms_key = KmsKey::new(id.clone(), self.client.clone()).await?;
+        let kms_key = KmsKey::new(id.clone(), &self.client).await?;
 
         Ok(KmsTestKey {
             id,
             kms_key,
             url: self.url.clone(),
         })
+    }
+
+    pub fn client(&self) -> &AwsClient {
+        &self.client
+    }
+
+    pub fn url(&self) -> &str {
+        &self.url
     }
 }
 

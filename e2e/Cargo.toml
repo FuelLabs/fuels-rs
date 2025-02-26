@@ -23,7 +23,6 @@ fuels-accounts = { workspace = true, features = ["test-helpers"] }
 tai64 = { workspace = true }
 tempfile = { workspace = true }
 
-
 [build-dependencies]
 anyhow = { workspace = true, features = ["std"] }
 flate2 = { workspace = true, features = ["zlib"] }
@@ -34,11 +33,11 @@ semver = { workspace = true }
 tar = { workspace = true }
 
 [dependencies]
-testcontainers = { workspace = true }
-fuels = { workspace = true }
 anyhow = { workspace = true }
-tokio = { workspace = true, features = ["test-util"]}
 aws-sdk-kms = { workspace = true, features = ["rustls"] }
+fuels = { workspace = true }
+testcontainers = { workspace = true }
+tokio = { workspace = true, features = ["test-util"] }
 
 [features]
 default = ["fuels/default", "coin-cache", ]

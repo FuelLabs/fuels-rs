@@ -14,7 +14,14 @@ impl AbiEncode for [u8; 1000] {
     }
 }
 
-fn main() -> [u8; 1000] {
+fn main(log_instead_of_return: bool) -> Option<[u8; 1000]> {
     let arr: [u8; 1000] = [0; 1000];
-    arr
+
+    if log_instead_of_return {
+        log(arr);
+
+        return None;
+    }
+
+    Some(arr)
 }

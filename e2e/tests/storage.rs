@@ -24,7 +24,8 @@ async fn test_storage_initialization() -> Result<()> {
         LoadConfiguration::default().with_storage_configuration(storage_configuration),
     )?
     .deploy_if_not_exists(&wallet, TxPolicies::default())
-    .await?;
+    .await?
+    .contract_id;
 
     let contract_instance = MyContract::new(contract_id, wallet.clone());
 
@@ -53,7 +54,8 @@ async fn test_init_storage_automatically() -> Result<()> {
         LoadConfiguration::default(),
     )?
     .deploy_if_not_exists(&wallet, TxPolicies::default())
-    .await?;
+    .await?
+    .contract_id;
 
     let contract_methods = MyContract::new(contract_id, wallet.clone()).methods();
     {

@@ -1,4 +1,4 @@
-use crate::kms::aws::client::{AwsClient, AwsConfig};
+use crate::kms::aws::client::AwsClient;
 use crate::provider::Provider;
 use crate::wallet::Wallet;
 use crate::{Account, ViewOnlyAccount};
@@ -41,14 +41,26 @@ pub struct KmsKey {
 }
 
 impl KmsKey {
-    pub async fn new(key_id: String, client: AwsClient) -> Result<Self> {
-        Self::validate_key_type(&client, &key_id).await?;
-        let public_key = Self::fetch_public_key(&client, &key_id).await?;
+    pub fn key_id(&self) -> &String {
+        &self.key_id
+    }
+    pub fn public_key(&self) -> &Vec<u8> {
+        &self.public_key
+    }
+    pub fn fuel_address(&self) -> &Bech32Address {
+        &self.fuel_address
+    }
+}
+
+impl KmsKey {
+    pub async fn new(key_id: String, client: &AwsClient) -> Result<Self> {
+        Self::validate_key_type(client, &key_id).await?;
+        let public_key = Self::fetch_public_key(client, &key_id).await?;
         let fuel_address = Self::derive_fuel_address(&public_key)?;
 
         Ok(Self {
             key_id,
-            client,
+            client: client.clone(),
             public_key,
             fuel_address,
         })
@@ -191,11 +203,12 @@ impl KmsKey {
 impl AwsWallet {
     pub async fn with_kms_key(
         key_id: impl Into<String>,
+        aws_client: &AwsClient,
         provider: Option<Provider>,
     ) -> Result<Self> {
-        let config = AwsConfig::from_environment().await;
-        let client = AwsClient::new(&config);
-        let kms_key = KmsKey::new(key_id.into(), client).await?;
+        // let config = AwsConfig::from_environment().await;
+        // let client = AwsClient::new(&config);
+        let kms_key = KmsKey::new(key_id.into(), aws_client).await?;
 
         Ok(Self {
             view_account: Wallet::from_address(kms_key.fuel_address.clone(), provider),

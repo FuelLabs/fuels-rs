@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use async_trait::async_trait;
 use fuel_core_client::client::pagination::{PaginatedResult, PaginationRequest};
-use fuel_tx::{Output, Receipt, TxId, TxPointer, UtxoId};
+use fuel_tx::{Output, TxId, TxPointer, UtxoId};
 use fuel_types::{AssetId, Bytes32, ContractId, Nonce};
 use fuels_core::types::{
     bech32::{Bech32Address, Bech32ContractId},
@@ -15,6 +15,8 @@ use fuels_core::types::{
     transaction::{Transaction, TxPolicies},
     transaction_builders::{BuildableTransaction, ScriptTransactionBuilder, TransactionBuilder},
     transaction_response::TransactionResponse,
+    tx_response::TxResponse,
+    tx_status::Success,
 };
 
 use crate::{
@@ -24,6 +26,13 @@ use crate::{
     },
     provider::{Provider, ResourceFilter},
 };
+
+#[derive(Clone, Debug)]
+pub struct WithdrawToBaseResponse {
+    pub tx_status: Success,
+    pub tx_id: TxId,
+    pub nonce: Nonce,
+}
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync + Clone {
@@ -169,7 +178,7 @@ pub trait Account: ViewOnlyAccount {
         amount: u64,
         asset_id: AssetId,
         tx_policies: TxPolicies,
-    ) -> Result<(TxId, Vec<Receipt>)> {
+    ) -> Result<TxResponse> {
         let provider = self.try_provider()?;
 
         let inputs = self
@@ -196,9 +205,10 @@ pub trait Account: ViewOnlyAccount {
 
         let tx_status = provider.send_transaction_and_await_commit(tx).await?;
 
-        let receipts = tx_status.take_receipts_checked(None)?;
-
-        Ok((tx_id, receipts))
+        Ok(TxResponse {
+            tx_status: tx_status.take_success_checked(None)?,
+            tx_id,
+        })
     }
 
     /// Unconditionally transfers `balance` of type `asset_id` to
@@ -216,7 +226,7 @@ pub trait Account: ViewOnlyAccount {
         balance: u64,
         asset_id: AssetId,
         tx_policies: TxPolicies,
-    ) -> Result<(String, Vec<Receipt>)> {
+    ) -> Result<TxResponse> {
         let provider = self.try_provider()?;
 
         let zeroes = Bytes32::zeroed();
@@ -257,11 +267,13 @@ pub trait Account: ViewOnlyAccount {
 
         let consensus_parameters = provider.consensus_parameters().await?;
         let tx_id = tx.id(consensus_parameters.chain_id());
+
         let tx_status = provider.send_transaction_and_await_commit(tx).await?;
 
-        let receipts = tx_status.take_receipts_checked(None)?;
-
-        Ok((tx_id.to_string(), receipts))
+        Ok(TxResponse {
+            tx_status: tx_status.take_success_checked(None)?,
+            tx_id,
+        })
     }
 
     /// Withdraws an amount of the base asset to
@@ -272,7 +284,7 @@ pub trait Account: ViewOnlyAccount {
         to: &Bech32Address,
         amount: u64,
         tx_policies: TxPolicies,
-    ) -> Result<(TxId, Nonce, Vec<Receipt>)> {
+    ) -> Result<WithdrawToBaseResponse> {
         let provider = self.try_provider()?;
         let consensus_parameters = provider.consensus_parameters().await?;
 
@@ -292,16 +304,19 @@ pub trait Account: ViewOnlyAccount {
         self.adjust_for_fee(&mut tb, amount).await?;
 
         let tx = tb.build(provider).await?;
-
         let tx_id = tx.id(consensus_parameters.chain_id());
+
         let tx_status = provider.send_transaction_and_await_commit(tx).await?;
+        let success = tx_status.take_success_checked(None)?;
 
-        let receipts = tx_status.take_receipts_checked(None)?;
-
-        let nonce = extract_message_nonce(&receipts)
+        let nonce = extract_message_nonce(&success.receipts)
             .expect("MessageId could not be retrieved from tx receipts.");
 
-        Ok((tx_id, nonce, receipts))
+        Ok(WithdrawToBaseResponse {
+            tx_status: success,
+            tx_id,
+            nonce,
+        })
     }
 }
 
