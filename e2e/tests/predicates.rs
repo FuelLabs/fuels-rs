@@ -1370,8 +1370,8 @@ async fn predicate_tx_input_output() -> Result<()> {
     {
         transfer_to_predicate(&wallet_2, predicate.address(), 42, asset_id).await;
 
-        // Call contract method and add custom `wallet_2` input at first place
-        // and predicate at second
+        // Call contract method with custom `wallet_2` input at first place, predicate at second
+        // and custom change to `wallet_2`
         let wallet_input = wallet_2
             .get_asset_inputs_for_amount(asset_id, 10, None)
             .await?
@@ -1386,7 +1386,6 @@ async fn predicate_tx_input_output() -> Result<()> {
 
         let custom_inputs = vec![wallet_input, predicate_input];
 
-        // Add custom change output to `wallet_2`
         let custom_output = vec![Output::change(wallet_2.address().into(), 0, asset_id)];
 
         let value = contract_instance
@@ -1404,7 +1403,7 @@ async fn predicate_tx_input_output() -> Result<()> {
     {
         transfer_to_predicate(&wallet_2, predicate.address(), 42, asset_id).await;
 
-        // Add wrong owner coin from `wallet_1`
+        // Add coin with wrong owner (`wallet_1`)
         let wallet_input = wallet_1
             .get_asset_inputs_for_amount(asset_id, 10, None)
             .await?
