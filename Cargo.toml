@@ -42,7 +42,7 @@ rust-version = "1.81.0"
 version = "0.70.0"
 
 [workspace.dependencies]
-base64ct = "1.6.0"
+base64ct = "=1.6.0"
 Inflector = "0.11.4"
 anyhow = { version = "1.0", default-features = false }
 dialoguer = { version = "0.11", default-features = false }
