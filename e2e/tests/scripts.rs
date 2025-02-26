@@ -764,23 +764,26 @@ async fn script_tx_input_output() -> Result<()> {
     let asset_id = AssetId::zeroed();
 
     {
-        let custom_input = wallet_1
+        let custom_inputs = wallet_1
             .get_asset_inputs_for_amount(asset_id, 10, None)
             .await?
-            .pop()
-            .unwrap();
+            .into_iter()
+            .take(1)
+            .collect();
 
-        let custom_output = Output::change(wallet_1.address().into(), 0, asset_id);
+        let custom_output = vec![Output::change(wallet_1.address().into(), 0, asset_id)];
 
         // Input at first position is a coin owned by wallet_1
         // Output at first position is change to wallet_1
+        // ANCHOR: script_custom_inputs_outputs
         let _ = script_instance
             .main(0, 0)
-            .with_inputs(vec![custom_input])
-            .with_outputs(vec![custom_output])
+            .with_inputs(custom_inputs)
+            .with_outputs(custom_output)
             .add_signer(wallet_1.clone())
             .call()
             .await?;
+        // ANCHOR_END: script_custom_inputs_outputs
     }
     {
         // Input at first position is not a coin owned by wallet_1
