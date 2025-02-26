@@ -13,6 +13,7 @@ publish = false
 build = "build.rs"
 
 [dev-dependencies]
+#TODO: [issue](https://github.com/FuelLabs/fuels-rs/issues/1609)
 base64ct = "=1.6.0"
 # used in test assertions
 chrono = { workspace = true }

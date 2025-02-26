@@ -42,6 +42,8 @@ rust-version = "1.81.0"
 version = "0.70.0"
 
 [workspace.dependencies]
+#TODO: [issue](https://github.com/FuelLabs/fuels-rs/issues/1609)
+base64ct = "=1.6.0"
 Inflector = "0.11.4"
 anyhow = { version = "1.0", default-features = false }
 dialoguer = { version = "0.11", default-features = false }
@@ -117,4 +119,3 @@ fuels-macros = { version = "0.70.0", path = "./packages/fuels-macros", default-f
 fuels-programs = { version = "0.70.0", path = "./packages/fuels-programs", default-features = false }
 fuels-test-helpers = { version = "0.70.0", path = "./packages/fuels-test-helpers", default-features = false }
 versions-replacer = { version = "0.70.0", path = "./scripts/versions-replacer", default-features = false }
-base64ct = "=1.6.0"
