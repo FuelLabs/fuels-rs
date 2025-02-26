@@ -67,15 +67,13 @@ impl ContractCall {
         *self.custom_assets.entry((asset_id, to)).or_default() += amount;
     }
 
-    /// Add custom outputs to the `ContractCall`. These outputs will be placed
-    /// at the beginning.
+    /// Add custom outputs to the `ContractCall`.
     pub fn with_outputs(mut self, outputs: Vec<Output>) -> Self {
         self.outputs = outputs;
         self
     }
 
-    /// Add custom inputs to the `ContractCall`. These inputs will be placed
-    /// at the beginning.
+    /// Add custom inputs to the `ContractCall`.
     pub fn with_inputs(mut self, inputs: Vec<Input>) -> Self {
         self.inputs = inputs;
         self

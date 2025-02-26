@@ -21,15 +21,13 @@ pub struct ScriptCall {
 }
 
 impl ScriptCall {
-    /// Add custom outputs to the `ScriptCall`. These outputs will be placed
-    /// at the beginning.
+    /// Add custom outputs to the `ScriptCall`.
     pub fn with_outputs(mut self, outputs: Vec<Output>) -> Self {
         self.outputs = outputs;
         self
     }
 
-    /// Add custom inputs to the `ScriptCall`. These inputs will be placed
-    /// at the beginning.
+    /// Add custom inputs to the `ScriptCall`.
     pub fn with_inputs(mut self, inputs: Vec<Input>) -> Self {
         self.inputs = inputs;
         self
@@ -55,7 +53,7 @@ impl ScriptCall {
         // the `inputs` array we've sent over.
         let outputs = chain!(
             self.outputs.clone(),
-            generate_contract_outputs(num_of_contracts),
+            generate_contract_outputs(num_of_contracts, self.inputs.len()),
         )
         .collect();
 
