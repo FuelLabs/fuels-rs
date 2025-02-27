@@ -99,7 +99,7 @@ fn generate_builder_methods(resolved_configurables: &[ResolvedConfigurable]) -> 
              ..
          }| {
             let encoder_code = generate_encoder_code(ttype);
-            let name = safe_ident(&format!("with_{}", name));
+            let name = safe_ident(&format!("with_{name}"));
             quote! {
                 #[allow(non_snake_case)]
                 // Generate the `with_XXX` methods for setting the configurables

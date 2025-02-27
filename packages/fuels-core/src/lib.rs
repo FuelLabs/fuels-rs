@@ -166,7 +166,7 @@ impl OverrideConfigurables {
     fn dynamic_section_start(&self, binary: &[u8], data_offset: usize) -> Result<Option<usize>> {
         let mut min = None;
 
-        for (static_offset, _) in self.indirect.iter() {
+        for static_offset in self.indirect.keys() {
             let offset =
                 extract_offset_at(binary, *static_offset as usize)?.saturating_add(data_offset);
 
@@ -385,10 +385,39 @@ mod tests {
         }
     }
 
+    #[rustfmt::skip]
     const TEST_BINARY: [u8; 55] = [
-        0, 1, 2, 3, 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 16, 17, 18, 19, 20, 21, 22, 0, 0, 0, 0, 0, 0,
-        0, 30, 0, 0, 0, 0, 0, 0, 0, 33, 0, 0, 0, 0, 0, 0, 0, 36, 50, 51, 52, 53, 54, 55, 56, 57,
-        58,
+        // Header (8 bytes): produced by the Sway compiler.
+        0, 1, 2, 3, 4, 5, 6, 7,
+
+        // Data offset (8 bytes)
+        0, 0, 0, 0, 0, 0, 0, 16,
+
+        // Direct configurables (6 bytes):
+        // u16(4370)
+        17, 18,
+        // Additional direct configurable values
+        19, 20, 21, 22,
+
+        // First indirect pointer
+        // 30 + data_offset (16) = 46, so its data is at location 46 below.
+        0, 0, 0, 0, 0, 0, 0, 30,
+
+        // Second indirect pointer
+        // 33 + 16 = 49, so its data is at location 49 below.
+        0, 0, 0, 0, 0, 0, 0, 33,
+
+        // Third indirect pointer
+        // 36 + 16 = 52, so its data is at location 52 below.
+        0, 0, 0, 0, 0, 0, 0, 36,
+
+        // Dynamic section (9 bytes):
+        // Data for first indirect configurable (location 46)
+        50, 51, 52,
+        // Data for second indirect configurable (location 49)
+        53, 54, 55,
+        // Data for third indirect configurable (location 52)
+        56, 57, 58,
     ];
 
     fn setup_configurables() -> Configurables {
@@ -402,6 +431,8 @@ mod tests {
     #[test]
     fn try_from_direct() {
         let configurables_reader = ConfigurablesReader::load(TEST_BINARY.to_vec());
+        // try_from_direct(16) reads the direct configurable data starting at byte 16.
+        // It decodes [17, 18] as a big-endian u16 which is 4370.
         let value: u16 = configurables_reader.try_from_direct(16).unwrap();
 
         assert_eq!(4370, value);
@@ -410,6 +441,9 @@ mod tests {
     #[test]
     fn try_from_indirect() {
         let configurables_reader = ConfigurablesReader::load(TEST_BINARY.to_vec());
+        // try_from_indirect(22) reads the first indirect pointer at offset 22.
+        // The pointer's value is 30, and 30 + data_offset (16) = 46.
+        // The dynamic section at location 46 is [50, 51, 52].
         let value: [u8; 3] = configurables_reader.try_from_indirect(22).unwrap();
 
         assert_eq!([50, 51, 52], value);
@@ -445,11 +479,29 @@ mod tests {
 
         configurables.update_constants_in(&mut binary).unwrap();
 
+        #[rustfmt::skip]
         let expected_binary: [u8; 54] = [
-            0, 1, 2, 3, 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 16, 34, 36, 38, 40, 42, 44, 0, 0, 0, 0, 0,
-            0, 0, 30, 0, 0, 0, 0, 0, 0, 0, 32, 0, 0, 0, 0, 0, 0, 0, 35, 100, 102, 53, 54, 55, 56,
-            57, 58,
+            // Header (bytes 0..8)
+             0,  1,  2,  3,  4,  5,  6,  7,
+            // Data offset (bytes 8..16): 16
+             0,  0,  0,  0,  0,  0,  0, 16,
+            // Direct configurables (bytes 16..22): updated to [34,36,38,40,42,44]
+            34, 36, 38, 40, 42, 44,
+            // First indirect pointer (bytes 22..30): remains value 30
+             0,  0,  0,  0,  0,  0,  0, 30,
+            // Second indirect pointer (bytes 30..38): updated to value 32
+             0,  0,  0,  0,  0,  0,  0, 32,
+            // Third indirect pointer (bytes 38..46): updated to value 35
+             0,  0,  0,  0,  0,  0,  0, 35,
+            // Dynamic section (bytes 46..54):
+            // For pointer 30: updated data [100,102]
+            100, 102,
+            // For pointer 32: data remains [53,54,55]
+            53, 54, 55,
+            // For pointer 35: data remains [56,57,58]
+            56, 57, 58,
         ];
+
 
         pretty_assertions::assert_eq!(&expected_binary, binary.as_slice());
     }
@@ -466,10 +518,27 @@ mod tests {
 
         configurables.update_constants_in(&mut binary).unwrap();
 
+        #[rustfmt::skip]
         let expected_binary: [u8; 56] = [
-            0, 1, 2, 3, 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 16, 34, 36, 38, 40, 42, 44, 0, 0, 0, 0, 0,
-            0, 0, 30, 0, 0, 0, 0, 0, 0, 0, 34, 0, 0, 0, 0, 0, 0, 0, 37, 100, 102, 103, 104, 53, 54,
-            55, 56, 57, 58,
+            // Header (bytes 0..8)
+             0,  1,  2,  3,  4,  5,  6,  7,
+            // Data offset (bytes 8..16): 16
+             0,  0,  0,  0,  0,  0,  0, 16,
+            // Direct configurables (bytes 16..22): updated to [34,36,38,40,42,44]
+            34, 36, 38, 40, 42, 44,
+            // First indirect pointer (bytes 22..30): remains value 30
+             0,  0,  0,  0,  0,  0,  0, 30,
+            // Second indirect pointer (bytes 30..38): updated to value 34
+             0,  0,  0,  0,  0,  0,  0, 34,
+            // Third indirect pointer (bytes 38..46): updated to value 37
+             0,  0,  0,  0,  0,  0,  0, 37,
+            // Dynamic section (bytes 46..56):
+            // For pointer 30: updated data [100,102,103,104] (4 bytes)
+            100, 102, 103, 104,
+            // For pointer 34: second indirect data remains [53,54,55] (3 bytes)
+            53, 54, 55,
+            // For pointer 37: third indirect data remains [56,57,58] (3 bytes)
+            56, 57, 58,
         ];
 
         pretty_assertions::assert_eq!(&expected_binary, binary.as_slice());
@@ -485,10 +554,27 @@ mod tests {
 
         configurables.update_constants_in(&mut binary).unwrap();
 
+        #[rustfmt::skip]
         let expected_binary: [u8; 54] = [
-            0, 1, 2, 3, 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 16, 34, 36, 38, 40, 42, 44, 0, 0, 0, 0, 0,
-            0, 0, 30, 0, 0, 0, 0, 0, 0, 0, 33, 0, 0, 0, 0, 0, 0, 0, 35, 50, 51, 52, 106, 108, 56,
-            57, 58,
+            // Header (bytes 0..8)
+             0,  1,  2,  3,  4,  5,  6,  7,
+            // Data offset (bytes 8..16): 16
+             0,  0,  0,  0,  0,  0,  0, 16,
+            // Direct configurables (bytes 16..22): [34,36,38,40,42,44]
+            34, 36, 38, 40, 42, 44,
+            // First indirect pointer (bytes 22..30): remains value 30
+             0,  0,  0,  0,  0,  0,  0, 30,
+            // Second indirect pointer (bytes 30..38): remains value 33
+             0,  0,  0,  0,  0,  0,  0, 33,
+            // Third indirect pointer (bytes 38..46): remains value 35
+             0,  0,  0,  0,  0,  0,  0, 35,
+            // Dynamic section (bytes 46..54):
+            // For pointer 30: data remains [50,51,52]
+            50, 51, 52,
+            // For pointer 33: updated data [106,108] (2 bytes)
+            106, 108,
+            // For pointer 35: data remains [56,57,58]
+            56, 57, 58,
         ];
 
         pretty_assertions::assert_eq!(&expected_binary, binary.as_slice());
@@ -506,10 +592,27 @@ mod tests {
 
         configurables.update_constants_in(&mut binary).unwrap();
 
+        #[rustfmt::skip]
         let expected_binary: [u8; 56] = [
-            0, 1, 2, 3, 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 16, 34, 36, 38, 40, 42, 44, 0, 0, 0, 0, 0,
-            0, 0, 30, 0, 0, 0, 0, 0, 0, 0, 33, 0, 0, 0, 0, 0, 0, 0, 37, 50, 51, 52, 106, 108, 110,
-            112, 56, 57, 58,
+            // Header (bytes 0..8)
+             0,  1,  2,  3,  4,  5,  6,  7,
+            // Data offset (bytes 8..16): 16
+             0,  0,  0,  0,  0,  0,  0, 16,
+            // Direct configurables (bytes 16..22): [34,36,38,40,42,44]
+            34, 36, 38, 40, 42, 44,
+            // First indirect pointer (bytes 22..30): remains value 30
+             0,  0,  0,  0,  0,  0,  0, 30,
+            // Second indirect pointer (bytes 30..38): remains value 33
+             0,  0,  0,  0,  0,  0,  0, 33,
+            // Third indirect pointer (bytes 38..46): updated to value 37
+             0,  0,  0,  0,  0,  0,  0, 37,
+            // Dynamic section (bytes 46..56):
+            // For pointer 30: data remains [50,51,52]
+            50, 51, 52,
+            // For pointer 33: updated data [106,108,110,112] (4 bytes)
+            106, 108, 110, 112,
+            // For pointer 37: data remains [56,57,58]
+            56, 57, 58,
         ];
 
         pretty_assertions::assert_eq!(&expected_binary, binary.as_slice());
@@ -525,9 +628,26 @@ mod tests {
 
         configurables.update_constants_in(&mut binary).unwrap();
 
+        #[rustfmt::skip]
         let expected_binary: [u8; 54] = [
-            0, 1, 2, 3, 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 16, 34, 36, 38, 40, 42, 44, 0, 0, 0, 0, 0,
-            0, 0, 30, 0, 0, 0, 0, 0, 0, 0, 33, 0, 0, 0, 0, 0, 0, 0, 36, 50, 51, 52, 53, 54, 55,
+            // Header (bytes 0..8)
+             0,  1,  2,  3,  4,  5,  6,  7,
+            // Data offset (bytes 8..16): 16
+             0,  0,  0,  0,  0,  0,  0, 16,
+            // Direct configurables (bytes 16..22): [34,36,38,40,42,44]
+            34, 36, 38, 40, 42, 44,
+            // First indirect pointer (bytes 22..30): remains value 30
+             0,  0,  0,  0,  0,  0,  0, 30,
+            // Second indirect pointer (bytes 30..38): remains value 33
+             0,  0,  0,  0,  0,  0,  0, 33,
+            // Third indirect pointer (bytes 38..46): remains value 36
+             0,  0,  0,  0,  0,  0,  0, 36,
+            // Dynamic section (bytes 46..54):
+            // For pointer 30: data remains [50,51,52]
+            50, 51, 52,
+            // For pointer 33: data remains [53,54,55]
+            53, 54, 55,
+            // For pointer 36: updated data [112,114]
             112, 114,
         ];
 
@@ -546,9 +666,26 @@ mod tests {
 
         configurables.update_constants_in(&mut binary).unwrap();
 
+        #[rustfmt::skip]
         let expected_binary: [u8; 56] = [
-            0, 1, 2, 3, 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 16, 34, 36, 38, 40, 42, 44, 0, 0, 0, 0, 0,
-            0, 0, 30, 0, 0, 0, 0, 0, 0, 0, 33, 0, 0, 0, 0, 0, 0, 0, 36, 50, 51, 52, 53, 54, 55,
+            // Header (bytes 0..8)
+             0,  1,  2,  3,  4,  5,  6,  7,
+            // Data offset (bytes 8..16): 16
+             0,  0,  0,  0,  0,  0,  0, 16,
+            // Direct configurables (bytes 16..22): [34,36,38,40,42,44]
+            34, 36, 38, 40, 42, 44,
+            // First indirect pointer (bytes 22..30): remains value 30
+             0,  0,  0,  0,  0,  0,  0, 30,
+            // Second indirect pointer (bytes 30..38): remains value 33
+             0,  0,  0,  0,  0,  0,  0, 33,
+            // Third indirect pointer (bytes 38..46): remains value 36
+             0,  0,  0,  0,  0,  0,  0, 36,
+            // Dynamic section (bytes 46..56):
+            // For pointer 30: data remains [50,51,52]
+            50, 51, 52,
+            // For pointer 33: data remains [53,54,55]
+            53, 54, 55,
+            // For pointer 36: updated data [112,114,116,118]
             112, 114, 116, 118,
         ];
 
@@ -571,10 +708,27 @@ mod tests {
 
         configurables.update_constants_in(&mut binary).unwrap();
 
+        #[rustfmt::skip]
         let expected_binary: [u8; 55] = [
-            0, 1, 2, 3, 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 16, 34, 36, 38, 40, 42, 44, 0, 0, 0, 0, 0,
-            0, 0, 30, 0, 0, 0, 0, 0, 0, 0, 32, 0, 0, 0, 0, 0, 0, 0, 36, 100, 101, 102, 103, 104,
-            105, 106, 107, 108,
+            // Header (bytes 0..8)
+             0,  1,  2,  3,  4,  5,  6,  7,
+            // Data offset (bytes 8..16): 16
+             0,  0,  0,  0,  0,  0,  0, 16,
+            // Direct configurables (bytes 16..22): updated to [34,36,38,40,42,44]
+            34, 36, 38, 40, 42, 44,
+            // First indirect pointer (bytes 22..30): remains value 30
+             0,  0,  0,  0,  0,  0,  0, 30,
+            // Second indirect pointer (bytes 30..38): updated to value 32
+             0,  0,  0,  0,  0,  0,  0, 32,
+            // Third indirect pointer (bytes 38..46): remains value 36
+             0,  0,  0,  0,  0,  0,  0, 36,
+            // Dynamic section (bytes 46..55):
+            // For pointer 30: updated data [100,101]
+            100, 101,
+            // For pointer 32: updated data [102,103,104,105]
+            102, 103, 104, 105,
+            // For pointer 36: updated data [106, 107, 108]
+            106, 107, 108
         ];
 
         pretty_assertions::assert_eq!(&expected_binary, binary.as_slice());
