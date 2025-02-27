@@ -43,7 +43,7 @@ version = "0.70.0"
 
 [workspace.dependencies]
 #TODO: [issue](https://github.com/FuelLabs/fuels-rs/issues/1609)
-base64ct = "=1.6.0"
+base64ct = "<1.7.0"
 Inflector = "0.11.4"
 anyhow = { version = "1.0", default-features = false }
 dialoguer = { version = "0.11", default-features = false }
