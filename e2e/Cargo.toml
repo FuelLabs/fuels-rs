@@ -38,7 +38,7 @@ testcontainers = { workspace = true }
 tokio = { workspace = true, features = ["test-util"] }
 
 [features]
-default = ["fuels/default", "coin-cache", ]
+default = ["fuels/default", "coin-cache"]
 fuel-core-lib = ["fuels/fuel-core-lib"]
 rocksdb = ["fuels/rocksdb"]
 coin-cache = ["fuels/coin-cache"]
