@@ -53,4 +53,4 @@ std = [
   "dep:cynic",
 ]
 test-helpers = []
-kms_signer = ["dep:aws-sdk-kms", "dep:aws-config"]
+kms-signer = ["dep:aws-sdk-kms", "dep:aws-config"]

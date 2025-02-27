@@ -36,7 +36,7 @@ mod tests {
             .first()
             .expect("No coins found")
             .amount;
-        assert_eq!(founded_coins, 500000000);
+        assert_eq!(founded_coins, amount);
         Ok(())
     }
 

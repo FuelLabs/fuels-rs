@@ -11,7 +11,7 @@ pub mod wallet;
 
 #[cfg(feature = "std")]
 pub use account::*;
-#[cfg(feature = "kms_signer")]
+#[cfg(feature = "kms-signer")]
 pub mod kms;
 
 #[cfg(feature = "coin-cache")]
