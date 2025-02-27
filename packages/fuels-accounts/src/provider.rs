@@ -786,7 +786,7 @@ impl Provider {
             .message_proof(
                 tx_id,
                 nonce,
-                commit_block_id.map(Into::into),
+                commit_block_id,
                 commit_block_height.map(Into::into),
             )
             .await
