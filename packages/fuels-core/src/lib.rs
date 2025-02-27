@@ -137,7 +137,6 @@ impl OverrideConfigurables {
             let ptr = start_of_dyn_section
                 .saturating_add(new_dyn_section.len())
                 .saturating_sub(data_offset);
-            dbg!(&ptr);
             let ptr_encoded = ABIEncoder::default().encode(&[(ptr as u64).into_token()])?;
 
             new_dyn_section.extend(data);
