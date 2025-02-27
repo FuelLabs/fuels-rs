@@ -206,8 +206,6 @@ impl AwsWallet {
         aws_client: &AwsClient,
         provider: Option<Provider>,
     ) -> Result<Self> {
-        // let config = AwsConfig::from_environment().await;
-        // let client = AwsClient::new(&config);
         let kms_key = KmsKey::new(key_id.into(), aws_client).await?;
 
         Ok(Self {

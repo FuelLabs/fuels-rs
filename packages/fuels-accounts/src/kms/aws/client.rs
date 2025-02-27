@@ -1,12 +1,21 @@
 use aws_config::{
     default_provider::credentials::DefaultCredentialsChain, BehaviorVersion, Region, SdkConfig,
 };
+use aws_sdk_kms::config::Credentials;
 use aws_sdk_kms::Client;
 
 #[derive(Clone)]
 pub struct AwsConfig {
     sdk_config: SdkConfig,
 }
+
+// aws_sdk_kms::config::Credentials::new(
+// "test",
+// "test",
+// None,
+// None,
+// "Static Test Credentials",
+// )
 
 impl AwsConfig {
     pub async fn from_environment() -> Self {
@@ -19,17 +28,15 @@ impl AwsConfig {
     }
 
     #[cfg(feature = "test-helpers")]
-    pub async fn for_testing(endpoint_url: String) -> Self {
+    pub async fn for_testing(
+        credentials: Credentials,
+        region: Region,
+        endpoint_url: String,
+    ) -> Self {
         let sdk_config = aws_config::defaults(BehaviorVersion::latest())
-            .credentials_provider(aws_sdk_kms::config::Credentials::new(
-                "test",
-                "test",
-                None,
-                None,
-                "Static Test Credentials",
-            ))
+            .credentials_provider(credentials)
             .endpoint_url(endpoint_url)
-            .region(Region::new("us-east-1")) // Test region
+            .region(region)
             .load()
             .await;
 
@@ -58,7 +65,7 @@ impl AwsClient {
         Self { client }
     }
 
-    pub fn inner(&self) -> &aws_sdk_kms::Client {
+    pub fn inner(&self) -> &Client {
         &self.client
     }
 }
