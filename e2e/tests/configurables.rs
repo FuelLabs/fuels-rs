@@ -29,11 +29,13 @@ async fn contract_default_configurables(is_regular: bool) -> Result<()> {
         contract
             .deploy_if_not_exists(&wallet, TxPolicies::default())
             .await?
+            .contract_id
     } else {
         contract
             .convert_to_loader(124)?
             .deploy_if_not_exists(&wallet, TxPolicies::default())
             .await?
+            .contract_id
     };
 
     let contract_instance = MyContract::new(contract_id, wallet.clone());
@@ -155,11 +157,13 @@ async fn contract_configurables(is_regular: bool) -> Result<()> {
         contract
             .deploy_if_not_exists(&wallet, TxPolicies::default())
             .await?
+            .contract_id
     } else {
         contract
             .convert_to_loader(124)?
             .deploy_if_not_exists(&wallet, TxPolicies::default())
             .await?
+            .contract_id
     };
 
     let contract_instance = MyContract::new(contract_id, wallet.clone());
@@ -217,11 +221,13 @@ async fn contract_dyn_configurables(is_regular: bool) -> Result<()> {
         contract
             .deploy_if_not_exists(&wallet, TxPolicies::default())
             .await?
+            .contract_id
     } else {
         contract
             .convert_to_loader(124)?
             .deploy_if_not_exists(&wallet, TxPolicies::default())
             .await?
+            .contract_id
     };
 
     let contract_instance = MyContract::new(contract_id, wallet.clone());

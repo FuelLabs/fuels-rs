@@ -36,7 +36,6 @@ members = [
   'sway/logs/contract_with_contract_logs',
   'sway/logs/script_heap_logs',
   'sway/logs/script_logs',
-  'sway/logs/script_needs_custom_decoder_logging',
   'sway/logs/script_with_contract_logs',
   'sway/predicates/basic_predicate',
   'sway/predicates/predicate_blobs',
@@ -120,5 +119,6 @@ members = [
   'sway/types/scripts/script_vectors',
 ]
 
+#TODO: [issue](https://github.com/FuelLabs/fuels-rs/issues/1610)
 [patch.'https://github.com/fuellabs/sway']
 std = { git = "https://github.com/fuellabs/sway", branch = "xunilrj/dynamic-types-configurables" }
