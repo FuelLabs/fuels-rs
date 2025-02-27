@@ -9,14 +9,6 @@ pub struct AwsConfig {
     sdk_config: SdkConfig,
 }
 
-// aws_sdk_kms::config::Credentials::new(
-// "test",
-// "test",
-// None,
-// None,
-// "Static Test Credentials",
-// )
-
 impl AwsConfig {
     pub async fn from_environment() -> Self {
         let loader = aws_config::defaults(BehaviorVersion::latest())

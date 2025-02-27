@@ -2,25 +2,17 @@
 mod tests {
     use anyhow::Result;
     use e2e::e2e_helpers::start_aws_kms;
-    use fuels::prelude::{
-        launch_custom_provider_and_get_wallets, AssetId, Contract, LoadConfiguration, TxPolicies,
-        WalletsConfig,
-    };
-    use fuels::types::errors::Context;
     use fuels::accounts::kms::AwsWallet;
     use fuels::accounts::{Account, ViewOnlyAccount};
+    use fuels::prelude::{
+        launch_provider_and_get_wallet, AssetId, Contract, LoadConfiguration, TxPolicies,
+    };
+    use fuels::types::errors::Context;
 
     #[tokio::test(flavor = "multi_thread")]
     async fn fund_aws_wallet() -> Result<()> {
         let kms = start_aws_kms(false).await?;
-
-        let mut wallets = launch_custom_provider_and_get_wallets(
-            WalletsConfig::new(Some(1), None, None),
-            None,
-            None,
-        )
-        .await?;
-        let wallet = wallets.first_mut().expect("No wallets found");
+        let wallet = launch_provider_and_get_wallet().await?;
 
         let amount = 500000000;
         let key = kms.create_key().await?;
@@ -49,16 +41,10 @@ mod tests {
     }
 
     #[tokio::test(flavor = "multi_thread")]
-    async fn deploy_contract() -> anyhow::Result<()> {
+    async fn deploy_contract() -> Result<()> {
         let kms = start_aws_kms(false).await?;
 
-        let mut wallets = launch_custom_provider_and_get_wallets(
-            WalletsConfig::new(Some(1), None, None),
-            None,
-            None,
-        )
-        .await?;
-        let wallet = wallets.first_mut().expect("No wallets found");
+        let wallet = launch_provider_and_get_wallet().await?;
 
         let amount = 500000000;
         let key = kms.create_key().await?;
@@ -96,6 +82,7 @@ mod tests {
             .first()
             .expect("No coins found")
             .amount;
+
         assert_eq!(founded_coins, 499999999);
 
         Ok(())
