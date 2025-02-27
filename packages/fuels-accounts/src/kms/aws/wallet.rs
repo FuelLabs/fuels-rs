@@ -25,9 +25,7 @@ use k256::{
     PublicKey as K256PublicKey,
 };
 
-/// Error prefix for AWS KMS related operations
 const AWS_KMS_ERROR_PREFIX: &str = "AWS KMS Error";
-/// Expected key specification for AWS KMS keys
 const EXPECTED_KEY_SPEC: KeySpec = KeySpec::EccSecgP256K1;
 
 /// A wallet implementation that uses AWS KMS for signing
@@ -37,7 +35,6 @@ pub struct AwsWallet {
     kms_key: KmsKey,
 }
 
-/// Represents an AWS KMS key with Fuel-compatible address
 #[derive(Clone, Debug)]
 pub struct KmsKey {
     key_id: String,
@@ -210,7 +207,6 @@ impl KmsKey {
         Signature::from_bytes(bytes)
     }
 
-    /// Returns the Fuel address associated with this key
     pub fn address(&self) -> &Bech32Address {
         &self.fuel_address
     }
