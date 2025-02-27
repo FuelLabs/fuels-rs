@@ -8,4 +8,3 @@ If you need to add specific inputs and outputs to contract calls, you can use th
 ```
 
 > **Note:** if custom inputs include coins that need to be signed, use the `add_signer` method to add the appropriate signer.
-
