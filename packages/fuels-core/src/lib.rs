@@ -163,6 +163,9 @@ impl OverrideConfigurables {
         Ok(())
     }
 
+    /// Each indirect configurable holds an `offset` relative to the `data_offset`. When adding the
+    /// indirect's `offset` and the `data_offset` we get a pointer to the dynamic data.
+    /// This function finds the minimal pointer i.e. the beginning of the dynamic data.
     fn dynamic_section_start(&self, binary: &[u8], data_offset: usize) -> Result<Option<usize>> {
         let mut min = None;
 
@@ -501,7 +504,6 @@ mod tests {
             // For pointer 35: data remains [56,57,58]
             56, 57, 58,
         ];
-
 
         pretty_assertions::assert_eq!(&expected_binary, binary.as_slice());
     }
