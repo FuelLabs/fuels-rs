@@ -163,7 +163,10 @@ pub trait TransactionBuilder: BuildableTransaction + Send + sealed::Sealed {
     type TxType: Transaction;
 
     fn add_signer(&mut self, signer: impl Signer + Send + Sync) -> Result<&mut Self>;
-    fn add_signers(&mut self, signers: &[Arc<dyn Signer + Send + Sync>]) -> Result<&mut Self>;
+    fn add_signers<'a>(
+        &mut self,
+        signers: impl IntoIterator<Item = &'a std::sync::Arc<dyn Signer + Send + Sync>>,
+    ) -> Result<&mut Self>;
     async fn estimate_max_fee(&self, provider: impl DryRunner) -> Result<u64>;
     fn enable_burn(self, enable: bool) -> Self;
     fn with_tx_policies(self, tx_policies: TxPolicies) -> Self;
@@ -199,7 +202,7 @@ macro_rules! impl_tx_builder_trait {
                 Ok(self)
             }
 
-            fn add_signers(&mut self, signers: &[std::sync::Arc<dyn Signer + Send + Sync>]) -> Result<&mut Self> {
+            fn add_signers<'a>(&mut self, signers: impl IntoIterator<Item=&'a std::sync::Arc<dyn Signer + Send + Sync>>) -> Result<&mut Self> {
                 for signer in signers {
                     self.check_signer_address(signer.address())?;
 
