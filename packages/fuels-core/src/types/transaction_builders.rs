@@ -190,7 +190,7 @@ macro_rules! impl_tx_builder_trait {
 
 
             fn add_signer(&mut self, signer: impl Signer + Send + Sync) -> Result<&mut Self> {
-                self.check_signer_address(signer.address())?;
+                self.validate_no_signer_available(signer.address())?;
 
 
                 let index_offset = self.unresolved_signers.len() as u64;
@@ -204,7 +204,7 @@ macro_rules! impl_tx_builder_trait {
 
             fn add_signers<'a>(&mut self, signers: impl IntoIterator<Item=&'a std::sync::Arc<dyn Signer + Send + Sync>>) -> Result<&mut Self> {
                 for signer in signers {
-                    self.check_signer_address(signer.address())?;
+                    self.validate_no_signer_available(signer.address())?;
 
                     let index_offset = self.unresolved_signers.len() as u64;
                     self.unresolved_witness_indexes
@@ -313,7 +313,7 @@ macro_rules! impl_tx_builder_trait {
         }
 
         impl $ty {
-            fn check_signer_address(&self, address: &$crate::types::bech32::Bech32Address) -> Result<()> {
+            fn validate_no_signer_available(&self, address: &$crate::types::bech32::Bech32Address) -> Result<()> {
                 if self
                     .unresolved_witness_indexes
                     .owner_to_idx_offset
