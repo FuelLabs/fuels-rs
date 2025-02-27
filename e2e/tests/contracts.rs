@@ -2635,10 +2635,8 @@ async fn multicall_tx_input_output() -> Result<()> {
     ));
     let contract_binary = "sway/contracts/tx_input_output/out/release/tx_input_output.bin";
 
-    let get_contract_instance = async |wallet: &WalletUnlocked| {
-        // Set `wallet` as the custom input owner
-        let configurables =
-            TxContractConfigurables::default().with_OWNER(wallet.address().into())?;
+    let get_contract_instance = |owner: Address, wallet_for_fees: WalletUnlocked| async move {
+        let configurables = TxContractConfigurables::default().with_OWNER(owner)?;
 
         let contract = Contract::load_from(
             contract_binary,
@@ -2646,15 +2644,19 @@ async fn multicall_tx_input_output() -> Result<()> {
         )?;
 
         let contract_id = contract
-            .deploy_if_not_exists(&wallet_2, TxPolicies::default())
+            .deploy_if_not_exists(&wallet_for_fees, TxPolicies::default())
             .await?
             .contract_id;
 
-        fuels::types::errors::Result::<_>::Ok(TxContract::new(contract_id, wallet_3.clone()))
+        fuels::types::errors::Result::<_>::Ok(TxContract::new(contract_id, wallet_for_fees))
     };
 
-    let contract_instance_1 = get_contract_instance(&wallet_1).await?;
-    let contract_instance_2 = get_contract_instance(&wallet_2).await?;
+    // Set `wallet_1` as owner
+    let contract_instance_1 =
+        get_contract_instance(wallet_1.address().into(), wallet_3.clone()).await?;
+    // Set `wallet_2` as owner
+    let contract_instance_2 =
+        get_contract_instance(wallet_2.address().into(), wallet_3.clone()).await?;
     let asset_id = AssetId::zeroed();
 
     {
