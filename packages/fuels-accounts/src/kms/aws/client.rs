@@ -1,5 +1,6 @@
 pub use aws_config::{
-    default_provider::credentials::DefaultCredentialsChain, BehaviorVersion, Region, SdkConfig, defaults
+    default_provider::credentials::DefaultCredentialsChain, defaults, BehaviorVersion, Region,
+    SdkConfig,
 };
 pub use aws_sdk_kms::config::Credentials;
 use aws_sdk_kms::Client;
