@@ -108,5 +108,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_get_kms() {}
+    fn test_get_kms() {
+        let config = GoogleConfig::new("fuel-dev-451516".to_string(), "location".to_string(), None);
+
+
+        CredentialsFile::new()
+
+    }
 }
