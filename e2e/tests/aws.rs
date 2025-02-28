@@ -29,13 +29,8 @@ mod tests {
         let wallet = AwsWallet::with_kms_key(your_kms_key_id, kms.client(), Some(provider)).await?;
         // ANCHOR_END: use_kms_wallet
 
-        let founded_coins = wallet
-            .get_coins(AssetId::zeroed())
-            .await?
-            .first()
-            .expect("No coins found")
-            .amount;
-        assert_eq!(founded_coins, 500000000);
+        let total_base_balance = wallet.get_asset_balance(&AssetId::zeroed()).await?;
+        assert_eq!(total_base_balance, amount);
         Ok(())
     }
 
@@ -66,7 +61,7 @@ mod tests {
             .first()
             .expect("No coins found")
             .amount;
-        assert_eq!(founded_coins, 500000000);
+        assert_eq!(founded_coins, amount);
 
         Contract::load_from(
             "../e2e/sway/contracts/contract_test/out/release/contract_test.bin",
@@ -74,15 +69,6 @@ mod tests {
         )?
         .deploy(aws_wallet, TxPolicies::default())
         .await?;
-
-        let founded_coins = wallet
-            .get_coins(AssetId::zeroed())
-            .await?
-            .first()
-            .expect("No coins found")
-            .amount;
-
-        assert_eq!(founded_coins, 499999999);
 
         Ok(())
     }

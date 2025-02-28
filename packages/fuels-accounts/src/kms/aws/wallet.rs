@@ -1,5 +1,5 @@
 use crate::accounts_utils::try_provider_error;
-use crate::kms::aws::client::AwsClient;
+pub use crate::kms::aws::client::AwsClient;
 use crate::provider::Provider;
 use crate::wallet::Wallet;
 use crate::{Account, ViewOnlyAccount};

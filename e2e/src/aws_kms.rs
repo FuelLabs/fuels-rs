@@ -1,6 +1,7 @@
-use anyhow::Context;
-use aws_sdk_kms::config::{Credentials, Region};
-use fuels::accounts::kms::{AwsClient, AwsConfig, KmsKey};
+use fuels::accounts::kms::{defaults, AwsClient, BehaviorVersion, Credentials, KmsKey, Region};
+use fuels::prelude::Error;
+use fuels::types::errors::Context;
+use fuels::types::errors::Result;
 use testcontainers::{core::ContainerPort, runners::AsyncRunner};
 use tokio::io::AsyncBufReadExt;
 
@@ -35,23 +36,33 @@ impl AwsKms {
         self
     }
 
-    pub async fn start(self) -> anyhow::Result<AwsKmsProcess> {
+    pub async fn start(self) -> Result<AwsKmsProcess> {
         let container = AwsKmsImage
             .start()
             .await
+            .map_err(|e| Error::Other(e.to_string()))
             .with_context(|| "Failed to start KMS container")?;
 
         if self.show_logs {
             spawn_log_printer(&container);
         }
 
-        let port = container.get_host_port_ipv4(4566).await?;
+        let port = container
+            .get_host_port_ipv4(4566)
+            .await
+            .map_err(|e| Error::Other(e.to_string()))?;
         let url = format!("http://localhost:{}", port);
 
         let credentials = Credentials::new("test", "test", None, None, "Static Test Credentials");
         let region = Region::new("us-east-1");
 
-        let config = AwsConfig::for_testing(credentials, region, url.clone()).await;
+        let config = defaults(BehaviorVersion::latest())
+            .credentials_provider(credentials)
+            .endpoint_url(url.clone())
+            .region(region)
+            .load()
+            .await;
+
         let client = AwsClient::new(config);
 
         Ok(AwsKmsProcess {

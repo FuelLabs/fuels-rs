@@ -11,8 +11,6 @@ description = "Fuel Rust SDK accounts."
 
 [dependencies]
 async-trait = { workspace = true, default-features = false }
-
-# AWS KMS client
 aws-config = { workspace = true, features = [
   "behavior-version-latest",
 ], optional = true }
