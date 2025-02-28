@@ -35,6 +35,9 @@ tai64 = { workspace = true, features = ["serde"] }
 thiserror = { workspace = true, default-features = false }
 tokio = { workspace = true, features = ["full"], optional = true }
 zeroize = { workspace = true, features = ["derive"] }
+google-cloud-kms = { workspace = true, features = ["auth"], optional = true }
+prost = "0.13.5"
+tonic = "0.12.3"
 
 [dev-dependencies]
 fuel-tx = { workspace = true, features = ["test-helpers", "random"] }
@@ -53,4 +56,4 @@ std = [
   "dep:cynic",
 ]
 test-helpers = []
-kms_signer = ["dep:aws-sdk-kms", "dep:aws-config"]
+kms_signer = ["dep:aws-sdk-kms", "dep:aws-config", "dep:google-cloud-kms"]

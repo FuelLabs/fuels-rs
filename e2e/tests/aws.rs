@@ -87,4 +87,34 @@ mod tests {
 
         Ok(())
     }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn fund_google_wallet() -> Result<()> {
+        // let wallet = launch_provider_and_get_wallet().await?;
+        //
+        // let amount = 500000000;
+        // // let key = kms.create_key().await?;
+        // let address = key.kms_key.address().clone();
+        //
+        // wallet
+        //     .transfer(&address, amount, AssetId::zeroed(), TxPolicies::default())
+        //     .await
+        //     .context("Failed to transfer funds")?;
+        //
+        // // let your_kms_key_id = key.id;
+        // let provider = wallet.provider().expect("No provider found").clone();
+        //
+        // // ANCHOR: use_kms_wallet
+        // // let wallet = AwsWallet::with_kms_key(your_kms_key_id, kms.client(), Some(provider)).await?;
+        // // ANCHOR_END: use_kms_wallet
+        //
+        // let founded_coins = wallet
+        //     .get_coins(AssetId::zeroed())
+        //     .await?
+        //     .first()
+        //     .expect("No coins found")
+        //     .amount;
+        // assert_eq!(founded_coins, 500000000);
+        Ok(())
+    }
 }
