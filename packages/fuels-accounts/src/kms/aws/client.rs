@@ -10,15 +10,6 @@ pub struct AwsConfig {
 }
 
 impl AwsConfig {
-    pub async fn from_environment() -> Self {
-        let loader = aws_config::defaults(BehaviorVersion::latest())
-            .credentials_provider(DefaultCredentialsChain::builder().build().await);
-
-        Self {
-            sdk_config: loader.load().await,
-        }
-    }
-
     #[cfg(feature = "test-helpers")]
     pub async fn for_testing(
         credentials: Credentials,
