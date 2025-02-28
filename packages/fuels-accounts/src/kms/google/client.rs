@@ -1,6 +1,6 @@
-pub use google_cloud_kms::client::{google_cloud_auth::credentials::CredentialsFile, ClientConfig};
-use google_cloud_kms::client::Client;
 use fuels_core::types::errors::{Error, Result};
+use google_cloud_kms::client::Client;
+pub use google_cloud_kms::client::{google_cloud_auth::credentials::CredentialsFile, ClientConfig};
 
 #[derive(Clone, Debug)]
 pub struct GoogleClient {
@@ -9,7 +9,6 @@ pub struct GoogleClient {
 
 impl GoogleClient {
     pub async fn new(config: ClientConfig) -> Result<Self> {
-
         let config_debug = format!("{:?}", config);
 
         let client = Client::new(config).await.map_err(|e| {

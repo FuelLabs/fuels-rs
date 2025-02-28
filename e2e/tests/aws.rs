@@ -1,11 +1,12 @@
 #[cfg(test)]
 mod tests {
-    use std::any::Any;
     use anyhow::Result;
     use e2e::e2e_helpers::start_aws_kms;
-    use fuels::accounts::kms::{AwsWallet, CredentialsFile};
+    use fuels::accounts::kms::AwsWallet;
     use fuels::accounts::{Account, ViewOnlyAccount};
-    use fuels::prelude::{launch_provider_and_get_wallet, AssetId, Contract, Error, LoadConfiguration, TxPolicies};
+    use fuels::prelude::{
+        launch_provider_and_get_wallet, AssetId, Contract, LoadConfiguration, TxPolicies,
+    };
     use fuels::types::errors::Context;
 
     #[tokio::test(flavor = "multi_thread")]
@@ -71,13 +72,5 @@ mod tests {
         .await?;
 
         Ok(())
-    }
-
-    #[tokio::test(flavor = "multi_thread")]
-    async fn fund_google_wallet() -> Result<()> {
-            let credentials_file = CredentialsFile::new().await.map_err(|e| Error::Other(format!("Failed to create credentials file: {}", e)))?;
-
-
-            Ok(())
     }
 }

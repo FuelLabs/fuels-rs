@@ -25,9 +25,7 @@ use k256::{
     PublicKey as K256PublicKey,
 };
 
-/// Error prefix for AWS KMS related operations
 const AWS_KMS_ERROR_PREFIX: &str = "AWS KMS Error";
-/// Expected key specification for AWS KMS keys
 const EXPECTED_KEY_SPEC: KeySpec = KeySpec::EccSecgP256K1;
 
 /// A wallet implementation that uses AWS KMS for signing
@@ -37,7 +35,6 @@ pub struct AwsWallet {
     kms_key: KmsKey,
 }
 
-/// Represents an AWS KMS key with Fuel-compatible address
 #[derive(Clone, Debug)]
 pub struct KmsKey {
     key_id: String,
@@ -120,15 +117,6 @@ impl KmsKey {
         Ok(Bech32Address::new(FUEL_BECH32_HRP, fuel_public_key.hash()))
     }
 
-    /// Signs a message using the AWS KMS key
-    async fn sign_message(&self, message: Message) -> Result<Signature> {
-        let signature_der = self.request_kms_signature(message).await?;
-        let (sig, recovery_id) = self.normalize_signature(&signature_der, message)?;
-
-        Ok(self.convert_to_fuel_signature(sig, recovery_id))
-    }
-
-    /// Requests a signature from AWS KMS
     async fn request_kms_signature(&self, message: Message) -> Result<Vec<u8>> {
         let response = self
             .client
@@ -152,6 +140,14 @@ impl KmsKey {
             })
     }
 
+    /// Signs a message using the AWS KMS key
+    async fn sign_message(&self, message: Message) -> Result<Signature> {
+        let signature_der = self.request_kms_signature(message).await?;
+        let (sig, recovery_id) = self.normalize_signature(&signature_der, message)?;
+
+        Ok(self.convert_to_fuel_signature(sig, recovery_id))
+    }
+
     /// Normalizes a DER signature and determines the recovery ID
     fn normalize_signature(
         &self,
@@ -161,7 +157,6 @@ impl KmsKey {
         let signature = K256Signature::from_der(signature_der)
             .map_err(|_| Error::Other(format!("{AWS_KMS_ERROR_PREFIX}: Invalid DER signature")))?;
 
-        // Ensure the signature is in normalized form (low-S value)
         let normalized_sig = signature.normalize_s().unwrap_or(signature);
         let recovery_id = self.determine_recovery_id(&normalized_sig, message)?;
 
@@ -230,13 +225,10 @@ impl AwsWallet {
             kms_key,
         })
     }
-
-    /// Returns the Fuel address associated with this wallet
     pub fn address(&self) -> &Bech32Address {
         &self.kms_key.fuel_address
     }
 
-    /// Returns the provider associated with this wallet, if any
     pub fn provider(&self) -> Option<&Provider> {
         self.view_account.provider()
     }
