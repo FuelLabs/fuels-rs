@@ -73,7 +73,7 @@ pub(crate) struct ResourceQueries {
     utxos: Vec<UtxoId>,
     messages: Vec<Nonce>,
     asset_id: Option<AssetId>,
-    amount: u64,
+    amount: u128,
 }
 
 impl ResourceQueries {
@@ -85,7 +85,7 @@ impl ResourceQueries {
         Some((self.utxos.clone(), self.messages.clone()))
     }
 
-    pub fn spend_query(&self, base_asset_id: AssetId) -> Vec<(AssetId, u64, Option<u32>)> {
+    pub fn spend_query(&self, base_asset_id: AssetId) -> Vec<(AssetId, u128, Option<u16>)> {
         vec![(self.asset_id.unwrap_or(base_asset_id), self.amount, None)]
     }
 }
@@ -95,7 +95,7 @@ impl ResourceQueries {
 pub struct ResourceFilter {
     pub from: Bech32Address,
     pub asset_id: Option<AssetId>,
-    pub amount: u64,
+    pub amount: u128,
     pub excluded_utxos: Vec<UtxoId>,
     pub excluded_message_nonces: Vec<Nonce>,
 }
@@ -368,6 +368,7 @@ impl Provider {
         tx: impl Transaction,
         utxo_validation: bool,
         gas_price: Option<u64>,
+        at_height: Option<BlockHeight>,
     ) -> Result<TxStatus> {
         let [tx_status] = self
             .uncached_client()
@@ -375,6 +376,7 @@ impl Provider {
                 Transactions::new().insert(tx).as_slice(),
                 Some(utxo_validation),
                 gas_price,
+                at_height,
             )
             .await?
             .into_iter()
@@ -391,10 +393,16 @@ impl Provider {
         transactions: Transactions,
         utxo_validation: bool,
         gas_price: Option<u64>,
+        at_height: Option<BlockHeight>,
     ) -> Result<Vec<(TxId, TxStatus)>> {
         Ok(self
             .uncached_client()
-            .dry_run_opt(transactions.as_slice(), Some(utxo_validation), gas_price)
+            .dry_run_opt(
+                transactions.as_slice(),
+                Some(utxo_validation),
+                gas_price,
+                at_height,
+            )
             .await?
             .into_iter()
             .map(|execution_status| (execution_status.id, execution_status.into()))
@@ -715,7 +723,7 @@ impl Provider {
         let tolerance = tolerance.unwrap_or(DEFAULT_GAS_ESTIMATION_TOLERANCE);
 
         let EstimateGasPrice { gas_price, .. } = self.estimate_gas_price(block_horizon).await?;
-        let tx_status = self.dry_run_opt(tx.clone(), false, None).await?;
+        let tx_status = self.dry_run_opt(tx.clone(), false, None, None).await?;
 
         let total_gas = Self::apply_tolerance(tx_status.total_gas(), tolerance);
         let total_fee = Self::apply_tolerance(tx_status.total_fee(), tolerance);
@@ -786,7 +794,7 @@ impl Provider {
             .message_proof(
                 tx_id,
                 nonce,
-                commit_block_id.map(Into::into),
+                commit_block_id,
                 commit_block_height.map(Into::into),
             )
             .await
@@ -827,7 +835,7 @@ impl DryRunner for Provider {
     async fn dry_run(&self, tx: FuelTransaction) -> Result<DryRun> {
         let [tx_execution_status] = self
             .uncached_client()
-            .dry_run_opt(&vec![tx], Some(false), Some(0))
+            .dry_run_opt(&vec![tx], Some(false), Some(0), None)
             .await?
             .try_into()
             .expect("should have only one element");

@@ -94,7 +94,7 @@ pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync + Clone {
         let filter = ResourceFilter {
             from: self.address().clone(),
             asset_id: Some(asset_id),
-            amount,
+            amount: amount as u128, //TODO: check if we should change fn signatures types as well
             excluded_utxos,
             excluded_message_nonces,
         };

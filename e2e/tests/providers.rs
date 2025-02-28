@@ -685,7 +685,7 @@ async fn test_get_spendable_with_exclusion() -> Result<()> {
     {
         let filter = ResourceFilter {
             from: wallet.address().clone(),
-            amount: coin_amount_1,
+            amount: coin_amount_1 as u128,
             excluded_utxos: vec![coin_2_utxo_id],
             excluded_message_nonces: vec![message_nonce],
             ..Default::default()
