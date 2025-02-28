@@ -1,4 +1,4 @@
-use fuels::accounts::kms::{AwsClient, AwsConfig, Credentials, KmsKey, Region};
+use fuels::accounts::kms::{defaults, AwsClient, BehaviorVersion, Credentials, KmsKey, Region};
 use fuels::prelude::Error;
 use fuels::types::errors::Context;
 use fuels::types::errors::Result;
@@ -56,7 +56,13 @@ impl AwsKms {
         let credentials = Credentials::new("test", "test", None, None, "Static Test Credentials");
         let region = Region::new("us-east-1");
 
-        let config = AwsConfig::for_testing(credentials, region, url.clone()).await;
+        let config = defaults(BehaviorVersion::latest())
+            .credentials_provider(credentials)
+            .endpoint_url(url.clone())
+            .region(region)
+            .load()
+            .await;
+
         let client = AwsClient::new(config);
 
         Ok(AwsKmsProcess {
