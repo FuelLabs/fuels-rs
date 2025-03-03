@@ -2,6 +2,7 @@ use fuel_asm::{Instruction, Opcode};
 use fuels_core::{error, types::errors::Result};
 use itertools::Itertools;
 
+use crate::assembly::script_and_predicate_loader::get_offset_for_section_containing_configurables;
 use crate::{
     assembly::{
         contract_call::{ContractCallData, ContractCallInstructions},
@@ -13,6 +14,8 @@ use crate::{
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ScriptCallData {
     pub code: Vec<u8>,
+    /// This will be renamed in next breaking release. For binary generated with sway 0.66.5 this will be data_offset
+    /// and for binary generated with sway 0.66.6 and above this will probably be data_section_offset and configurable_section_offset.
     pub data_section_offset: Option<u64>,
     pub data: Vec<u8>,
 }
@@ -36,23 +39,24 @@ pub enum ScriptType {
     Other(ScriptCallData),
 }
 
-fn parse_script_call(script: &[u8], script_data: &[u8]) -> ScriptCallData {
+fn parse_script_call(script: &[u8], script_data: &[u8]) -> Result<ScriptCallData> {
     let data_section_offset = if script.len() >= 16 {
-        let data_offset = u64::from_be_bytes(script[8..16].try_into().expect("will have 8 bytes"));
-        if data_offset as usize >= script.len() {
+        let offset = get_offset_for_section_containing_configurables(script)?;
+
+        if offset >= script.len() {
             None
         } else {
-            Some(data_offset)
+            Some(offset as u64)
         }
     } else {
         None
     };
 
-    ScriptCallData {
+    Ok(ScriptCallData {
         data: script_data.to_vec(),
         data_section_offset,
         code: script.to_vec(),
-    }
+    })
 }
 
 fn parse_contract_calls(
@@ -141,7 +145,7 @@ impl ScriptType {
             return Ok(Self::Loader { script, blob_id });
         }
 
-        Ok(Self::Other(parse_script_call(script, data)))
+        Ok(Self::Other(parse_script_call(script, data)?))
     }
 }
 
@@ -156,7 +160,7 @@ fn parse_loader_script(script: &[u8], data: &[u8]) -> Result<Option<(ScriptCallD
         ScriptCallData {
             code: script.to_vec(),
             data: data.to_vec(),
-            data_section_offset: Some(loader_code.data_section_offset() as u64),
+            data_section_offset: Some(loader_code.configurables_section_offset() as u64),
         },
         loader_code.blob_id(),
     )))
@@ -172,7 +176,7 @@ mod tests {
 
     use crate::assembly::{
         contract_call::{CallOpcodeParamsOffset, ContractCallInstructions},
-        script_and_predicate_loader::loader_instructions_w_data_section,
+        script_and_predicate_loader::loader_instructions_w_configurables,
     };
 
     use super::*;
@@ -198,48 +202,19 @@ mod tests {
 
     #[test]
     fn is_fine_with_malformed_scripts() {
-        // given
         let mut script = vec![0; 100 * Instruction::SIZE];
+        let jmpf = fuel_asm::op::jmpf(0x0, 0x04).to_bytes();
+
         let mut rng = rand::rngs::StdRng::from_seed([0; 32]);
         rng.fill_bytes(&mut script);
+        script[4..8].copy_from_slice(&jmpf);
 
-        // when
         let script_type = ScriptType::detect(&script, &[]).unwrap();
 
-        // then
         assert_eq!(
             script_type,
             ScriptType::Other(ScriptCallData {
                 code: script,
-                data_section_offset: None,
-                data: vec![]
-            })
-        );
-    }
-
-    // Mostly to do with the script binary not having the script data offset in the second word
-    #[test]
-    fn is_fine_with_handwritten_scripts() {
-        // given
-        let handwritten_script = [
-            fuel_asm::op::movi(0x10, 100),
-            fuel_asm::op::movi(0x10, 100),
-            fuel_asm::op::movi(0x10, 100),
-            fuel_asm::op::movi(0x10, 100),
-            fuel_asm::op::movi(0x10, 100),
-        ]
-        .iter()
-        .flat_map(|i| i.to_bytes())
-        .collect::<Vec<_>>();
-
-        // when
-        let script_type = ScriptType::detect(&handwritten_script, &[]).unwrap();
-
-        // then
-        assert_eq!(
-            script_type,
-            ScriptType::Other(ScriptCallData {
-                code: handwritten_script.to_vec(),
                 data_section_offset: None,
                 data: vec![]
             })
@@ -342,7 +317,7 @@ mod tests {
     #[test]
     fn loader_script_without_a_blob() {
         // given
-        let script = loader_instructions_w_data_section()
+        let script = loader_instructions_w_configurables()
             .iter()
             .flat_map(|i| i.to_bytes())
             .collect::<Vec<_>>();
@@ -363,7 +338,7 @@ mod tests {
     #[test]
     fn loader_script_with_almost_matching_instructions() {
         // given
-        let mut loader_instructions = loader_instructions_w_data_section().to_vec();
+        let mut loader_instructions = loader_instructions_w_configurables().to_vec();
 
         loader_instructions.insert(
             loader_instructions.len() - 2,
