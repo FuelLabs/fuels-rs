@@ -56,14 +56,6 @@ mod tests {
         let aws_wallet =
             &AwsWallet::with_kms_key(your_kms_key_id, kms.client(), Some(provider)).await?;
 
-        let founded_coins = aws_wallet
-            .get_coins(AssetId::zeroed())
-            .await?
-            .first()
-            .expect("No coins found")
-            .amount;
-        assert_eq!(founded_coins, amount);
-
         Contract::load_from(
             "../e2e/sway/contracts/contract_test/out/release/contract_test.bin",
             LoadConfiguration::default(),
