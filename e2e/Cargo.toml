@@ -32,7 +32,6 @@ tar = { workspace = true }
 
 [dependencies]
 anyhow = { workspace = true }
-aws-sdk-kms = { workspace = true, features = ["rustls"] }
 fuels = { workspace = true, features = ["kms-signer", "test-helpers"] }
 testcontainers = { workspace = true }
 tokio = { workspace = true, features = ["test-util"] }

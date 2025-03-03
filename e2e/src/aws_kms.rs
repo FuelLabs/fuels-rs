@@ -1,4 +1,12 @@
-use fuels::accounts::kms::{defaults, AwsClient, BehaviorVersion, Credentials, KmsKey, Region};
+use fuels::accounts::kms::{
+    aws_config::{defaults, BehaviorVersion, Region},
+    aws_sdk_kms::{
+        config::Credentials,
+        types::{KeySpec, KeyUsageType},
+        Client,
+    },
+    KmsKey,
+};
 use fuels::prelude::Error;
 use fuels::types::errors::Context;
 use fuels::types::errors::Result;
@@ -63,7 +71,7 @@ impl AwsKms {
             .load()
             .await;
 
-        let client = AwsClient::new(config);
+        let client = Client::new(&config);
 
         Ok(AwsKmsProcess {
             _container: container,
@@ -114,7 +122,7 @@ fn spawn_log_printer(container: &testcontainers::ContainerAsync<AwsKmsImage>) {
 
 pub struct AwsKmsProcess {
     _container: testcontainers::ContainerAsync<AwsKmsImage>,
-    client: AwsClient,
+    client: Client,
     url: String,
 }
 
@@ -122,10 +130,9 @@ impl AwsKmsProcess {
     pub async fn create_key(&self) -> anyhow::Result<KmsTestKey> {
         let response = self
             .client
-            .inner()
             .create_key()
-            .key_usage(aws_sdk_kms::types::KeyUsageType::SignVerify)
-            .key_spec(aws_sdk_kms::types::KeySpec::EccSecgP256K1)
+            .key_usage(KeyUsageType::SignVerify)
+            .key_spec(KeySpec::EccSecgP256K1)
             .send()
             .await?;
 
@@ -143,7 +150,7 @@ impl AwsKmsProcess {
         })
     }
 
-    pub fn client(&self) -> &AwsClient {
+    pub fn client(&self) -> &Client {
         &self.client
     }
 
