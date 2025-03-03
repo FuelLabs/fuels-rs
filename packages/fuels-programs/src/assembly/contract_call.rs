@@ -4,7 +4,6 @@ use fuels_core::{constants::WORD_SIZE, error, types::errors::Result};
 
 use super::cursor::WasmFriendlyCursor;
 #[derive(Debug)]
-
 pub struct ContractCallInstructions {
     instructions: Vec<Instruction>,
     gas_fwd: bool,
