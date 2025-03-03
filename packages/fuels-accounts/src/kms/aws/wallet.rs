@@ -1,11 +1,11 @@
 use crate::accounts_utils::try_provider_error;
-pub use crate::kms::aws::client::AwsClient;
 use crate::provider::Provider;
 use crate::wallet::Wallet;
 use crate::{Account, ViewOnlyAccount};
 use aws_sdk_kms::{
     primitives::Blob,
     types::{KeySpec, MessageType, SigningAlgorithmSpec},
+    Client,
 };
 use fuel_crypto::{Message, PublicKey, Signature};
 use fuel_types::AssetId;
@@ -38,7 +38,7 @@ pub struct AwsWallet {
 #[derive(Clone, Debug)]
 pub struct KmsKey {
     key_id: String,
-    client: AwsClient,
+    client: Client,
     public_key_der: Vec<u8>,
     fuel_address: Bech32Address,
 }
@@ -57,7 +57,7 @@ impl KmsKey {
     }
 
     /// Creates a new KmsKey from an AWS KMS key ID
-    pub async fn new(key_id: String, client: &AwsClient) -> Result<Self> {
+    pub async fn new(key_id: String, client: &Client) -> Result<Self> {
         Self::validate_key_spec(client, &key_id).await?;
         let public_key = Self::retrieve_public_key(client, &key_id).await?;
         let fuel_address = Self::derive_fuel_address(&public_key)?;
@@ -71,9 +71,8 @@ impl KmsKey {
     }
 
     /// Validates that the KMS key is of the expected type
-    async fn validate_key_spec(client: &AwsClient, key_id: &str) -> Result<()> {
+    async fn validate_key_spec(client: &Client, key_id: &str) -> Result<()> {
         let response = client
-            .inner()
             .get_public_key()
             .key_id(key_id)
             .send()
@@ -91,9 +90,8 @@ impl KmsKey {
     }
 
     /// Retrieves the public key from AWS KMS
-    async fn retrieve_public_key(client: &AwsClient, key_id: &str) -> Result<Vec<u8>> {
+    async fn retrieve_public_key(client: &Client, key_id: &str) -> Result<Vec<u8>> {
         let response = client
-            .inner()
             .get_public_key()
             .key_id(key_id)
             .send()
@@ -120,7 +118,6 @@ impl KmsKey {
     async fn request_kms_signature(&self, message: Message) -> Result<Vec<u8>> {
         let response = self
             .client
-            .inner()
             .sign()
             .key_id(&self.key_id)
             .signing_algorithm(SigningAlgorithmSpec::EcdsaSha256)
@@ -215,7 +212,7 @@ impl AwsWallet {
     /// Creates a new AwsWallet with the given KMS key ID
     pub async fn with_kms_key(
         key_id: impl Into<String>,
-        aws_client: &AwsClient,
+        aws_client: &Client,
         provider: Option<Provider>,
     ) -> Result<Self> {
         let kms_key = KmsKey::new(key_id.into(), aws_client).await?;

@@ -1,5 +1,5 @@
-mod client;
 mod wallet;
-
-pub use client::*;
 pub use wallet::*;
+
+pub use aws_config;
+pub use aws_sdk_kms;
