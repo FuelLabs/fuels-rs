@@ -1,5 +1,4 @@
 use crate::accounts_utils::try_provider_error;
-use crate::kms::google::client::GoogleClient;
 use crate::provider::Provider;
 use crate::wallet::Wallet;
 use crate::{Account, ViewOnlyAccount};
@@ -15,6 +14,7 @@ use fuels_core::{
         transaction_builders::TransactionBuilder,
     },
 };
+use google_cloud_kms::client::Client;
 use google_cloud_kms::grpc::kms::v1::crypto_key_version::CryptoKeyVersionAlgorithm::EcSignSecp256k1Sha256;
 use google_cloud_kms::grpc::kms::v1::digest::Digest::Sha256;
 use google_cloud_kms::grpc::kms::v1::{AsymmetricSignRequest, Digest, GetPublicKeyRequest};
@@ -36,7 +36,7 @@ pub struct GoogleWallet {
 #[derive(Clone, Debug)]
 pub struct GcpKey {
     key_path: String,
-    client: GoogleClient,
+    client: Client,
     public_key_pem: String,
     fuel_address: Bech32Address,
 }
@@ -94,7 +94,7 @@ impl GcpKey {
     /// Creates a new GcpKey from a Google Cloud KMS key path.
     /// The key_path should be in the format:
     /// projects/{project}/locations/{location}/keyRings/{key_ring}/cryptoKeys/{key}/cryptoKeyVersions/{version}
-    pub async fn new(key_path: String, client: &GoogleClient) -> Result<Self> {
+    pub async fn new(key_path: String, client: &Client) -> Result<Self> {
         let public_key_pem = Self::retrieve_public_key(client, &key_path).await?;
         let fuel_address = Self::derive_fuel_address(&public_key_pem)?;
         Ok(Self {
@@ -106,13 +106,12 @@ impl GcpKey {
     }
 
     /// Retrieves the public key PEM from Google Cloud KMS and verifies the key algorithm.
-    async fn retrieve_public_key(client: &GoogleClient, key_path: &str) -> Result<String> {
+    async fn retrieve_public_key(client: &Client, key_path: &str) -> Result<String> {
         let request = GetPublicKeyRequest {
             name: key_path.to_string(),
         };
 
         let response = client
-            .inner()
             .get_public_key(request, None)
             .await
             .map_err(|e| format_gcp_error(format!("Failed to get public key: {}", e)))?;
@@ -153,7 +152,6 @@ impl GcpKey {
 
         let response = self
             .client
-            .inner()
             .asymmetric_sign(request, None)
             .await
             .map_err(|e| format_gcp_error(format!("Signing failed: {}", e)))?;
@@ -241,7 +239,7 @@ impl GoogleWallet {
     /// Creates a new GoogleWallet with the given KMS key path.
     pub async fn with_kms_key(
         key_path: CryptoKeyVersionName,
-        google_client: &GoogleClient,
+        google_client: &Client,
         provider: Option<Provider>,
     ) -> Result<Self> {
         let kms_key = GcpKey::new(key_path.to_string(), google_client).await?;

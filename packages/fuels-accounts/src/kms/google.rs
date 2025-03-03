@@ -1,5 +1,4 @@
-mod client;
 mod wallet;
-
-pub use client::*;
 pub use wallet::*;
+
+pub use google_cloud_kms;
