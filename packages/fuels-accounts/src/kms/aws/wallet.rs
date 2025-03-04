@@ -154,6 +154,7 @@ impl KmsKey {
         let signature = K256Signature::from_der(signature_der)
             .map_err(|_| Error::Other(format!("{AWS_KMS_ERROR_PREFIX}: Invalid DER signature")))?;
 
+        // Ensure the signature is in normalized form (low-S value)
         let normalized_sig = signature.normalize_s().unwrap_or(signature);
         let recovery_id = self.determine_recovery_id(&normalized_sig, message)?;
 
@@ -222,10 +223,13 @@ impl AwsWallet {
             kms_key,
         })
     }
+
+    /// Returns the Fuel address associated with this wallet
     pub fn address(&self) -> &Bech32Address {
         &self.kms_key.fuel_address
     }
 
+    /// Returns the provider associated with this wallet, if any
     pub fn provider(&self) -> Option<&Provider> {
         self.view_account.provider()
     }
