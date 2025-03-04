@@ -10,7 +10,7 @@ repository = { workspace = true }
 rust-version = { workspace = true }
 
 [dependencies]
-regex = { workspace = true }
 dotenv = { workspace = true }
-tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
 octocrab = { workspace = true, features = ["default"] }
+regex = { workspace = true }
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
