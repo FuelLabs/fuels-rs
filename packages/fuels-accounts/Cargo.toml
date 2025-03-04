@@ -30,8 +30,8 @@ tokio = { workspace = true, features = ["full"], optional = true }
 zeroize = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
-mockall = { workspace = true, default-features = false }
 fuel-tx = { workspace = true, features = ["test-helpers", "random"] }
+mockall = { workspace = true, default-features = false }
 tempfile = { workspace = true }
 tokio = { workspace = true, features = ["test-util"] }
 
