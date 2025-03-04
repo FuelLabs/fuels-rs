@@ -88,6 +88,10 @@ octocrab = { version = "0.43", default-features = false }
 dotenv = { version = "0.15", default-features = false }
 toml = { version = "0.8", default-features = false }
 mockall = { version = "0.13", default-features = false }
+aws-config = { version = "1", default-features = false }
+aws-sdk-kms = { version = "1", default-features = false }
+testcontainers = { version = "0.23", default-features = false }
+k256 = { version = "0.13", default-features = false }
 
 # Dependencies from the `fuel-core` repository:
 fuel-core = { version = "0.41.7", default-features = false, features = [

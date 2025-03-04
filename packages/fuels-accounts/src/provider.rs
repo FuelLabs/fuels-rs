@@ -786,7 +786,7 @@ impl Provider {
             .message_proof(
                 tx_id,
                 nonce,
-                commit_block_id.map(Into::into),
+                commit_block_id,
                 commit_block_height.map(Into::into),
             )
             .await
@@ -860,15 +860,15 @@ impl DryRunner for Provider {
         Ok(self.estimate_gas_price(block_horizon).await?.gas_price)
     }
 
+    async fn consensus_parameters(&self) -> Result<ConsensusParameters> {
+        Provider::consensus_parameters(self).await
+    }
+
     async fn estimate_predicates(
         &self,
         tx: &FuelTransaction,
         _latest_chain_executor_version: Option<u32>,
     ) -> Result<FuelTransaction> {
         Ok(self.uncached_client().estimate_predicates(tx).await?)
-    }
-
-    async fn consensus_parameters(&self) -> Result<ConsensusParameters> {
-        Provider::consensus_parameters(self).await
     }
 }
