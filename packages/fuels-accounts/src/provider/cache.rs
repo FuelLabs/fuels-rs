@@ -160,6 +160,10 @@ where
 mod tests {
     use std::sync::Mutex;
 
+    use fuel_core_client::client::schema::{
+        node_info::{IndexationFlags, TxPoolStats},
+        U64,
+    };
     use fuel_types::ChainId;
 
     use super::*;
@@ -305,5 +309,113 @@ mod tests {
 
         assert_eq!(result1, first_params);
         assert_eq!(result2, second_params);
+    }
+
+    fn dummy_node_info() -> NodeInfo {
+        NodeInfo {
+            utxo_validation: true,
+            vm_backtrace: false,
+            max_tx: u64::MAX,
+            max_gas: u64::MAX,
+            max_size: u64::MAX,
+            max_depth: u64::MAX,
+            node_version: "0.0.1".to_string(),
+            indexation: IndexationFlags {
+                balances: true,
+                coins_to_spend: true,
+                asset_metadata: true,
+            },
+            tx_pool_stats: TxPoolStats {
+                tx_count: U64(1),
+                total_gas: U64(1),
+                total_size: U64(1),
+            },
+        }
+    }
+
+    #[tokio::test]
+    async fn initial_call_to_node_info_fwd_to_api() {
+        // given
+        let mut api = MockCacheableRpcs::new();
+        api.expect_node_info()
+            .once()
+            .return_once(|| Ok(dummy_node_info()));
+        let sut = CachedClient::new(api, TtlConfig::default(), TestClock::default());
+
+        // when
+        let _node_info = sut.node_info().await.unwrap();
+
+        // then
+        // The mock verifies that the API call was made.
+    }
+
+    #[tokio::test]
+    async fn new_call_to_node_info_cached() {
+        // given
+        let mut api = MockCacheableRpcs::new();
+        api.expect_node_info()
+            .once()
+            .return_once(|| Ok(dummy_node_info()));
+        let sut = CachedClient::new(
+            api,
+            TtlConfig {
+                consensus_parameters: Duration::from_secs(10),
+            },
+            TestClock::default(),
+        );
+        let first_node_info = sut.node_info().await.unwrap();
+
+        // when: second call should return the cached value
+        let second_node_info = sut.node_info().await.unwrap();
+
+        // then: only one API call should have been made and the values are equal
+        assert_eq!(first_node_info, second_node_info);
+    }
+
+    #[tokio::test]
+    async fn if_ttl_expired_node_info_cache_is_updated() {
+        // given
+        let original_node_info = dummy_node_info();
+
+        let changed_node_info = NodeInfo {
+            node_version: "changed".to_string(),
+            ..dummy_node_info()
+        };
+
+        let api = {
+            let mut api = MockCacheableRpcs::new();
+            let original_clone = original_node_info.clone();
+            api.expect_node_info()
+                .times(1)
+                .return_once(move || Ok(original_clone));
+
+            let changed_clone = changed_node_info.clone();
+            api.expect_node_info()
+                .times(1)
+                .return_once(move || Ok(changed_clone));
+            api
+        };
+
+        let clock = TestClock::default();
+        let start_time = clock.now();
+
+        let sut = CachedClient::new(
+            api,
+            TtlConfig {
+                consensus_parameters: Duration::from_secs(10),
+            },
+            clock.clone(),
+        );
+        let first_call = sut.node_info().await.unwrap();
+
+        // Advance time past the TTL.
+        clock.update_time(start_time + Duration::from_secs(11));
+
+        // when: a new API call should be triggered because the TTL expired
+        let second_call = sut.node_info().await.unwrap();
+
+        // then
+        assert_eq!(first_call, original_node_info);
+        assert_eq!(second_call, changed_node_info);
     }
 }
