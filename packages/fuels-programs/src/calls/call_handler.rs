@@ -1,10 +1,11 @@
 use core::{fmt::Debug, marker::PhantomData};
+use std::sync::Arc;
 
 use fuel_tx::{AssetId, Bytes32};
 use fuels_accounts::{provider::TransactionCost, Account};
 use fuels_core::{
     codec::{ABIEncoder, DecoderConfig, EncoderConfig, LogDecoder},
-    traits::{Parameterize, Tokenizable},
+    traits::{Parameterize, Signer, Tokenizable},
     types::{
         bech32::{Bech32Address, Bech32ContractId},
         errors::{error, transaction::Reason, Error, Result},
@@ -13,7 +14,7 @@ use fuels_core::{
         transaction::{ScriptTransaction, Transaction, TxPolicies},
         transaction_builders::{
             BuildableTransaction, ScriptBuildStrategy, ScriptTransactionBuilder,
-            VariableOutputPolicy,
+            TransactionBuilder, VariableOutputPolicy,
         },
         tx_status::TxStatus,
         Selector, Token,
@@ -50,6 +51,7 @@ pub struct CallHandler<A, C, T> {
     // Initially `None`, gets set to the right tx id after the transaction is submitted
     cached_tx_id: Option<Bytes32>,
     variable_output_policy: VariableOutputPolicy,
+    unresolved_signers: Vec<Arc<dyn Signer + Send + Sync>>,
 }
 
 impl<A, C, T> CallHandler<A, C, T> {
@@ -81,6 +83,11 @@ impl<A, C, T> CallHandler<A, C, T> {
         self.variable_output_policy = variable_outputs;
         self
     }
+
+    pub fn add_signer(mut self, signer: impl Signer + Send + Sync) -> Self {
+        self.unresolved_signers.push(Arc::new(signer));
+        self
+    }
 }
 
 impl<A, C, T> CallHandler<A, C, T>
@@ -90,16 +97,21 @@ where
     T: Tokenizable + Parameterize + Debug,
 {
     pub async fn transaction_builder(&self) -> Result<ScriptTransactionBuilder> {
-        self.call
+        let mut tb = self
+            .call
             .transaction_builder(self.tx_policies, self.variable_output_policy, &self.account)
-            .await
+            .await?;
+
+        tb.add_signers(&self.unresolved_signers)?;
+
+        Ok(tb)
     }
 
     /// Returns the script that executes the contract call
     pub async fn build_tx(&self) -> Result<ScriptTransaction> {
-        self.call
-            .build_tx(self.tx_policies, self.variable_output_policy, &self.account)
-            .await
+        let tb = self.transaction_builder().await?;
+
+        self.call.build_tx(tb, &self.account).await
     }
 
     /// Get a call's estimated cost
@@ -267,6 +279,8 @@ where
             output_param: T::param_type(),
             is_payable,
             custom_assets: Default::default(),
+            inputs: vec![],
+            outputs: vec![],
         };
         CallHandler {
             account,
@@ -277,6 +291,7 @@ where
             decoder_config: DecoderConfig::default(),
             cached_tx_id: None,
             variable_output_policy: VariableOutputPolicy::default(),
+            unresolved_signers: vec![],
         }
     }
 
@@ -325,6 +340,20 @@ where
 
         Ok(self)
     }
+
+    /// Add custom outputs to the `CallHandler`. These outputs
+    /// will appear at the **start** of the final output list.
+    pub fn with_outputs(mut self, outputs: Vec<Output>) -> Self {
+        self.call = self.call.with_outputs(outputs);
+        self
+    }
+
+    /// Add custom inputs to the `CallHandler`. These inputs
+    /// will appear at the **start** of the final input list.
+    pub fn with_inputs(mut self, inputs: Vec<Input>) -> Self {
+        self.call = self.call.with_inputs(inputs);
+        self
+    }
 }
 
 impl<A, T> CallHandler<A, ScriptCall, T>
@@ -355,14 +384,19 @@ where
             decoder_config: DecoderConfig::default(),
             cached_tx_id: None,
             variable_output_policy: VariableOutputPolicy::default(),
+            unresolved_signers: vec![],
         }
     }
 
+    /// Add custom outputs to the `CallHandler`. These outputs
+    /// will appear at the **start** of the final output list.
     pub fn with_outputs(mut self, outputs: Vec<Output>) -> Self {
         self.call = self.call.with_outputs(outputs);
         self
     }
 
+    /// Add custom inputs to the `CallHandler`. These inputs
+    /// will appear at the **start** of the final input list.
     pub fn with_inputs(mut self, inputs: Vec<Input>) -> Self {
         self.call = self.call.with_inputs(inputs);
         self
@@ -383,6 +417,7 @@ where
             decoder_config: DecoderConfig::default(),
             cached_tx_id: None,
             variable_output_policy: VariableOutputPolicy::default(),
+            unresolved_signers: vec![],
         }
     }
 
@@ -402,14 +437,17 @@ where
         Ok(self)
     }
 
-    /// Adds a contract call to be bundled in the transaction
-    /// Note that this is a builder method
+    /// Adds a contract call to be bundled in the transaction.
+    /// Note that if you added custom inputs/outputs that they will follow the
+    /// order in which the calls are added.
     pub fn add_call(
         mut self,
         call_handler: CallHandler<impl Account, ContractCall, impl Tokenizable>,
     ) -> Self {
         self.log_decoder.merge(call_handler.log_decoder);
         self.call.push(call_handler.call);
+        self.unresolved_signers
+            .extend(call_handler.unresolved_signers);
 
         self
     }

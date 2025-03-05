@@ -8,6 +8,8 @@ With `CallHandler`, you can execute multiple contract calls within a single tran
 
 You can also set call parameters, variable outputs, or external contracts for every contract call, as long as you don't execute it with `call()` or `simulate()`.
 
+> **Note:** if custom inputs or outputs have been added to the separate calls, the input and output order will follow the order how the calls are added to the multi-call.
+
 Next, you provide the prepared calls to your `CallHandler` and optionally configure transaction policies:
 
 ```rust,ignore
