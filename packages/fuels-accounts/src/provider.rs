@@ -322,7 +322,7 @@ impl Provider {
     }
 
     pub async fn node_info(&self) -> Result<NodeInfo> {
-        Ok(self.uncached_client().node_info().await?.into())
+        Ok(self.cached_client.node_info().await?.into())
     }
 
     pub async fn latest_gas_price(&self) -> Result<LatestGasPrice> {
@@ -541,33 +541,51 @@ impl Provider {
     /// for each asset id) and not the UTXOs coins themselves
     pub async fn get_balances(&self, address: &Bech32Address) -> Result<HashMap<String, u128>> {
         let mut balances = HashMap::new();
-        let mut cursor = None;
 
-        loop {
-            let response = self
-                .uncached_client()
-                .balances(
-                    &address.into(),
-                    PaginationRequest {
-                        cursor: cursor.clone(),
-                        results: NUM_RESULTS_PER_REQUEST,
-                        direction: PageDirection::Forward,
-                    },
-                )
-                .await?;
-
-            if response.results.is_empty() {
-                break;
-            }
-
-            balances.extend(response.results.into_iter().map(
+        let mut register_balances = |results: Vec<_>| {
+            let pairs = results.into_iter().map(
                 |Balance {
                      owner: _,
                      amount,
                      asset_id,
                  }| (asset_id.to_string(), amount),
-            ));
-            cursor = response.cursor;
+            );
+            balances.extend(pairs);
+        };
+
+        let indexation_flags = self.cached_client.node_info().await?.indexation;
+        if indexation_flags.balances {
+            let mut cursor = None;
+            loop {
+                let pagination = PaginationRequest {
+                    cursor: cursor.clone(),
+                    results: NUM_RESULTS_PER_REQUEST,
+                    direction: PageDirection::Forward,
+                };
+                let response = self
+                    .uncached_client()
+                    .balances(&address.into(), pagination)
+                    .await?;
+
+                if response.results.is_empty() {
+                    break;
+                }
+
+                register_balances(response.results);
+                cursor = response.cursor;
+            }
+        } else {
+            let pagination = PaginationRequest {
+                cursor: None,
+                results: 9999,
+                direction: PageDirection::Forward,
+            };
+            let response = self
+                .uncached_client()
+                .balances(&address.into(), pagination)
+                .await?;
+
+            register_balances(response.results)
         }
 
         Ok(balances)

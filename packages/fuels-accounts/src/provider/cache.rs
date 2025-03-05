@@ -2,6 +2,7 @@ use std::{sync::Arc, time::Duration};
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
+use fuel_core_client::client::types::NodeInfo;
 use fuel_tx::ConsensusParameters;
 use fuels_core::types::errors::Result;
 use tokio::sync::RwLock;
@@ -10,6 +11,7 @@ use tokio::sync::RwLock;
 #[async_trait]
 pub trait CacheableRpcs {
     async fn consensus_parameters(&self) -> Result<ConsensusParameters>;
+    async fn node_info(&self) -> Result<NodeInfo>;
 }
 
 trait Clock {
@@ -54,6 +56,7 @@ pub struct CachedClient<Client, Clock = SystemClock> {
     client: Client,
     ttl_config: TtlConfig,
     cached_consensus_params: Arc<RwLock<Option<Dated<ConsensusParameters>>>>,
+    cached_node_info: Arc<RwLock<Option<Dated<NodeInfo>>>>,
     clock: Clock,
 }
 
@@ -63,6 +66,7 @@ impl<Client, Clock> CachedClient<Client, Clock> {
             client,
             ttl_config: ttl,
             cached_consensus_params: Default::default(),
+            cached_node_info: Default::default(),
             clock,
         }
     }
@@ -121,6 +125,34 @@ where
         });
 
         Ok(fresh_parameters)
+    }
+
+    async fn node_info(&self) -> Result<NodeInfo> {
+        {
+            let read_lock = self.cached_node_info.read().await;
+            if let Some(entry) = read_lock.as_ref() {
+                if !entry.is_stale(self.clock.now(), self.ttl_config.consensus_parameters) {
+                    return Ok(entry.value.clone());
+                }
+            }
+        }
+
+        let mut write_lock = self.cached_node_info.write().await;
+
+        // because it could have been updated since we last checked
+        if let Some(entry) = write_lock.as_ref() {
+            if !entry.is_stale(self.clock.now(), self.ttl_config.consensus_parameters) {
+                return Ok(entry.value.clone());
+            }
+        }
+
+        let fresh_node_info = self.client.node_info().await?;
+        *write_lock = Some(Dated {
+            value: fresh_node_info.clone(),
+            date: self.clock.now(),
+        });
+
+        Ok(fresh_node_info)
     }
 }
 
