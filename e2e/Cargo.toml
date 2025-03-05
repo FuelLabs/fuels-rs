@@ -18,11 +18,9 @@ chrono = { workspace = true }
 fuel-asm = { workspace = true }
 # TODO: [issue](https://github.com/FuelLabs/fuels-rs/issues/1375) needs to be removed, `ScriptTransaction` and `CreateTransaction` in `fuels` use `fuel_tx::Input` but don't reexport or convert it into a `fuels` owned type
 fuel-tx = { workspace = true }
-fuels = { workspace = true }
 # used in test assertions
 tai64 = { workspace = true }
 tempfile = { workspace = true }
-tokio = { workspace = true, features = ["test-util"] }
 
 [build-dependencies]
 anyhow = { workspace = true, features = ["std"] }
@@ -31,6 +29,12 @@ fuels-accounts = { workspace = true, features = ["std"] }
 reqwest = { workspace = true, features = ["blocking", "default-tls"] }
 semver = { workspace = true }
 tar = { workspace = true }
+
+[dependencies]
+anyhow = { workspace = true }
+fuels = { workspace = true, features = ["kms-signer", "test-helpers"] }
+testcontainers = { workspace = true }
+tokio = { workspace = true, features = ["test-util"] }
 
 [features]
 default = ["fuels/default", "coin-cache"]

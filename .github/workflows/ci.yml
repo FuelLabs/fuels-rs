@@ -277,7 +277,7 @@ jobs:
 
       - name: Check for typos
         if: ${{ matrix.command == 'check_typos' }}
-        uses: crate-ci/typos@v1.20.3
+        uses: crate-ci/typos@v1.29.5
 
   publish:
     needs:
