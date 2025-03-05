@@ -128,10 +128,12 @@ where
     }
 
     async fn node_info(&self) -> Result<NodeInfo> {
+        // must borrow from consensus_parameters to keep the change non-breaking
+        let ttl = self.ttl_config.consensus_parameters;
         {
             let read_lock = self.cached_node_info.read().await;
             if let Some(entry) = read_lock.as_ref() {
-                if !entry.is_stale(self.clock.now(), self.ttl_config.consensus_parameters) {
+                if !entry.is_stale(self.clock.now(), ttl) {
                     return Ok(entry.value.clone());
                 }
             }
@@ -141,7 +143,7 @@ where
 
         // because it could have been updated since we last checked
         if let Some(entry) = write_lock.as_ref() {
-            if !entry.is_stale(self.clock.now(), self.ttl_config.consensus_parameters) {
+            if !entry.is_stale(self.clock.now(), ttl) {
                 return Ok(entry.value.clone());
             }
         }
