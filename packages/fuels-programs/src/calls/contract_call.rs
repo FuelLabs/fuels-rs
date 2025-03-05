@@ -7,6 +7,8 @@ use fuels_core::{
     types::{
         bech32::{Bech32Address, Bech32ContractId},
         errors::Result,
+        input::Input,
+        output::Output,
         param_types::ParamType,
         Selector,
     },
@@ -25,6 +27,8 @@ pub struct ContractCall {
     pub output_param: ParamType,
     pub is_payable: bool,
     pub custom_assets: HashMap<(AssetId, Option<Bech32Address>), u64>,
+    pub inputs: Vec<Input>,
+    pub outputs: Vec<Output>,
 }
 
 impl ContractCall {
@@ -61,6 +65,18 @@ impl ContractCall {
 
     pub fn add_custom_asset(&mut self, asset_id: AssetId, amount: u64, to: Option<Bech32Address>) {
         *self.custom_assets.entry((asset_id, to)).or_default() += amount;
+    }
+
+    /// Add custom outputs to the `ContractCall`.
+    pub fn with_outputs(mut self, outputs: Vec<Output>) -> Self {
+        self.outputs = outputs;
+        self
+    }
+
+    /// Add custom inputs to the `ContractCall`.
+    pub fn with_inputs(mut self, inputs: Vec<Input>) -> Self {
+        self.inputs = inputs;
+        self
     }
 }
 

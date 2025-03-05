@@ -2533,3 +2533,214 @@ async fn loader_storage_works_via_proxy() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn tx_input_output() -> Result<()> {
+    let [wallet_1, wallet_2] = launch_custom_provider_and_get_wallets(
+        WalletsConfig::new(Some(2), Some(10), Some(1000)),
+        None,
+        None,
+    )
+    .await?
+    .try_into()
+    .unwrap();
+
+    abigen!(Contract(
+        name = "TxContract",
+        abi = "e2e/sway/contracts/tx_input_output/out/release/tx_input_output-abi.json"
+    ));
+    let contract_binary = "sway/contracts/tx_input_output/out/release/tx_input_output.bin";
+
+    // Set `wallet_1` as the custom input owner
+    let configurables = TxContractConfigurables::default().with_OWNER(wallet_1.address().into())?;
+
+    let contract = Contract::load_from(
+        contract_binary,
+        LoadConfiguration::default().with_configurables(configurables),
+    )?;
+
+    let contract_id = contract
+        .deploy_if_not_exists(&wallet_2, TxPolicies::default())
+        .await?
+        .contract_id;
+
+    let contract_instance = TxContract::new(contract_id, wallet_2.clone());
+    let asset_id = AssetId::zeroed();
+
+    {
+        let custom_input = wallet_1
+            .get_asset_inputs_for_amount(asset_id, 10, None)
+            .await?
+            .pop()
+            .unwrap();
+
+        // Input at first position is a coin owned by wallet_1
+        let _ = contract_instance
+            .methods()
+            .check_input(0)
+            .with_inputs(vec![custom_input])
+            .add_signer(wallet_1.clone())
+            .call()
+            .await?;
+
+        let custom_output = Output::change(wallet_1.address().into(), 0, asset_id);
+
+        // Output at first position is change to wallet_1
+        let _ = contract_instance
+            .methods()
+            .check_output_is_change(0)
+            .with_outputs(vec![custom_output])
+            .call()
+            .await?;
+    }
+    {
+        // Input at first position is not a coin owned by wallet_1
+        let err = contract_instance
+            .methods()
+            .check_input(0)
+            .call()
+            .await
+            .unwrap_err();
+
+        assert!(err.to_string().contains("input is not a coin"));
+
+        // Output at first position is not change
+        let err = contract_instance
+            .methods()
+            .check_output_is_change(0)
+            .call()
+            .await
+            .unwrap_err();
+
+        assert!(err.to_string().contains("output is not change"));
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn multicall_tx_input_output() -> Result<()> {
+    let [wallet_1, wallet_2, wallet_3] = launch_custom_provider_and_get_wallets(
+        WalletsConfig::new(Some(3), Some(10), Some(1000)),
+        None,
+        None,
+    )
+    .await?
+    .try_into()
+    .unwrap();
+
+    abigen!(Contract(
+        name = "TxContract",
+        abi = "e2e/sway/contracts/tx_input_output/out/release/tx_input_output-abi.json"
+    ));
+    let contract_binary = "sway/contracts/tx_input_output/out/release/tx_input_output.bin";
+
+    let get_contract_instance = |owner: &Bech32Address| {
+        let wallet_for_fees = wallet_3.clone();
+        let owner_address = owner.into();
+
+        async move {
+            let configurables = TxContractConfigurables::default().with_OWNER(owner_address)?;
+
+            let contract = Contract::load_from(
+                contract_binary,
+                LoadConfiguration::default().with_configurables(configurables),
+            )?;
+
+            let contract_id = contract
+                .deploy_if_not_exists(&wallet_for_fees, TxPolicies::default())
+                .await?
+                .contract_id;
+
+            fuels::types::errors::Result::<_>::Ok(TxContract::new(contract_id, wallet_for_fees))
+        }
+    };
+
+    // Set `wallet_1` as owner
+    let contract_instance_1 = get_contract_instance(wallet_1.address()).await?;
+    // Set `wallet_2` as owner
+    let contract_instance_2 = get_contract_instance(wallet_2.address()).await?;
+    let asset_id = AssetId::zeroed();
+
+    {
+        let custom_input = wallet_1
+            .get_asset_inputs_for_amount(asset_id, 10, None)
+            .await?
+            .pop()
+            .unwrap();
+
+        // Input at first position is a coin owned by wallet_1
+        let ch1 = contract_instance_1
+            .methods()
+            .check_input(0)
+            .with_inputs(vec![custom_input])
+            .add_signer(wallet_1.clone());
+
+        let custom_input = wallet_2
+            .get_asset_inputs_for_amount(asset_id, 10, None)
+            .await?
+            .pop()
+            .unwrap();
+
+        // As inputs follow the order off calls added to the multicall,
+        // we need to check the second input in this call
+        let ch2 = contract_instance_2
+            .methods()
+            .check_input(1)
+            .with_inputs(vec![custom_input])
+            .add_signer(wallet_2.clone());
+
+        let multi_call_handler = CallHandler::new_multi_call(wallet_3.clone())
+            .add_call(ch1)
+            .add_call(ch2);
+
+        let _: ((), ()) = multi_call_handler.call().await?.value;
+    }
+    {
+        let custom_input = wallet_1
+            .get_asset_inputs_for_amount(asset_id, 10, None)
+            .await?
+            .pop()
+            .unwrap();
+
+        // Input at first position is a coin owned by wallet_1
+        let ch1 = contract_instance_1
+            .methods()
+            .check_input(0)
+            .with_inputs(vec![custom_input])
+            .add_signer(wallet_1.clone());
+
+        // This call will read the wrong input and return an error
+        let ch2 = contract_instance_2.methods().check_input(0);
+
+        let multi_call_handler = CallHandler::new_multi_call(wallet_3.clone())
+            .add_call(ch1)
+            .add_call(ch2);
+
+        let err = multi_call_handler.call::<((), ())>().await.unwrap_err();
+
+        assert!(err.to_string().contains("wrong owner"));
+    }
+    {
+        let custom_output = Output::change(wallet_1.address().into(), 0, asset_id);
+
+        // Output at first position is change to wallet_1
+        let ch1 = contract_instance_1
+            .methods()
+            .check_output_is_change(0)
+            .with_outputs(vec![custom_output]);
+
+        // This call will read the wrong output and return an error
+        let ch2 = contract_instance_2.methods().check_output_is_change(0);
+
+        let multi_call_handler = CallHandler::new_multi_call(wallet_3.clone())
+            .add_call(ch1)
+            .add_call(ch2);
+
+        let err = multi_call_handler.call::<((), ())>().await.unwrap_err();
+
+        assert!(err.to_string().contains("wrong change address"));
+    }
+
+    Ok(())
+}

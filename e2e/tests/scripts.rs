@@ -736,3 +736,79 @@ async fn script_call_respects_maturity_and_expiration() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn script_tx_input_output() -> Result<()> {
+    let [wallet_1, wallet_2] = launch_custom_provider_and_get_wallets(
+        WalletsConfig::new(Some(2), Some(10), Some(1000)),
+        None,
+        None,
+    )
+    .await?
+    .try_into()
+    .unwrap();
+
+    abigen!(Script(
+        name = "TxScript",
+        abi = "e2e/sway/scripts/script_tx_input_output/out/release/script_tx_input_output-abi.json"
+    ));
+    let script_binary =
+        "sway/scripts/script_tx_input_output/out/release/script_tx_input_output.bin";
+
+    // Set `wallet_1` as the custom input owner
+    let configurables = TxScriptConfigurables::default().with_OWNER(wallet_1.address().into())?;
+
+    let script_instance =
+        TxScript::new(wallet_2.clone(), script_binary).with_configurables(configurables);
+
+    let asset_id = AssetId::zeroed();
+
+    {
+        let custom_inputs = wallet_1
+            .get_asset_inputs_for_amount(asset_id, 10, None)
+            .await?
+            .into_iter()
+            .take(1)
+            .collect();
+
+        let custom_output = vec![Output::change(wallet_1.address().into(), 0, asset_id)];
+
+        // Input at first position is a coin owned by wallet_1
+        // Output at first position is change to wallet_1
+        // ANCHOR: script_custom_inputs_outputs
+        let _ = script_instance
+            .main(0, 0)
+            .with_inputs(custom_inputs)
+            .with_outputs(custom_output)
+            .add_signer(wallet_1.clone())
+            .call()
+            .await?;
+        // ANCHOR_END: script_custom_inputs_outputs
+    }
+    {
+        // Input at first position is not a coin owned by wallet_1
+        let err = script_instance.main(0, 0).call().await.unwrap_err();
+
+        assert!(err.to_string().contains("wrong owner"));
+
+        let custom_input = wallet_1
+            .get_asset_inputs_for_amount(asset_id, 10, None)
+            .await?
+            .pop()
+            .unwrap();
+
+        // Input at first position is a coin owned by wallet_1
+        // Output at first position is not change to wallet_1
+        let err = script_instance
+            .main(0, 0)
+            .with_inputs(vec![custom_input])
+            .add_signer(wallet_1.clone())
+            .call()
+            .await
+            .unwrap_err();
+
+        assert!(err.to_string().contains("wrong change address"));
+    }
+
+    Ok(())
+}

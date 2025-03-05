@@ -4,6 +4,7 @@ use std::{
     collections::HashMap,
     fmt::{Debug, Formatter},
     iter::repeat,
+    sync::Arc,
 };
 
 use async_trait::async_trait;
@@ -162,6 +163,10 @@ pub trait TransactionBuilder: BuildableTransaction + Send + sealed::Sealed {
     type TxType: Transaction;
 
     fn add_signer(&mut self, signer: impl Signer + Send + Sync) -> Result<&mut Self>;
+    fn add_signers<'a>(
+        &mut self,
+        signers: impl IntoIterator<Item = &'a std::sync::Arc<dyn Signer + Send + Sync>>,
+    ) -> Result<&mut Self>;
     async fn estimate_max_fee(&self, provider: impl DryRunner) -> Result<u64>;
     fn enable_burn(self, enable: bool) -> Self;
     fn with_tx_policies(self, tx_policies: TxPolicies) -> Self;
@@ -183,31 +188,37 @@ macro_rules! impl_tx_builder_trait {
         impl $crate::types::transaction_builders::TransactionBuilder for $ty {
             type TxType = $tx_ty;
 
+
             fn add_signer(&mut self, signer: impl Signer + Send + Sync) -> Result<&mut Self> {
-                let address = signer.address();
-                if self
-                    .unresolved_witness_indexes
-                    .owner_to_idx_offset
-                    .contains_key(address)
-                {
-                    return Err(error_transaction!(
-                        Builder,
-                        "already added `Signer` with address: `{address}`"
-                    ));
-                }
+                self.validate_no_signer_available(signer.address())?;
+
 
                 let index_offset = self.unresolved_signers.len() as u64;
                 self.unresolved_witness_indexes
                     .owner_to_idx_offset
-                    .insert(address.clone(), index_offset);
-                self.unresolved_signers.push(Box::new(signer));
+                    .insert(signer.address().clone(), index_offset);
+                self.unresolved_signers.push(std::sync::Arc::new(signer));
+
+                Ok(self)
+            }
+
+            fn add_signers<'a>(&mut self, signers: impl IntoIterator<Item=&'a std::sync::Arc<dyn Signer + Send + Sync>>) -> Result<&mut Self> {
+                for signer in signers {
+                    self.validate_no_signer_available(signer.address())?;
+
+                    let index_offset = self.unresolved_signers.len() as u64;
+                    self.unresolved_witness_indexes
+                        .owner_to_idx_offset
+                        .insert(signer.address().clone(), index_offset);
+                    self.unresolved_signers.push(signer.clone());
+                }
 
                 Ok(self)
             }
 
             async fn estimate_max_fee(&self, provider: impl DryRunner) -> Result<u64> {
                 let mut fee_estimation_tb = self
-                    .clone_without_signers()
+                    .clone()
                     .with_build_strategy(Self::Strategy::NoSignatures);
 
                 // Add a temporary witness for every `Signer` to include them in the fee
@@ -302,6 +313,21 @@ macro_rules! impl_tx_builder_trait {
         }
 
         impl $ty {
+            fn validate_no_signer_available(&self, address: &$crate::types::bech32::Bech32Address) -> Result<()> {
+                if self
+                    .unresolved_witness_indexes
+                    .owner_to_idx_offset
+                    .contains_key(address)
+                {
+                    return Err(error_transaction!(
+                        Builder,
+                        "already added `Signer` with address: `{address}`"
+                    ));
+                }
+
+                Ok(())
+            }
+
             fn set_witness_indexes(&mut self) {
                 use $crate::types::transaction_builders::TransactionBuilder;
                 self.unresolved_witness_indexes.owner_to_idx_offset = self
@@ -496,7 +522,7 @@ impl Default for VariableOutputPolicy {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ScriptTransactionBuilder {
     pub script: Vec<u8>,
     pub script_data: Vec<u8>,
@@ -510,7 +536,7 @@ pub struct ScriptTransactionBuilder {
     pub variable_output_policy: VariableOutputPolicy,
     pub build_strategy: ScriptBuildStrategy,
     unresolved_witness_indexes: UnresolvedWitnessIndexes,
-    unresolved_signers: Vec<Box<dyn Signer + Send + Sync>>,
+    unresolved_signers: Vec<Arc<dyn Signer + Send + Sync>>,
     enable_burn: bool,
 }
 
@@ -535,6 +561,7 @@ impl Default for ScriptTransactionBuilder {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct CreateTransactionBuilder {
     pub bytecode_length: u64,
     pub bytecode_witness_index: u16,
@@ -548,7 +575,7 @@ pub struct CreateTransactionBuilder {
     pub max_fee_estimation_tolerance: f32,
     pub build_strategy: Strategy,
     unresolved_witness_indexes: UnresolvedWitnessIndexes,
-    unresolved_signers: Vec<Box<dyn Signer + Send + Sync>>,
+    unresolved_signers: Vec<Arc<dyn Signer + Send + Sync>>,
     enable_burn: bool,
 }
 
@@ -573,6 +600,7 @@ impl Default for CreateTransactionBuilder {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct UploadTransactionBuilder {
     /// The root of the Merkle tree is created over the bytecode.
     pub root: Bytes32,
@@ -592,7 +620,7 @@ pub struct UploadTransactionBuilder {
     pub max_fee_estimation_tolerance: f32,
     pub build_strategy: Strategy,
     unresolved_witness_indexes: UnresolvedWitnessIndexes,
-    unresolved_signers: Vec<Box<dyn Signer + Send + Sync>>,
+    unresolved_signers: Vec<Arc<dyn Signer + Send + Sync>>,
     enable_burn: bool,
 }
 
@@ -618,6 +646,7 @@ impl Default for UploadTransactionBuilder {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct UpgradeTransactionBuilder {
     /// The purpose of the upgrade.
     pub purpose: UpgradePurpose,
@@ -629,7 +658,7 @@ pub struct UpgradeTransactionBuilder {
     pub max_fee_estimation_tolerance: f32,
     pub build_strategy: Strategy,
     unresolved_witness_indexes: UnresolvedWitnessIndexes,
-    unresolved_signers: Vec<Box<dyn Signer + Send + Sync>>,
+    unresolved_signers: Vec<Arc<dyn Signer + Send + Sync>>,
     enable_burn: bool,
 }
 
@@ -958,25 +987,6 @@ impl ScriptTransactionBuilder {
             .with_inputs(inputs)
             .with_outputs(outputs)
     }
-
-    fn clone_without_signers(&self) -> Self {
-        Self {
-            script: self.script.clone(),
-            script_data: self.script_data.clone(),
-            inputs: self.inputs.clone(),
-            outputs: self.outputs.clone(),
-            witnesses: self.witnesses.clone(),
-            tx_policies: self.tx_policies,
-            gas_estimation_tolerance: self.gas_estimation_tolerance,
-            unresolved_witness_indexes: self.unresolved_witness_indexes.clone(),
-            unresolved_signers: Default::default(),
-            gas_price_estimation_block_horizon: self.gas_price_estimation_block_horizon,
-            variable_output_policy: self.variable_output_policy,
-            max_fee_estimation_tolerance: self.max_fee_estimation_tolerance,
-            build_strategy: self.build_strategy.clone(),
-            enable_burn: self.enable_burn,
-        }
-    }
 }
 
 fn add_variable_outputs(tx: &mut fuel_tx::Script, variable_outputs: usize) {
@@ -1095,25 +1105,6 @@ impl CreateTransactionBuilder {
             .with_storage_slots(storage_slots)
             .with_outputs(outputs)
             .with_witnesses(witnesses)
-    }
-
-    fn clone_without_signers(&self) -> Self {
-        Self {
-            bytecode_length: self.bytecode_length,
-            bytecode_witness_index: self.bytecode_witness_index,
-            storage_slots: self.storage_slots.clone(),
-            inputs: self.inputs.clone(),
-            outputs: self.outputs.clone(),
-            witnesses: self.witnesses.clone(),
-            tx_policies: self.tx_policies,
-            salt: self.salt,
-            unresolved_witness_indexes: self.unresolved_witness_indexes.clone(),
-            unresolved_signers: Default::default(),
-            gas_price_estimation_block_horizon: self.gas_price_estimation_block_horizon,
-            max_fee_estimation_tolerance: self.max_fee_estimation_tolerance,
-            build_strategy: self.build_strategy.clone(),
-            enable_burn: self.enable_burn,
-        }
     }
 }
 
@@ -1234,26 +1225,6 @@ impl UploadTransactionBuilder {
             .with_outputs(outputs)
             .with_witnesses(witnesses)
     }
-
-    fn clone_without_signers(&self) -> Self {
-        Self {
-            root: self.root,
-            witness_index: self.witness_index,
-            subsection_index: self.subsection_index,
-            subsections_number: self.subsections_number,
-            inputs: self.inputs.clone(),
-            outputs: self.outputs.clone(),
-            witnesses: self.witnesses.clone(),
-            tx_policies: self.tx_policies,
-            unresolved_witness_indexes: self.unresolved_witness_indexes.clone(),
-            unresolved_signers: Default::default(),
-            gas_price_estimation_block_horizon: self.gas_price_estimation_block_horizon,
-            proof_set: vec![],
-            max_fee_estimation_tolerance: self.max_fee_estimation_tolerance,
-            build_strategy: self.build_strategy.clone(),
-            enable_burn: self.enable_burn,
-        }
-    }
 }
 
 impl UpgradeTransactionBuilder {
@@ -1345,22 +1316,6 @@ impl UpgradeTransactionBuilder {
             })
             .with_outputs(outputs)
             .with_witnesses(witnesses)
-    }
-
-    fn clone_without_signers(&self) -> Self {
-        Self {
-            purpose: self.purpose,
-            inputs: self.inputs.clone(),
-            outputs: self.outputs.clone(),
-            witnesses: self.witnesses.clone(),
-            tx_policies: self.tx_policies,
-            unresolved_witness_indexes: self.unresolved_witness_indexes.clone(),
-            unresolved_signers: Default::default(),
-            gas_price_estimation_block_horizon: self.gas_price_estimation_block_horizon,
-            max_fee_estimation_tolerance: self.max_fee_estimation_tolerance,
-            build_strategy: self.build_strategy.clone(),
-            enable_burn: self.enable_burn,
-        }
     }
 }
 
@@ -1536,7 +1491,7 @@ pub fn create_coin_message_predicate(
 
 async fn generate_missing_witnesses(
     id: Bytes32,
-    unresolved_signatures: &[Box<dyn Signer + Send + Sync>],
+    unresolved_signatures: &[Arc<dyn Signer + Send + Sync>],
 ) -> Result<Vec<Witness>> {
     let mut witnesses = Vec::with_capacity(unresolved_signatures.len());
     for signer in unresolved_signatures {

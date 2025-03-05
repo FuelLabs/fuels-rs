@@ -1,4 +1,4 @@
-use std::{fmt::Debug, iter::repeat};
+use std::{fmt::Debug, iter::repeat, sync::Arc};
 
 use async_trait::async_trait;
 use fuel_crypto::Signature;
@@ -86,6 +86,7 @@ impl From<Blob> for fuel_tx::Witness {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct BlobTransactionBuilder {
     pub inputs: Vec<Input>,
     pub outputs: Vec<Output>,
@@ -96,7 +97,7 @@ pub struct BlobTransactionBuilder {
     pub build_strategy: Strategy,
     pub blob: Blob,
     unresolved_witness_indexes: UnresolvedWitnessIndexes,
-    unresolved_signers: Vec<Box<dyn Signer + Send + Sync>>,
+    unresolved_signers: Vec<Arc<dyn Signer + Send + Sync>>,
     enable_burn: bool,
 }
 
@@ -123,7 +124,7 @@ impl BlobTransactionBuilder {
     /// Calculates the maximum possible blob size by determining the remaining space available in the current transaction before it reaches the maximum allowed size.
     /// Note: This calculation only considers the transaction size limit and does not account for the maximum gas per transaction.
     pub async fn estimate_max_blob_size(&self, provider: &impl DryRunner) -> Result<usize> {
-        let mut tb = self.clone_without_signers();
+        let mut tb = self.clone();
         tb.blob = Blob::new(vec![]);
 
         let tx = tb
@@ -163,22 +164,6 @@ impl BlobTransactionBuilder {
             is_using_predicates,
             tx,
         })
-    }
-
-    fn clone_without_signers(&self) -> Self {
-        Self {
-            inputs: self.inputs.clone(),
-            outputs: self.outputs.clone(),
-            witnesses: self.witnesses.clone(),
-            tx_policies: self.tx_policies,
-            unresolved_witness_indexes: self.unresolved_witness_indexes.clone(),
-            unresolved_signers: Default::default(),
-            gas_price_estimation_block_horizon: self.gas_price_estimation_block_horizon,
-            max_fee_estimation_tolerance: self.max_fee_estimation_tolerance,
-            build_strategy: self.build_strategy.clone(),
-            blob: self.blob.clone(),
-            enable_burn: self.enable_burn,
-        }
     }
 
     async fn resolve_fuel_tx(mut self, provider: &impl DryRunner) -> Result<fuel_tx::Blob> {

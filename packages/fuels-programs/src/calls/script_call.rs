@@ -21,11 +21,13 @@ pub struct ScriptCall {
 }
 
 impl ScriptCall {
+    /// Add custom outputs to the `ScriptCall`.
     pub fn with_outputs(mut self, outputs: Vec<Output>) -> Self {
         self.outputs = outputs;
         self
     }
 
+    /// Add custom inputs to the `ScriptCall`.
     pub fn with_inputs(mut self, inputs: Vec<Input>) -> Self {
         self.inputs = inputs;
         self
@@ -39,15 +41,19 @@ impl ScriptCall {
             .collect();
         let num_of_contracts = contract_ids.len();
 
-        let inputs = chain!(generate_contract_inputs(contract_ids), self.inputs.clone(),).collect();
+        let inputs = chain!(
+            self.inputs.clone(),
+            generate_contract_inputs(contract_ids, self.outputs.len())
+        )
+        .collect();
 
-        // Note the contract_outputs need to come first since the
-        // contract_inputs are referencing them via `output_index`. The node
-        // will, upon receiving our request, use `output_index` to index the
-        // `inputs` array we've sent over.
+        // Note the contract_outputs are placed after the custom outputs and
+        // the contract_inputs are referencing them via `output_index`. The
+        // node will, upon receiving our request, use `output_index` to index
+        // the `inputs` array we've sent over.
         let outputs = chain!(
-            generate_contract_outputs(num_of_contracts),
             self.outputs.clone(),
+            generate_contract_outputs(num_of_contracts, self.inputs.len()),
         )
         .collect();
 
