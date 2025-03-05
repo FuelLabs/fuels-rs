@@ -50,7 +50,11 @@ pub(crate) struct RetryableClient {
 #[async_trait]
 impl CacheableRpcs for RetryableClient {
     async fn consensus_parameters(&self) -> Result<ConsensusParameters> {
-        Ok(self.client.chain_info().await?.consensus_parameters)
+        Ok(self.chain_info().await?.consensus_parameters)
+    }
+
+    async fn node_info(&self) -> Result<NodeInfo> {
+        Ok(self.node_info().await?)
     }
 }
 

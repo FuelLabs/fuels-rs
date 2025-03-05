@@ -11,6 +11,10 @@ description = "Fuel Rust SDK accounts."
 
 [dependencies]
 async-trait = { workspace = true, default-features = false }
+aws-config = { workspace = true, features = [
+  "behavior-version-latest",
+], optional = true }
+aws-sdk-kms = { workspace = true, features = ["default"], optional = true }
 chrono = { workspace = true }
 cynic = { workspace = true, optional = true }
 elliptic-curve = { workspace = true, default-features = false }
@@ -22,6 +26,7 @@ fuel-tx = { workspace = true }
 fuel-types = { workspace = true, features = ["random"] }
 fuels-core = { workspace = true, default-features = false }
 itertools = { workspace = true }
+k256 = { workspace = true, features = ["ecdsa-core"] }
 rand = { workspace = true, default-features = false }
 semver = { workspace = true }
 tai64 = { workspace = true, features = ["serde"] }
@@ -30,8 +35,8 @@ tokio = { workspace = true, features = ["full"], optional = true }
 zeroize = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
-mockall = { workspace = true, default-features = false }
 fuel-tx = { workspace = true, features = ["test-helpers", "random"] }
+mockall = { workspace = true, default-features = false }
 tempfile = { workspace = true }
 tokio = { workspace = true, features = ["test-util"] }
 
@@ -46,3 +51,4 @@ std = [
   "dep:cynic",
 ]
 test-helpers = []
+kms-signer = ["dep:aws-sdk-kms", "dep:aws-config"]

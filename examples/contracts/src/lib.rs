@@ -697,7 +697,7 @@ mod tests {
         use fuels::prelude::*;
 
         setup_program_test!(
-            Wallets("wallet"),
+            Wallets("wallet", "wallet_2"),
             Abigen(Contract(
                 name = "MyContract",
                 project = "e2e/sway/contracts/contract_test"
@@ -724,6 +724,19 @@ mod tests {
             .call()
             .await?;
         // ANCHOR_END: add_custom_assets
+
+        let custom_inputs = vec![];
+        let custom_outputs = vec![];
+        // ANCHOR: add_custom_inputs_outputs
+        let _ = contract_instance
+            .methods()
+            .initialize_counter(42)
+            .with_inputs(custom_inputs)
+            .with_outputs(custom_outputs)
+            .add_signer(wallet_2)
+            .call()
+            .await?;
+        // ANCHOR_END: add_custom_inputs_outputs
 
         Ok(())
     }

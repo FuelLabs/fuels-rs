@@ -81,16 +81,11 @@ pub(crate) async fn transaction_builder_from_contract_calls(
 /// Creates a [`ScriptTransaction`] from contract calls. The internal [Transaction] is
 /// initialized with the actual script instructions, script data needed to perform the call and
 /// transaction inputs/outputs consisting of assets and contracts.
-pub(crate) async fn build_tx_from_contract_calls(
+pub(crate) async fn build_with_tb(
     calls: &[ContractCall],
-    tx_policies: TxPolicies,
-    variable_outputs: VariableOutputPolicy,
+    mut tb: ScriptTransactionBuilder,
     account: &impl Account,
 ) -> Result<ScriptTransaction> {
-    let mut tb =
-        transaction_builder_from_contract_calls(calls, tx_policies, variable_outputs, account)
-            .await?;
-
     let consensus_parameters = account.try_provider()?.consensus_parameters().await?;
     let base_asset_id = *consensus_parameters.base_asset_id();
     let required_asset_amounts = calculate_required_asset_amounts(calls, base_asset_id);
@@ -197,14 +192,25 @@ pub(crate) fn get_transaction_inputs_outputs(
     let contract_ids = extract_unique_contract_ids(calls);
     let num_of_contracts = contract_ids.len();
 
-    let inputs = chain!(generate_contract_inputs(contract_ids), asset_inputs).collect();
+    // Custom `Inputs` and `Outputs` should be placed before other inputs and outputs.
+    let custom_inputs = calls.iter().flat_map(|c| c.inputs.clone()).collect_vec();
+    let custom_inputs_len = custom_inputs.len();
+    let custom_outputs = calls.iter().flat_map(|c| c.outputs.clone()).collect_vec();
 
-    // Note the contract_outputs need to come first since the
-    // contract_inputs are referencing them via `output_index`. The node
-    // will, upon receiving our request, use `output_index` to index the
-    // `inputs` array we've sent over.
+    let inputs = chain!(
+        custom_inputs,
+        generate_contract_inputs(contract_ids, custom_outputs.len()),
+        asset_inputs
+    )
+    .collect();
+
+    // Note the contract_outputs are placed after the custom outputs and
+    // the contract_inputs are referencing them via `output_index`. The
+    // node will, upon receiving our request, use `output_index` to index
+    // the `inputs` array we've sent over.
     let outputs = chain!(
-        generate_contract_outputs(num_of_contracts),
+        custom_outputs,
+        generate_contract_outputs(num_of_contracts, custom_inputs_len),
         generate_asset_change_outputs(address, asset_ids),
         generate_custom_outputs(calls),
     )
@@ -257,19 +263,33 @@ fn generate_asset_change_outputs(
         .collect()
 }
 
-pub(crate) fn generate_contract_outputs(num_of_contracts: usize) -> Vec<Output> {
+/// Generate contract outputs taking in consideration already existing inputs
+pub(crate) fn generate_contract_outputs(
+    num_of_contracts: usize,
+    num_current_inputs: usize,
+) -> Vec<Output> {
     (0..num_of_contracts)
-        .map(|idx| Output::contract(idx as u16, Bytes32::zeroed(), Bytes32::zeroed()))
+        .map(|idx| {
+            Output::contract(
+                (idx + num_current_inputs) as u16,
+                Bytes32::zeroed(),
+                Bytes32::zeroed(),
+            )
+        })
         .collect()
 }
 
-pub(crate) fn generate_contract_inputs(contract_ids: HashSet<ContractId>) -> Vec<Input> {
+/// Generate contract inputs taking in consideration already existing outputs
+pub(crate) fn generate_contract_inputs(
+    contract_ids: HashSet<ContractId>,
+    num_current_outputs: usize,
+) -> Vec<Input> {
     contract_ids
         .into_iter()
         .enumerate()
         .map(|(idx, contract_id)| {
             Input::contract(
-                UtxoId::new(Bytes32::zeroed(), idx as u16),
+                UtxoId::new(Bytes32::zeroed(), (idx + num_current_outputs) as u16),
                 Bytes32::zeroed(),
                 Bytes32::zeroed(),
                 TxPointer::default(),
@@ -337,6 +357,8 @@ mod test {
             output_param: ParamType::Unit,
             is_payable: false,
             custom_assets: Default::default(),
+            inputs: vec![],
+            outputs: vec![],
         }
     }
 

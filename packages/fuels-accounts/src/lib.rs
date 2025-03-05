@@ -11,12 +11,13 @@ pub mod wallet;
 
 #[cfg(feature = "std")]
 pub use account::*;
+#[cfg(feature = "kms-signer")]
+pub mod kms;
 
 #[cfg(feature = "coin-cache")]
 mod coin_cache;
 
 pub mod predicate;
-
 #[cfg(test)]
 mod test {
     #[test]

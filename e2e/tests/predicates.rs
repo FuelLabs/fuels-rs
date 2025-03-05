@@ -1314,3 +1314,120 @@ async fn predicate_transfer_respects_maturity_and_expiration() -> Result<()> {
 
     Ok(())
 }
+
+async fn transfer_to_predicate(
+    from: &impl Account,
+    address: &Bech32Address,
+    amount: u64,
+    asset_id: AssetId,
+) {
+    from.transfer(address, amount, asset_id, TxPolicies::default())
+        .await
+        .unwrap();
+
+    assert_address_balance(address, from.try_provider().unwrap(), asset_id, amount).await;
+}
+
+#[tokio::test]
+async fn predicate_tx_input_output() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet_1", "wallet_2"),
+        Abigen(
+            Contract(
+                name = "TestContract",
+                project = "e2e/sway/contracts/contract_test"
+            ),
+            Predicate(
+                name = "MyPredicate",
+                project = "e2e/sway/predicates/predicate_tx_input_output"
+            ),
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "TestContract",
+            wallet = "wallet_1",
+            random_salt = false,
+        ),
+    );
+
+    let provider = wallet_1.try_provider()?;
+
+    // Predicate expects `wallet_2` as owner
+    let configurables =
+        MyPredicateConfigurables::default().with_OWNER(wallet_2.address().into())?;
+
+    // Predicate will check first input and first output
+    let predicate_data = MyPredicateEncoder::default().encode_data(0, 0)?;
+
+    let mut predicate: Predicate = Predicate::load_from(
+        "sway/predicates/predicate_tx_input_output/out/release/predicate_tx_input_output.bin",
+    )?
+    .with_data(predicate_data)
+    .with_configurables(configurables);
+    predicate.set_provider(provider.clone());
+
+    let asset_id = AssetId::zeroed();
+    {
+        transfer_to_predicate(&wallet_2, predicate.address(), 42, asset_id).await;
+
+        // Call contract method with custom `wallet_2` input at first place, predicate at second
+        // and custom change to `wallet_2`
+        let wallet_input = wallet_2
+            .get_asset_inputs_for_amount(asset_id, 10, None)
+            .await?
+            .pop()
+            .unwrap();
+
+        let predicate_input = predicate
+            .get_asset_inputs_for_amount(asset_id, 10, None)
+            .await?
+            .pop()
+            .unwrap();
+
+        let custom_inputs = vec![wallet_input, predicate_input];
+
+        let custom_output = vec![Output::change(wallet_2.address().into(), 0, asset_id)];
+
+        let value = contract_instance
+            .methods()
+            .initialize_counter(36)
+            .with_inputs(custom_inputs)
+            .add_signer(wallet_2.clone())
+            .with_outputs(custom_output)
+            .call()
+            .await?
+            .value;
+
+        assert_eq!(value, 36);
+    }
+    {
+        transfer_to_predicate(&wallet_2, predicate.address(), 42, asset_id).await;
+
+        // Add coin with wrong owner (`wallet_1`)
+        let wallet_input = wallet_1
+            .get_asset_inputs_for_amount(asset_id, 10, None)
+            .await?
+            .pop()
+            .unwrap();
+
+        let predicate_input = predicate
+            .get_asset_inputs_for_amount(asset_id, 10, None)
+            .await?
+            .pop()
+            .unwrap();
+
+        let custom_inputs = vec![wallet_input, predicate_input];
+
+        let err = contract_instance
+            .methods()
+            .initialize_counter(36)
+            .with_inputs(custom_inputs)
+            .call()
+            .await
+            .unwrap_err();
+
+        assert!(err.to_string().contains("PredicateVerificationFailed"));
+    }
+
+    Ok(())
+}
