@@ -2,10 +2,10 @@
 mod tests {
     use anyhow::Result;
     use e2e::e2e_helpers::start_aws_kms;
-    use fuels::accounts::kms::{AwsWallet, KmsSigner};
+    use fuels::accounts::kms::AwsWallet;
     use fuels::accounts::{Account, ViewOnlyAccount};
     use fuels::prelude::{
-        launch_provider_and_get_wallet, AssetId, Contract, LoadConfiguration, TxPolicies,
+        launch_provider_and_get_wallet, AssetId, Contract, LoadConfiguration, Signer, TxPolicies,
     };
     use fuels::types::errors::Context;
 
@@ -16,7 +16,7 @@ mod tests {
 
         let amount = 500000000;
         let key = kms.create_key().await?;
-        let address = key.kms_key.fuel_address().clone();
+        let address = key.kms_key.address().clone();
 
         wallet
             .transfer(&address, amount, AssetId::zeroed(), TxPolicies::default())
@@ -43,7 +43,7 @@ mod tests {
 
         let amount = 500000000;
         let key = kms.create_key().await?;
-        let address = key.kms_key.fuel_address().clone();
+        let address = key.kms_key.address().clone();
 
         wallet
             .transfer(&address, amount, AssetId::zeroed(), TxPolicies::default())

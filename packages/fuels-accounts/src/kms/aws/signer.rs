@@ -1,4 +1,3 @@
-use crate::kms::kms_trait::KmsSigner;
 use crate::kms::signature_utils::{convert_to_fuel_signature, normalize_signature};
 use async_trait::async_trait;
 use aws_sdk_kms::{
@@ -7,6 +6,7 @@ use aws_sdk_kms::{
     Client,
 };
 use fuel_crypto::{Message, PublicKey, Signature};
+use fuels_core::traits::Signer;
 use fuels_core::types::{
     bech32::{Bech32Address, FUEL_BECH32_HRP},
     errors::{Error, Result},
@@ -114,12 +114,8 @@ impl AwsKmsSigner {
 }
 
 #[async_trait]
-impl KmsSigner for AwsKmsSigner {
-    fn fuel_address(&self) -> &Bech32Address {
-        &self.fuel_address
-    }
-
-    async fn sign_message(&self, message: Message) -> Result<Signature> {
+impl Signer for AwsKmsSigner {
+    async fn sign(&self, message: Message) -> Result<Signature> {
         let signature_der = self.request_kms_signature(message).await?;
 
         let k256_key = K256PublicKey::from_public_key_der(&self.public_key_der).map_err(|_| {
@@ -130,6 +126,10 @@ impl KmsSigner for AwsKmsSigner {
             normalize_signature(&signature_der, message, &k256_key, AWS_KMS_ERROR_PREFIX)?;
 
         Ok(convert_to_fuel_signature(normalized_sig, recovery_id))
+    }
+
+    fn address(&self) -> &Bech32Address {
+        &self.fuel_address
     }
 }
 
