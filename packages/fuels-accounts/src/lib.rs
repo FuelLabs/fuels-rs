@@ -18,6 +18,7 @@ pub mod kms;
 mod coin_cache;
 
 pub mod predicate;
+pub mod signers;
 #[cfg(test)]
 mod test {
     #[test]

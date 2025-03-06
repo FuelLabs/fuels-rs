@@ -21,6 +21,9 @@ use crate::{accounts_utils::try_provider_error, provider::Provider, Account, Vie
 
 pub const DEFAULT_DERIVATION_PATH_PREFIX: &str = "m/44'/1179993420'";
 
+mod new_wallet;
+pub use new_wallet::*;
+
 /// A FuelVM-compatible wallet that can be used to list assets, balances and more.
 ///
 /// Note that instances of the `Wallet` type only know their public address, and as a result can
