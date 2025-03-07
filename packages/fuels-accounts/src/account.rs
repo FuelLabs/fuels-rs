@@ -35,7 +35,7 @@ pub struct WithdrawToBaseResponse {
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
-pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync + Clone {
+pub trait ViewOnlyAccount: Send + Sync {
     fn address(&self) -> &Bech32Address;
 
     fn try_provider(&self) -> Result<&Provider>;
@@ -330,7 +330,6 @@ mod tests {
         traits::Signer,
         types::{transaction::Transaction, DryRun, DryRunner},
     };
-    
 
     use crate::signers::PrivateKeySigner;
 
