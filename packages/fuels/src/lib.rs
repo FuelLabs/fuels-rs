@@ -63,8 +63,7 @@ pub mod prelude {
     #[cfg(feature = "std")]
     pub use super::{
         accounts::{
-            impersonated_account::ImpersonatedAccount, predicate::Predicate, provider::*,
-            signers::*, wallet::Wallet, Account, ViewOnlyAccount,
+            predicate::Predicate, provider::*, signers::*, wallet::Wallet, Account, ViewOnlyAccount,
         },
         core::{
             codec::{LogDecoder, LogId, LogResult},

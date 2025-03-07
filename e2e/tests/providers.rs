@@ -4,7 +4,7 @@ use chrono::{DateTime, Duration, TimeZone, Utc};
 use fuel_asm::RegId;
 use fuel_tx::Witness;
 use fuels::{
-    accounts::{impersonated_account::ImpersonatedAccount, signers::PrivateKeySigner, Account},
+    accounts::{signers::PrivateKeySigner, Account},
     client::{PageDirection, PaginationRequest},
     prelude::*,
     tx::Receipt,
@@ -1269,7 +1269,7 @@ async fn contract_call_with_impersonation() -> Result<()> {
     let wallet = wallets.pop().unwrap();
     let provider = wallet.try_provider()?;
 
-    let impersonator = ImpersonatedAccount::new(wallet.address().clone(), Some(provider.clone()));
+    let impersonator = Wallet::new(FakeSigner::new(wallet.address().clone()), provider.clone());
 
     abigen!(Contract(
         name = "MyContract",

@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use fuel_tx::AssetId;
 use fuels_core::{
-    traits::Signer,
+    traits::{AddressResolver, Signer},
     types::{
         bech32::Bech32Address, coin_type_id::CoinTypeId, errors::Result, input::Input,
         transaction_builders::TransactionBuilder,
@@ -11,7 +11,7 @@ use rand::{CryptoRng, RngCore};
 
 use crate::{
     provider::Provider,
-    signers::{FakeSigner, PrivateKeySigner},
+    signers::{Locked, PrivateKeySigner},
     Account, ViewOnlyAccount,
 };
 
@@ -45,9 +45,9 @@ impl<S> Wallet<S>
 where
     S: Signer,
 {
-    pub fn locked(&self) -> Wallet<FakeSigner> {
+    pub fn locked(&self) -> Wallet<Locked> {
         Wallet::new(
-            FakeSigner::new(self.signer.address().clone()),
+            Locked::new(self.signer.address().clone()),
             self.provider.clone(),
         )
     }
@@ -56,7 +56,7 @@ where
 #[async_trait]
 impl<S> ViewOnlyAccount for Wallet<S>
 where
-    S: Signer + Clone + Send + Sync + std::fmt::Debug,
+    S: AddressResolver + Clone + Send + Sync + std::fmt::Debug,
 {
     fn address(&self) -> &Bech32Address {
         self.signer.address()

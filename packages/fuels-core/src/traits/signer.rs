@@ -10,7 +10,11 @@ use auto_impl::auto_impl;
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 #[auto_impl(&, Box, Rc, Arc)]
-pub trait Signer {
+pub trait Signer: AddressResolver {
     async fn sign(&self, message: Message) -> Result<Signature>;
+}
+
+#[auto_impl(&, Box, Rc, Arc)]
+pub trait AddressResolver {
     fn address(&self) -> &Bech32Address;
 }
