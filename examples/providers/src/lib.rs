@@ -2,7 +2,7 @@
 mod tests {
     use std::time::Duration;
 
-    use fuels::{accounts::signers::PrivateKeySigner, prelude::Result};
+    use fuels::prelude::Result;
 
     #[tokio::test]
     async fn query_the_blockchain() -> Result<()> {

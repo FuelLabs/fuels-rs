@@ -3,7 +3,6 @@ mod tests {
     use std::{collections::HashSet, time::Duration};
 
     use fuels::{
-        accounts::signers::{FakeSigner, PrivateKeySigner},
         core::codec::{encode_fn_selector, ABIFormatter, DecoderConfig, EncoderConfig},
         prelude::{LoadConfiguration, NodeConfig, StorageConfiguration},
         programs::debug::ScriptType,

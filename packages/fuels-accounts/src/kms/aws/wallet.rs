@@ -1,22 +1,14 @@
-use crate::accounts_utils::try_provider_error;
-use crate::provider::Provider;
-use crate::wallet::Wallet;
-use crate::{Account, ViewOnlyAccount};
 use aws_sdk_kms::{
     primitives::Blob,
     types::{KeySpec, MessageType, SigningAlgorithmSpec},
     Client,
 };
 use fuel_crypto::{Message, PublicKey, Signature};
-use fuel_types::AssetId;
 use fuels_core::{
     traits::Signer,
     types::{
         bech32::{Bech32Address, FUEL_BECH32_HRP},
-        coin_type_id::CoinTypeId,
         errors::{Error, Result},
-        input::Input,
-        transaction_builders::TransactionBuilder,
     },
 };
 use k256::{
@@ -27,13 +19,6 @@ use k256::{
 
 const AWS_KMS_ERROR_PREFIX: &str = "AWS KMS Error";
 const EXPECTED_KEY_SPEC: KeySpec = KeySpec::EccSecgP256K1;
-
-/// A wallet implementation that uses AWS KMS for signing
-#[derive(Clone, Debug)]
-pub struct AwsWallet {
-    view_account: Wallet,
-    kms_key: KmsKey,
-}
 
 #[derive(Clone, Debug)]
 pub struct KmsKey {
@@ -209,70 +194,14 @@ impl KmsKey {
     }
 }
 
-impl AwsWallet {
-    /// Creates a new AwsWallet with the given KMS key ID
-    pub async fn with_kms_key(
-        key_id: impl Into<String>,
-        aws_client: &Client,
-        provider: Option<Provider>,
-    ) -> Result<Self> {
-        let kms_key = KmsKey::new(key_id.into(), aws_client).await?;
-
-        Ok(Self {
-            view_account: Wallet::from_address(kms_key.fuel_address.clone(), provider),
-            kms_key,
-        })
-    }
-
-    /// Returns the Fuel address associated with this wallet
-    pub fn address(&self) -> &Bech32Address {
-        &self.kms_key.fuel_address
-    }
-
-    /// Returns the provider associated with this wallet, if any
-    pub fn provider(&self) -> Option<&Provider> {
-        self.view_account.provider()
-    }
-}
-
 #[async_trait::async_trait]
-impl Signer for AwsWallet {
+impl Signer for KmsKey {
     async fn sign(&self, message: Message) -> Result<Signature> {
-        self.kms_key.sign_message(message).await
+        self.sign_message(message).await
     }
 
     fn address(&self) -> &Bech32Address {
-        self.address()
-    }
-}
-
-#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
-impl ViewOnlyAccount for AwsWallet {
-    fn address(&self) -> &Bech32Address {
-        &self.kms_key.fuel_address
-    }
-
-    fn try_provider(&self) -> Result<&Provider> {
-        self.provider().ok_or_else(try_provider_error)
-    }
-
-    async fn get_asset_inputs_for_amount(
-        &self,
-        asset_id: AssetId,
-        amount: u64,
-        excluded_coins: Option<Vec<CoinTypeId>>,
-    ) -> Result<Vec<Input>> {
-        self.view_account
-            .get_asset_inputs_for_amount(asset_id, amount, excluded_coins)
-            .await
-    }
-}
-
-#[async_trait::async_trait]
-impl Account for AwsWallet {
-    fn add_witnesses<Tb: TransactionBuilder>(&self, tb: &mut Tb) -> Result<()> {
-        tb.add_signer(self.clone())?;
-        Ok(())
+        self.fuel_address()
     }
 }
 
