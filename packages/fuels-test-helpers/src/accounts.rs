@@ -1,7 +1,7 @@
 use std::mem::size_of;
 
 use fuel_crypto::SecretKey;
-use fuels_accounts::{signers::PrivateKeySigner, wallet::Wallet};
+use fuels_accounts::{signers::private_key::PrivateKeySigner, wallet::Wallet};
 use fuels_core::types::errors::Result;
 
 use crate::{

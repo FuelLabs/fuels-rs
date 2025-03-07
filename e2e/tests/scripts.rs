@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use fuel_tx::Output;
 use fuels::{
-    accounts::signers::PrivateKeySigner,
+    accounts::signers::private_key::PrivateKeySigner,
     client::{PageDirection, PaginationRequest},
     core::{
         codec::{DecoderConfig, EncoderConfig},

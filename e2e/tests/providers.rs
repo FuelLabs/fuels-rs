@@ -4,7 +4,10 @@ use chrono::{DateTime, Duration, TimeZone, Utc};
 use fuel_asm::RegId;
 use fuel_tx::Witness;
 use fuels::{
-    accounts::{signers::PrivateKeySigner, Account},
+    accounts::{
+        signers::{fake::FakeSigner, private_key::PrivateKeySigner},
+        Account,
+    },
     client::{PageDirection, PaginationRequest},
     prelude::*,
     tx::Receipt,

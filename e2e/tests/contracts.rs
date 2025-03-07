@@ -5,7 +5,7 @@ use fuel_tx::{
     ConsensusParameters, FeeParameters, Output,
 };
 use fuels::{
-    accounts::signers::PrivateKeySigner,
+    accounts::signers::private_key::PrivateKeySigner,
     core::codec::{calldata, encode_fn_selector, DecoderConfig, EncoderConfig},
     prelude::*,
     programs::DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE,

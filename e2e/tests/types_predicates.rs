@@ -1,7 +1,7 @@
 use std::{default::Default, path::Path};
 
 use fuels::{
-    accounts::{predicate::Predicate, signers::PrivateKeySigner, Account},
+    accounts::{predicate::Predicate, signers::private_key::PrivateKeySigner, Account},
     prelude::*,
     types::{coin::Coin, message::Message, AssetId, Bits256, U256},
 };

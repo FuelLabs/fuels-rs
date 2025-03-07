@@ -1,7 +1,7 @@
 use std::default::Default;
 
 use fuels::{
-    accounts::signers::PrivateKeySigner,
+    accounts::signers::private_key::PrivateKeySigner,
     core::{
         codec::{ABIEncoder, EncoderConfig},
         traits::Tokenizable,

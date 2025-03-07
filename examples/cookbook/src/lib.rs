@@ -4,7 +4,8 @@ mod tests {
 
     use fuels::{
         accounts::{
-            predicate::Predicate, signers::PrivateKeySigner, wallet::Wallet, ViewOnlyAccount,
+            predicate::Predicate, signers::private_key::PrivateKeySigner, wallet::Wallet,
+            ViewOnlyAccount,
         },
         prelude::Result,
         test_helpers::{setup_single_asset_coins, setup_test_provider},

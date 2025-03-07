@@ -11,7 +11,7 @@ use rand::{CryptoRng, RngCore};
 
 use crate::{
     provider::Provider,
-    signers::{Locked, PrivateKeySigner},
+    signers::{locked::Locked, private_key::PrivateKeySigner},
     Account, ViewOnlyAccount,
 };
 

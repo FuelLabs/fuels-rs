@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use fuels::{
-        accounts::signers::{self, save_key_to_keystore, DEFAULT_DERIVATION_PATH},
+        accounts::signers::{private_key::PrivateKeySigner, DEFAULT_DERIVATION_PATH},
         crypto::SecretKey,
         prelude::*,
     };
@@ -82,11 +82,11 @@ mod tests {
         let password = "my_master_password";
 
         // Create a wallet to be stored in the keystore.
-        let saved = signers::new_key_from_keystore(&dir, &mut rng, password)?;
+        let saved = keystore::new_key_from_keystore(&dir, &mut rng, password)?;
 
         let path = dir.join(saved.uuid());
 
-        let _recovered_key = signers::load_key_from_keystore(path, password)?;
+        let _recovered_key = keystore::load_key_from_keystore(path, password)?;
         // ANCHOR_END: create_and_restore_json_key
         Ok(())
     }
@@ -105,7 +105,7 @@ mod tests {
         let password = "my_master_password";
 
         // Encrypts and stores it on disk. Can be recovered using `load_key_from_keystore`.
-        let _uuid = save_key_to_keystore(key, &dir, password, thread_rng())?;
+        let _uuid = keystore::save_key_to_keystore(key, &dir, password, thread_rng())?;
         // ANCHOR_END: create_and_store_mnemonic_key
         Ok(())
     }

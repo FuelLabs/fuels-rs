@@ -331,7 +331,7 @@ mod tests {
         types::{transaction::Transaction, DryRun, DryRunner},
     };
 
-    use crate::signers::PrivateKeySigner;
+    use crate::signers::private_key::PrivateKeySigner;
 
     use super::*;
 

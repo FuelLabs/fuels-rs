@@ -1,5 +1,5 @@
 use fuels::{
-    accounts::signers::PrivateKeySigner,
+    accounts::signers::{locked::Locked, private_key::PrivateKeySigner},
     prelude::*,
     types::{coin_type::CoinType, input::Input, output::Output},
 };
