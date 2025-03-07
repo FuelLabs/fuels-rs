@@ -3,6 +3,7 @@ mod tests {
     use std::{collections::HashSet, time::Duration};
 
     use fuels::{
+        accounts::signers::{FakeSigner, PrivateKeySigner},
         core::codec::{encode_fn_selector, ABIFormatter, DecoderConfig, EncoderConfig},
         crypto::SecretKey,
         prelude::{LoadConfiguration, NodeConfig, StorageConfiguration},
@@ -13,7 +14,7 @@ mod tests {
             Bits256,
         },
     };
-    use rand::Rng;
+    use rand::{thread_rng, Rng};
 
     #[tokio::test]
     async fn instantiate_client() -> Result<()> {
@@ -709,18 +710,14 @@ mod tests {
             )
         );
 
-        let other_wallet = WalletUnlocked::new_random(None);
+        let some_addr: Bech32Address = thread_rng().gen();
 
         // ANCHOR: add_custom_assets
         let amount = 1000;
         let _ = contract_instance
             .methods()
             .initialize_counter(42)
-            .add_custom_asset(
-                AssetId::zeroed(),
-                amount,
-                Some(other_wallet.address().clone()),
-            )
+            .add_custom_asset(AssetId::zeroed(), amount, Some(some_addr.clone()))
             .call()
             .await?;
         // ANCHOR_END: add_custom_assets
@@ -733,7 +730,7 @@ mod tests {
             .initialize_counter(42)
             .with_inputs(custom_inputs)
             .with_outputs(custom_outputs)
-            .add_signer(wallet_2)
+            .add_signer(wallet_2.signer().clone())
             .call()
             .await?;
         // ANCHOR_END: add_custom_inputs_outputs
@@ -912,7 +909,7 @@ mod tests {
         // customize the builder...
 
         wallet.adjust_for_fee(&mut tb, 0).await?;
-        tb.add_signer(wallet.clone())?;
+        wallet.add_witnesses(&mut tb)?;
 
         let tx = tb.build(provider).await?;
 
@@ -976,20 +973,15 @@ mod tests {
             utxo_validation: false,
             ..Default::default()
         };
-        let mut wallet = WalletUnlocked::new_from_private_key(
-            SecretKey::from_str(
-                "0x4433d156e8c53bf5b50af07aa95a29436f29a94e0ccc5d58df8e57bdc8583c32",
-            )?,
-            None,
-        );
+        let signer = PrivateKeySigner::random(&mut thread_rng());
         let coins = setup_single_asset_coins(
-            wallet.address(),
+            signer.address(),
             AssetId::zeroed(),
             DEFAULT_NUM_COINS,
             DEFAULT_COIN_AMOUNT,
         );
         let provider = setup_test_provider(coins, vec![], Some(node_config), None).await?;
-        wallet.set_provider(provider.clone());
+        let wallet = NewWallet::new(signer, provider.clone());
 
         let contract_id = Contract::load_from(
             "../../e2e/sway/contracts/contract_test/out/release/contract_test.bin",
@@ -999,13 +991,11 @@ mod tests {
         .await?
         .contract_id;
 
+        let some_address = wallet.address().clone();
         // ANCHOR: contract_call_impersonation
         // create impersonator for an address
-        let address =
-            Address::from_str("0x17f46f562778f4bb5fe368eeae4985197db51d80c83494ea7f84c530172dedd1")
-                .unwrap();
-        let address = Bech32Address::from(address);
-        let impersonator = ImpersonatedAccount::new(address, Some(provider.clone()));
+        let fake_signer = FakeSigner::new(some_address);
+        let impersonator = NewWallet::new(fake_signer, provider.clone());
 
         let contract_instance = MyContract::new(contract_id, impersonator.clone());
 

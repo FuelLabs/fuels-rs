@@ -1,7 +1,7 @@
 use std::mem::size_of;
 
 use fuel_crypto::SecretKey;
-use fuels_accounts::wallet::WalletUnlocked;
+use fuels_accounts::{signers::PrivateKeySigner, wallet::NewWallet};
 use fuels_core::types::errors::Result;
 
 use crate::{
@@ -23,7 +23,7 @@ use crate::{
 ///   Ok(())
 /// }
 /// ```
-pub async fn launch_provider_and_get_wallet() -> Result<WalletUnlocked> {
+pub async fn launch_provider_and_get_wallet() -> Result<NewWallet> {
     let mut wallets =
         launch_custom_provider_and_get_wallets(WalletsConfig::new(Some(1), None, None), None, None)
             .await?;
@@ -54,33 +54,33 @@ pub async fn launch_custom_provider_and_get_wallets(
     wallet_config: WalletsConfig,
     node_config: Option<NodeConfig>,
     chain_config: Option<ChainConfig>,
-) -> Result<Vec<WalletUnlocked>> {
+) -> Result<Vec<NewWallet>> {
     const SIZE_SECRET_KEY: usize = size_of::<SecretKey>();
     const PADDING_BYTES: usize = SIZE_SECRET_KEY - size_of::<u64>();
-    let mut secret_key: [u8; SIZE_SECRET_KEY] = [0; SIZE_SECRET_KEY];
 
-    let mut wallets: Vec<_> = (1..=wallet_config.num_wallets())
+    let signers: Vec<_> = (1..=wallet_config.num_wallets())
         .map(|wallet_counter| {
+            let mut secret_key: [u8; SIZE_SECRET_KEY] = [0; SIZE_SECRET_KEY];
             secret_key[PADDING_BYTES..].copy_from_slice(&wallet_counter.to_be_bytes());
 
-            WalletUnlocked::new_from_private_key(
-                SecretKey::try_from(secret_key.as_slice())
-                    .expect("This should never happen as we provide a [u8; SIZE_SECRET_KEY] array"),
-                None,
-            )
+            let key = SecretKey::try_from(secret_key.as_slice())
+                .expect("This should never happen as we provide a [u8; SIZE_SECRET_KEY] array");
+
+            PrivateKeySigner::new(key)
         })
         .collect();
 
-    let all_coins = wallets
+    let all_coins = signers
         .iter()
-        .flat_map(|wallet| setup_custom_assets_coins(wallet.address(), wallet_config.assets()))
+        .flat_map(|signer| setup_custom_assets_coins(signer.address(), wallet_config.assets()))
         .collect::<Vec<_>>();
 
     let provider = setup_test_provider(all_coins, vec![], node_config, chain_config).await?;
 
-    for wallet in &mut wallets {
-        wallet.set_provider(provider.clone());
-    }
+    let wallets = signers
+        .into_iter()
+        .map(|signer| NewWallet::new(signer, provider.clone()))
+        .collect::<Vec<_>>();
 
     Ok(wallets)
 }

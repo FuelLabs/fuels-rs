@@ -1,11 +1,12 @@
 #[cfg(test)]
 mod tests {
     use fuels::{
-        accounts::{predicate::Predicate, Account},
+        accounts::{predicate::Predicate, signers::PrivateKeySigner, Account},
         crypto::{Message, SecretKey},
         prelude::*,
         types::B512,
     };
+    use rand::thread_rng;
 
     #[tokio::test]
     async fn predicate_example() -> Result<()> {
@@ -19,10 +20,10 @@ mod tests {
         let secret_key3: SecretKey =
             "0x976e5c3fa620092c718d852ca703b6da9e3075b9f2ecb8ed42d9f746bf26aafb".parse()?;
 
-        let mut wallet = WalletUnlocked::new_from_private_key(secret_key1, None);
-        let mut wallet2 = WalletUnlocked::new_from_private_key(secret_key2, None);
-        let mut wallet3 = WalletUnlocked::new_from_private_key(secret_key3, None);
-        let mut receiver = WalletUnlocked::new_random(None);
+        let mut wallet_signer = PrivateKeySigner::new(secret_key1);
+        let mut wallet2_signer = PrivateKeySigner::new(secret_key2);
+        let mut wallet3_signer = PrivateKeySigner::new(secret_key3);
+        let mut receiver_signer = PrivateKeySigner::random(&mut thread_rng());
         // ANCHOR_END: predicate_wallets
 
         // ANCHOR: predicate_coins
@@ -30,26 +31,43 @@ mod tests {
         let num_coins = 32;
         let amount = 64;
         let initial_balance = amount * num_coins;
-        let all_coins = [&wallet, &wallet2, &wallet3, &receiver]
-            .iter()
-            .flat_map(|wallet| {
-                setup_single_asset_coins(wallet.address(), asset_id, num_coins, amount)
-            })
-            .collect::<Vec<_>>();
+        let all_coins = [
+            &wallet_signer,
+            &wallet2_signer,
+            &wallet3_signer,
+            &receiver_signer,
+        ]
+        .iter()
+        .flat_map(|signer| setup_single_asset_coins(signer.address(), asset_id, num_coins, amount))
+        .collect::<Vec<_>>();
 
         let provider = setup_test_provider(all_coins, vec![], None, None).await?;
 
-        [&mut wallet, &mut wallet2, &mut wallet3, &mut receiver]
-            .iter_mut()
-            .for_each(|wallet| {
-                wallet.set_provider(provider.clone());
-            });
+        let wallet = NewWallet::new(wallet_signer, provider.clone());
+        let wallet2 = NewWallet::new(wallet2_signer, provider.clone());
+        let wallet3 = NewWallet::new(wallet3_signer, provider.clone());
+        let receiver = NewWallet::new(receiver_signer, provider.clone());
         // ANCHOR_END: predicate_coins
 
         let data_to_sign = Message::new([0; 32]);
-        let signature1: B512 = wallet.sign(data_to_sign).await?.as_ref().try_into()?;
-        let signature2: B512 = wallet2.sign(data_to_sign).await?.as_ref().try_into()?;
-        let signature3: B512 = wallet3.sign(data_to_sign).await?.as_ref().try_into()?;
+        let signature1: B512 = wallet
+            .signer()
+            .sign(data_to_sign)
+            .await?
+            .as_ref()
+            .try_into()?;
+        let signature2: B512 = wallet2
+            .signer()
+            .sign(data_to_sign)
+            .await?
+            .as_ref()
+            .try_into()?;
+        let signature3: B512 = wallet3
+            .signer()
+            .sign(data_to_sign)
+            .await?
+            .as_ref()
+            .try_into()?;
 
         let signatures = [signature1, signature2, signature3];
 

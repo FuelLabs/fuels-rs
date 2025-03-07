@@ -283,6 +283,8 @@ pub fn generate_mnemonic_phrase<R: Rng>(rng: &mut R, count: usize) -> Result<Str
 mod tests {
     use tempfile::tempdir;
 
+    use crate::signers::PrivateKeySigner;
+
     use super::*;
 
     #[tokio::test]
@@ -313,7 +315,10 @@ mod tests {
     #[tokio::test]
     async fn mnemonic_generation() -> Result<()> {
         let mnemonic = generate_mnemonic_phrase(&mut rand::thread_rng(), 12)?;
-        let _wallet = WalletUnlocked::new_from_mnemonic_phrase(&mnemonic, None)?;
+        let _wallet = PrivateKeySigner::new(SecretKey::new_from_mnemonic_phrase_with_path(
+            &mnemonic,
+            DEFAULT_DERIVATION_PATH_PREFIX,
+        )?);
 
         Ok(())
     }

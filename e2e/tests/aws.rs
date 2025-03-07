@@ -24,7 +24,7 @@ mod tests {
             .context("Failed to transfer funds")?;
 
         let your_kms_key_id = key.id;
-        let provider = wallet.provider().expect("No provider found").clone();
+        let provider = wallet.provider().clone();
 
         // ANCHOR: use_kms_wallet
         let wallet = AwsWallet::with_kms_key(your_kms_key_id, kms.client(), Some(provider)).await?;
@@ -51,7 +51,7 @@ mod tests {
             .context("Failed to transfer funds")?;
 
         let your_kms_key_id = key.id;
-        let provider = wallet.provider().expect("No provider found").clone();
+        let provider = wallet.provider().clone();
 
         let aws_wallet =
             &AwsWallet::with_kms_key(your_kms_key_id, kms.client(), Some(provider)).await?;

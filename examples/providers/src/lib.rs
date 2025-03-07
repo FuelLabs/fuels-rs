@@ -2,40 +2,7 @@
 mod tests {
     use std::time::Duration;
 
-    use fuels::prelude::Result;
-
-    #[ignore = "testnet currently not compatible with the sdk"]
-    #[tokio::test]
-    async fn connect_to_fuel_node() -> Result<()> {
-        // ANCHOR: connect_to_testnet
-        use std::str::FromStr;
-
-        use fuels::{crypto::SecretKey, prelude::*};
-
-        // Create a provider pointing to the testnet.
-        let provider = Provider::connect("testnet.fuel.network").await.unwrap();
-
-        // Setup a private key
-        let secret = SecretKey::from_str(
-            "a1447cd75accc6b71a976fd3401a1f6ce318d27ba660b0315ee6ac347bf39568",
-        )?;
-
-        // Create the wallet
-        let wallet = WalletUnlocked::new_from_private_key(secret, Some(provider));
-
-        // Get the wallet address. Used later with the faucet
-        dbg!(wallet.address().to_string());
-        // ANCHOR_END: connect_to_testnet
-
-        let provider = setup_test_provider(vec![], vec![], None, None).await?;
-        let port = provider.url().split(':').last().unwrap();
-
-        // ANCHOR: local_node_address
-        let _provider = Provider::connect(format!("127.0.0.1:{port}")).await?;
-        // ANCHOR_END: local_node_address
-
-        Ok(())
-    }
+    use fuels::{accounts::signers::PrivateKeySigner, prelude::Result};
 
     #[tokio::test]
     async fn query_the_blockchain() -> Result<()> {
@@ -44,9 +11,9 @@ mod tests {
 
         // Set up our test blockchain.
 
-        // Create a random wallet (more on wallets later).
+        // Create a random signer
         // ANCHOR: setup_single_asset
-        let wallet = WalletUnlocked::new_random(None);
+        let wallet_signer = PrivateKeySigner::random(&mut rand::thread_rng());
 
         // How many coins in our wallet.
         let number_of_coins = 1;
@@ -55,7 +22,7 @@ mod tests {
         let amount_per_coin = 3;
 
         let coins = setup_single_asset_coins(
-            wallet.address(),
+            wallet_signer.address(),
             AssetId::zeroed(),
             number_of_coins,
             amount_per_coin,
@@ -73,14 +40,17 @@ mod tests {
         // ANCHOR: get_coins
         let consensus_parameters = provider.consensus_parameters().await?;
         let coins = provider
-            .get_coins(wallet.address(), *consensus_parameters.base_asset_id())
+            .get_coins(
+                wallet_signer.address(),
+                *consensus_parameters.base_asset_id(),
+            )
             .await?;
         assert_eq!(coins.len(), 1);
         // ANCHOR_END: get_coins
 
         // ANCHOR: get_spendable_resources
         let filter = ResourceFilter {
-            from: wallet.address().clone(),
+            from: wallet_signer.address().clone(),
             amount: 1,
             ..Default::default()
         };
@@ -89,7 +59,7 @@ mod tests {
         // ANCHOR_END: get_spendable_resources
 
         // ANCHOR: get_balances
-        let _balances = provider.get_balances(wallet.address()).await?;
+        let _balances = provider.get_balances(wallet_signer.address()).await?;
         // ANCHOR_END: get_balances
 
         Ok(())

@@ -2,6 +2,7 @@ use std::time::Duration;
 
 use fuel_tx::Output;
 use fuels::{
+    accounts::signers::PrivateKeySigner,
     client::{PageDirection, PaginationRequest},
     core::{
         codec::{DecoderConfig, EncoderConfig},
@@ -12,6 +13,7 @@ use fuels::{
     programs::{executable::Executable, DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE},
     types::{Bits256, Identity},
 };
+use rand::thread_rng;
 
 #[tokio::test]
 async fn main_function_arguments() -> Result<()> {
@@ -121,8 +123,7 @@ async fn test_output_variable_estimation() -> Result<()> {
     );
 
     let provider = wallet.try_provider()?.clone();
-    let mut receiver = WalletUnlocked::new_random(None);
-    receiver.set_provider(provider);
+    let receiver = NewWallet::random(&mut thread_rng(), provider);
 
     let amount = 1000;
     let asset_id = AssetId::zeroed();
@@ -319,7 +320,7 @@ async fn test_script_transaction_builder() -> Result<()> {
     // customize the builder...
 
     wallet.adjust_for_fee(&mut tb, 0).await?;
-    tb.add_signer(wallet.clone())?;
+    wallet.add_witnesses(&mut tb)?;
 
     let tx = tb.build(provider).await?;
 
@@ -396,9 +397,9 @@ async fn simulations_can_be_made_without_coins() -> Result<()> {
             wallet = "wallet"
         )
     );
-    let provider = wallet.provider().cloned();
+    let provider = wallet.provider().clone();
 
-    let no_funds_wallet = WalletUnlocked::new_random(provider);
+    let no_funds_wallet = NewWallet::random(&mut thread_rng(), provider);
     let script_instance = script_instance.with_account(no_funds_wallet);
 
     let value = script_instance
@@ -497,10 +498,10 @@ async fn high_level_blob_upload_sets_max_fee_tolerance() -> Result<()> {
         starting_gas_price: 1000000000,
         ..Default::default()
     };
-    let mut wallet = WalletUnlocked::new_random(None);
-    let coins = setup_single_asset_coins(wallet.address(), AssetId::zeroed(), 1, u64::MAX);
+    let signer = PrivateKeySigner::random(&mut thread_rng());
+    let coins = setup_single_asset_coins(signer.address(), AssetId::zeroed(), 1, u64::MAX);
     let provider = setup_test_provider(coins, vec![], Some(node_config), None).await?;
-    wallet.set_provider(provider.clone());
+    let wallet = NewWallet::new(signer, provider.clone());
 
     setup_program_test!(
         Abigen(Script(
@@ -780,7 +781,7 @@ async fn script_tx_input_output() -> Result<()> {
             .main(0, 0)
             .with_inputs(custom_inputs)
             .with_outputs(custom_output)
-            .add_signer(wallet_1.clone())
+            .add_signer(wallet_1.signer().clone())
             .call()
             .await?;
         // ANCHOR_END: script_custom_inputs_outputs
@@ -802,7 +803,7 @@ async fn script_tx_input_output() -> Result<()> {
         let err = script_instance
             .main(0, 0)
             .with_inputs(vec![custom_input])
-            .add_signer(wallet_1.clone())
+            .add_signer(wallet_1.signer().clone())
             .call()
             .await
             .unwrap_err();

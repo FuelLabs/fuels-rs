@@ -7,8 +7,13 @@ use fuels_core::{
         transaction_builders::TransactionBuilder,
     },
 };
+use rand::{CryptoRng, RngCore};
 
-use crate::{provider::Provider, signers::PrivateKeySigner, Account, ViewOnlyAccount};
+use crate::{
+    provider::Provider,
+    signers::{FakeSigner, PrivateKeySigner},
+    Account, ViewOnlyAccount,
+};
 
 #[derive(Debug, Clone)]
 pub struct NewWallet<S = PrivateKeySigner> {
@@ -19,6 +24,32 @@ pub struct NewWallet<S = PrivateKeySigner> {
 impl<S> NewWallet<S> {
     pub fn new(signer: S, provider: Provider) -> Self {
         Self { signer, provider }
+    }
+
+    pub fn provider(&self) -> &Provider {
+        &self.provider
+    }
+
+    pub fn signer(&self) -> &S {
+        &self.signer
+    }
+}
+
+impl NewWallet<PrivateKeySigner> {
+    pub fn random(rng: &mut (impl CryptoRng + RngCore), provider: Provider) -> Self {
+        Self::new(PrivateKeySigner::random(rng), provider)
+    }
+}
+
+impl<S> NewWallet<S>
+where
+    S: Signer,
+{
+    pub fn locked(&self) -> NewWallet<FakeSigner> {
+        NewWallet::new(
+            FakeSigner::new(self.signer.address().clone()),
+            self.provider.clone(),
+        )
     }
 }
 
@@ -53,7 +84,7 @@ where
 #[async_trait]
 impl<S> Account for NewWallet<S>
 where
-    S: Signer + Clone + Send + Sync + std::fmt::Debug,
+    S: Signer + Clone + Send + Sync + std::fmt::Debug + 'static,
 {
     fn add_witnesses<Tb: TransactionBuilder>(&self, tb: &mut Tb) -> Result<()> {
         tb.add_signer(self.signer.clone())?;

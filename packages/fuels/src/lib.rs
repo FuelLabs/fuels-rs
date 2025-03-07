@@ -66,7 +66,7 @@ pub mod prelude {
             impersonated_account::ImpersonatedAccount,
             predicate::Predicate,
             provider::*,
-            wallet::{generate_mnemonic_phrase, WalletUnlocked},
+            wallet::{generate_mnemonic_phrase, NewWallet},
             Account, ViewOnlyAccount,
         },
         core::{
