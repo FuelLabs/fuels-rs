@@ -1,3 +1,6 @@
+pub use aws_config;
+pub use aws_sdk_kms;
+
 use aws_sdk_kms::{
     primitives::Blob,
     types::{KeySpec, MessageType, SigningAlgorithmSpec},
@@ -21,14 +24,14 @@ const AWS_KMS_ERROR_PREFIX: &str = "AWS KMS Error";
 const EXPECTED_KEY_SPEC: KeySpec = KeySpec::EccSecgP256K1;
 
 #[derive(Clone, Debug)]
-pub struct KmsKey {
+pub struct AwsKmsSigner {
     key_id: String,
     client: Client,
     public_key_der: Vec<u8>,
     fuel_address: Bech32Address,
 }
 
-impl KmsKey {
+impl AwsKmsSigner {
     pub fn key_id(&self) -> &String {
         &self.key_id
     }
@@ -195,13 +198,13 @@ impl KmsKey {
 }
 
 #[async_trait::async_trait]
-impl Signer for KmsKey {
+impl Signer for AwsKmsSigner {
     async fn sign(&self, message: Message) -> Result<Signature> {
         self.sign_message(message).await
     }
 }
 
-impl AddressResolver for KmsKey {
+impl AddressResolver for AwsKmsSigner {
     fn address(&self) -> &Bech32Address {
         self.fuel_address()
     }

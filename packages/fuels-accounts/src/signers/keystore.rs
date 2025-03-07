@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use fuel_crypto::SecretKey;
 use fuels_core::{error, types::errors::Result};
@@ -13,8 +13,8 @@ pub struct KeySaved {
 }
 
 impl KeySaved {
-    pub fn key(&self) -> SecretKey {
-        self.key
+    pub fn key(&self) -> &SecretKey {
+        &self.key
     }
 
     pub fn uuid(&self) -> &str {
@@ -22,49 +22,56 @@ impl KeySaved {
     }
 }
 
-/// Creates a new key and stores its encrypted version in the given path.
-pub fn new_key_from_keystore<P, R, S>(dir: P, rng: &mut R, password: S) -> Result<KeySaved>
-where
-    P: AsRef<Path>,
-    R: Rng + CryptoRng + CryptoRng,
-    S: AsRef<[u8]>,
-{
-    let (secret, uuid) =
-        eth_keystore::new(dir, rng, password, None).map_err(|e| error!(Other, "{e}"))?;
-
-    let key = SecretKey::try_from(secret.as_slice()).expect("should have correct size");
-
-    Ok(KeySaved { key, uuid })
+/// A Keystore encapsulates operations for key management such as creation, loading,
+/// and saving of keys into a specified directory.
+pub struct Keystore {
+    dir: PathBuf,
 }
 
-/// Recreates a key from an encrypted JSON wallet given the provided path and password.
-pub fn load_key_from_keystore<P, S>(keypath: P, password: S) -> Result<SecretKey>
-where
-    P: AsRef<Path>,
-    S: AsRef<[u8]>,
-{
-    let secret = eth_keystore::decrypt_key(keypath, password).map_err(|e| error!(Other, "{e}"))?;
-    let secret_key =
-        SecretKey::try_from(secret.as_slice()).expect("Decrypted key should have a correct size");
-    Ok(secret_key)
-}
+impl Keystore {
+    /// Creates a new Keystore instance with the provided directory.
+    pub fn new<P: AsRef<Path>>(dir: P) -> Self {
+        Self {
+            dir: dir.as_ref().to_path_buf(),
+        }
+    }
 
-// TODO: segfault, this needs to go into a struct along with other keystore stuff
+    /// Creates a new key, encrypts it with the given password, and stores it in the keystore.
+    pub fn new_key<R, S>(&self, rng: &mut R, password: S) -> Result<KeySaved>
+    where
+        R: Rng + CryptoRng,
+        S: AsRef<[u8]>,
+    {
+        let (secret, uuid) =
+            eth_keystore::new(&self.dir, rng, password, None).map_err(|e| error!(Other, "{e}"))?;
+        let key = SecretKey::try_from(secret.as_slice()).expect("should have correct size");
+        Ok(KeySaved { key, uuid })
+    }
 
-/// Encrypts the private key with the given password and saves it
-/// to the given path.
-pub fn save_key_to_keystore<P, S, R>(
-    key: SecretKey,
-    dir: P,
-    password: S,
-    mut rng: R,
-) -> Result<String>
-where
-    P: AsRef<Path>,
-    S: AsRef<[u8]>,
-    R: Rng + CryptoRng,
-{
-    eth_keystore::encrypt_key(dir, &mut rng, *key, password, None).map_err(|e| error!(Other, "{e}"))
+    /// Loads and decrypts a key from the keystore using the given UUID and password.
+    pub fn load_key<S>(&self, uuid: &str, password: S) -> Result<SecretKey>
+    where
+        S: AsRef<[u8]>,
+    {
+        let key_path = self.dir.join(uuid);
+        let secret =
+            eth_keystore::decrypt_key(key_path, password).map_err(|e| error!(Other, "{e}"))?;
+        let secret_key = SecretKey::try_from(secret.as_slice())
+            .expect("Decrypted key should have a correct size");
+        Ok(secret_key)
+    }
+
+    /// Encrypts the provided key with the given password and saves it to the keystore.
+    /// Returns the generated UUID for the stored key.
+    pub fn save_key<R, S>(&self, key: SecretKey, password: S, mut rng: R) -> Result<String>
+    where
+        R: Rng + CryptoRng,
+        S: AsRef<[u8]>,
+    {
+        // Note: `*key` is used if SecretKey implements Deref to an inner type.
+        eth_keystore::encrypt_key(&self.dir, &mut rng, *key, password, None)
+            .map_err(|e| error!(Other, "{e}"))
+    }
 }
 
 #[cfg(test)]
@@ -74,35 +81,34 @@ mod tests {
     use rand::thread_rng;
     use tempfile::tempdir;
 
-    use crate::signers::private_key::PrivateKeySigner;
-
     use super::*;
+    use crate::signers::private_key::PrivateKeySigner;
 
     #[tokio::test]
     async fn encrypted_json_keystore() -> Result<()> {
         let dir = tempdir()?;
+        let keystore = Keystore::new(dir.path());
         let mut rng = rand::thread_rng();
 
         // Create a key to be stored in the keystore.
-        let key_saved = new_key_from_keystore(&dir, &mut rng, "password")?;
-        let signer = PrivateKeySigner::new(key_saved.key());
+        let key_saved = keystore.new_key(&mut rng, "password")?;
+        let signer = PrivateKeySigner::new(*key_saved.key());
 
-        // sign a message using the above key.
+        // Sign a message using the above key.
         let message = Message::new("Hello there!".as_bytes());
         let signature = signer.sign(message).await?;
 
         // Read from the encrypted JSON keystore and decrypt it.
-        let path = Path::new(dir.path()).join(key_saved.uuid());
-        let recovered_key = load_key_from_keystore(path.clone(), "password")?;
-        let signer = PrivateKeySigner::new(recovered_key);
+        let recovered_key = keystore.load_key(key_saved.uuid(), "password")?;
+        let signer2 = PrivateKeySigner::new(recovered_key);
 
         // Sign the same message as before and assert that the signature is the same.
-
-        let signature2 = signer.sign(message).await?;
+        let signature2 = signer2.sign(message).await?;
         assert_eq!(signature, signature2);
 
-        // Remove tempdir.
-        assert!(std::fs::remove_file(&path).is_ok());
+        // Remove the keystore file.
+        let key_path = keystore.dir.join(key_saved.uuid());
+        assert!(std::fs::remove_file(key_path).is_ok());
         Ok(())
     }
 
@@ -124,7 +130,7 @@ mod tests {
 
         // Create a second key from the same phrase.
         let key = SecretKey::new_from_mnemonic_phrase_with_path(phrase, "m/44'/60'/1'/0/0")?;
-        let signer = PrivateKeySigner::new(key);
+        let signer2 = PrivateKeySigner::new(key);
 
         let expected_second_plain_address =
             "261191b0164a24fd0fd51566ec5e5b0b9ba8fb2d42dc9cf7dbbd6f23d2742759";
@@ -132,10 +138,10 @@ mod tests {
             "fuel1ycgervqkfgj06r74z4nwchjmpwd637edgtwfea7mh4hj85n5yavszjk4cc";
 
         assert_eq!(
-            signer.address().hash().to_string(),
+            signer2.address().hash().to_string(),
             expected_second_plain_address
         );
-        assert_eq!(signer.address().to_string(), expected_second_address);
+        assert_eq!(signer2.address().to_string(), expected_second_address);
 
         Ok(())
     }
@@ -143,23 +149,20 @@ mod tests {
     #[tokio::test]
     async fn encrypt_and_store_keys_from_mnemonic() -> Result<()> {
         let dir = tempdir()?;
-
+        let keystore = Keystore::new(dir.path());
         let phrase =
             "oblige salon price punch saddle immune slogan rare snap desert retire surprise";
 
-        // Create first key from mnemonic phrase.
+        // Create a key from the mnemonic phrase.
         let key = SecretKey::new_from_mnemonic_phrase_with_path(phrase, "m/44'/60'/0'/0/0")?;
+        let uuid = keystore.save_key(key, "password", thread_rng())?;
 
-        let uuid = save_key_to_keystore(key, &dir, "password", thread_rng())?;
-
-        let path = Path::new(dir.path()).join(uuid);
-
-        let recovered_key = load_key_from_keystore(&path, "password")?;
-
+        let recovered_key = keystore.load_key(&uuid, "password")?;
         assert_eq!(key, recovered_key);
 
-        // Remove tempdir.
-        assert!(std::fs::remove_file(&path).is_ok());
+        // Remove the keystore file.
+        let key_path = keystore.dir.join(&uuid);
+        assert!(std::fs::remove_file(key_path).is_ok());
         Ok(())
     }
 }

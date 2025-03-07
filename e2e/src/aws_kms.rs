@@ -1,11 +1,11 @@
-use fuels::accounts::kms::{
+use fuels::accounts::signers::aws_kms::{
     aws_config::{defaults, BehaviorVersion, Region},
     aws_sdk_kms::{
         config::Credentials,
         types::{KeySpec, KeyUsageType},
         Client,
     },
-    KmsKey,
+    AwsKmsSigner,
 };
 use fuels::prelude::Error;
 use fuels::types::errors::Context;
@@ -141,7 +141,7 @@ impl AwsKmsProcess {
             .and_then(|metadata| metadata.arn)
             .ok_or_else(|| anyhow::anyhow!("key arn missing from response"))?;
 
-        let kms_key = KmsKey::new(id.clone(), &self.client).await?;
+        let kms_key = AwsKmsSigner::new(id.clone(), &self.client).await?;
 
         Ok(KmsTestKey {
             id,
@@ -162,6 +162,6 @@ impl AwsKmsProcess {
 #[derive(Debug, Clone)]
 pub struct KmsTestKey {
     pub id: String,
-    pub kms_key: KmsKey,
+    pub kms_key: AwsKmsSigner,
     pub url: String,
 }

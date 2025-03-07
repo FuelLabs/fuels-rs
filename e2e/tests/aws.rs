@@ -2,7 +2,7 @@
 mod tests {
     use anyhow::Result;
     use e2e::e2e_helpers::start_aws_kms;
-    use fuels::accounts::kms::KmsKey;
+    use fuels::accounts::signers::aws_kms::AwsKmsSigner;
     use fuels::accounts::wallet::Wallet;
     use fuels::accounts::{Account, ViewOnlyAccount};
     use fuels::prelude::{
@@ -28,7 +28,7 @@ mod tests {
         let provider = wallet.provider().clone();
 
         // ANCHOR: use_kms_wallet
-        let kms_key = KmsKey::new(your_kms_key_id, kms.client()).await?;
+        let kms_key = AwsKmsSigner::new(your_kms_key_id, kms.client()).await?;
         let wallet = Wallet::new(kms_key, provider);
         // ANCHOR_END: use_kms_wallet
 
@@ -55,7 +55,7 @@ mod tests {
         let your_kms_key_id = key.id;
         let provider = wallet.provider().clone();
 
-        let kms_key = KmsKey::new(your_kms_key_id, kms.client()).await?;
+        let kms_key = AwsKmsSigner::new(your_kms_key_id, kms.client()).await?;
         let aws_wallet = Wallet::new(kms_key, provider);
 
         Contract::load_from(
