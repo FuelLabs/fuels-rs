@@ -1348,12 +1348,11 @@ async fn low_level_call() -> Result<()> {
 #[cfg(any(not(feature = "fuel-core-lib"), feature = "rocksdb"))]
 #[test]
 fn db_rocksdb() {
-    use std::{fs, str::FromStr};
+    use std::fs;
 
     use fuels::{
         accounts::wallet::NewWallet,
         client::{PageDirection, PaginationRequest},
-        crypto::SecretKey,
         prelude::{setup_test_provider, DbType, Error, ViewOnlyAccount, DEFAULT_COIN_AMOUNT},
     };
 
@@ -1870,10 +1869,9 @@ async fn msg_sender_gas_estimation_issue() {
     let provider = setup_test_provider(coins, vec![], None, None)
         .await
         .unwrap();
-    let mut wallet = NewWallet::new(signer, provider.clone());
+    let wallet = NewWallet::new(signer, provider.clone());
 
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "MyContract",
             project = "e2e/sway/contracts/msg_methods"
@@ -2114,7 +2112,7 @@ async fn max_fee_estimation_respects_tolerance() -> Result<()> {
 
     let call_coins = setup_single_asset_coins(call_signer.address(), AssetId::BASE, 1000, 1);
 
-    let mut deploy_signer = PrivateKeySigner::random(&mut rng);
+    let deploy_signer = PrivateKeySigner::random(&mut rng);
     let deploy_coins =
         setup_single_asset_coins(deploy_signer.address(), AssetId::BASE, 1, 1_000_000);
 

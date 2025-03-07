@@ -125,8 +125,8 @@ async fn adjust_fee_empty_transaction() -> Result<()> {
 
 #[tokio::test]
 async fn adjust_for_fee_with_message_data_input() -> Result<()> {
-    let mut wallet_signer = PrivateKeySigner::random(&mut rand::thread_rng());
-    let mut receiver_signer = PrivateKeySigner::random(&mut rand::thread_rng());
+    let wallet_signer = PrivateKeySigner::random(&mut rand::thread_rng());
+    let receiver_signer = PrivateKeySigner::random(&mut rand::thread_rng());
 
     let messages = setup_single_message(
         &Bech32Address::default(),
@@ -224,6 +224,7 @@ async fn adjust_fee_resources_to_transfer_with_base_asset() -> Result<()> {
 #[tokio::test]
 async fn test_transfer() -> Result<()> {
     let wallet_1_signer = PrivateKeySigner::random(&mut rand::thread_rng());
+    let wallet_2_signer = PrivateKeySigner::random(&mut rand::thread_rng());
 
     let amount = 100;
     let num_coins = 1;
@@ -231,12 +232,12 @@ async fn test_transfer() -> Result<()> {
     let mut coins_1 =
         setup_single_asset_coins(wallet_1_signer.address(), base_asset_id, num_coins, amount);
     let coins_2 =
-        setup_single_asset_coins(wallet_1_signer.address(), base_asset_id, num_coins, amount);
+        setup_single_asset_coins(wallet_2_signer.address(), base_asset_id, num_coins, amount);
     coins_1.extend(coins_2);
 
     let provider = setup_test_provider(coins_1, vec![], None, None).await?;
     let wallet_1 = NewWallet::new(wallet_1_signer, provider.clone());
-    let wallet_2 = wallet_1.locked();
+    let wallet_2 = NewWallet::new(wallet_2_signer, provider.clone()).locked();
 
     let _ = wallet_1
         .transfer(
@@ -458,7 +459,7 @@ async fn test_transfer_with_multiple_signatures() -> Result<()> {
     let wallets = launch_custom_provider_and_get_wallets(wallet_config, None, None).await?;
     let provider = wallets[0].try_provider()?;
 
-    let mut receiver = NewWallet::random(&mut thread_rng(), provider.clone());
+    let receiver = NewWallet::random(&mut thread_rng(), provider.clone());
 
     let amount_to_transfer = 20;
 

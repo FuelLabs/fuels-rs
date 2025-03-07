@@ -17,9 +17,10 @@ use fuels_core::{
 use rand::{CryptoRng, Rng};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
-use crate::{accounts_utils::try_provider_error, provider::Provider, Account, ViewOnlyAccount};
-
-pub const DEFAULT_DERIVATION_PATH_PREFIX: &str = "m/44'/1179993420'";
+use crate::{
+    accounts_utils::try_provider_error, provider::Provider, signers::DEFAULT_DERIVATION_PATH,
+    Account, ViewOnlyAccount,
+};
 
 mod new_wallet;
 pub use new_wallet::*;
@@ -139,8 +140,7 @@ impl WalletUnlocked {
     /// Creates a new wallet from a mnemonic phrase.
     /// The default derivation path is used.
     pub fn new_from_mnemonic_phrase(phrase: &str, provider: Option<Provider>) -> Result<Self> {
-        let path = format!("{DEFAULT_DERIVATION_PATH_PREFIX}/0'/0/0");
-        Self::new_from_mnemonic_phrase_with_path(phrase, provider, &path)
+        Self::new_from_mnemonic_phrase_with_path(phrase, provider, DEFAULT_DERIVATION_PATH)
     }
 
     /// Creates a new wallet from a mnemonic phrase.
@@ -317,7 +317,7 @@ mod tests {
         let mnemonic = generate_mnemonic_phrase(&mut rand::thread_rng(), 12)?;
         let _wallet = PrivateKeySigner::new(SecretKey::new_from_mnemonic_phrase_with_path(
             &mnemonic,
-            DEFAULT_DERIVATION_PATH_PREFIX,
+            DEFAULT_DERIVATION_PATH,
         )?);
 
         Ok(())

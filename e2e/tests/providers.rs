@@ -4,11 +4,7 @@ use chrono::{DateTime, Duration, TimeZone, Utc};
 use fuel_asm::RegId;
 use fuel_tx::Witness;
 use fuels::{
-    accounts::{
-        impersonated_account::ImpersonatedAccount,
-        signers::{FakeSigner, PrivateKeySigner},
-        Account,
-    },
+    accounts::{impersonated_account::ImpersonatedAccount, signers::PrivateKeySigner, Account},
     client::{PageDirection, PaginationRequest},
     prelude::*,
     tx::Receipt,
@@ -800,7 +796,7 @@ async fn create_transfer(
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
 
     wallet.adjust_for_fee(&mut tb, amount).await?;
-    wallet.add_witnesses(&mut tb);
+    wallet.add_witnesses(&mut tb)?;
 
     tb.build(wallet.try_provider()?).await
 }
@@ -892,7 +888,7 @@ async fn create_revert_tx(wallet: &NewWallet) -> Result<ScriptTransaction> {
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default())
         .with_script(script);
     wallet.adjust_for_fee(&mut tb, amount).await?;
-    wallet.add_witnesses(&mut tb);
+    wallet.add_witnesses(&mut tb)?;
 
     tb.build(wallet.try_provider()?).await
 }
@@ -999,7 +995,7 @@ async fn test_build_with_provider() -> Result<()> {
     );
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
-    wallet.add_witnesses(&mut tb);
+    wallet.add_witnesses(&mut tb)?;
 
     let tx = tb.build(provider).await?;
 

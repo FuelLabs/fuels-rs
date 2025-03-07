@@ -1,7 +1,6 @@
 use std::path::Path;
 
 use async_trait::async_trait;
-use cynic::serde::Deserialize;
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
 use fuels_core::{
     error,
@@ -11,8 +10,10 @@ use fuels_core::{
         errors::Result,
     },
 };
-use rand::{distributions::Standard, prelude::Distribution, CryptoRng, Rng, RngCore};
+use rand::{CryptoRng, Rng, RngCore};
 use zeroize::{Zeroize, ZeroizeOnDrop};
+
+pub const DEFAULT_DERIVATION_PATH: &str = "m/44'/1179993420'/0'/0/0";
 
 #[derive(Clone, Debug, Zeroize, ZeroizeOnDrop)]
 pub struct PrivateKeySigner {

@@ -4,8 +4,7 @@ mod tests {
 
     use fuels::{
         accounts::{
-            predicate::Predicate, signers::PrivateKeySigner, wallet::NewWallet, Account,
-            ViewOnlyAccount,
+            predicate::Predicate, signers::PrivateKeySigner, wallet::NewWallet, ViewOnlyAccount,
         },
         prelude::Result,
         test_helpers::{setup_single_asset_coins, setup_test_provider},
@@ -150,8 +149,8 @@ mod tests {
 
         use fuels::prelude::*;
         // ANCHOR: transfer_multiple_setup
-        let mut wallet_1_signer = PrivateKeySigner::random(&mut thread_rng());
-        let mut wallet_2_signer = PrivateKeySigner::random(&mut thread_rng());
+        let wallet_1_signer = PrivateKeySigner::random(&mut thread_rng());
+        let wallet_2_signer = PrivateKeySigner::random(&mut thread_rng());
 
         const NUM_ASSETS: u64 = 5;
         const AMOUNT: u64 = 100_000;
@@ -236,8 +235,8 @@ mod tests {
 
     #[tokio::test]
     async fn custom_transaction() -> Result<()> {
-        let mut hot_wallet_signer = PrivateKeySigner::random(&mut thread_rng());
-        let mut cold_wallet_signer = PrivateKeySigner::random(&mut thread_rng());
+        let hot_wallet_signer = PrivateKeySigner::random(&mut thread_rng());
+        let cold_wallet_signer = PrivateKeySigner::random(&mut thread_rng());
 
         let code_path = "../../e2e/sway/predicates/swap/out/release/swap.bin";
         let mut predicate = Predicate::load_from(code_path)?;

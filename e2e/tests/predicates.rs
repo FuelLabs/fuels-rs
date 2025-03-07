@@ -73,8 +73,8 @@ async fn setup_predicate_test(
 
     let predicate_balance = (num_coins + num_messages) * amount;
     let mut rng = thread_rng();
-    let mut receiver_signer = PrivateKeySigner::random(&mut rng);
-    let mut extra_wallet_signer = PrivateKeySigner::random(&mut rng);
+    let receiver_signer = PrivateKeySigner::random(&mut rng);
+    let extra_wallet_signer = PrivateKeySigner::random(&mut rng);
 
     let (mut coins, messages, asset_id) =
         get_test_coins_and_messages(predicate_address, num_coins, num_messages, amount, 0);
@@ -452,7 +452,7 @@ async fn predicate_transfer_with_signed_resources() -> Result<()> {
     let predicate_amount = 1000;
     let predicate_balance = (predicate_num_coins + predicate_num_messages) * predicate_amount;
 
-    let mut signer = PrivateKeySigner::random(&mut thread_rng());
+    let signer = PrivateKeySigner::random(&mut thread_rng());
     let wallet_num_coins = 4;
     let wallet_num_messages = 3;
     let wallet_amount = 1000;
@@ -824,7 +824,7 @@ async fn predicate_transfer_non_base_asset() -> Result<()> {
         Predicate::load_from("sway/predicates/basic_predicate/out/release/basic_predicate.bin")?
             .with_data(predicate_data);
 
-    let mut signer = PrivateKeySigner::random(&mut thread_rng());
+    let signer = PrivateKeySigner::random(&mut thread_rng());
 
     let amount = 5;
     let non_base_asset_id = AssetId::new([1; 32]);

@@ -1,9 +1,8 @@
 #[cfg(test)]
 mod tests {
     use fuels::{
-        accounts::{
-            signers::{self, save_key_to_keystore, KeySaved, PrivateKeySigner},
-            wallet::DEFAULT_DERIVATION_PATH_PREFIX,
+        accounts::signers::{
+            self, save_key_to_keystore, PrivateKeySigner, DEFAULT_DERIVATION_PATH,
         },
         crypto::SecretKey,
         prelude::*,
@@ -65,8 +64,7 @@ mod tests {
         let _wallet = NewWallet::new(signer, provider.clone());
 
         // Or with the default derivation path
-        let key =
-            SecretKey::new_from_mnemonic_phrase_with_path(phrase, DEFAULT_DERIVATION_PATH_PREFIX)?;
+        let key = SecretKey::new_from_mnemonic_phrase_with_path(phrase, DEFAULT_DERIVATION_PATH)?;
         let signer = PrivateKeySigner::new(key);
         let wallet = NewWallet::new(signer, provider);
 
@@ -104,13 +102,12 @@ mod tests {
             "oblige salon price punch saddle immune slogan rare snap desert retire surprise";
 
         // Create first key from mnemonic phrase.
-        let key =
-            SecretKey::new_from_mnemonic_phrase_with_path(phrase, DEFAULT_DERIVATION_PATH_PREFIX)?;
+        let key = SecretKey::new_from_mnemonic_phrase_with_path(phrase, DEFAULT_DERIVATION_PATH)?;
 
         let password = "my_master_password";
 
         // Encrypts and stores it on disk. Can be recovered using `load_key_from_keystore`.
-        let _uuid = save_key_to_keystore(key, &dir, password, &mut thread_rng())?;
+        let _uuid = save_key_to_keystore(key, &dir, password, thread_rng())?;
         // ANCHOR_END: create_and_store_mnemonic_key
         Ok(())
     }

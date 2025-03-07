@@ -20,10 +20,10 @@ mod tests {
         let secret_key3: SecretKey =
             "0x976e5c3fa620092c718d852ca703b6da9e3075b9f2ecb8ed42d9f746bf26aafb".parse()?;
 
-        let mut wallet_signer = PrivateKeySigner::new(secret_key1);
-        let mut wallet2_signer = PrivateKeySigner::new(secret_key2);
-        let mut wallet3_signer = PrivateKeySigner::new(secret_key3);
-        let mut receiver_signer = PrivateKeySigner::random(&mut thread_rng());
+        let wallet_signer = PrivateKeySigner::new(secret_key1);
+        let wallet2_signer = PrivateKeySigner::new(secret_key2);
+        let wallet3_signer = PrivateKeySigner::new(secret_key3);
+        let receiver_signer = PrivateKeySigner::random(&mut thread_rng());
         // ANCHOR_END: predicate_wallets
 
         // ANCHOR: predicate_coins

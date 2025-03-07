@@ -5,7 +5,6 @@ mod tests {
     use fuels::{
         accounts::signers::{FakeSigner, PrivateKeySigner},
         core::codec::{encode_fn_selector, ABIFormatter, DecoderConfig, EncoderConfig},
-        crypto::SecretKey,
         prelude::{LoadConfiguration, NodeConfig, StorageConfiguration},
         programs::debug::ScriptType,
         test_helpers::{ChainConfig, StateConfig},
@@ -960,8 +959,6 @@ mod tests {
 
     #[tokio::test]
     async fn contract_call_impersonation() -> Result<()> {
-        use std::str::FromStr;
-
         use fuels::prelude::*;
 
         abigen!(Contract(

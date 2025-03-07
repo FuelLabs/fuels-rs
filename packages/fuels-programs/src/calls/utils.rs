@@ -336,7 +336,7 @@ pub fn find_id_of_missing_contract(receipts: &[Receipt]) -> Option<Bech32Contrac
 mod test {
     use std::slice;
 
-    use fuels_accounts::{signers::PrivateKeySigner, wallet::NewWallet};
+    use fuels_accounts::signers::PrivateKeySigner;
     use fuels_core::types::{
         coin::{Coin, CoinStatus},
         coin_type::CoinType,
