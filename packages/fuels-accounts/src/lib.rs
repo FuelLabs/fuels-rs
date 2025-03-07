@@ -2,6 +2,8 @@
 mod account;
 #[cfg(feature = "std")]
 mod accounts_utils;
+#[cfg(all(feature = "std", feature = "keystore"))]
+pub mod keystore;
 #[cfg(feature = "std")]
 pub mod provider;
 #[cfg(feature = "std")]

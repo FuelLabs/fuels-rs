@@ -1,8 +1,9 @@
 #[cfg(test)]
 mod tests {
     use fuels::{
-        accounts::signers::{
-            keystore::Keystore, private_key::PrivateKeySigner, DEFAULT_DERIVATION_PATH,
+        accounts::{
+            keystore::Keystore,
+            signers::{private_key::PrivateKeySigner, DEFAULT_DERIVATION_PATH},
         },
         crypto::SecretKey,
         prelude::*,

@@ -44,12 +44,7 @@ tokio = { workspace = true, features = ["test-util"] }
 # TODO: segfault
 default = ["std", "signer-aws-kms"]
 coin-cache = ["tokio?/time"]
-std = [
-  "fuels-core/std",
-  "dep:tokio",
-  "fuel-core-client/default",
-  "dep:eth-keystore",
-  "dep:cynic",
-]
+std = ["fuels-core/std", "dep:tokio", "fuel-core-client/default", "dep:cynic"]
 test-helpers = []
 signer-aws-kms = ["dep:aws-sdk-kms", "dep:aws-config"]
+keystore = ["dep:eth-keystore"]
