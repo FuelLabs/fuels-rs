@@ -122,7 +122,7 @@ async fn test_output_variable_estimation() -> Result<()> {
         )
     );
 
-    let provider = wallet.try_provider()?.clone();
+    let provider = wallet.provider().clone();
     let receiver = Wallet::random(&mut thread_rng(), provider);
 
     let amount = 1000;
@@ -310,7 +310,7 @@ async fn test_script_transaction_builder() -> Result<()> {
             wallet = "wallet"
         )
     );
-    let provider = wallet.try_provider()?;
+    let provider = wallet.provider();
 
     // ANCHOR: script_call_tb
     let script_call_handler = script_instance.main(1, 2);
@@ -422,7 +422,7 @@ async fn can_be_run_in_blobs_builder() -> Result<()> {
 
     let binary_path = "./sway/scripts/script_blobs/out/release/script_blobs.bin";
     let wallet = launch_provider_and_get_wallet().await?;
-    let provider = wallet.try_provider()?.clone();
+    let provider = wallet.provider().clone();
 
     // ANCHOR: preload_low_level
     let regular = Executable::load_from(binary_path)?;
@@ -641,7 +641,7 @@ async fn loader_can_be_presented_as_a_normal_script_with_shifted_configurables()
 
     let binary_path = "./sway/scripts/script_blobs/out/release/script_blobs.bin";
     let wallet = launch_provider_and_get_wallet().await?;
-    let provider = wallet.try_provider()?.clone();
+    let provider = wallet.provider().clone();
 
     let regular = Executable::load_from(binary_path)?;
 
@@ -698,7 +698,7 @@ async fn script_call_respects_maturity_and_expiration() -> Result<()> {
         abi = "e2e/sway/scripts/basic_script/out/release/basic_script-abi.json"
     ));
     let wallet = launch_provider_and_get_wallet().await.expect("");
-    let provider = wallet.try_provider()?.clone();
+    let provider = wallet.provider().clone();
     let bin_path = "sway/scripts/basic_script/out/release/basic_script.bin";
 
     let script_instance = MyScript::new(wallet, bin_path);

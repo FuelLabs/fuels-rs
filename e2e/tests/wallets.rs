@@ -104,7 +104,7 @@ async fn adjust_fee_empty_transaction() -> Result<()> {
     assert!(!tb.inputs().is_empty(), "inputs should be added");
     assert_eq!(tb.outputs().len(), 1, "output should be added");
 
-    let tx = tb.build(wallet.try_provider()?).await?;
+    let tx = tb.build(wallet.provider()).await?;
 
     let total_amount_inputs: u64 = tx.inputs().iter().map(|i| i.amount().unwrap()).sum();
     assert!(
@@ -155,7 +155,7 @@ async fn adjust_for_fee_with_message_data_input() -> Result<()> {
         );
         wallet.add_witnesses(&mut tb)?;
 
-        let tx = tb.build(wallet.try_provider()?).await?;
+        let tx = tb.build(wallet.provider()).await?;
         let err = provider
             .send_transaction_and_await_commit(tx)
             .await
@@ -174,7 +174,7 @@ async fn adjust_for_fee_with_message_data_input() -> Result<()> {
         wallet.adjust_for_fee(&mut tb, 0).await.unwrap();
         wallet.add_witnesses(&mut tb)?;
 
-        let tx = tb.build(wallet.try_provider()?).await?;
+        let tx = tb.build(wallet.provider()).await?;
 
         assert_eq!(receiver.get_asset_balance(&asset_id).await?, 0);
 
@@ -206,7 +206,7 @@ async fn adjust_fee_resources_to_transfer_with_base_asset() -> Result<()> {
     wallet.adjust_for_fee(&mut tb, base_amount).await?;
     wallet.add_witnesses(&mut tb)?;
 
-    let tx = tb.build(wallet.try_provider()?).await?;
+    let tx = tb.build(wallet.provider()).await?;
 
     let total_amount_inputs: u64 = tx.inputs().iter().map(|i| i.amount().unwrap()).sum();
     assert!(total_amount_inputs > tx.max_fee().unwrap()); // can cover tx
@@ -511,7 +511,7 @@ async fn wallet_transfer_respects_maturity_and_expiration() -> Result<()> {
     let asset_id = AssetId::zeroed();
     let wallet_balance = wallet.get_asset_balance(&asset_id).await?;
 
-    let provider = wallet.try_provider()?;
+    let provider = wallet.provider();
     let receiver = thread_rng().gen::<Bech32Address>();
 
     let maturity = 10;

@@ -211,7 +211,7 @@ async fn can_increase_block_height() -> Result<()> {
     let wallets =
         launch_custom_provider_and_get_wallets(WalletsConfig::default(), None, None).await?;
     let wallet = &wallets[0];
-    let provider = wallet.try_provider()?;
+    let provider = wallet.provider();
 
     assert_eq!(provider.latest_block_height().await?, 0u32);
 
@@ -240,7 +240,7 @@ async fn can_set_custom_block_time() -> Result<()> {
         launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config), None)
             .await?;
     let wallet = &wallets[0];
-    let provider = wallet.try_provider()?;
+    let provider = wallet.provider();
 
     assert_eq!(provider.latest_block_height().await?, 0u32);
     let origin_block_time = provider.latest_block_time().await?.unwrap();
@@ -292,7 +292,7 @@ async fn contract_deployment_respects_maturity_and_expiration() -> Result<()> {
     abigen!(Contract(name="MyContract", abi="e2e/sway/contracts/transaction_block_height/out/release/transaction_block_height-abi.json"));
 
     let wallet = launch_provider_and_get_wallet().await?;
-    let provider = wallet.try_provider()?.clone();
+    let provider = wallet.provider().clone();
 
     let maturity = 10;
     let expiration = 20;
@@ -742,7 +742,7 @@ async fn test_sway_timestamp() -> Result<()> {
     )
     .await?;
     let wallet = wallets.pop().unwrap();
-    let provider = wallet.try_provider()?;
+    let provider = wallet.provider();
 
     setup_program_test!(
         Abigen(Contract(
@@ -801,7 +801,7 @@ async fn create_transfer(
     wallet.adjust_for_fee(&mut tb, amount).await?;
     wallet.add_witnesses(&mut tb)?;
 
-    tb.build(wallet.try_provider()?).await
+    tb.build(wallet.provider()).await
 }
 
 #[cfg(feature = "coin-cache")]
@@ -893,7 +893,7 @@ async fn create_revert_tx(wallet: &Wallet) -> Result<ScriptTransaction> {
     wallet.adjust_for_fee(&mut tb, amount).await?;
     wallet.add_witnesses(&mut tb)?;
 
-    tb.build(wallet.try_provider()?).await
+    tb.build(wallet.provider()).await
 }
 
 #[cfg(feature = "coin-cache")]
@@ -953,7 +953,7 @@ async fn can_fetch_mint_transactions() -> Result<()> {
         ),
     );
 
-    let provider = wallet.try_provider()?;
+    let provider = wallet.provider();
 
     let transactions = provider
         .get_transactions(PaginationRequest {
@@ -980,7 +980,7 @@ async fn can_fetch_mint_transactions() -> Result<()> {
 #[tokio::test]
 async fn test_build_with_provider() -> Result<()> {
     let wallet = launch_provider_and_get_wallet().await?;
-    let provider = wallet.try_provider()?;
+    let provider = wallet.provider();
 
     let receiver = Wallet::new(
         PrivateKeySigner::random(&mut thread_rng()),
@@ -1023,7 +1023,7 @@ async fn can_produce_blocks_with_trig_never() -> Result<()> {
         launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config), None)
             .await?;
     let wallet = &wallets[0];
-    let provider = wallet.try_provider()?;
+    let provider = wallet.provider();
 
     let consensus_parameters = provider.consensus_parameters().await?;
     let inputs = wallet
@@ -1131,7 +1131,7 @@ async fn tx_respects_policies() -> Result<()> {
     );
 
     // advance the block height to ensure the maturity is respected
-    let provider = wallet.try_provider()?;
+    let provider = wallet.provider();
     provider.produce_blocks(4, None).await?;
 
     // trigger a transaction that contains script code to verify
@@ -1185,7 +1185,7 @@ async fn tx_with_witness_data() -> Result<()> {
     use fuel_asm::{op, GTFArgs};
 
     let wallet = launch_provider_and_get_wallet().await?;
-    let provider = wallet.try_provider()?;
+    let provider = wallet.provider();
 
     let receiver = Wallet::random(&mut thread_rng(), provider.clone());
 
@@ -1270,7 +1270,7 @@ async fn contract_call_with_impersonation() -> Result<()> {
     )
     .await?;
     let wallet = wallets.pop().unwrap();
-    let provider = wallet.try_provider()?;
+    let provider = wallet.provider();
 
     let impersonator = Wallet::new(FakeSigner::new(wallet.address().clone()), provider.clone());
 

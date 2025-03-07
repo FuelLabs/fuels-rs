@@ -896,7 +896,7 @@ mod tests {
                 wallet = "wallet"
             ),
         );
-        let provider = wallet.try_provider()?;
+        let provider = wallet.provider();
 
         let counter = 42;
 
@@ -1023,7 +1023,7 @@ mod tests {
         let contract_binary =
             "../../e2e/sway/contracts/huge_contract/out/release/huge_contract.bin";
 
-        let provider: Provider = main_wallet.try_provider()?.clone();
+        let provider: Provider = main_wallet.provider().clone();
 
         let random_salt = || Salt::new(rand::thread_rng().gen());
         // ANCHOR: show_contract_is_too_big
@@ -1195,7 +1195,7 @@ mod tests {
             .tx_id
             .unwrap();
 
-        let provider: &Provider = wallet.try_provider()?;
+        let provider: &Provider = wallet.provider();
 
         // ANCHOR: decoding_script_transactions
         let TransactionType::Script(tx) = provider

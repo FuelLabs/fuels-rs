@@ -409,7 +409,7 @@ async fn contract_method_call_respects_maturity_and_expiration() -> Result<()> {
             random_salt = false,
         ),
     );
-    let provider = wallet.try_provider()?;
+    let provider = wallet.provider();
 
     let maturity = 10;
     let expiration = 20;
@@ -1616,7 +1616,7 @@ async fn heap_types_correctly_offset_in_create_transactions_w_storage_slots() ->
         ),),
     );
 
-    let provider = wallet.try_provider()?.clone();
+    let provider = wallet.provider().clone();
     let data = MyPredicateEncoder::default().encode_data(18, 24, vec![2, 4, 42])?;
     let predicate = Predicate::load_from(
         "sway/types/predicates/predicate_vector/out/release/predicate_vector.bin",
@@ -1725,7 +1725,7 @@ async fn contract_custom_call_no_signatures_strategy() -> Result<()> {
             random_salt = false,
         ),
     );
-    let provider = wallet.try_provider()?;
+    let provider = wallet.provider();
 
     let counter = 42;
     let call_handler = contract_instance.methods().initialize_counter(counter);

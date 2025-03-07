@@ -372,7 +372,7 @@ mod tests {
             .withdraw_to_base_layer(&base_layer_address, amount, TxPolicies::default())
             .await?;
 
-        let _block_height = wallet.try_provider()?.produce_blocks(1, None).await?;
+        let _block_height = wallet.provider().produce_blocks(1, None).await?;
 
         // Retrieve a message proof from the provider.
         let proof = wallet
