@@ -43,10 +43,10 @@ mod tests {
 
         let provider = setup_test_provider(all_coins, vec![], None, None).await?;
 
-        let wallet = NewWallet::new(wallet_signer, provider.clone());
-        let wallet2 = NewWallet::new(wallet2_signer, provider.clone());
-        let wallet3 = NewWallet::new(wallet3_signer, provider.clone());
-        let receiver = NewWallet::new(receiver_signer, provider.clone());
+        let wallet = Wallet::new(wallet_signer, provider.clone());
+        let wallet2 = Wallet::new(wallet2_signer, provider.clone());
+        let wallet3 = Wallet::new(wallet3_signer, provider.clone());
+        let receiver = Wallet::new(receiver_signer, provider.clone());
         // ANCHOR_END: predicate_coins
 
         let data_to_sign = Message::new([0; 32]);

@@ -16,12 +16,12 @@ use crate::{
 };
 
 #[derive(Debug, Clone)]
-pub struct NewWallet<S = PrivateKeySigner> {
+pub struct Wallet<S = PrivateKeySigner> {
     signer: S,
     provider: Provider,
 }
 
-impl<S> NewWallet<S> {
+impl<S> Wallet<S> {
     pub fn new(signer: S, provider: Provider) -> Self {
         Self { signer, provider }
     }
@@ -35,18 +35,18 @@ impl<S> NewWallet<S> {
     }
 }
 
-impl NewWallet<PrivateKeySigner> {
+impl Wallet<PrivateKeySigner> {
     pub fn random(rng: &mut (impl CryptoRng + RngCore), provider: Provider) -> Self {
         Self::new(PrivateKeySigner::random(rng), provider)
     }
 }
 
-impl<S> NewWallet<S>
+impl<S> Wallet<S>
 where
     S: Signer,
 {
-    pub fn locked(&self) -> NewWallet<FakeSigner> {
-        NewWallet::new(
+    pub fn locked(&self) -> Wallet<FakeSigner> {
+        Wallet::new(
             FakeSigner::new(self.signer.address().clone()),
             self.provider.clone(),
         )
@@ -54,7 +54,7 @@ where
 }
 
 #[async_trait]
-impl<S> ViewOnlyAccount for NewWallet<S>
+impl<S> ViewOnlyAccount for Wallet<S>
 where
     S: Signer + Clone + Send + Sync + std::fmt::Debug,
 {
@@ -82,7 +82,7 @@ where
 }
 
 #[async_trait]
-impl<S> Account for NewWallet<S>
+impl<S> Account for Wallet<S>
 where
     S: Signer + Clone + Send + Sync + std::fmt::Debug + 'static,
 {

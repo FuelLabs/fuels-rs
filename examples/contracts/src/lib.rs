@@ -977,7 +977,7 @@ mod tests {
             DEFAULT_COIN_AMOUNT,
         );
         let provider = setup_test_provider(coins, vec![], Some(node_config), None).await?;
-        let wallet = NewWallet::new(signer, provider.clone());
+        let wallet = Wallet::new(signer, provider.clone());
 
         let contract_id = Contract::load_from(
             "../../e2e/sway/contracts/contract_test/out/release/contract_test.bin",
@@ -991,7 +991,7 @@ mod tests {
         // ANCHOR: contract_call_impersonation
         // create impersonator for an address
         let fake_signer = FakeSigner::new(some_address);
-        let impersonator = NewWallet::new(fake_signer, provider.clone());
+        let impersonator = Wallet::new(fake_signer, provider.clone());
 
         let contract_instance = MyContract::new(contract_id, impersonator.clone());
 

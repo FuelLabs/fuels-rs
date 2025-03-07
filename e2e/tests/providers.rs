@@ -34,7 +34,7 @@ async fn test_provider_launch_and_connect() -> Result<()> {
         DEFAULT_COIN_AMOUNT,
     );
     let provider = setup_test_provider(coins, vec![], None, None).await?;
-    let wallet = NewWallet::new(signer, provider.clone());
+    let wallet = Wallet::new(signer, provider.clone());
 
     let contract_id = Contract::load_from(
         "sway/contracts/contract_test/out/release/contract_test.bin",
@@ -79,7 +79,7 @@ async fn test_network_error() -> Result<()> {
     let service = FuelService::start(node_config, chain_config, state_config).await?;
     let provider = Provider::connect(service.bound_address().to_string()).await?;
 
-    let wallet = NewWallet::new(signer, provider.clone());
+    let wallet = Wallet::new(signer, provider.clone());
 
     // Simulate an unreachable node
     service.stop().await.unwrap();
@@ -122,7 +122,7 @@ async fn test_input_message() -> Result<()> {
     )];
 
     let provider = setup_test_provider(coins, messages.clone(), None, None).await?;
-    let wallet = NewWallet::new(signer, provider.clone());
+    let wallet = Wallet::new(signer, provider.clone());
 
     setup_program_test!(
         Abigen(Contract(
@@ -170,7 +170,7 @@ async fn test_input_message_pays_fee() -> Result<()> {
     let provider = setup_test_provider(vec![], vec![messages], None, None).await?;
     let consensus_parameters = provider.consensus_parameters().await?;
     let base_asset_id = consensus_parameters.base_asset_id();
-    let wallet = NewWallet::new(signer, provider.clone());
+    let wallet = Wallet::new(signer, provider.clone());
 
     abigen!(Contract(
         name = "MyContract",
@@ -489,7 +489,7 @@ async fn test_gas_errors() -> Result<()> {
     );
 
     let provider = setup_test_provider(coins.clone(), vec![], None, None).await?;
-    let wallet = NewWallet::new(signer, provider.clone());
+    let wallet = Wallet::new(signer, provider.clone());
 
     setup_program_test!(
         Abigen(Contract(
@@ -618,7 +618,7 @@ async fn test_parse_block_time() -> Result<()> {
     let asset_id = AssetId::zeroed();
     let coins = setup_single_asset_coins(signer.address(), asset_id, 1, DEFAULT_COIN_AMOUNT);
     let provider = setup_test_provider(coins.clone(), vec![], None, None).await?;
-    let wallet = NewWallet::new(signer, provider.clone());
+    let wallet = Wallet::new(signer, provider.clone());
     let tx_policies = TxPolicies::default().with_script_gas_limit(2000);
 
     let wallet_2 = wallet.locked();
@@ -666,7 +666,7 @@ async fn test_get_spendable_with_exclusion() -> Result<()> {
 
     let provider = setup_test_provider(coins, vec![message], None, None).await?;
 
-    let wallet = NewWallet::new(signer, provider.clone());
+    let wallet = Wallet::new(signer, provider.clone());
 
     let requested_amount = coin_amount_1 + coin_amount_2 + message_amount;
     let consensus_parameters = provider.consensus_parameters().await?;
@@ -783,7 +783,7 @@ async fn test_sway_timestamp() -> Result<()> {
 
 #[cfg(feature = "coin-cache")]
 async fn create_transfer(
-    wallet: &NewWallet,
+    wallet: &Wallet,
     amount: u64,
     to: &Bech32Address,
 ) -> Result<ScriptTransaction> {
@@ -808,7 +808,7 @@ async fn transactions_with_the_same_utxo() -> Result<()> {
 
     let wallet_1 = launch_provider_and_get_wallet().await?;
     let provider = wallet_1.provider();
-    let wallet_2 = NewWallet::new(
+    let wallet_2 = Wallet::new(
         PrivateKeySigner::random(&mut thread_rng()),
         provider.clone(),
     );
@@ -845,7 +845,7 @@ async fn test_caching() -> Result<()> {
     .await?;
     let wallet_1 = wallets.pop().unwrap();
     let provider = wallet_1.provider();
-    let wallet_2 = NewWallet::new(
+    let wallet_2 = Wallet::new(
         PrivateKeySigner::random(&mut thread_rng()),
         provider.clone(),
     );
@@ -875,7 +875,7 @@ async fn test_caching() -> Result<()> {
 }
 
 #[cfg(feature = "coin-cache")]
-async fn create_revert_tx(wallet: &NewWallet) -> Result<ScriptTransaction> {
+async fn create_revert_tx(wallet: &Wallet) -> Result<ScriptTransaction> {
     let script = std::fs::read("sway/scripts/reverting/out/release/reverting.bin")?;
 
     let amount = 1;
@@ -979,7 +979,7 @@ async fn test_build_with_provider() -> Result<()> {
     let wallet = launch_provider_and_get_wallet().await?;
     let provider = wallet.try_provider()?;
 
-    let receiver = NewWallet::new(
+    let receiver = Wallet::new(
         PrivateKeySigner::random(&mut thread_rng()),
         provider.clone(),
     );
@@ -1066,7 +1066,7 @@ async fn can_upload_executor_and_trigger_upgrade() -> Result<()> {
         .set_privileged_address(signer.address().into());
 
     let provider = setup_test_provider(coins, vec![], None, Some(chain_config)).await?;
-    let wallet = NewWallet::new(signer, provider.clone());
+    let wallet = Wallet::new(signer, provider.clone());
 
     // This is downloaded over in `build.rs`
     let executor = std::fs::read(Path::new(env!("OUT_DIR")).join("fuel-core-wasm-executor.wasm"))?;
@@ -1184,7 +1184,7 @@ async fn tx_with_witness_data() -> Result<()> {
     let wallet = launch_provider_and_get_wallet().await?;
     let provider = wallet.try_provider()?;
 
-    let receiver = NewWallet::random(&mut thread_rng(), provider.clone());
+    let receiver = Wallet::random(&mut thread_rng(), provider.clone());
 
     let consensus_parameters = provider.consensus_parameters().await?;
     let inputs = wallet

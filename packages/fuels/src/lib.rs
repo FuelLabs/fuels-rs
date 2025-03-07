@@ -64,7 +64,7 @@ pub mod prelude {
     pub use super::{
         accounts::{
             impersonated_account::ImpersonatedAccount, predicate::Predicate, provider::*,
-            signers::*, wallet::NewWallet, Account, ViewOnlyAccount,
+            signers::*, wallet::Wallet, Account, ViewOnlyAccount,
         },
         core::{
             codec::{LogDecoder, LogId, LogResult},

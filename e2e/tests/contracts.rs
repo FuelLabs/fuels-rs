@@ -700,7 +700,7 @@ async fn test_connect_wallet() -> Result<()> {
 }
 
 async fn setup_output_variable_estimation_test(
-) -> Result<(Vec<NewWallet>, [Identity; 3], AssetId, Bech32ContractId)> {
+) -> Result<(Vec<Wallet>, [Identity; 3], AssetId, Bech32ContractId)> {
     let wallet_config = WalletsConfig::new(Some(3), None, None);
     let wallets = launch_custom_provider_and_get_wallets(wallet_config, None, None).await?;
 
@@ -824,7 +824,7 @@ async fn test_contract_instance_get_balances() -> Result<()> {
 
     let random_asset_id = &asset_ids[1];
     let provider = setup_test_provider(coins.clone(), vec![], None, None).await?;
-    let wallet = NewWallet::new(signer, provider.clone());
+    let wallet = Wallet::new(signer, provider.clone());
 
     setup_program_test!(
         Abigen(Contract(
@@ -1050,7 +1050,7 @@ async fn test_contract_call_with_non_default_max_input() -> Result<()> {
     };
 
     let provider = setup_test_provider(coins, vec![], None, Some(chain_config)).await?;
-    let wallet = NewWallet::new(signer, provider.clone());
+    let wallet = Wallet::new(signer, provider.clone());
     assert_eq!(consensus_parameters, provider.consensus_parameters().await?);
 
     setup_program_test!(
@@ -1351,7 +1351,7 @@ fn db_rocksdb() {
     use std::fs;
 
     use fuels::{
-        accounts::wallet::NewWallet,
+        accounts::wallet::Wallet,
         client::{PageDirection, PaginationRequest},
         prelude::{setup_test_provider, DbType, Error, ViewOnlyAccount, DEFAULT_COIN_AMOUNT},
     };
@@ -1421,7 +1421,7 @@ fn db_rocksdb() {
                     .parse()
                     .unwrap(),
             );
-            let wallet = NewWallet::new(signer, provider.clone());
+            let wallet = Wallet::new(signer, provider.clone());
 
             let blocks = provider
                 .get_blocks(PaginationRequest {
@@ -1869,7 +1869,7 @@ async fn msg_sender_gas_estimation_issue() {
     let provider = setup_test_provider(coins, vec![], None, None)
         .await
         .unwrap();
-    let wallet = NewWallet::new(signer, provider.clone());
+    let wallet = Wallet::new(signer, provider.clone());
 
     setup_program_test!(
         Abigen(Contract(
@@ -1949,7 +1949,7 @@ async fn variable_output_estimation_is_optimized() -> Result<()> {
     Ok(())
 }
 
-async fn setup_node_with_high_price() -> Result<Vec<NewWallet>> {
+async fn setup_node_with_high_price() -> Result<Vec<Wallet>> {
     let wallet_config = WalletsConfig::new(None, None, None);
     let fee_parameters = FeeParameters::V1(FeeParametersV1 {
         gas_price_factor: 92000,
@@ -1995,7 +1995,7 @@ async fn simulations_can_be_made_without_coins() -> Result<()> {
     let provider = wallet.provider().clone();
     let mut rng = thread_rng();
     let signer_no_funds = PrivateKeySigner::random(&mut rng);
-    let no_funds_wallet = NewWallet::new(signer_no_funds, provider.clone());
+    let no_funds_wallet = Wallet::new(signer_no_funds, provider.clone());
 
     let response = MyContract::new(contract_id, no_funds_wallet.clone())
         .methods()
@@ -2030,7 +2030,7 @@ async fn simulations_can_be_made_without_coins_multicall() -> Result<()> {
     // Replace NewWallet::new_random with new pattern:
     let mut rng = thread_rng();
     let signer_no_funds = PrivateKeySigner::random(&mut rng);
-    let no_funds_wallet = NewWallet::new(signer_no_funds, provider.clone());
+    let no_funds_wallet = Wallet::new(signer_no_funds, provider.clone());
     let contract_instance = MyContract::new(contract_id, no_funds_wallet.clone());
 
     let contract_methods = contract_instance.methods();
@@ -2119,8 +2119,8 @@ async fn max_fee_estimation_respects_tolerance() -> Result<()> {
     let provider =
         setup_test_provider([call_coins, deploy_coins].concat(), vec![], None, None).await?;
 
-    let call_wallet = NewWallet::new(call_signer, provider.clone());
-    let deploy_wallet = NewWallet::new(deploy_signer, provider.clone());
+    let call_wallet = Wallet::new(call_signer, provider.clone());
+    let deploy_wallet = Wallet::new(deploy_signer, provider.clone());
 
     setup_program_test!(
         Abigen(Contract(

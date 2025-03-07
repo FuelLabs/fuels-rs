@@ -1,7 +1,7 @@
 use std::mem::size_of;
 
 use fuel_crypto::SecretKey;
-use fuels_accounts::{signers::PrivateKeySigner, wallet::NewWallet};
+use fuels_accounts::{signers::PrivateKeySigner, wallet::Wallet};
 use fuels_core::types::errors::Result;
 
 use crate::{
@@ -23,7 +23,7 @@ use crate::{
 ///   Ok(())
 /// }
 /// ```
-pub async fn launch_provider_and_get_wallet() -> Result<NewWallet> {
+pub async fn launch_provider_and_get_wallet() -> Result<Wallet> {
     let mut wallets =
         launch_custom_provider_and_get_wallets(WalletsConfig::new(Some(1), None, None), None, None)
             .await?;
@@ -54,7 +54,7 @@ pub async fn launch_custom_provider_and_get_wallets(
     wallet_config: WalletsConfig,
     node_config: Option<NodeConfig>,
     chain_config: Option<ChainConfig>,
-) -> Result<Vec<NewWallet>> {
+) -> Result<Vec<Wallet>> {
     const SIZE_SECRET_KEY: usize = size_of::<SecretKey>();
     const PADDING_BYTES: usize = SIZE_SECRET_KEY - size_of::<u64>();
 
@@ -79,7 +79,7 @@ pub async fn launch_custom_provider_and_get_wallets(
 
     let wallets = signers
         .into_iter()
-        .map(|signer| NewWallet::new(signer, provider.clone()))
+        .map(|signer| Wallet::new(signer, provider.clone()))
         .collect::<Vec<_>>();
 
     Ok(wallets)

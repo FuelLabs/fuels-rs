@@ -3,7 +3,7 @@ mod tests {
     use anyhow::Result;
     use e2e::e2e_helpers::start_aws_kms;
     use fuels::accounts::kms::KmsKey;
-    use fuels::accounts::wallet::NewWallet;
+    use fuels::accounts::wallet::Wallet;
     use fuels::accounts::{Account, ViewOnlyAccount};
     use fuels::prelude::{
         launch_provider_and_get_wallet, AssetId, Contract, LoadConfiguration, TxPolicies,
@@ -29,7 +29,7 @@ mod tests {
 
         // ANCHOR: use_kms_wallet
         let kms_key = KmsKey::new(your_kms_key_id, kms.client()).await?;
-        let wallet = NewWallet::new(kms_key, provider);
+        let wallet = Wallet::new(kms_key, provider);
         // ANCHOR_END: use_kms_wallet
 
         let total_base_balance = wallet.get_asset_balance(&AssetId::zeroed()).await?;
@@ -56,7 +56,7 @@ mod tests {
         let provider = wallet.provider().clone();
 
         let kms_key = KmsKey::new(your_kms_key_id, kms.client()).await?;
-        let aws_wallet = NewWallet::new(kms_key, provider);
+        let aws_wallet = Wallet::new(kms_key, provider);
 
         Contract::load_from(
             "../e2e/sway/contracts/contract_test/out/release/contract_test.bin",

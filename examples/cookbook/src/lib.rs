@@ -4,7 +4,7 @@ mod tests {
 
     use fuels::{
         accounts::{
-            predicate::Predicate, signers::PrivateKeySigner, wallet::NewWallet, ViewOnlyAccount,
+            predicate::Predicate, signers::PrivateKeySigner, wallet::Wallet, ViewOnlyAccount,
         },
         prelude::Result,
         test_helpers::{setup_single_asset_coins, setup_test_provider},
@@ -160,8 +160,8 @@ mod tests {
 
         let provider = setup_test_provider(coins, vec![], None, None).await?;
 
-        let wallet_1 = NewWallet::new(wallet_1_signer, provider.clone());
-        let wallet_2 = NewWallet::new(wallet_2_signer, provider.clone());
+        let wallet_1 = Wallet::new(wallet_1_signer, provider.clone());
+        let wallet_2 = Wallet::new(wallet_2_signer, provider.clone());
         // ANCHOR_END: transfer_multiple_setup
 
         // ANCHOR: transfer_multiple_input
@@ -263,8 +263,8 @@ mod tests {
 
         provider.produce_blocks(100, None).await?;
 
-        let hot_wallet = NewWallet::new(hot_wallet_signer, provider.clone());
-        let cold_wallet = NewWallet::new(cold_wallet_signer, provider.clone());
+        let hot_wallet = Wallet::new(hot_wallet_signer, provider.clone());
+        let cold_wallet = Wallet::new(cold_wallet_signer, provider.clone());
         predicate.set_provider(provider.clone());
 
         // ANCHOR: custom_tx_receiver

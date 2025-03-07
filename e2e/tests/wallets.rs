@@ -32,7 +32,7 @@ async fn test_wallet_balance_api_multi_asset() -> Result<()> {
     );
 
     let provider = setup_test_provider(coins.clone(), vec![], None, None).await?;
-    let wallet = NewWallet::new(signer, provider.clone());
+    let wallet = Wallet::new(signer, provider.clone());
     let balances = wallet.get_balances().await?;
     assert_eq!(balances.len() as u64, number_of_assets);
 
@@ -63,7 +63,7 @@ async fn test_wallet_balance_api_single_asset() -> Result<()> {
     );
 
     let provider = setup_test_provider(coins.clone(), vec![], None, None).await?;
-    let wallet = NewWallet::new(signer, provider.clone());
+    let wallet = Wallet::new(signer, provider.clone());
 
     for coin in coins {
         let balance = wallet.get_asset_balance(&coin.asset_id).await;
@@ -138,8 +138,8 @@ async fn adjust_for_fee_with_message_data_input() -> Result<()> {
     let asset_id = AssetId::zeroed();
     let coins = setup_single_asset_coins(wallet_signer.address(), asset_id, 1, 50);
     let provider = setup_test_provider(coins, vec![messages], None, None).await?;
-    let wallet = NewWallet::new(wallet_signer, provider.clone());
-    let receiver = NewWallet::new(receiver_signer, provider.clone());
+    let wallet = Wallet::new(wallet_signer, provider.clone());
+    let receiver = Wallet::new(receiver_signer, provider.clone());
 
     let amount_to_send = 14;
     let message = wallet.get_messages().await?.pop().unwrap();
@@ -236,8 +236,8 @@ async fn test_transfer() -> Result<()> {
     coins_1.extend(coins_2);
 
     let provider = setup_test_provider(coins_1, vec![], None, None).await?;
-    let wallet_1 = NewWallet::new(wallet_1_signer, provider.clone());
-    let wallet_2 = NewWallet::new(wallet_2_signer, provider.clone()).locked();
+    let wallet_1 = Wallet::new(wallet_1_signer, provider.clone());
+    let wallet_2 = Wallet::new(wallet_2_signer, provider.clone()).locked();
 
     let _ = wallet_1
         .transfer(
@@ -362,7 +362,7 @@ async fn test_wallet_get_coins() -> Result<()> {
     let coins = setup_single_asset_coins(&addr, AssetId::zeroed(), NUM_COINS, AMOUNT);
 
     let provider = setup_test_provider(coins, vec![], None, None).await?;
-    let wallet = NewWallet::new(FakeSigner::new(addr), provider.clone());
+    let wallet = Wallet::new(FakeSigner::new(addr), provider.clone());
 
     let consensus_parameters = provider.consensus_parameters().await?;
     let wallet_initial_coins = wallet
@@ -376,7 +376,7 @@ async fn test_wallet_get_coins() -> Result<()> {
     Ok(())
 }
 
-async fn setup_transfer_test(amount: u64) -> Result<(NewWallet, NewWallet)> {
+async fn setup_transfer_test(amount: u64) -> Result<(Wallet, Wallet)> {
     let wallet_1_signer = PrivateKeySigner::random(&mut rand::thread_rng());
     let wallet_2_signer = PrivateKeySigner::random(&mut rand::thread_rng());
 
@@ -384,8 +384,8 @@ async fn setup_transfer_test(amount: u64) -> Result<(NewWallet, NewWallet)> {
 
     let provider = setup_test_provider(coins, vec![], None, None).await?;
 
-    let wallet_1 = NewWallet::new(wallet_1_signer, provider.clone());
-    let wallet_2 = NewWallet::new(wallet_2_signer, provider.clone());
+    let wallet_1 = Wallet::new(wallet_1_signer, provider.clone());
+    let wallet_2 = Wallet::new(wallet_2_signer, provider.clone());
 
     Ok((wallet_1, wallet_2))
 }
@@ -428,8 +428,8 @@ async fn transfer_coins_of_non_base_asset() -> Result<()> {
 
     let provider = setup_test_provider(coins, vec![], None, None).await?;
 
-    let wallet_1 = NewWallet::new(wallet_1_signer, provider.clone());
-    let wallet_2 = NewWallet::new(wallet_2_signer, provider.clone());
+    let wallet_1 = Wallet::new(wallet_1_signer, provider.clone());
+    let wallet_2 = Wallet::new(wallet_2_signer, provider.clone());
 
     const SEND_AMOUNT: u64 = 200;
     let _ = wallet_1
@@ -459,7 +459,7 @@ async fn test_transfer_with_multiple_signatures() -> Result<()> {
     let wallets = launch_custom_provider_and_get_wallets(wallet_config, None, None).await?;
     let provider = wallets[0].try_provider()?;
 
-    let receiver = NewWallet::random(&mut thread_rng(), provider.clone());
+    let receiver = Wallet::random(&mut thread_rng(), provider.clone());
 
     let amount_to_transfer = 20;
 

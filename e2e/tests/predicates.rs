@@ -66,7 +66,7 @@ async fn setup_predicate_test(
     num_coins: u64,
     num_messages: u64,
     amount: u64,
-) -> Result<(Provider, u64, NewWallet, u64, AssetId, NewWallet)> {
+) -> Result<(Provider, u64, Wallet, u64, AssetId, Wallet)> {
     let receiver_num_coins = 1;
     let receiver_amount = 1;
     let receiver_balance = receiver_num_coins * receiver_amount;
@@ -100,8 +100,8 @@ async fn setup_predicate_test(
     ));
 
     let provider = setup_test_provider(coins, messages, None, None).await?;
-    let receiver_wallet = NewWallet::new(receiver_signer.clone(), provider.clone());
-    let extra_wallet = NewWallet::new(extra_wallet_signer.clone(), provider.clone());
+    let receiver_wallet = Wallet::new(receiver_signer.clone(), provider.clone());
+    let extra_wallet = Wallet::new(extra_wallet_signer.clone(), provider.clone());
 
     Ok((
         provider,
@@ -127,7 +127,7 @@ async fn transfer_coins_and_messages_to_predicate() -> Result<()> {
 
     let provider = setup_test_provider(coins, messages, None, None).await?;
 
-    let wallet = NewWallet::new(signer, provider.clone());
+    let wallet = Wallet::new(signer, provider.clone());
 
     let predicate =
         Predicate::load_from("sway/predicates/basic_predicate/out/release/basic_predicate.bin")?
@@ -477,7 +477,7 @@ async fn predicate_transfer_with_signed_resources() -> Result<()> {
     messages.extend(wallet_messages);
 
     let provider = setup_test_provider(coins, messages, None, None).await?;
-    let wallet = NewWallet::new(signer.clone(), provider.clone());
+    let wallet = Wallet::new(signer.clone(), provider.clone());
     predicate.set_provider(provider.clone());
 
     let mut inputs = wallet
@@ -840,7 +840,7 @@ async fn predicate_transfer_non_base_asset() -> Result<()> {
 
     let provider = setup_test_provider(coins, vec![], None, None).await?;
     predicate.set_provider(provider.clone());
-    let wallet = NewWallet::new(signer.clone(), provider.clone());
+    let wallet = Wallet::new(signer.clone(), provider.clone());
 
     let inputs = predicate
         .get_asset_inputs_for_amount(non_base_asset_id, amount, None)

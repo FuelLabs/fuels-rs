@@ -101,7 +101,7 @@ async fn setup_predicate_test(
     num_coins: u64,
     num_messages: u64,
     amount: u64,
-) -> Result<(Provider, u64, NewWallet, u64, AssetId)> {
+) -> Result<(Provider, u64, Wallet, u64, AssetId)> {
     let receiver_num_coins = 1;
     let receiver_amount = 1;
     let receiver_balance = receiver_num_coins * receiver_amount;
@@ -124,7 +124,7 @@ async fn setup_predicate_test(
         ..Default::default()
     };
     let provider = setup_test_provider(coins, messages, Some(node_config), None).await?;
-    let receiver = NewWallet::new(receiver_signer, provider.clone());
+    let receiver = Wallet::new(receiver_signer, provider.clone());
 
     Ok((
         provider,

@@ -123,7 +123,7 @@ async fn test_output_variable_estimation() -> Result<()> {
     );
 
     let provider = wallet.try_provider()?.clone();
-    let receiver = NewWallet::random(&mut thread_rng(), provider);
+    let receiver = Wallet::random(&mut thread_rng(), provider);
 
     let amount = 1000;
     let asset_id = AssetId::zeroed();
@@ -399,7 +399,7 @@ async fn simulations_can_be_made_without_coins() -> Result<()> {
     );
     let provider = wallet.provider().clone();
 
-    let no_funds_wallet = NewWallet::random(&mut thread_rng(), provider);
+    let no_funds_wallet = Wallet::random(&mut thread_rng(), provider);
     let script_instance = script_instance.with_account(no_funds_wallet);
 
     let value = script_instance
@@ -501,7 +501,7 @@ async fn high_level_blob_upload_sets_max_fee_tolerance() -> Result<()> {
     let signer = PrivateKeySigner::random(&mut thread_rng());
     let coins = setup_single_asset_coins(signer.address(), AssetId::zeroed(), 1, u64::MAX);
     let provider = setup_test_provider(coins, vec![], Some(node_config), None).await?;
-    let wallet = NewWallet::new(signer, provider.clone());
+    let wallet = Wallet::new(signer, provider.clone());
 
     setup_program_test!(
         Abigen(Script(

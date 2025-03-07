@@ -1,9 +1,7 @@
 #[cfg(test)]
 mod tests {
     use fuels::{
-        accounts::signers::{
-            self, save_key_to_keystore, DEFAULT_DERIVATION_PATH,
-        },
+        accounts::signers::{self, save_key_to_keystore, DEFAULT_DERIVATION_PATH},
         crypto::SecretKey,
         prelude::*,
     };
@@ -18,7 +16,7 @@ mod tests {
         let provider = setup_test_provider(vec![], vec![], None, None).await?;
 
         // Create the wallet.
-        let _wallet = NewWallet::random(&mut thread_rng(), provider);
+        let _wallet = Wallet::random(&mut thread_rng(), provider);
         // ANCHOR_END: create_random_wallet
 
         Ok(())
@@ -41,7 +39,7 @@ mod tests {
         )?;
 
         // Create the wallet.
-        let _wallet = NewWallet::new(PrivateKeySigner::new(secret), provider);
+        let _wallet = Wallet::new(PrivateKeySigner::new(secret), provider);
         // ANCHOR_END: create_wallet_from_secret_key
         Ok(())
     }
@@ -61,12 +59,12 @@ mod tests {
         let key =
             SecretKey::new_from_mnemonic_phrase_with_path(phrase, "m/44'/1179993420'/0'/0/0")?;
         let signer = PrivateKeySigner::new(key);
-        let _wallet = NewWallet::new(signer, provider.clone());
+        let _wallet = Wallet::new(signer, provider.clone());
 
         // Or with the default derivation path
         let key = SecretKey::new_from_mnemonic_phrase_with_path(phrase, DEFAULT_DERIVATION_PATH)?;
         let signer = PrivateKeySigner::new(key);
-        let wallet = NewWallet::new(signer, provider);
+        let wallet = Wallet::new(signer, provider);
 
         let expected_address = "fuel17x9kg3k7hqf42396vqenukm4yf59e5k0vj4yunr4mae9zjv9pdjszy098t";
 
@@ -259,7 +257,7 @@ mod tests {
         );
         // ANCHOR_END: multiple_assets_coins
         let provider = setup_test_provider(coins.clone(), vec![], None, None).await?;
-        let wallet = NewWallet::new(signer, provider);
+        let wallet = Wallet::new(signer, provider);
         // ANCHOR_END: multiple_assets_wallet
         Ok(())
     }
@@ -300,7 +298,7 @@ mod tests {
 
         let coins = setup_custom_assets_coins(signer.address(), &assets);
         let provider = setup_test_provider(coins, vec![], None, None).await?;
-        let wallet = NewWallet::new(signer, provider.clone());
+        let wallet = Wallet::new(signer, provider.clone());
         // ANCHOR_END: custom_assets_wallet
         // ANCHOR: custom_assets_wallet_short
         let num_wallets = 1;
@@ -309,7 +307,7 @@ mod tests {
         // ANCHOR_END: custom_assets_wallet_short
 
         // ANCHOR: wallet_to_address
-        let wallet = NewWallet::random(&mut rng, provider);
+        let wallet = Wallet::random(&mut rng, provider);
         let address: Address = wallet.address().into();
         // ANCHOR_END: wallet_to_address
         Ok(())
