@@ -2,13 +2,13 @@
 mod tests {
     use anyhow::Result;
     use e2e::e2e_helpers::start_aws_kms;
-    use fuels::accounts::signers::aws_kms::AwsKmsSigner;
-    use fuels::accounts::wallet::Wallet;
-    use fuels::accounts::{Account, ViewOnlyAccount};
-    use fuels::prelude::{
-        launch_provider_and_get_wallet, AssetId, Contract, LoadConfiguration, TxPolicies,
+    use fuels::{
+        accounts::{signers::aws_kms::AwsKmsSigner, wallet::Wallet, Account, ViewOnlyAccount},
+        prelude::{
+            launch_provider_and_get_wallet, AssetId, Contract, LoadConfiguration, TxPolicies,
+        },
+        types::errors::Context,
     };
-    use fuels::types::errors::Context;
 
     #[tokio::test(flavor = "multi_thread")]
     async fn fund_aws_wallet() -> Result<()> {

@@ -1,8 +1,8 @@
 use async_trait::async_trait;
+use auto_impl::auto_impl;
 use fuel_crypto::{Message, Signature};
 
 use crate::types::{bech32::Bech32Address, errors::Result};
-use auto_impl::auto_impl;
 
 /// Trait for signing transactions and messages
 ///

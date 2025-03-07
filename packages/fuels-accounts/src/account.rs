@@ -331,9 +331,8 @@ mod tests {
         types::{transaction::Transaction, DryRun, DryRunner},
     };
 
-    use crate::signers::private_key::PrivateKeySigner;
-
     use super::*;
+    use crate::signers::private_key::PrivateKeySigner;
 
     #[derive(Default)]
     struct MockDryRunner {

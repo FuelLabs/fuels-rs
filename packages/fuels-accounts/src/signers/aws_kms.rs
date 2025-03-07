@@ -1,6 +1,5 @@
 pub use aws_config;
 pub use aws_sdk_kms;
-
 use aws_sdk_kms::{
     primitives::Blob,
     types::{KeySpec, MessageType, SigningAlgorithmSpec},

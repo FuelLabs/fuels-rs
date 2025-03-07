@@ -1163,7 +1163,7 @@ async fn tx_respects_policies() -> Result<()> {
 }
 
 #[tokio::test]
-#[ignore] //TODO: https://github.com/FuelLabs/fuels-rs/issues/1581
+#[ignore] // TODO: https://github.com/FuelLabs/fuels-rs/issues/1581
 async fn can_setup_static_gas_price() -> Result<()> {
     let expected_gas_price = 474;
     let node_config = NodeConfig {

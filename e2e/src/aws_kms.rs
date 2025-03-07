@@ -1,15 +1,16 @@
-use fuels::accounts::signers::aws_kms::{
-    aws_config::{defaults, BehaviorVersion, Region},
-    aws_sdk_kms::{
-        config::Credentials,
-        types::{KeySpec, KeyUsageType},
-        Client,
+use fuels::{
+    accounts::signers::aws_kms::{
+        aws_config::{defaults, BehaviorVersion, Region},
+        aws_sdk_kms::{
+            config::Credentials,
+            types::{KeySpec, KeyUsageType},
+            Client,
+        },
+        AwsKmsSigner,
     },
-    AwsKmsSigner,
+    prelude::Error,
+    types::errors::{Context, Result},
 };
-use fuels::prelude::Error;
-use fuels::types::errors::Context;
-use fuels::types::errors::Result;
 use testcontainers::{core::ContainerPort, runners::AsyncRunner};
 use tokio::io::AsyncBufReadExt;
 

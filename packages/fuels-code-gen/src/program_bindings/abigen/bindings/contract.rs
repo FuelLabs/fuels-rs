@@ -338,7 +338,7 @@ mod tests {
         // when
         let result = expand_fn(&FullABIFunction::from_counterpart(&the_function, &types)?);
 
-        //then
+        // then
 
         // Some more editing was required because it is not rustfmt-compatible (adding/removing parentheses or commas)
         let expected = quote! {
