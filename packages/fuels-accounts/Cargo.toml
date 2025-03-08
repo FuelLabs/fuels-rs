@@ -9,6 +9,9 @@ repository = { workspace = true }
 rust-version = { workspace = true }
 description = "Fuel Rust SDK accounts."
 
+[package.metadata.cargo-machete]
+ignored = ["aws-config"]
+
 [dependencies]
 async-trait = { workspace = true, default-features = false }
 aws-config = { workspace = true, features = [
