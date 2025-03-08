@@ -52,4 +52,5 @@ std = [
   "dep:cynic",
 ]
 test-helpers = []
-kms-signer = ["dep:aws-sdk-kms", "dep:aws-config", "dep:google-cloud-kms"]
+accounts-aws-kms-signer = ["dep:aws-sdk-kms", "dep:aws-config"]
+accounts-google-kms-signer = ["dep:google-cloud-kms"]

@@ -1,15 +1,8 @@
 use crate::{
-    accounts_utils::try_provider_error,
-    kms::{
-        aws::AwsKmsSigner,
-        google::{CryptoKeyVersionName, GoogleKmsSigner},
-    },
-    provider::Provider,
-    wallet::Wallet,
-    Account, ViewOnlyAccount,
+    accounts_utils::try_provider_error, provider::Provider, wallet::Wallet, Account,
+    ViewOnlyAccount,
 };
 use async_trait::async_trait;
-use aws_sdk_kms::Client as AwsClient;
 use fuel_types::AssetId;
 use fuels_core::{
     traits::Signer,
@@ -18,11 +11,7 @@ use fuels_core::{
         transaction_builders::TransactionBuilder,
     },
 };
-use google_cloud_kms::client::Client as GoogleClient;
 use std::fmt::{Debug, Formatter};
-
-pub type AwsWallet = KmsWallet<AwsKmsSigner>;
-pub type GoogleWallet = KmsWallet<GoogleKmsSigner>;
 
 pub struct KmsWallet<S: Signer + Send + Sync + Clone> {
     view_account: Wallet,
@@ -40,6 +29,7 @@ impl<S: Signer + Send + Sync + Clone> KmsWallet<S> {
     pub fn address(&self) -> &Bech32Address {
         self.kms_signer.address()
     }
+
     pub fn provider(&self) -> Option<&Provider> {
         self.view_account.provider()
     }
@@ -50,6 +40,7 @@ impl<S: Signer + Send + Sync + Clone> ViewOnlyAccount for KmsWallet<S> {
     fn address(&self) -> &Bech32Address {
         self.kms_signer.address()
     }
+
     fn try_provider(&self) -> Result<&Provider> {
         self.provider().ok_or_else(try_provider_error)
     }
@@ -92,36 +83,63 @@ impl<S: Signer + Send + Sync + Clone> Clone for KmsWallet<S> {
     }
 }
 
-impl AwsWallet {
-    pub async fn with_kms_key(
-        key_id: impl Into<String>,
-        aws_client: &AwsClient,
-        provider: Option<Provider>,
-    ) -> Result<Self> {
-        Ok(Self::new(
-            AwsKmsSigner::new(key_id.into(), aws_client).await?,
-            provider,
-        ))
+// AWS wallet implementation
+#[cfg(feature = "accounts-aws-kms-signer")]
+mod aws_wallet {
+    use super::*;
+    use crate::kms::aws::AwsKmsSigner;
+    use aws_sdk_kms::Client as AwsClient;
+
+    pub type AwsWallet = KmsWallet<AwsKmsSigner>;
+
+    impl AwsWallet {
+        pub async fn with_kms_key(
+            key_id: impl Into<String>,
+            aws_client: &AwsClient,
+            provider: Option<Provider>,
+        ) -> Result<Self> {
+            Ok(Self::new(
+                AwsKmsSigner::new(key_id.into(), aws_client).await?,
+                provider,
+            ))
+        }
     }
 }
 
-impl GoogleWallet {
-    pub async fn with_kms_key(
-        key_path: impl Into<String>,
-        google_client: &GoogleClient,
-        provider: Option<Provider>,
-    ) -> Result<Self> {
-        Ok(Self::new(
-            GoogleKmsSigner::new(key_path.into(), google_client).await?,
-            provider,
-        ))
-    }
+// Google wallet implementation
+#[cfg(feature = "accounts-google-kms-signer")]
+mod google_wallet {
+    use super::*;
+    use crate::kms::google::{CryptoKeyVersionName, GoogleKmsSigner};
+    use google_cloud_kms::client::Client as GoogleClient;
 
-    pub async fn with_key_version(
-        key_name: CryptoKeyVersionName,
-        google_client: &GoogleClient,
-        provider: Option<Provider>,
-    ) -> Result<Self> {
-        Self::with_kms_key(key_name.to_string(), google_client, provider).await
+    pub type GoogleWallet = KmsWallet<GoogleKmsSigner>;
+
+    impl GoogleWallet {
+        pub async fn with_kms_key(
+            key_path: impl Into<String>,
+            google_client: &GoogleClient,
+            provider: Option<Provider>,
+        ) -> Result<Self> {
+            Ok(Self::new(
+                GoogleKmsSigner::new(key_path.into(), google_client).await?,
+                provider,
+            ))
+        }
+
+        pub async fn with_key_version(
+            key_name: CryptoKeyVersionName,
+            google_client: &GoogleClient,
+            provider: Option<Provider>,
+        ) -> Result<Self> {
+            Self::with_kms_key(key_name.to_string(), google_client, provider).await
+        }
     }
 }
+
+// Re-export the wallet types when respective features are enabled
+#[cfg(feature = "accounts-aws-kms-signer")]
+pub use aws_wallet::*;
+
+#[cfg(feature = "accounts-google-kms-signer")]
+pub use google_wallet::*;
