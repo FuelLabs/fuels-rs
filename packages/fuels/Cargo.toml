@@ -41,4 +41,5 @@ std = [
 ]
 fuel-core-lib = ["fuels-test-helpers?/fuel-core-lib"]
 rocksdb = ["fuels-test-helpers?/rocksdb"]
-kms-signer = ["fuels-accounts/kms-signer"]
+accounts-aws-kms-signer = ["fuels-accounts/aws-kms-signer"]
+accounts-google-kms-signer = ["fuels-accounts/google-kms-signer"]

@@ -2,10 +2,10 @@
 mod tests {
     use anyhow::Result;
     use e2e::e2e_helpers::start_aws_kms;
-    use fuels::accounts::kms::AwsWallet;
+    use fuels::accounts::kms::{AwsKmsSigner, KmsWallet};
     use fuels::accounts::{Account, ViewOnlyAccount};
     use fuels::prelude::{
-        launch_provider_and_get_wallet, AssetId, Contract, LoadConfiguration, TxPolicies,
+        launch_provider_and_get_wallet, AssetId, Contract, LoadConfiguration, Signer, TxPolicies,
     };
     use fuels::types::errors::Context;
 
@@ -27,10 +27,11 @@ mod tests {
         let provider = wallet.provider().expect("No provider found").clone();
 
         // ANCHOR: use_kms_wallet
-        let wallet = AwsWallet::with_kms_key(your_kms_key_id, kms.client(), Some(provider)).await?;
+        let signer = AwsKmsSigner::new(your_kms_key_id, kms.client()).await?;
+        let kms_wallet = KmsWallet::new(signer, Some(provider));
         // ANCHOR_END: use_kms_wallet
 
-        let total_base_balance = wallet.get_asset_balance(&AssetId::zeroed()).await?;
+        let total_base_balance = kms_wallet.get_asset_balance(&AssetId::zeroed()).await?;
         assert_eq!(total_base_balance, amount);
         Ok(())
     }
@@ -53,14 +54,14 @@ mod tests {
         let your_kms_key_id = key.id;
         let provider = wallet.provider().expect("No provider found").clone();
 
-        let aws_wallet =
-            &AwsWallet::with_kms_key(your_kms_key_id, kms.client(), Some(provider)).await?;
+        let signer = AwsKmsSigner::new(your_kms_key_id, kms.client()).await?;
+        let kms_wallet = KmsWallet::new(signer, Some(provider));
 
         Contract::load_from(
             "../e2e/sway/contracts/contract_test/out/release/contract_test.bin",
             LoadConfiguration::default(),
         )?
-        .deploy(aws_wallet, TxPolicies::default())
+        .deploy(&kms_wallet, TxPolicies::default())
         .await?;
 
         Ok(())
