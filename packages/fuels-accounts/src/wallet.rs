@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use fuel_tx::AssetId;
 use fuels_core::{
-    traits::{AddressResolver, Signer},
+    traits::Signer,
     types::{
         bech32::Bech32Address, coin_type_id::CoinTypeId, errors::Result, input::Input,
         transaction_builders::TransactionBuilder,
@@ -9,86 +9,179 @@ use fuels_core::{
 };
 use rand::{CryptoRng, RngCore};
 
-use crate::{
-    provider::Provider,
-    signers::{locked::Locked, private_key::PrivateKeySigner},
-    Account, ViewOnlyAccount,
-};
+use crate::{provider::Provider, signers::private_key::PrivateKeySigner, Account, ViewOnlyAccount};
 
 #[derive(Debug, Clone)]
-pub struct Wallet<S = PrivateKeySigner> {
-    signer: S,
+pub struct Wallet<S = Unlocked<PrivateKeySigner>> {
+    state: S,
     provider: Provider,
 }
 
 impl<S> Wallet<S> {
-    pub fn new(signer: S, provider: Provider) -> Self {
-        Self { signer, provider }
-    }
-
     pub fn provider(&self) -> &Provider {
         &self.provider
     }
+}
 
-    pub fn signer(&self) -> &S {
-        &self.signer
+pub use locked::*;
+pub use unlocked::*;
+
+mod unlocked {
+    #[derive(Debug, Clone)]
+    pub struct Unlocked<S> {
+        signer: S,
+    }
+
+    impl<S> Unlocked<S> {
+        fn new(signer: S) -> Self {
+            Self { signer }
+        }
+    }
+
+    use async_trait::async_trait;
+    use fuel_tx::AssetId;
+    use fuels_core::{
+        traits::Signer,
+        types::{
+            bech32::Bech32Address, coin_type_id::CoinTypeId, errors::Result, input::Input,
+            transaction_builders::TransactionBuilder,
+        },
+    };
+    use rand::{CryptoRng, RngCore};
+
+    use crate::{
+        provider::Provider, signers::private_key::PrivateKeySigner, Account, ViewOnlyAccount,
+    };
+
+    use super::{Locked, Wallet};
+    impl<S> Wallet<Unlocked<S>> {
+        pub fn new(signer: S, provider: Provider) -> Self {
+            Wallet {
+                state: Unlocked::new(signer),
+                provider,
+            }
+        }
+
+        pub fn signer(&self) -> &S {
+            &self.state.signer
+        }
+    }
+
+    impl Wallet<Unlocked<PrivateKeySigner>> {
+        pub fn random(rng: &mut (impl CryptoRng + RngCore), provider: Provider) -> Self {
+            Self::new(PrivateKeySigner::random(rng), provider)
+        }
+    }
+
+    impl<S> Wallet<Unlocked<S>>
+    where
+        S: Signer,
+    {
+        pub fn locked(&self) -> Wallet<Locked> {
+            Wallet::new_locked(self.state.signer.address().clone(), self.provider.clone())
+        }
+    }
+
+    #[async_trait]
+    impl<S> ViewOnlyAccount for Wallet<Unlocked<S>>
+    where
+        S: Signer + Clone + Send + Sync + std::fmt::Debug + 'static,
+    {
+        fn address(&self) -> &Bech32Address {
+            self.state.signer.address()
+        }
+
+        fn try_provider(&self) -> Result<&Provider> {
+            Ok(&self.provider)
+        }
+
+        async fn get_asset_inputs_for_amount(
+            &self,
+            asset_id: AssetId,
+            amount: u64,
+            excluded_coins: Option<Vec<CoinTypeId>>,
+        ) -> Result<Vec<Input>> {
+            Ok(self
+                .get_spendable_resources(asset_id, amount, excluded_coins)
+                .await?
+                .into_iter()
+                .map(Input::resource_signed)
+                .collect::<Vec<Input>>())
+        }
+    }
+
+    #[async_trait]
+    impl<S> Account for Wallet<Unlocked<S>>
+    where
+        S: Signer + Clone + Send + Sync + std::fmt::Debug + 'static,
+    {
+        fn add_witnesses<Tb: TransactionBuilder>(&self, tb: &mut Tb) -> Result<()> {
+            tb.add_signer(self.state.signer.clone())?;
+
+            Ok(())
+        }
     }
 }
 
-impl Wallet<PrivateKeySigner> {
-    pub fn random(rng: &mut (impl CryptoRng + RngCore), provider: Provider) -> Self {
-        Self::new(PrivateKeySigner::random(rng), provider)
-    }
-}
-
-impl<S> Wallet<S>
-where
-    S: Signer,
-{
-    pub fn locked(&self) -> Wallet<Locked> {
-        Wallet::new(
-            Locked::new(self.signer.address().clone()),
-            self.provider.clone(),
-        )
-    }
-}
-
-#[async_trait]
-impl<S> ViewOnlyAccount for Wallet<S>
-where
-    S: AddressResolver + Clone + Send + Sync + std::fmt::Debug,
-{
-    fn address(&self) -> &Bech32Address {
-        self.signer.address()
+mod locked {
+    #[derive(Debug, Clone)]
+    pub struct Locked {
+        address: Bech32Address,
     }
 
-    fn try_provider(&self) -> Result<&Provider> {
-        Ok(&self.provider)
+    impl Locked {
+        fn new(address: Bech32Address) -> Self {
+            Self { address }
+        }
     }
 
-    async fn get_asset_inputs_for_amount(
-        &self,
-        asset_id: AssetId,
-        amount: u64,
-        excluded_coins: Option<Vec<CoinTypeId>>,
-    ) -> Result<Vec<Input>> {
-        Ok(self
-            .get_spendable_resources(asset_id, amount, excluded_coins)
-            .await?
-            .into_iter()
-            .map(Input::resource_signed)
-            .collect::<Vec<Input>>())
+    use async_trait::async_trait;
+    use fuel_tx::AssetId;
+    use fuels_core::{
+        traits::Signer,
+        types::{
+            bech32::Bech32Address, coin_type_id::CoinTypeId, errors::Result, input::Input,
+            transaction_builders::TransactionBuilder,
+        },
+    };
+    use rand::{CryptoRng, RngCore};
+
+    use crate::{
+        provider::Provider, signers::private_key::PrivateKeySigner, Account, ViewOnlyAccount,
+    };
+
+    use super::Wallet;
+    impl Wallet<Locked> {
+        pub fn new_locked(addr: Bech32Address, provider: Provider) -> Self {
+            Self {
+                state: Locked::new(addr),
+                provider,
+            }
+        }
     }
-}
 
-#[async_trait]
-impl<S> Account for Wallet<S>
-where
-    S: Signer + Clone + Send + Sync + std::fmt::Debug + 'static,
-{
-    fn add_witnesses<Tb: TransactionBuilder>(&self, tb: &mut Tb) -> Result<()> {
-        tb.add_signer(self.signer.clone())?;
+    #[async_trait]
+    impl ViewOnlyAccount for Wallet<Locked> {
+        fn address(&self) -> &Bech32Address {
+            &self.state.address
+        }
 
-        Ok(())
+        fn try_provider(&self) -> Result<&Provider> {
+            Ok(&self.provider)
+        }
+
+        async fn get_asset_inputs_for_amount(
+            &self,
+            asset_id: AssetId,
+            amount: u64,
+            excluded_coins: Option<Vec<CoinTypeId>>,
+        ) -> Result<Vec<Input>> {
+            Ok(self
+                .get_spendable_resources(asset_id, amount, excluded_coins)
+                .await?
+                .into_iter()
+                .map(Input::resource_signed)
+                .collect::<Vec<Input>>())
+        }
     }
 }

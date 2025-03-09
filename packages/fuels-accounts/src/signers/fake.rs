@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use fuel_crypto::{Message, Signature};
 use fuels_core::{
-    traits::{AddressResolver, Signer},
+    traits::Signer,
     types::{bech32::Bech32Address, errors::Result},
 };
 
@@ -31,9 +31,7 @@ impl Signer for FakeSigner {
     async fn sign(&self, _message: Message) -> Result<Signature> {
         Ok(Signature::default())
     }
-}
 
-impl AddressResolver for FakeSigner {
     fn address(&self) -> &Bech32Address {
         &self.address
     }

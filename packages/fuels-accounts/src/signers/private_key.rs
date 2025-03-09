@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
 use fuels_core::{
-    traits::{AddressResolver, Signer},
+    traits::Signer,
     types::{
         bech32::{Bech32Address, FUEL_BECH32_HRP},
         errors::Result,
@@ -60,13 +60,12 @@ impl Signer for PrivateKeySigner {
 
         Ok(sig)
     }
-}
 
-impl AddressResolver for PrivateKeySigner {
     fn address(&self) -> &Bech32Address {
         &self.address
     }
 }
+
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;

@@ -7,7 +7,7 @@ use aws_sdk_kms::{
 };
 use fuel_crypto::{Message, PublicKey, Signature};
 use fuels_core::{
-    traits::{AddressResolver, Signer},
+    traits::Signer,
     types::{
         bech32::{Bech32Address, FUEL_BECH32_HRP},
         errors::{Error, Result},
@@ -201,9 +201,7 @@ impl Signer for AwsKmsSigner {
     async fn sign(&self, message: Message) -> Result<Signature> {
         self.sign_message(message).await
     }
-}
 
-impl AddressResolver for AwsKmsSigner {
     fn address(&self) -> &Bech32Address {
         self.fuel_address()
     }
