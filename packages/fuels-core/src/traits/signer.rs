@@ -10,11 +10,7 @@ use crate::types::{bech32::Bech32Address, errors::Result};
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 #[auto_impl(&, Box, Rc, Arc)]
-pub trait Signer: AddressResolver {
+pub trait Signer {
     async fn sign(&self, message: Message) -> Result<Signature>;
-}
-
-#[auto_impl(&, Box, Rc, Arc)]
-pub trait AddressResolver {
     fn address(&self) -> &Bech32Address;
 }

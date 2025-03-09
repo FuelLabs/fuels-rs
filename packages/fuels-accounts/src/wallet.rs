@@ -1,15 +1,4 @@
-use async_trait::async_trait;
-use fuel_tx::AssetId;
-use fuels_core::{
-    traits::Signer,
-    types::{
-        bech32::Bech32Address, coin_type_id::CoinTypeId, errors::Result, input::Input,
-        transaction_builders::TransactionBuilder,
-    },
-};
-use rand::{CryptoRng, RngCore};
-
-use crate::{provider::Provider, signers::private_key::PrivateKeySigner, Account, ViewOnlyAccount};
+use crate::{provider::Provider, signers::private_key::PrivateKeySigner};
 
 #[derive(Debug, Clone)]
 pub struct Wallet<S = Unlocked<PrivateKeySigner>> {
@@ -23,21 +12,7 @@ impl<S> Wallet<S> {
     }
 }
 
-pub use locked::*;
-pub use unlocked::*;
-
 mod unlocked {
-    #[derive(Debug, Clone)]
-    pub struct Unlocked<S> {
-        signer: S,
-    }
-
-    impl<S> Unlocked<S> {
-        fn new(signer: S) -> Self {
-            Self { signer }
-        }
-    }
-
     use async_trait::async_trait;
     use fuel_tx::AssetId;
     use fuels_core::{
@@ -54,6 +29,18 @@ mod unlocked {
     };
 
     use super::{Locked, Wallet};
+
+    #[derive(Debug, Clone)]
+    pub struct Unlocked<S> {
+        signer: S,
+    }
+
+    impl<S> Unlocked<S> {
+        fn new(signer: S) -> Self {
+            Self { signer }
+        }
+    }
+
     impl<S> Wallet<Unlocked<S>> {
         pub fn new(signer: S, provider: Provider) -> Self {
             Wallet {
@@ -122,8 +109,19 @@ mod unlocked {
         }
     }
 }
+pub use unlocked::*;
 
 mod locked {
+    use async_trait::async_trait;
+    use fuel_tx::AssetId;
+    use fuels_core::types::{
+        bech32::Bech32Address, coin_type_id::CoinTypeId, errors::Result, input::Input,
+    };
+
+    use crate::{provider::Provider, ViewOnlyAccount};
+
+    use super::Wallet;
+
     #[derive(Debug, Clone)]
     pub struct Locked {
         address: Bech32Address,
@@ -135,22 +133,6 @@ mod locked {
         }
     }
 
-    use async_trait::async_trait;
-    use fuel_tx::AssetId;
-    use fuels_core::{
-        traits::Signer,
-        types::{
-            bech32::Bech32Address, coin_type_id::CoinTypeId, errors::Result, input::Input,
-            transaction_builders::TransactionBuilder,
-        },
-    };
-    use rand::{CryptoRng, RngCore};
-
-    use crate::{
-        provider::Provider, signers::private_key::PrivateKeySigner, Account, ViewOnlyAccount,
-    };
-
-    use super::Wallet;
     impl Wallet<Locked> {
         pub fn new_locked(addr: Bech32Address, provider: Provider) -> Self {
             Self {
@@ -185,3 +167,4 @@ mod locked {
         }
     }
 }
+pub use locked::*;

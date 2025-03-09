@@ -1,5 +1,5 @@
 use fuels::{
-    accounts::signers::{locked::Locked, private_key::PrivateKeySigner},
+    accounts::signers::private_key::PrivateKeySigner,
     prelude::*,
     types::{coin_type::CoinType, input::Input, output::Output},
 };
@@ -362,7 +362,7 @@ async fn test_wallet_get_coins() -> Result<()> {
     let coins = setup_single_asset_coins(&addr, AssetId::zeroed(), NUM_COINS, AMOUNT);
 
     let provider = setup_test_provider(coins, vec![], None, None).await?;
-    let wallet = Wallet::new(Locked::new(addr), provider.clone());
+    let wallet = Wallet::new_locked(addr, provider.clone());
 
     let consensus_parameters = provider.consensus_parameters().await?;
     let wallet_initial_coins = wallet

@@ -1512,10 +1512,7 @@ mod tests {
     use fuel_tx::{input::coin::CoinSigned, ConsensusParameters, UtxoId};
 
     use super::*;
-    use crate::{
-        traits::AddressResolver,
-        types::{bech32::Bech32Address, message::MessageStatus, DryRun},
-    };
+    use crate::types::{bech32::Bech32Address, message::MessageStatus, DryRun};
 
     #[test]
     fn storage_slots_are_sorted_when_set() {
@@ -1779,18 +1776,15 @@ mod tests {
         address: Bech32Address,
     }
 
-    impl AddressResolver for MockSigner {
-        fn address(&self) -> &Bech32Address {
-            &self.address
-        }
-    }
-
     #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
     #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
     #[async_trait]
     impl Signer for MockSigner {
         async fn sign(&self, _message: fuel_crypto::Message) -> Result<Signature> {
             Ok(Signature::default())
+        }
+        fn address(&self) -> &Bech32Address {
+            &self.address
         }
     }
 
