@@ -15,6 +15,7 @@ use chrono::{DateTime, Utc};
 use fuel_core_client::client::{
     pagination::{PageDirection, PaginatedResult, PaginationRequest},
     types::{
+        assemble_tx::{AssembleTransactionResult, RequiredBalance},
         balance::Balance,
         contract::ContractBalance,
         gas_price::{EstimateGasPrice, LatestGasPrice},
@@ -187,7 +188,7 @@ impl Provider {
         self.check_inputs_already_in_cache(&tx.used_coins(&base_asset_id))
             .await?;
 
-        let tx = self.prepare_transaction_for_sending(tx).await?;
+        // let tx = self.prepare_transaction_for_sending(tx).await?; //TODO: what to do with this
         let tx_status = self
             .uncached_client()
             .submit_and_await_commit(&tx.clone().into())
@@ -208,7 +209,8 @@ impl Provider {
         Ok(tx_status)
     }
 
-    async fn prepare_transaction_for_sending<T: Transaction>(&self, mut tx: T) -> Result<T> {
+    // TODO: should be have this public or we do it inside the builder
+    pub async fn prepare_transaction_for_sending<T: Transaction>(&self, mut tx: T) -> Result<T> {
         let consensus_parameters = self.consensus_parameters().await?;
         tx.precompute(&consensus_parameters.chain_id())?;
 
@@ -348,6 +350,31 @@ impl Provider {
             .expect("should have only one element");
 
         Ok(tx_status)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub async fn assemble_tx(
+        &self,
+        transaction: impl Transaction,
+        block_horizon: u32,
+        required_balances: Vec<RequiredBalance>,
+        fee_address_index: u16,
+        exclude: Option<(Vec<UtxoId>, Vec<Nonce>)>, //TODO: exclude coins when assembling
+        estimate_predicates: bool,
+        reserve_gas: Option<u64>,
+    ) -> Result<AssembleTransactionResult> {
+        Ok(self
+            .uncached_client()
+            .assemble_tx(
+                &transaction.into(),
+                block_horizon,
+                required_balances,
+                fee_address_index,
+                exclude,
+                estimate_predicates,
+                reserve_gas,
+            )
+            .await?)
     }
 
     pub async fn dry_run_multiple(
@@ -896,5 +923,29 @@ impl DryRunner for Provider {
         _latest_chain_executor_version: Option<u32>,
     ) -> Result<FuelTransaction> {
         Ok(self.uncached_client().estimate_predicates(tx).await?)
+    }
+
+    async fn assemble_tx(
+        &self,
+        transaction: &FuelTransaction,
+        block_horizon: u32,
+        required_balances: Vec<RequiredBalance>,
+        fee_address_index: u16,
+        exclude: Option<(Vec<UtxoId>, Vec<Nonce>)>, //TODO: exclude coins when assembling
+        estimate_predicates: bool,
+        reserve_gas: Option<u64>,
+    ) -> Result<AssembleTransactionResult> {
+        Ok(self
+            .uncached_client()
+            .assemble_tx(
+                transaction,
+                block_horizon,
+                required_balances,
+                fee_address_index,
+                exclude,
+                estimate_predicates,
+                reserve_gas,
+            )
+            .await?)
     }
 }

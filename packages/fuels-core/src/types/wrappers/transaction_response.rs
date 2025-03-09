@@ -25,6 +25,7 @@ impl From<ClientTransactionResponse> for TransactionResponse {
             | ClientTransactionStatus::SqueezedOut { .. } => None,
             ClientTransactionStatus::Success { block_height, .. }
             | ClientTransactionStatus::Failure { block_height, .. } => Some(*block_height),
+            _ => todo!(), //TODO: add the rest of the statuses
         };
 
         let time = match &client_response.status {
@@ -34,6 +35,7 @@ impl From<ClientTransactionResponse> for TransactionResponse {
             | ClientTransactionStatus::Failure { time, .. } => {
                 DateTime::from_timestamp(time.to_unix(), 0)
             }
+            _ => todo!(), //TODO: add the rest of the statuses
         };
 
         let transaction = match client_response.transaction {

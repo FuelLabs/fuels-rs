@@ -9,7 +9,7 @@ use fuels_core::{
         bech32::Bech32ContractId,
         errors::Result,
         transaction::{Transaction, TxPolicies},
-        transaction_builders::{Blob, CreateTransactionBuilder},
+        transaction_builders::{Blob, BuildableTransaction, CreateTransactionBuilder, Strategy},
         tx_status::Success,
     },
     Configurables,
@@ -154,6 +154,13 @@ impl Contract<Regular> {
         let salt = self.salt;
         let storage_slots = self.storage_slots;
 
+        let provider = account.try_provider()?;
+        let consensus_parameters = provider.consensus_parameters().await?;
+        let base_asset_id = *consensus_parameters.base_asset_id();
+
+        let fee_index = 0u16;
+        let required_balances = vec![account.required_balance(0, base_asset_id, None)];
+
         let mut tb = CreateTransactionBuilder::prepare_contract_deployment(
             self.code.code(),
             contract_id,
@@ -162,13 +169,13 @@ impl Contract<Regular> {
             storage_slots.to_vec(),
             tx_policies,
         )
-        .with_max_fee_estimation_tolerance(DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE);
+        .with_max_fee_estimation_tolerance(DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE)
+        .with_build_strategy(Strategy::AssembleTx {
+            required_balances,
+            fee_index,
+        });
 
         account.add_witnesses(&mut tb)?;
-        account.adjust_for_fee(&mut tb, 0).await?;
-
-        let provider = account.try_provider()?;
-        let consensus_parameters = provider.consensus_parameters().await?;
 
         let tx = tb.build(provider).await?;
         let tx_id = Some(tx.id(consensus_parameters.chain_id()));

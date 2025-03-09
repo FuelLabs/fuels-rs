@@ -138,7 +138,7 @@ async fn test_output_variable_estimation() -> Result<()> {
     let _ = script_call
         .with_inputs(inputs)
         .with_outputs(vec![output])
-        .with_variable_output_policy(VariableOutputPolicy::EstimateMinimum)
+        // .with_variable_output_policy(VariableOutputPolicy::EstimateMinimum)
         .call()
         .await?;
 

@@ -194,6 +194,7 @@ impl From<ClientTransactionStatus> for TxStatus {
             ClientTransactionStatus::SqueezedOut { reason } => {
                 TxStatus::SqueezedOut(SqueezedOut { reason })
             }
+            _ => todo!(), //TODO: add rest of the statuses
         }
     }
 }

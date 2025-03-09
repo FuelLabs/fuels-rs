@@ -292,18 +292,21 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
     let gas_limit = 800;
     let tolerance = Some(0.2);
     let block_horizon = Some(1);
-    let expected_script_gas = 800;
-    let expected_total_gas = 8463;
+    let _expected_script_gas = 800; //TODO: see todo below
+    let expected_total_gas = 10618;
     let expected_metered_bytes_size = 824;
 
     let estimated_transaction_cost = contract_instance
         .methods()
         .initialize_counter(42)
+        //TODO: decide what to do with script gas limit as assemble tx will set the correct one
+        //and the one here does not have any effect
         .with_tx_policies(TxPolicies::default().with_script_gas_limit(gas_limit))
         .estimate_transaction_cost(tolerance, block_horizon)
         .await?;
 
-    assert_eq!(estimated_transaction_cost.script_gas, expected_script_gas);
+    // TODO: ^
+    // assert_eq!(estimated_transaction_cost.script_gas, expected_script_gas);
     assert_eq!(estimated_transaction_cost.total_gas, expected_total_gas);
     assert_eq!(
         estimated_transaction_cost.metered_bytes_size,
@@ -739,17 +742,18 @@ async fn test_output_variable_estimation() -> Result<()> {
     let contract_methods = contract_instance.methods();
     let amount = 1000;
 
+    //TODO: decide what to do here and what to report to user as this will not fail anymore
     {
         // Should fail due to lack of output variables
-        let response = contract_methods
-            .mint_to_addresses(amount, addresses)
-            .call()
-            .await;
+        // let _response = contract_methods
+        //     .mint_to_addresses(amount, addresses)
+        //     .call()
+        //     .await?;
 
-        assert!(matches!(
-            response,
-            Err(Error::Transaction(Reason::Reverted { .. }))
-        ));
+        // assert!(matches!(
+        //     response,
+        //     Err(Error::Transaction(Reason::Reverted { .. }))
+        // ));
     }
 
     {
@@ -928,18 +932,19 @@ async fn test_contract_set_estimation() -> Result<()> {
     let res = lib_contract_instance.methods().increment(42).call().await?;
     assert_eq!(43, res.value);
 
+    //TODO: decide what to do here and what to report to user as this will not fail anymore
     {
         // Should fail due to missing external contracts
-        let res = contract_caller_instance
+        let _res = contract_caller_instance
             .methods()
             .increment_from_contract(lib_contract_id, 42)
             .call()
-            .await;
+            .await?;
 
-        assert!(matches!(
-            res,
-            Err(Error::Transaction(Reason::Reverted { .. }))
-        ));
+        // assert!(matches!(
+        //     res,
+        //     Err(Error::Transaction(Reason::Reverted { .. }))
+        // ));
     }
 
     let res = contract_caller_instance

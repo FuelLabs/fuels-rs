@@ -2,14 +2,12 @@ use fuels_accounts::Account;
 use fuels_core::types::{
     errors::{error, Result},
     transaction::{ScriptTransaction, TxPolicies},
-    transaction_builders::{
-        BuildableTransaction, ScriptTransactionBuilder, TransactionBuilder, VariableOutputPolicy,
-    },
+    transaction_builders::{ScriptTransactionBuilder, TransactionBuilder, VariableOutputPolicy},
 };
 
 use crate::{
     calls::{
-        utils::{build_with_tb, sealed, transaction_builder_from_contract_calls},
+        utils::{assemble_tx, sealed, transaction_builder_from_contract_calls},
         ContractCall, ScriptCall,
     },
     DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE,
@@ -53,7 +51,7 @@ impl TransactionTuner for ContractCall {
         tb: ScriptTransactionBuilder,
         account: &T,
     ) -> Result<ScriptTransaction> {
-        build_with_tb(std::slice::from_ref(self), tb, account).await
+        assemble_tx(tb, account).await
     }
 }
 
@@ -80,13 +78,10 @@ impl TransactionTuner for ScriptCall {
 
     async fn build_tx<T: Account>(
         &self,
-        mut tb: ScriptTransactionBuilder,
+        tb: ScriptTransactionBuilder,
         account: &T,
     ) -> Result<ScriptTransaction> {
-        account.add_witnesses(&mut tb)?;
-        account.adjust_for_fee(&mut tb, 0).await?;
-
-        tb.build(account.try_provider()?).await
+        assemble_tx(tb, account).await
     }
 }
 
@@ -114,7 +109,7 @@ impl TransactionTuner for Vec<ContractCall> {
     ) -> Result<ScriptTransaction> {
         validate_contract_calls(self)?;
 
-        build_with_tb(self, tb, account).await
+        assemble_tx(tb, account).await
     }
 }
 

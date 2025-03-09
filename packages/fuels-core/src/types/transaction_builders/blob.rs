@@ -1,11 +1,17 @@
+use fuel_crypto::{Message as CryptoMessage, Signature};
 use std::{fmt::Debug, iter::repeat, sync::Arc};
 
 use async_trait::async_trait;
-use fuel_crypto::Signature;
+use fuel_core_client::client::types::assemble_tx::RequiredBalance;
 use fuel_tx::{
-    field::{Policies as PoliciesField, Witnesses},
+    field::{Inputs, Policies as PoliciesField, Witnesses},
+    input::{
+        coin::CoinSigned,
+        message::{MessageCoinSigned, MessageDataSigned},
+    },
     policies::{Policies, PolicyType},
-    BlobIdExt, Chargeable, Output, Transaction as FuelTransaction, UniqueIdentifier, Witness,
+    BlobIdExt, Chargeable, ConsensusParameters, Input as FuelInput, Output,
+    Transaction as FuelTransaction, UniqueIdentifier, Witness,
 };
 use fuel_types::bytes::padded_len_usize;
 use itertools::Itertools;
@@ -158,12 +164,112 @@ impl BlobTransactionBuilder {
                 self.unresolved_signers = Default::default();
                 self.resolve_fuel_tx(&provider).await?
             }
+            Strategy::AssembleTx {
+                ref required_balances,
+                fee_index,
+            } => {
+                let required_balances = required_balances.clone(); //TODO: Fix this
+                self.assemble_tx(
+                    required_balances,
+                    fee_index,
+                    &consensus_parameters,
+                    provider,
+                )
+                .await?
+            }
         };
 
         Ok(BlobTransaction {
             is_using_predicates,
             tx,
         })
+    }
+
+    async fn assemble_tx(
+        mut self,
+        required_balances: Vec<RequiredBalance>,
+        fee_index: u16,
+        consensus_parameters: &ConsensusParameters,
+        dry_runner: impl DryRunner,
+    ) -> Result<fuel_tx::Blob> {
+        let free_witness_index = self.num_witnesses()?;
+        let body = self.blob.as_blob_body(free_witness_index);
+
+        let blob_witness = std::mem::take(&mut self.blob).into();
+        self.witnesses_mut().push(blob_witness);
+
+        let num_witnesses = self.num_witnesses()?;
+        let policies = self.generate_fuel_policies_assemble();
+
+        let mut tx = FuelTransaction::blob(
+            body,
+            policies,
+            resolve_fuel_inputs(self.inputs, num_witnesses, &self.unresolved_witness_indexes)?,
+            self.outputs,
+            self.witnesses,
+        );
+
+        if let Some(max_fee) = self.tx_policies.max_fee() {
+            tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
+        };
+
+        let fuel_tx = FuelTransaction::Blob(tx);
+        let mut tx = dry_runner
+            .assemble_tx(
+                &fuel_tx,
+                self.gas_price_estimation_block_horizon,
+                required_balances,
+                fee_index,
+                None,
+                true,
+                None,
+            )
+            .await?
+            .transaction
+            .as_blob()
+            .expect("is upgrade")
+            .clone(); //TODO: do not clone
+
+        let id = tx.id(&consensus_parameters.chain_id());
+
+        for signer in &self.unresolved_signers {
+            let message = CryptoMessage::from_bytes(*id);
+            let signature = signer.sign(message).await?;
+            let address = signer.address().into();
+
+            let witness_indexes = tx
+                .inputs()
+                .iter()
+                .filter_map(|input| match input {
+                    FuelInput::CoinSigned(CoinSigned {
+                        owner,
+                        witness_index,
+                        ..
+                    })
+                    | FuelInput::MessageCoinSigned(MessageCoinSigned {
+                        recipient: owner,
+                        witness_index,
+                        ..
+                    })
+                    | FuelInput::MessageDataSigned(MessageDataSigned {
+                        recipient: owner,
+                        witness_index,
+                        ..
+                    }) if owner == &address => Some(*witness_index as usize),
+                    _ => None,
+                })
+                .sorted()
+                .dedup()
+                .collect_vec();
+
+            for w in witness_indexes {
+                if let Some(w) = tx.witnesses_mut().get_mut(w) {
+                    *w = signature.as_ref().into();
+                }
+            }
+        }
+
+        Ok(tx)
     }
 
     async fn resolve_fuel_tx(mut self, provider: &impl DryRunner) -> Result<fuel_tx::Blob> {
