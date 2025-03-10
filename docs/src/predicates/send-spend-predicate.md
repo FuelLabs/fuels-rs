@@ -6,13 +6,13 @@ This is a more involved example where the predicate accepts three signatures and
 {{#include ../../../e2e/sway/predicates/signatures/src/main.sw}}
 ```
 
-Let's use the SDK to interact with the predicate. First, let's create three wallets with specific keys. Their hashed public keys are already hard-coded in the predicate. Then we create the receiver wallet, which we will use to spend the predicate funds.
+Let's use the SDK to interact with the predicate. First, let's create three signers with specific keys. Their hashed public keys are already hard-coded in the predicate. Then we create the receiver signer, which we will use to spend the predicate funds.
 
 ```rust,ignore
-{{#include ../../../examples/predicates/src/lib.rs:predicate_wallets}}
+{{#include ../../../examples/predicates/src/lib.rs:predicate_signers}}
 ```
 
-Next, let's add some coins, start a provider and connect it with the wallets.
+Next, let's add some coins, start a provider and create the wallets.
 
 ```rust,ignore
 {{#include ../../../examples/predicates/src/lib.rs:predicate_coins}}

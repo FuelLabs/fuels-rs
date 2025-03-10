@@ -1,7 +1,7 @@
 use std::{default::Default, path::Path};
 
 use fuels::{
-    accounts::{predicate::Predicate, Account},
+    accounts::{predicate::Predicate, signers::private_key::PrivateKeySigner, Account},
     prelude::*,
     types::{coin::Coin, message::Message, AssetId, Bits256, U256},
 };
@@ -101,19 +101,19 @@ async fn setup_predicate_test(
     num_coins: u64,
     num_messages: u64,
     amount: u64,
-) -> Result<(Provider, u64, WalletUnlocked, u64, AssetId)> {
+) -> Result<(Provider, u64, Wallet, u64, AssetId)> {
     let receiver_num_coins = 1;
     let receiver_amount = 1;
     let receiver_balance = receiver_num_coins * receiver_amount;
 
     let predicate_balance = (num_coins + num_messages) * amount;
-    let mut receiver = WalletUnlocked::new_random(None);
+    let receiver_signer = PrivateKeySigner::random(&mut rand::thread_rng());
 
     let (mut coins, messages, asset_id) =
         get_test_coins_and_messages(predicate_address, num_coins, num_messages, amount);
 
     coins.extend(setup_single_asset_coins(
-        receiver.address(),
+        receiver_signer.address(),
         asset_id,
         receiver_num_coins,
         receiver_amount,
@@ -124,7 +124,7 @@ async fn setup_predicate_test(
         ..Default::default()
     };
     let provider = setup_test_provider(coins, messages, Some(node_config), None).await?;
-    receiver.set_provider(provider.clone());
+    let receiver = Wallet::new(receiver_signer, provider.clone());
 
     Ok((
         provider,

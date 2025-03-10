@@ -10,6 +10,6 @@ repository = { workspace = true }
 description = "Fuel Rust SDK wallet examples."
 
 [dev-dependencies]
-fuels = { workspace = true, features = ["default"] }
+fuels = { workspace = true, features = ["default", "accounts-keystore"] }
 rand = { workspace = true }
 tokio = { workspace = true, features = ["full"] }

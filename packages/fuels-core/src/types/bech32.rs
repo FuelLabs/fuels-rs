@@ -76,6 +76,14 @@ macro_rules! bech32type {
                 write!(f, "{}", encoding)
             }
         }
+
+        impl ::rand::distributions::Distribution<$i> for rand::distributions::Standard {
+            fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> $i {
+                let hrp = FUEL_BECH32_HRP;
+                let hash: [u8; 32] = rng.gen();
+                $i::new(&hrp, hash)
+            }
+        }
     };
 }
 

@@ -84,7 +84,7 @@ impl<A, C, T> CallHandler<A, C, T> {
         self
     }
 
-    pub fn add_signer(mut self, signer: impl Signer + Send + Sync) -> Self {
+    pub fn add_signer(mut self, signer: impl Signer + Send + Sync + 'static) -> Self {
         self.unresolved_signers.push(Arc::new(signer));
         self
     }

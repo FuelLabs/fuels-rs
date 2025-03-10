@@ -1,15 +1,16 @@
-use fuels::accounts::kms::{
-    aws_config::{defaults, BehaviorVersion, Region},
-    aws_sdk_kms::{
-        config::Credentials,
-        types::{KeySpec, KeyUsageType},
-        Client,
+use fuels::{
+    accounts::signers::aws_kms::{
+        aws_config::{defaults, BehaviorVersion, Region},
+        aws_sdk_kms::{
+            config::Credentials,
+            types::{KeySpec, KeyUsageType},
+            Client,
+        },
+        AwsKmsSigner,
     },
-    KmsKey,
+    prelude::Error,
+    types::errors::{Context, Result},
 };
-use fuels::prelude::Error;
-use fuels::types::errors::Context;
-use fuels::types::errors::Result;
 use testcontainers::{core::ContainerPort, runners::AsyncRunner};
 use tokio::io::AsyncBufReadExt;
 
@@ -127,7 +128,7 @@ pub struct AwsKmsProcess {
 }
 
 impl AwsKmsProcess {
-    pub async fn create_key(&self) -> anyhow::Result<KmsTestKey> {
+    pub async fn create_key(&self) -> anyhow::Result<KmsTestSigner> {
         let response = self
             .client
             .create_key()
@@ -141,11 +142,11 @@ impl AwsKmsProcess {
             .and_then(|metadata| metadata.arn)
             .ok_or_else(|| anyhow::anyhow!("key arn missing from response"))?;
 
-        let kms_key = KmsKey::new(id.clone(), &self.client).await?;
+        let kms_signer = AwsKmsSigner::new(id.clone(), &self.client).await?;
 
-        Ok(KmsTestKey {
+        Ok(KmsTestSigner {
             id,
-            kms_key,
+            kms_signer,
             url: self.url.clone(),
         })
     }
@@ -160,8 +161,8 @@ impl AwsKmsProcess {
 }
 
 #[derive(Debug, Clone)]
-pub struct KmsTestKey {
+pub struct KmsTestSigner {
     pub id: String,
-    pub kms_key: KmsKey,
+    pub kms_signer: AwsKmsSigner,
     pub url: String,
 }

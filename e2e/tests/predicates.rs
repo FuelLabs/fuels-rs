@@ -1,6 +1,7 @@
 use std::default::Default;
 
 use fuels::{
+    accounts::signers::private_key::PrivateKeySigner,
     core::{
         codec::{ABIEncoder, EncoderConfig},
         traits::Tokenizable,
@@ -9,6 +10,7 @@ use fuels::{
     programs::executable::Executable,
     types::{coin::Coin, coin_type::CoinType, input::Input, message::Message, output::Output},
 };
+use rand::thread_rng;
 
 async fn assert_address_balance(
     address: &Bech32Address,
@@ -64,26 +66,27 @@ async fn setup_predicate_test(
     num_coins: u64,
     num_messages: u64,
     amount: u64,
-) -> Result<(Provider, u64, WalletUnlocked, u64, AssetId, WalletUnlocked)> {
+) -> Result<(Provider, u64, Wallet, u64, AssetId, Wallet)> {
     let receiver_num_coins = 1;
     let receiver_amount = 1;
     let receiver_balance = receiver_num_coins * receiver_amount;
 
     let predicate_balance = (num_coins + num_messages) * amount;
-    let mut receiver = WalletUnlocked::new_random(None);
-    let mut extra_wallet = WalletUnlocked::new_random(None);
+    let mut rng = thread_rng();
+    let receiver_signer = PrivateKeySigner::random(&mut rng);
+    let extra_wallet_signer = PrivateKeySigner::random(&mut rng);
 
     let (mut coins, messages, asset_id) =
         get_test_coins_and_messages(predicate_address, num_coins, num_messages, amount, 0);
 
     coins.extend(setup_single_asset_coins(
-        receiver.address(),
+        receiver_signer.address(),
         asset_id,
         receiver_num_coins,
         receiver_amount,
     ));
     coins.extend(setup_single_asset_coins(
-        extra_wallet.address(),
+        extra_wallet_signer.address(),
         AssetId::zeroed(),
         10_000,
         10_000,
@@ -97,13 +100,13 @@ async fn setup_predicate_test(
     ));
 
     let provider = setup_test_provider(coins, messages, None, None).await?;
-    receiver.set_provider(provider.clone());
-    extra_wallet.set_provider(provider.clone());
+    let receiver_wallet = Wallet::new(receiver_signer.clone(), provider.clone());
+    let extra_wallet = Wallet::new(extra_wallet_signer.clone(), provider.clone());
 
     Ok((
         provider,
         predicate_balance,
-        receiver,
+        receiver_wallet,
         receiver_balance,
         asset_id,
         extra_wallet,
@@ -117,14 +120,14 @@ async fn transfer_coins_and_messages_to_predicate() -> Result<()> {
     let amount = 64;
     let balance_to_send = 42;
 
-    let mut wallet = WalletUnlocked::new_random(None);
+    let signer = PrivateKeySigner::random(&mut thread_rng());
 
     let (coins, messages, asset_id) =
-        get_test_coins_and_messages(wallet.address(), num_coins, num_messages, amount, 0);
+        get_test_coins_and_messages(signer.address(), num_coins, num_messages, amount, 0);
 
     let provider = setup_test_provider(coins, messages, None, None).await?;
 
-    wallet.set_provider(provider.clone());
+    let wallet = Wallet::new(signer, provider.clone());
 
     let predicate =
         Predicate::load_from("sway/predicates/basic_predicate/out/release/basic_predicate.bin")?
@@ -449,7 +452,7 @@ async fn predicate_transfer_with_signed_resources() -> Result<()> {
     let predicate_amount = 1000;
     let predicate_balance = (predicate_num_coins + predicate_num_messages) * predicate_amount;
 
-    let mut wallet = WalletUnlocked::new_random(None);
+    let signer = PrivateKeySigner::random(&mut thread_rng());
     let wallet_num_coins = 4;
     let wallet_num_messages = 3;
     let wallet_amount = 1000;
@@ -463,7 +466,7 @@ async fn predicate_transfer_with_signed_resources() -> Result<()> {
         0,
     );
     let (wallet_coins, wallet_messages, _) = get_test_coins_and_messages(
-        wallet.address(),
+        signer.address(),
         wallet_num_coins,
         wallet_num_messages,
         wallet_amount,
@@ -474,7 +477,7 @@ async fn predicate_transfer_with_signed_resources() -> Result<()> {
     messages.extend(wallet_messages);
 
     let provider = setup_test_provider(coins, messages, None, None).await?;
-    wallet.set_provider(provider.clone());
+    let wallet = Wallet::new(signer.clone(), provider.clone());
     predicate.set_provider(provider.clone());
 
     let mut inputs = wallet
@@ -488,7 +491,7 @@ async fn predicate_transfer_with_signed_resources() -> Result<()> {
     let outputs = vec![Output::change(predicate.address().into(), 0, asset_id)];
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, Default::default());
-    tb.add_signer(wallet.clone())?;
+    tb.add_signer(signer)?;
 
     let tx = tb.build(&provider).await?;
 
@@ -821,13 +824,13 @@ async fn predicate_transfer_non_base_asset() -> Result<()> {
         Predicate::load_from("sway/predicates/basic_predicate/out/release/basic_predicate.bin")?
             .with_data(predicate_data);
 
-    let mut wallet = WalletUnlocked::new_random(None);
+    let signer = PrivateKeySigner::random(&mut thread_rng());
 
     let amount = 5;
     let non_base_asset_id = AssetId::new([1; 32]);
 
     // wallet has base and predicate non base asset
-    let mut coins = setup_single_asset_coins(wallet.address(), AssetId::zeroed(), 1, amount);
+    let mut coins = setup_single_asset_coins(signer.address(), AssetId::zeroed(), 1, amount);
     coins.extend(setup_single_asset_coins(
         predicate.address(),
         non_base_asset_id,
@@ -837,7 +840,7 @@ async fn predicate_transfer_non_base_asset() -> Result<()> {
 
     let provider = setup_test_provider(coins, vec![], None, None).await?;
     predicate.set_provider(provider.clone());
-    wallet.set_provider(provider.clone());
+    let wallet = Wallet::new(signer.clone(), provider.clone());
 
     let inputs = predicate
         .get_asset_inputs_for_amount(non_base_asset_id, amount, None)
@@ -858,7 +861,7 @@ async fn predicate_transfer_non_base_asset() -> Result<()> {
         TxPolicies::default().with_tip(1),
     );
 
-    tb.add_signer(wallet.clone())?;
+    tb.add_signer(signer)?;
     wallet.adjust_for_fee(&mut tb, 0).await?;
 
     let tx = tb.build(&provider).await?;
@@ -1392,7 +1395,7 @@ async fn predicate_tx_input_output() -> Result<()> {
             .methods()
             .initialize_counter(36)
             .with_inputs(custom_inputs)
-            .add_signer(wallet_2.clone())
+            .add_signer(wallet_2.signer().clone())
             .with_outputs(custom_output)
             .call()
             .await?

@@ -336,13 +336,13 @@ pub fn find_id_of_missing_contract(receipts: &[Receipt]) -> Option<Bech32Contrac
 mod test {
     use std::slice;
 
-    use fuels_accounts::wallet::WalletUnlocked;
+    use fuels_accounts::signers::private_key::PrivateKeySigner;
     use fuels_core::types::{
         coin::{Coin, CoinStatus},
         coin_type::CoinType,
         param_types::ParamType,
     };
-    use rand::Rng;
+    use rand::{thread_rng, Rng};
 
     use super::*;
     use crate::calls::{traits::ContractDependencyConfigurator, CallParameters};
@@ -370,12 +370,12 @@ mod test {
     fn contract_input_present() {
         let call = new_contract_call_with_random_id();
 
-        let wallet = WalletUnlocked::new_random(None);
+        let signer = PrivateKeySigner::random(&mut thread_rng());
 
         let (inputs, _) = get_transaction_inputs_outputs(
             slice::from_ref(&call),
             Default::default(),
-            wallet.address(),
+            signer.address(),
             AssetId::zeroed(),
         );
 
@@ -397,14 +397,14 @@ mod test {
         let call_w_same_contract =
             new_contract_call_with_random_id().with_contract_id(call.contract_id.clone());
 
-        let wallet = WalletUnlocked::new_random(None);
+        let signer = PrivateKeySigner::random(&mut thread_rng());
 
         let calls = [call, call_w_same_contract];
 
         let (inputs, _) = get_transaction_inputs_outputs(
             &calls,
             Default::default(),
-            wallet.address(),
+            signer.address(),
             AssetId::zeroed(),
         );
 
@@ -424,12 +424,12 @@ mod test {
     fn contract_output_present() {
         let call = new_contract_call_with_random_id();
 
-        let wallet = WalletUnlocked::new_random(None);
+        let signer = PrivateKeySigner::random(&mut thread_rng());
 
         let (_, outputs) = get_transaction_inputs_outputs(
             &[call],
             Default::default(),
-            wallet.address(),
+            signer.address(),
             AssetId::zeroed(),
         );
 
@@ -446,13 +446,13 @@ mod test {
         let call = new_contract_call_with_random_id()
             .with_external_contracts(vec![external_contract_id.clone()]);
 
-        let wallet = WalletUnlocked::new_random(None);
+        let signer = PrivateKeySigner::random(&mut thread_rng());
 
         // when
         let (inputs, _) = get_transaction_inputs_outputs(
             slice::from_ref(&call),
             Default::default(),
-            wallet.address(),
+            signer.address(),
             AssetId::zeroed(),
         );
 
@@ -490,13 +490,13 @@ mod test {
         let call =
             new_contract_call_with_random_id().with_external_contracts(vec![external_contract_id]);
 
-        let wallet = WalletUnlocked::new_random(None);
+        let signer = PrivateKeySigner::random(&mut thread_rng());
 
         // when
         let (_, outputs) = get_transaction_inputs_outputs(
             &[call],
             Default::default(),
-            wallet.address(),
+            signer.address(),
             AssetId::zeroed(),
         );
 
@@ -529,11 +529,11 @@ mod test {
             .collect();
         let call = new_contract_call_with_random_id();
 
-        let wallet = WalletUnlocked::new_random(None);
+        let signer = PrivateKeySigner::random(&mut thread_rng());
 
         // when
         let (_, outputs) =
-            get_transaction_inputs_outputs(&[call], coins, wallet.address(), AssetId::zeroed());
+            get_transaction_inputs_outputs(&[call], coins, signer.address(), AssetId::zeroed());
 
         // then
         let change_outputs: HashSet<Output> = outputs[1..].iter().cloned().collect();
@@ -541,7 +541,7 @@ mod test {
         let expected_change_outputs = asset_ids
             .into_iter()
             .map(|asset_id| Output::Change {
-                to: wallet.address().into(),
+                to: signer.address().into(),
                 amount: 0,
                 asset_id,
             })

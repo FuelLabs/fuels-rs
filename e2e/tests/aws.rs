@@ -2,12 +2,13 @@
 mod tests {
     use anyhow::Result;
     use e2e::e2e_helpers::start_aws_kms;
-    use fuels::accounts::kms::AwsWallet;
-    use fuels::accounts::{Account, ViewOnlyAccount};
-    use fuels::prelude::{
-        launch_provider_and_get_wallet, AssetId, Contract, LoadConfiguration, TxPolicies,
+    use fuels::{
+        accounts::{signers::aws_kms::AwsKmsSigner, wallet::Wallet, Account, ViewOnlyAccount},
+        prelude::{
+            launch_provider_and_get_wallet, AssetId, Contract, LoadConfiguration, TxPolicies,
+        },
+        types::errors::Context,
     };
-    use fuels::types::errors::Context;
 
     #[tokio::test(flavor = "multi_thread")]
     async fn fund_aws_wallet() -> Result<()> {
@@ -16,7 +17,7 @@ mod tests {
 
         let amount = 500000000;
         let key = kms.create_key().await?;
-        let address = key.kms_key.address().clone();
+        let address = key.kms_signer.address().clone();
 
         wallet
             .transfer(&address, amount, AssetId::zeroed(), TxPolicies::default())
@@ -24,10 +25,12 @@ mod tests {
             .context("Failed to transfer funds")?;
 
         let your_kms_key_id = key.id;
-        let provider = wallet.provider().expect("No provider found").clone();
+        let provider = wallet.provider().clone();
 
+        let aws_client = kms.client();
         // ANCHOR: use_kms_wallet
-        let wallet = AwsWallet::with_kms_key(your_kms_key_id, kms.client(), Some(provider)).await?;
+        let kms_signer = AwsKmsSigner::new(your_kms_key_id, aws_client).await?;
+        let wallet = Wallet::new(kms_signer, provider);
         // ANCHOR_END: use_kms_wallet
 
         let total_base_balance = wallet.get_asset_balance(&AssetId::zeroed()).await?;
@@ -43,7 +46,7 @@ mod tests {
 
         let amount = 500000000;
         let key = kms.create_key().await?;
-        let address = key.kms_key.address().clone();
+        let address = key.kms_signer.address().clone();
 
         wallet
             .transfer(&address, amount, AssetId::zeroed(), TxPolicies::default())
@@ -51,16 +54,16 @@ mod tests {
             .context("Failed to transfer funds")?;
 
         let your_kms_key_id = key.id;
-        let provider = wallet.provider().expect("No provider found").clone();
+        let provider = wallet.provider().clone();
 
-        let aws_wallet =
-            &AwsWallet::with_kms_key(your_kms_key_id, kms.client(), Some(provider)).await?;
+        let kms_signer = AwsKmsSigner::new(your_kms_key_id, kms.client()).await?;
+        let aws_wallet = Wallet::new(kms_signer, provider);
 
         Contract::load_from(
             "../e2e/sway/contracts/contract_test/out/release/contract_test.bin",
             LoadConfiguration::default(),
         )?
-        .deploy(aws_wallet, TxPolicies::default())
+        .deploy(&aws_wallet, TxPolicies::default())
         .await?;
 
         Ok(())
