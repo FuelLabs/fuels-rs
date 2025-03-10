@@ -9,6 +9,9 @@ repository = { workspace = true }
 rust-version = { workspace = true }
 description = "Fuel Rust SDK accounts."
 
+[package.metadata.cargo-machete]
+ignored = ["aws-config"]
+
 [dependencies]
 async-trait = { workspace = true, default-features = false }
 aws-config = { workspace = true, features = [
@@ -25,8 +28,9 @@ fuel-crypto = { workspace = true, features = ["random"] }
 fuel-tx = { workspace = true }
 fuel-types = { workspace = true, features = ["random"] }
 fuels-core = { workspace = true, default-features = false }
+google-cloud-kms = { workspace = true, features = ["auth"], optional = true }
 itertools = { workspace = true }
-k256 = { workspace = true, features = ["ecdsa-core"] }
+k256 = { workspace = true, features = ["ecdsa-core", "pem"] }
 rand = { workspace = true, default-features = false }
 semver = { workspace = true }
 tai64 = { workspace = true, features = ["serde"] }
@@ -51,4 +55,5 @@ std = [
   "dep:cynic",
 ]
 test-helpers = []
-kms-signer = ["dep:aws-sdk-kms", "dep:aws-config"]
+aws-kms-signer = ["dep:aws-sdk-kms", "dep:aws-config"]
+google-kms-signer = ["dep:google-cloud-kms"]

@@ -32,7 +32,7 @@ tar = { workspace = true }
 
 [dependencies]
 anyhow = { workspace = true }
-fuels = { workspace = true, features = ["kms-signer", "test-helpers"] }
+fuels = { workspace = true, features = ["accounts-aws-kms-signer","test-helpers"] }
 testcontainers = { workspace = true }
 tokio = { workspace = true, features = ["test-util"] }
 
