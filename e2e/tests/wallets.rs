@@ -237,7 +237,7 @@ async fn test_transfer() -> Result<()> {
 
     let provider = setup_test_provider(coins_1, vec![], None, None).await?;
     let wallet_1 = Wallet::new(wallet_1_signer, provider.clone());
-    let wallet_2 = Wallet::new(wallet_2_signer, provider.clone()).locked();
+    let wallet_2 = Wallet::new(wallet_2_signer, provider.clone()).lock();
 
     let _ = wallet_1
         .transfer(

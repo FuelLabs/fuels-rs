@@ -14,13 +14,13 @@ Every wallet requires a **provider** to communicate with the network.
 
 There are two primary types of wallets available in the SDK:
 
-### Locked Wallets
+### [Locked Wallets](./access.md)
 
 - **Purpose:** Used for read-only operations.
 - **Interface:** Implements the [`ViewOnlyAccount`](../accounts.md) trait.
 - **Use Cases:** Checking balances, viewing UTXOs, and monitoring transactions without the ability to sign or submit transactions.
 
-### Unlocked Wallets
+### [Unlocked Wallets](./access.md)
 
 - **Purpose:** Supports full account functionality.
 - **Interface:** Implements the [`ViewOnlyAccount`](../accounts.md) and [`Account`](../accounts.md) traits.
@@ -35,13 +35,13 @@ The SDK offers multiple signing methods to suit different scenarios:
 
 - [**Private Key Signer:**](./private_key_signer.md)  
   Use when you have direct access to your account’s private key.
-- **AWS KMS Signer:**  
+- [**AWS KMS Signer:**](./aws_kms.md)
   Delegate signing operations to AWS Key Management Service, enhancing key security by offloading cryptographic operations.
 
 - **Google KMS Signer:**  
   Similar to AWS KMS, this option delegates signing to Google’s Key Management Service.
 
-- **Fake Signer:**  
-  Generates dummy signatures, which is useful for testing or when using a local network that does not enforce signature validation.
+- [**Fake Signer:**](./fake_signer.md)  
+  Generates dummy signatures, which is useful for impersonation while testing. Only possible when using a network that does not enforce signature validation.
 
 ---

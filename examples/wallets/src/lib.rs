@@ -77,24 +77,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn create_and_restore_json_key() -> Result<()> {
-        // ANCHOR: create_and_restore_json_key
-        let dir = std::env::temp_dir();
-        let mut rng = rand::thread_rng();
-        let password = "my_master_password";
-
-        // Create a keystore instance from the temp directory.
-        let keystore = Keystore::new(&dir);
-
-        // Create a key to be stored in the keystore.
-        let saved = keystore.new_key(&mut rng, password)?;
-        // Recover the key from the keystore using its UUID.
-        let _recovered_key = keystore.load_key(saved.uuid(), password)?;
-        // ANCHOR_END: create_and_restore_json_key
-        Ok(())
-    }
-
-    #[tokio::test]
     async fn create_and_store_mnemonic_key() -> Result<()> {
         // ANCHOR: create_and_store_mnemonic_key
         let dir = std::env::temp_dir();

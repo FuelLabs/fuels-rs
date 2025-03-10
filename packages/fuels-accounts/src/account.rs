@@ -332,7 +332,7 @@ mod tests {
     };
 
     use super::*;
-    use crate::signers::private_key::PrivateKeySigner;
+    use crate::{signers::private_key::PrivateKeySigner, wallet::Wallet};
 
     #[derive(Default)]
     struct MockDryRunner {

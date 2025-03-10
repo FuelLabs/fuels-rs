@@ -64,7 +64,7 @@ mod unlocked {
     where
         S: Signer,
     {
-        pub fn locked(&self) -> Wallet<Locked> {
+        pub fn lock(&self) -> Wallet<Locked> {
             Wallet::new_locked(self.state.signer.address().clone(), self.provider.clone())
         }
     }

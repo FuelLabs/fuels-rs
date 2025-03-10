@@ -27,8 +27,9 @@ mod tests {
         let your_kms_key_id = key.id;
         let provider = wallet.provider().clone();
 
+        let aws_client = kms.client();
         // ANCHOR: use_kms_wallet
-        let kms_key = AwsKmsSigner::new(your_kms_key_id, kms.client()).await?;
+        let kms_key = AwsKmsSigner::new(your_kms_key_id, aws_client).await?;
         let wallet = Wallet::new(kms_key, provider);
         // ANCHOR_END: use_kms_wallet
 

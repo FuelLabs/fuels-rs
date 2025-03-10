@@ -36,18 +36,6 @@ impl Keystore {
         }
     }
 
-    /// Creates a new key, encrypts it with the given password, and stores it in the keystore.
-    pub fn new_key<R, S>(&self, rng: &mut R, password: S) -> Result<KeySaved>
-    where
-        R: Rng + CryptoRng,
-        S: AsRef<[u8]>,
-    {
-        let (secret, uuid) =
-            eth_keystore::new(&self.dir, rng, password, None).map_err(|e| error!(Other, "{e}"))?;
-        let key = SecretKey::try_from(secret.as_slice()).expect("should have correct size");
-        Ok(KeySaved { key, uuid })
-    }
-
     /// Loads and decrypts a key from the keystore using the given UUID and password.
     pub fn load_key<S>(&self, uuid: &str, password: S) -> Result<SecretKey>
     where
@@ -76,41 +64,11 @@ impl Keystore {
 
 #[cfg(test)]
 mod tests {
-    use fuel_crypto::Message;
-    use fuels_core::traits::Signer;
     use rand::thread_rng;
     use tempfile::tempdir;
 
     use super::*;
     use crate::signers::private_key::PrivateKeySigner;
-
-    #[tokio::test]
-    async fn encrypted_json_keystore() -> Result<()> {
-        let dir = tempdir()?;
-        let keystore = Keystore::new(dir.path());
-        let mut rng = rand::thread_rng();
-
-        // Create a key to be stored in the keystore.
-        let key_saved = keystore.new_key(&mut rng, "password")?;
-        let signer = PrivateKeySigner::new(*key_saved.key());
-
-        // Sign a message using the above key.
-        let message = Message::new("Hello there!".as_bytes());
-        let signature = signer.sign(message).await?;
-
-        // Read from the encrypted JSON keystore and decrypt it.
-        let recovered_key = keystore.load_key(key_saved.uuid(), "password")?;
-        let signer2 = PrivateKeySigner::new(recovered_key);
-
-        // Sign the same message as before and assert that the signature is the same.
-        let signature2 = signer2.sign(message).await?;
-        assert_eq!(signature, signature2);
-
-        // Remove the keystore file.
-        let key_path = keystore.dir.join(key_saved.uuid());
-        assert!(std::fs::remove_file(key_path).is_ok());
-        Ok(())
-    }
 
     #[tokio::test]
     async fn wallet_from_mnemonic_phrase() -> Result<()> {

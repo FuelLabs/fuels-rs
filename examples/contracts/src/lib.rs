@@ -966,10 +966,12 @@ mod tests {
             abi = "e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
         ));
 
+        // ANCHOR: utxo_validation_off
         let node_config = NodeConfig {
             utxo_validation: false,
             ..Default::default()
         };
+        // ANCHOR_END: utxo_validation_off
         let signer = PrivateKeySigner::random(&mut thread_rng());
         let coins = setup_single_asset_coins(
             signer.address(),
@@ -977,7 +979,9 @@ mod tests {
             DEFAULT_NUM_COINS,
             DEFAULT_COIN_AMOUNT,
         );
+        // ANCHOR: utxo_validation_off_node_start
         let provider = setup_test_provider(coins, vec![], Some(node_config), None).await?;
+        // ANCHOR_END: utxo_validation_off_node_start
         let wallet = Wallet::new(signer, provider.clone());
 
         let contract_id = Contract::load_from(
