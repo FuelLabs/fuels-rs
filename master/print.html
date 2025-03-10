@@ -643,7 +643,8 @@ enables defining owners (wallet addresses) of genesis coins before a provider is
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="using-aws-kms-wallets"><a class="header" href="#using-aws-kms-wallets">Using AWS KMS Wallets</a></h1>
 <p>AWS Key Management Service (KMS) provides a secure way to manage cryptographic keys for your Fuel wallets. Rather than storing private keys locally, AWS KMS wallets use AWS's secure infrastructure to handle key storage and signing operations.</p>
-<pre><code class="language-rust ignore">        let wallet = AwsWallet::with_kms_key(your_kms_key_id, kms.client(), Some(provider)).await?;
+<pre><code class="language-rust ignore">        let signer = AwsKmsSigner::new(your_kms_key_id, kms.client()).await?;
+        let kms_wallet = KmsWallet::new(signer, Some(provider));
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="wallet-access"><a class="header" href="#wallet-access">Wallet Access</a></h1>
 <!-- This section should explain the difference between the different types of wallets -->
