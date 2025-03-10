@@ -128,7 +128,7 @@ pub struct AwsKmsProcess {
 }
 
 impl AwsKmsProcess {
-    pub async fn create_key(&self) -> anyhow::Result<KmsTestKey> {
+    pub async fn create_key(&self) -> anyhow::Result<KmsTestSigner> {
         let response = self
             .client
             .create_key()
@@ -142,11 +142,11 @@ impl AwsKmsProcess {
             .and_then(|metadata| metadata.arn)
             .ok_or_else(|| anyhow::anyhow!("key arn missing from response"))?;
 
-        let kms_key = AwsKmsSigner::new(id.clone(), &self.client).await?;
+        let kms_signer = AwsKmsSigner::new(id.clone(), &self.client).await?;
 
-        Ok(KmsTestKey {
+        Ok(KmsTestSigner {
             id,
-            kms_key,
+            kms_signer,
             url: self.url.clone(),
         })
     }
@@ -161,8 +161,8 @@ impl AwsKmsProcess {
 }
 
 #[derive(Debug, Clone)]
-pub struct KmsTestKey {
+pub struct KmsTestSigner {
     pub id: String,
-    pub kms_key: AwsKmsSigner,
+    pub kms_signer: AwsKmsSigner,
     pub url: String,
 }
