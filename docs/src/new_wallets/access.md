@@ -9,15 +9,11 @@ respectively.
 
 ## Wallet States
 
-The `Wallet<Unlocked<S>>` type represents a wallet that has a signer. A wallet must be of type `Wallet<Unlocked<S>>` in order
-to perform operations that involve signing messages or
-transactions.
+The `Wallet<Unlocked<S>>` type represents a wallet that has a signer. A wallet must be of type `Wallet<Unlocked<S>>` in order to perform operations that involve signing messages or transactions.
 
 You can learn more about signing [here](./signing.md).
 
-The `Wallet<Locked>` type represents a wallet without a signer. Instead, `Wallet<Locked>` only knows its public address. A `Wallet<Locked>` cannot be
-used to sign transactions, however it may still perform a whole suite of useful
-operations including listing transactions, assets, querying balances, and so on.
+The `Wallet<Locked>` type represents a wallet without a signer. Instead, `Wallet<Locked>` only knows its public address. A `Wallet<Locked>` cannot be used to sign transactions, however it may still perform a whole suite of useful operations including listing transactions, assets, querying balances, and so on.
 
 ## Transitioning States
 
