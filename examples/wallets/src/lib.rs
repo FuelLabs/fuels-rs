@@ -3,7 +3,7 @@ mod tests {
     use fuels::{
         accounts::{
             keystore::Keystore,
-            signers::{private_key::PrivateKeySigner, DEFAULT_DERIVATION_PATH},
+            signers::{derivation::DEFAULT_DERIVATION_PATH, private_key::PrivateKeySigner},
         },
         crypto::SecretKey,
         prelude::*,

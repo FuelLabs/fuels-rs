@@ -1,6 +1,9 @@
-use fuel_crypto::coins_bip32::path::DerivationPath;
+pub mod derivation {
+    pub const BIP44_PURPOSE: &str = "44'";
+    pub const COIN_TYPE: &str = "1179993420'";
+    pub const DEFAULT_DERIVATION_PATH: &str = "m/44'/1179993420'/0'/0/0";
+}
 
-pub const DEFAULT_DERIVATION_PATH: &str = "m/44'/1179993420'/0'/0/0";
 #[cfg(feature = "signer-aws-kms")]
 pub mod aws_kms;
 pub mod fake;
