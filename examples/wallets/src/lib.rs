@@ -228,9 +228,9 @@ mod tests {
         // ANCHOR: multiple_assets_coins
         use fuels::prelude::*;
         let signer = PrivateKeySigner::random(&mut thread_rng());
-        let num_assets = 5; // 5 different assets.
-        let coins_per_asset = 10; // 10 coins per asset.
-        let amount_per_coin = 15; // Each coin (UTXO) has an amount of 15.
+        let num_assets = 5;
+        let coins_per_asset = 10;
+        let amount_per_coin = 15;
 
         let (coins, asset_ids) = setup_multiple_assets_coins(
             signer.address(),
