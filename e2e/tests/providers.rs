@@ -811,10 +811,7 @@ async fn transactions_with_the_same_utxo() -> Result<()> {
 
     let wallet_1 = launch_provider_and_get_wallet().await?;
     let provider = wallet_1.provider();
-    let wallet_2 = Wallet::new(
-        PrivateKeySigner::random(&mut thread_rng()),
-        provider.clone(),
-    );
+    let wallet_2 = Wallet::random(&mut thread_rng(), provider.clone());
 
     let tx_1 = create_transfer(&wallet_1, 100, wallet_2.address()).await?;
     let tx_2 = create_transfer(&wallet_1, 101, wallet_2.address()).await?;
