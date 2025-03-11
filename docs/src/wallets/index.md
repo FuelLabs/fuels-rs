@@ -35,7 +35,7 @@ The SDK offers multiple signing methods to suit different scenarios:
 
 - [**Private Key Signer:**](./private_key_signer.md)  
   Use when you have direct access to your account’s private key.
-- [**AWS KMS Signer:**](./aws_kms.md)
+- [**AWS KMS Signer:**](./kms.md)
   Delegate signing operations to AWS Key Management Service, enhancing key security by offloading cryptographic operations.
 
 - [**Google KMS Signer:**](./kms.md)  
