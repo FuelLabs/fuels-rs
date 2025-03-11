@@ -14,7 +14,7 @@
   - [Using private keys](./wallets/private_key_signer.md)
     - [Keystore](./wallets/keystore.md)
   - [Using KMS](./wallets/kms.md)
-  - [Using a fake signer (impersonating)](./wallets/fake_signer.md)
+  - [Using a fake signer/impersonating an account](./wallets/fake_signer.md)
   - [Querying](./wallets/checking-balances-and-coins.md)
   - [Testing](./wallets/test-wallets.md)
   - [Locking](./wallets/access.md)

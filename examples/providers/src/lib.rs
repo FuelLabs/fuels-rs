@@ -4,6 +4,38 @@ mod tests {
 
     use fuels::{accounts::signers::private_key::PrivateKeySigner, prelude::Result};
 
+    #[ignore = "testnet currently not compatible with the sdk"]
+    #[tokio::test]
+    async fn connect_to_fuel_node() -> Result<()> {
+        // ANCHOR: connect_to_testnet
+        use std::str::FromStr;
+
+        use fuels::{crypto::SecretKey, prelude::*};
+
+        // Create a provider pointing to the testnet.
+        let provider = Provider::connect("testnet.fuel.network").await.unwrap();
+
+        // Setup a private key
+        let secret = SecretKey::from_str(
+            "a1447cd75accc6b71a976fd3401a1f6ce318d27ba660b0315ee6ac347bf39568",
+        )?;
+
+        // Create the wallet
+        let wallet = Wallet::new(PrivateKeySigner::new(secret), provider);
+
+        // Get the wallet address. Used later with the faucet
+        dbg!(wallet.address().to_string());
+        // ANCHOR_END: connect_to_testnet
+
+        let provider = setup_test_provider(vec![], vec![], None, None).await?;
+        let port = provider.url().split(':').last().unwrap();
+
+        // ANCHOR: local_node_address
+        let _provider = Provider::connect(format!("127.0.0.1:{port}")).await?;
+        // ANCHOR_END: local_node_address
+
+        Ok(())
+    }
     #[tokio::test]
     async fn query_the_blockchain() -> Result<()> {
         // ANCHOR: setup_test_blockchain

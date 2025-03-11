@@ -201,10 +201,9 @@ pub fn parse_md_files(text_w_files: String, path: &str) -> HashSet<PathBuf> {
         .lines()
         .filter_map(|line| regex.captures(line))
         .map(|capture| {
-            PathBuf::from(path)
-                .join(&capture[1])
-                .canonicalize()
-                .expect("could not canonicalize md path")
+            let path = PathBuf::from(path).join(&capture[1]);
+            path.canonicalize()
+                .unwrap_or_else(|e| panic!("could not canonicalize md path: {e} {path:?}"))
         })
         .collect()
 }

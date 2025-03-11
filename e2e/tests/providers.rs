@@ -625,6 +625,7 @@ async fn test_parse_block_time() -> Result<()> {
     let tx_policies = TxPolicies::default().with_script_gas_limit(2000);
 
     let wallet_2 = wallet.lock();
+    let locked_wallet = wallet.lock();
     let tx_response = wallet
         .transfer(wallet_2.address(), 100, asset_id, tx_policies)
         .await?;
