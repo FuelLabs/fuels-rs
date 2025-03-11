@@ -38,7 +38,7 @@ The SDK offers multiple signing methods to suit different scenarios:
 - [**AWS KMS Signer:**](./aws_kms.md)
   Delegate signing operations to AWS Key Management Service, enhancing key security by offloading cryptographic operations.
 
-- **Google KMS Signer:**  
+- [**Google KMS Signer:**](./kms.md)  
   Similar to AWS KMS, this option delegates signing to Google’s Key Management Service.
 
 - [**Fake Signer:**](./fake_signer.md)  
