@@ -1,4 +1,4 @@
-### Encrypting and Storing Keys
+# Encrypting and Storing Keys
 
 The code below shows how to:
 
