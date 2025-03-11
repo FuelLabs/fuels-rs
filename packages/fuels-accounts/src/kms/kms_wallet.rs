@@ -26,6 +26,10 @@ impl<S: Signer + Send + Sync + Clone> KmsWallet<S> {
         }
     }
 
+    pub fn set_provider(&mut self, provider: Provider) {
+        self.view_account.set_provider(provider);
+    }
+
     pub fn address(&self) -> &Bech32Address {
         self.kms_signer.address()
     }
