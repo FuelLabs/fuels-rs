@@ -3,7 +3,8 @@ mod tests {
     use anyhow::Result;
     use e2e::e2e_helpers::start_aws_kms;
     use fuels::{
-        accounts::{signers::aws_kms::AwsKmsSigner, wallet::Wallet, Account, ViewOnlyAccount},
+        accounts::{signers::kms::aws::AwsKmsSigner, wallet::Wallet, Account, ViewOnlyAccount},
+        core::traits::Signer,
         prelude::{
             launch_provider_and_get_wallet, AssetId, Contract, LoadConfiguration, TxPolicies,
         },
@@ -33,7 +34,7 @@ mod tests {
         let wallet = Wallet::new(kms_signer, provider);
         // ANCHOR_END: use_kms_wallet
 
-        let total_base_balance = kms_wallet.get_asset_balance(&AssetId::zeroed()).await?;
+        let total_base_balance = wallet.get_asset_balance(&AssetId::zeroed()).await?;
         assert_eq!(total_base_balance, amount);
         Ok(())
     }

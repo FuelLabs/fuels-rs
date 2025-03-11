@@ -4,7 +4,8 @@ pub mod derivation {
     pub const DEFAULT_DERIVATION_PATH: &str = "m/44'/1179993420'/0'/0/0";
 }
 
-#[cfg(feature = "signer-aws-kms")]
-pub mod aws_kms;
+#[cfg(any(feature = "signer-aws-kms", feature = "signer-google-kms"))]
+pub mod kms;
+
 pub mod fake;
 pub mod private_key;

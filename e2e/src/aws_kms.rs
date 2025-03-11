@@ -1,5 +1,5 @@
 use fuels::{
-    accounts::signers::aws_kms::{
+    accounts::signers::kms::aws::{
         aws_config::{defaults, BehaviorVersion, Region},
         aws_sdk_kms::{
             config::Credentials,

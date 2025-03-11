@@ -1,4 +1,7 @@
-use crate::kms::signature_utils::{convert_to_fuel_signature, normalize_signature};
+use super::signature_utils;
+
+pub use {aws_config, aws_sdk_kms};
+
 use async_trait::async_trait;
 use aws_sdk_kms::{
     primitives::Blob,
@@ -27,7 +30,7 @@ pub struct AwsKmsSigner {
 
 impl AwsKmsSigner {
     pub async fn new(key_id: impl Into<String>, client: &Client) -> Result<Self> {
-        let key_id = key_id.into();
+        let key_id: String = key_id.into();
         Self::validate_key_spec(client, &key_id).await?;
         let public_key = Self::retrieve_public_key(client, &key_id).await?;
         let fuel_address = Self::derive_fuel_address(&public_key)?;
@@ -122,10 +125,17 @@ impl Signer for AwsKmsSigner {
             Error::Other(format!("{AWS_KMS_ERROR_PREFIX}: Invalid cached public key"))
         })?;
 
-        let (normalized_sig, recovery_id) =
-            normalize_signature(&signature_der, message, &k256_key, AWS_KMS_ERROR_PREFIX)?;
+        let (normalized_sig, recovery_id) = signature_utils::normalize_signature(
+            &signature_der,
+            message,
+            &k256_key,
+            AWS_KMS_ERROR_PREFIX,
+        )?;
 
-        Ok(convert_to_fuel_signature(normalized_sig, recovery_id))
+        Ok(signature_utils::convert_to_fuel_signature(
+            normalized_sig,
+            recovery_id,
+        ))
     }
 
     fn address(&self) -> &Bech32Address {

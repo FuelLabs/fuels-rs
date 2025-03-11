@@ -45,7 +45,8 @@ tempfile = { workspace = true }
 tokio = { workspace = true, features = ["test-util"] }
 
 [features]
-default = ["std"]
+# TODO: segfault remove this
+default = ["std", "signer-aws-kms", "signer-google-kms"]
 coin-cache = ["tokio?/time"]
 std = ["fuels-core/std", "dep:tokio", "fuel-core-client/default", "dep:cynic"]
 test-helpers = []
