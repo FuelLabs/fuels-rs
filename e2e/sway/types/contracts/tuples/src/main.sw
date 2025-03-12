@@ -1,6 +1,6 @@
 contract;
 
-use std::{constants::ZERO_B256, hash::*};
+use std::hash::*;
 
 struct Person {
     name: str[4],
@@ -71,7 +71,7 @@ impl MyContract for Contract {
     }
 
     fn tuple_with_b256(p: (b256, u8)) -> (b256, u8) {
-        let expected = (ZERO_B256, 10u8);
+        let expected = (b256::zero(), 10u8);
 
         assert(p.0 == expected.0);
         assert(p.1 == expected.1);
