@@ -1993,11 +1993,9 @@ async fn simulations_can_be_made_without_coins() -> Result<()> {
     .contract_id;
 
     let provider = wallet.provider().clone();
-    let mut rng = thread_rng();
-    let signer_no_funds = PrivateKeySigner::random(&mut rng);
-    let no_funds_wallet = Wallet::new(signer_no_funds, provider.clone());
+    let no_funds_wallet = Wallet::random(&mut thread_rng(), provider.clone());
 
-    let response = MyContract::new(contract_id, no_funds_wallet.clone())
+    let response = MyContract::new(contract_id, no_funds_wallet)
         .methods()
         .get(5, 6)
         .simulate(Execution::StateReadOnly)
@@ -2028,9 +2026,7 @@ async fn simulations_can_be_made_without_coins_multicall() -> Result<()> {
 
     let provider = wallet.provider().clone();
 
-    let mut rng = thread_rng();
-    let signer_no_funds = PrivateKeySigner::random(&mut rng);
-    let no_funds_wallet = Wallet::new(signer_no_funds, provider.clone());
+    let no_funds_wallet = Wallet::random(&mut thread_rng(), provider.clone());
     let contract_instance = MyContract::new(contract_id, no_funds_wallet.clone());
 
     let contract_methods = contract_instance.methods();

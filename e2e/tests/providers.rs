@@ -74,7 +74,6 @@ async fn test_network_error() -> Result<()> {
         abi = "e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
     ));
 
-    let signer = PrivateKeySigner::random(&mut thread_rng());
 
     let node_config = NodeConfig::default();
     let chain_config = ChainConfig::default();
@@ -82,7 +81,7 @@ async fn test_network_error() -> Result<()> {
     let service = FuelService::start(node_config, chain_config, state_config).await?;
     let provider = Provider::connect(service.bound_address().to_string()).await?;
 
-    let wallet = Wallet::new(signer, provider.clone());
+    let wallet = Wallet::random(&mut thread_rng(), provider.clone());
 
     // Simulate an unreachable node
     service.stop().await.unwrap();
@@ -845,10 +844,7 @@ async fn test_caching() -> Result<()> {
     .await?;
     let wallet_1 = wallets.pop().unwrap();
     let provider = wallet_1.provider();
-    let wallet_2 = Wallet::new(
-        PrivateKeySigner::random(&mut thread_rng()),
-        provider.clone(),
-    );
+    let wallet_2 = Wallet::random(&mut thread_rng(), provider.clone());
 
     // Consecutively send transfer txs. Without caching, the txs will
     // end up trying to use the same input coins because 'get_spendable_coins()'
@@ -979,10 +975,7 @@ async fn test_build_with_provider() -> Result<()> {
     let wallet = launch_provider_and_get_wallet().await?;
     let provider = wallet.provider();
 
-    let receiver = Wallet::new(
-        PrivateKeySigner::random(&mut thread_rng()),
-        provider.clone(),
-    );
+    let receiver = Wallet::random(&mut thread_rng(), provider.clone());
 
     let consensus_parameters = provider.consensus_parameters().await?;
     let inputs = wallet
