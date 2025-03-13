@@ -1,13 +1,6 @@
 contract;
 
-use std::{
-    asset::*,
-    bytes::Bytes,
-    constants::ZERO_B256,
-    context::balance_of,
-    context::msg_amount,
-    message::send_message,
-};
+use std::{asset::*, bytes::Bytes, context::balance_of, context::msg_amount, message::send_message};
 
 abi TestFuelCoin {
     fn mint_coins(mint_amount: u64);
@@ -22,18 +15,18 @@ abi TestFuelCoin {
 
 impl TestFuelCoin for Contract {
     fn mint_coins(mint_amount: u64) {
-        mint(ZERO_B256, mint_amount);
+        mint(b256::zero(), mint_amount);
     }
     fn mint_to_addresses(mint_amount: u64, addresses: [Identity; 3]) {
         let mut counter = 0;
         while counter < 3 {
-            mint_to(addresses[counter], ZERO_B256, mint_amount);
+            mint_to(addresses[counter], b256::zero(), mint_amount);
             counter = counter + 1;
         }
     }
 
     fn burn_coins(burn_amount: u64) {
-        burn(ZERO_B256, burn_amount);
+        burn(b256::zero(), burn_amount);
     }
 
     // ANCHOR: variable_outputs
