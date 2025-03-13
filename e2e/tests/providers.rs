@@ -74,7 +74,6 @@ async fn test_network_error() -> Result<()> {
         abi = "e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
     ));
 
-
     let node_config = NodeConfig::default();
     let chain_config = ChainConfig::default();
     let state_config = StateConfig::default();
