@@ -2629,10 +2629,19 @@ fn main(
 <p>This is a more involved example where the predicate accepts three signatures and matches them to three predefined public keys. The <code>ec_recover_address</code> function is used to recover the public key from the signatures. If two of the three extracted public keys match the predefined public keys, the funds can be spent. Note that the signature order has to match the order of the predefined public keys.</p>
 <pre><code class="language-rust ignore">predicate;
 
-use std::{b512::B512, constants::ZERO_B256, ecr::ec_recover_address, inputs::input_predicate_data};
+use std::{
+    b512::B512,
+    crypto::{
+        message::Message,
+        secp256k1::Secp256k1,
+    },
+    inputs::input_predicate_data,
+};
 
 fn extract_public_key_and_match(signature: B512, expected_public_key: b256) -&gt; u64 {
-    if let Result::Ok(pub_key_sig) = ec_recover_address(signature, ZERO_B256)
+    let signature = Secp256k1::from(signature);
+
+    if let Result::Ok(pub_key_sig) = signature.address(Message::from(b256::zero()))
     {
         if pub_key_sig == Address::from(expected_public_key) {
             return 1;
@@ -3992,47 +4001,29 @@ provider attached to that node:</p>
 <p>Consider the following contract:</p>
 <pre><code class="language-rust ignore">contract;
 
-use std::{
-    asset::{
-        mint_to,
-        transfer,
-    },
-    call_frames::{
-        msg_asset_id,
-    },
-    constants::ZERO_B256,
-    context::msg_amount,
-};
-
+use std::{asset::{mint_to, transfer}, call_frames::msg_asset_id, context::msg_amount};
 abi LiquidityPool {
     #[payable]
     fn deposit(recipient: Identity);
     #[payable]
     fn withdraw(recipient: Identity);
 }
-
 const BASE_TOKEN: AssetId = AssetId::from(0x9ae5b658754e096e4d681c548daf46354495a437cc61492599e33fc64dcdc30c);
-
 impl LiquidityPool for Contract {
     #[payable]
     fn deposit(recipient: Identity) {
         assert(BASE_TOKEN == msg_asset_id());
         assert(0 &lt; msg_amount());
-
         // Mint two times the amount.
         let amount_to_mint = msg_amount() * 2;
-
         // Mint some LP token based upon the amount of the base token.
-        mint_to(recipient, ZERO_B256, amount_to_mint);
+        mint_to(recipient, b256::zero(), amount_to_mint);
     }
-
     #[payable]
     fn withdraw(recipient: Identity) {
         assert(0 &lt; msg_amount());
-
         // Amount to withdraw.
         let amount_to_transfer = msg_amount() / 2;
-
         // Transfer base token to recipient.
         transfer(recipient, BASE_TOKEN, amount_to_transfer);
     }
