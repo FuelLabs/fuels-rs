@@ -17,15 +17,15 @@ mod tests {
         let wallet = launch_provider_and_get_wallet().await?;
 
         let amount = 500000000;
-        let key = kms.create_key().await?;
-        let address = key.kms_signer.address().clone();
+        let key = kms.create_signer().await?;
+        let address = key.address().clone();
 
         wallet
             .transfer(&address, amount, AssetId::zeroed(), TxPolicies::default())
             .await
             .context("Failed to transfer funds")?;
 
-        let your_kms_key_id = key.id;
+        let your_kms_key_id = key.key_id();
         let provider = wallet.provider().clone();
 
         let aws_client = kms.client();
@@ -46,15 +46,15 @@ mod tests {
         let wallet = launch_provider_and_get_wallet().await?;
 
         let amount = 500000000;
-        let key = kms.create_key().await?;
-        let address = key.kms_signer.address().clone();
+        let key = kms.create_signer().await?;
+        let address = key.address().clone();
 
         wallet
             .transfer(&address, amount, AssetId::zeroed(), TxPolicies::default())
             .await
             .context("Failed to transfer funds")?;
 
-        let your_kms_key_id = key.id;
+        let your_kms_key_id = key.key_id();
         let provider = wallet.provider().clone();
 
         let kms_signer = AwsKmsSigner::new(your_kms_key_id, kms.client()).await?;

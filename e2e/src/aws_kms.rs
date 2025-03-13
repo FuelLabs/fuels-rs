@@ -128,7 +128,7 @@ pub struct AwsKmsProcess {
 }
 
 impl AwsKmsProcess {
-    pub async fn create_key(&self) -> anyhow::Result<KmsTestSigner> {
+    pub async fn create_signer(&self) -> anyhow::Result<AwsKmsSigner> {
         let response = self
             .client
             .create_key()
@@ -144,11 +144,7 @@ impl AwsKmsProcess {
 
         let kms_signer = AwsKmsSigner::new(id.clone(), &self.client).await?;
 
-        Ok(KmsTestSigner {
-            id,
-            kms_signer,
-            url: self.url.clone(),
-        })
+        Ok(kms_signer)
     }
 
     pub fn client(&self) -> &Client {
@@ -158,11 +154,4 @@ impl AwsKmsProcess {
     pub fn url(&self) -> &str {
         &self.url
     }
-}
-
-#[derive(Debug, Clone)]
-pub struct KmsTestSigner {
-    pub id: String,
-    pub kms_signer: AwsKmsSigner,
-    pub url: String,
 }
