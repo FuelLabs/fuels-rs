@@ -9,7 +9,7 @@ publish = false
 repository = { workspace = true }
 description = "Fuel Rust SDK cookbook examples."
 
-[dev-dependencies]
+[dependencies]
 fuels = { workspace = true, features = ["default"] }
 rand = { workspace = true }
 tokio = { workspace = true, features = ["full"] }

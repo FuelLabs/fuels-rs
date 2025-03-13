@@ -1,4 +1,3 @@
-use crate::kms::signature_utils::{convert_to_fuel_signature, normalize_signature};
 use async_trait::async_trait;
 use fuel_crypto::{Message, PublicKey, Signature};
 use fuels_core::traits::Signer;
@@ -6,11 +5,14 @@ use fuels_core::types::{
     bech32::{Bech32Address, FUEL_BECH32_HRP},
     errors::{Error, Result},
 };
+pub use google_cloud_kms;
 use google_cloud_kms::client::Client;
 use google_cloud_kms::grpc::kms::v1::crypto_key_version::CryptoKeyVersionAlgorithm::EcSignSecp256k1Sha256;
 use google_cloud_kms::grpc::kms::v1::digest::Digest::Sha256;
 use google_cloud_kms::grpc::kms::v1::{AsymmetricSignRequest, Digest, GetPublicKeyRequest};
 use k256::{pkcs8::DecodePublicKey, PublicKey as K256PublicKey};
+
+use super::signature_utils;
 
 const GOOGLE_KMS_ERROR_PREFIX: &str = "Google KMS Error";
 
@@ -61,7 +63,7 @@ impl std::fmt::Display for CryptoKeyVersionName {
 
 impl GoogleKmsSigner {
     pub async fn new(key_path: impl Into<String>, client: &Client) -> Result<Self> {
-        let key_path = key_path.into();
+        let key_path: String = key_path.into();
         let public_key_pem = Self::retrieve_public_key(client, &key_path).await?;
         let fuel_address = Self::derive_fuel_address(&public_key_pem)?;
 
@@ -149,10 +151,17 @@ impl Signer for GoogleKmsSigner {
             ))
         })?;
 
-        let (normalized_sig, recovery_id) =
-            normalize_signature(&signature_der, message, &k256_key, GOOGLE_KMS_ERROR_PREFIX)?;
+        let (normalized_sig, recovery_id) = signature_utils::normalize_signature(
+            &signature_der,
+            message,
+            &k256_key,
+            GOOGLE_KMS_ERROR_PREFIX,
+        )?;
 
-        Ok(convert_to_fuel_signature(normalized_sig, recovery_id))
+        Ok(signature_utils::convert_to_fuel_signature(
+            normalized_sig,
+            recovery_id,
+        ))
     }
 
     fn address(&self) -> &Bech32Address {

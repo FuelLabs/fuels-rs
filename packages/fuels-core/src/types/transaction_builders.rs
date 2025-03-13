@@ -162,7 +162,7 @@ impl BuildableTransaction for UpgradeTransactionBuilder {
 pub trait TransactionBuilder: BuildableTransaction + Send + sealed::Sealed {
     type TxType: Transaction;
 
-    fn add_signer(&mut self, signer: impl Signer + Send + Sync) -> Result<&mut Self>;
+    fn add_signer(&mut self, signer: impl Signer + Send + Sync + 'static) -> Result<&mut Self>;
     fn add_signers<'a>(
         &mut self,
         signers: impl IntoIterator<Item = &'a std::sync::Arc<dyn Signer + Send + Sync>>,
@@ -189,7 +189,7 @@ macro_rules! impl_tx_builder_trait {
             type TxType = $tx_ty;
 
 
-            fn add_signer(&mut self, signer: impl Signer + Send + Sync) -> Result<&mut Self> {
+            fn add_signer(&mut self, signer: impl Signer + Send + Sync + 'static) -> Result<&mut Self> {
                 self.validate_no_signer_available(signer.address())?;
 
 
@@ -1778,9 +1778,10 @@ mod tests {
 
     #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
     #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+    #[async_trait]
     impl Signer for MockSigner {
-        async fn sign(&self, _message: CryptoMessage) -> Result<Signature> {
-            Ok(Default::default())
+        async fn sign(&self, _message: fuel_crypto::Message) -> Result<Signature> {
+            Ok(Signature::default())
         }
         fn address(&self) -> &Bech32Address {
             &self.address
