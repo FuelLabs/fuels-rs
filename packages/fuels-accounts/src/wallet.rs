@@ -7,6 +7,10 @@ pub struct Wallet<S = Unlocked<PrivateKeySigner>> {
 }
 
 impl<S> Wallet<S> {
+    pub fn set_provider(&mut self, provider: Provider) {
+        self.provider = provider;
+    }
+
     pub fn provider(&self) -> &Provider {
         &self.provider
     }
