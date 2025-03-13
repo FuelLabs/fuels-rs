@@ -40,7 +40,7 @@ pub(crate) fn script_bindings(
 
     let code = quote! {
         #[derive(Debug,Clone)]
-        pub struct #name<A: ::fuels::accounts::Account>{
+        pub struct #name<A>{
             account: A,
             unconfigured_binary: ::std::vec::Vec<u8>,
             configurables: ::fuels::core::Configurables,
@@ -49,7 +49,7 @@ pub(crate) fn script_bindings(
             encoder_config: ::fuels::core::codec::EncoderConfig,
         }
 
-        impl<A: ::fuels::accounts::Account> #name<A>
+        impl<A> #name<A>
         {
             pub fn new(account: A, binary_filepath: &str) -> Self {
                 let binary = ::std::fs::read(binary_filepath)
@@ -64,7 +64,7 @@ pub(crate) fn script_bindings(
                 }
             }
 
-            pub fn with_account<U: ::fuels::accounts::Account>(self, account: U) -> #name<U> {
+            pub fn with_account<U>(self, account: U) -> #name<U> {
                     #name {
                         account,
                         unconfigured_binary: self.unconfigured_binary,
@@ -93,6 +93,10 @@ pub(crate) fn script_bindings(
                 }
             }
 
+            pub fn account(&self) -> &A {
+                &self.account
+            }
+
             pub fn with_encoder_config(mut self, encoder_config: ::fuels::core::codec::EncoderConfig)
                 -> Self
             {
@@ -109,7 +113,7 @@ pub(crate) fn script_bindings(
             /// into a loader that will fetch the blob and load it into memory before executing the
             /// code inside. Allows you to optimize fees by paying for most of the code once and
             /// then just running a small loader.
-            pub async fn convert_into_loader(&mut self) -> ::fuels::types::errors::Result<&mut Self> {
+            pub async fn convert_into_loader(&mut self) -> ::fuels::types::errors::Result<&mut Self> where A: ::fuels::accounts::Account + Clone {
                 if !self.converted_into_loader {
                     let regular = ::fuels::programs::executable::Executable::from_bytes(self.unconfigured_binary.clone()).with_configurables(self.configurables.clone());
                     let loader = regular.convert_to_loader()?;
@@ -122,6 +126,8 @@ pub(crate) fn script_bindings(
 
             }
 
+        }
+        impl<A: ::fuels::accounts::Account + Clone> #name<A> {
             #main_function
         }
 

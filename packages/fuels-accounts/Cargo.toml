@@ -20,7 +20,6 @@ aws-config = { workspace = true, features = [
 aws-sdk-kms = { workspace = true, features = ["default"], optional = true }
 chrono = { workspace = true }
 cynic = { workspace = true, optional = true }
-elliptic-curve = { workspace = true, default-features = false }
 eth-keystore = { workspace = true, optional = true }
 fuel-core-client = { workspace = true, optional = true }
 fuel-core-types = { workspace = true }
@@ -46,14 +45,9 @@ tokio = { workspace = true, features = ["test-util"] }
 
 [features]
 default = ["std"]
-coin-cache = ["tokio?/time"]
-std = [
-  "fuels-core/std",
-  "dep:tokio",
-  "fuel-core-client/default",
-  "dep:eth-keystore",
-  "dep:cynic",
-]
+coin-cache = ["tokio/time"]
+std = ["fuels-core/std", "dep:tokio", "fuel-core-client/default", "dep:cynic"]
 test-helpers = []
-aws-kms-signer = ["dep:aws-sdk-kms", "dep:aws-config"]
-google-kms-signer = ["dep:google-cloud-kms"]
+keystore = ["dep:eth-keystore"]
+signer-aws-kms = ["dep:aws-sdk-kms", "dep:aws-config"]
+signer-google-kms = ["dep:google-cloud-kms"]

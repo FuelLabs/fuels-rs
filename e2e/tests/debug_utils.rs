@@ -313,8 +313,8 @@ async fn can_debug_multi_call_tx() -> Result<()> {
 
 #[tokio::test]
 async fn can_debug_sway_script() -> Result<()> {
-    let wallet = WalletUnlocked::new_random(None);
     setup_program_test!(
+        Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
             project = "e2e/sway/scripts/script_struct"
@@ -367,8 +367,8 @@ async fn can_debug_sway_script() -> Result<()> {
 
 #[tokio::test]
 async fn debugs_sway_script_with_no_configurables() -> Result<()> {
-    let wallet = WalletUnlocked::new_random(None);
     setup_program_test!(
+        Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
             project = "e2e/sway/scripts/basic_script"

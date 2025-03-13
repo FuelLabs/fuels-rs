@@ -3,7 +3,10 @@ mod tests {
     use std::{str::FromStr, time::Duration};
 
     use fuels::{
-        accounts::{predicate::Predicate, wallet::WalletUnlocked, ViewOnlyAccount},
+        accounts::{
+            predicate::Predicate, signers::private_key::PrivateKeySigner, wallet::Wallet,
+            ViewOnlyAccount,
+        },
         prelude::Result,
         test_helpers::{setup_single_asset_coins, setup_test_provider},
         types::{
@@ -16,6 +19,7 @@ mod tests {
             AssetId,
         },
     };
+    use rand::thread_rng;
 
     #[tokio::test]
     async fn liquidity() -> Result<()> {
@@ -123,9 +127,9 @@ mod tests {
         // ANCHOR_END: custom_chain_consensus
 
         // ANCHOR: custom_chain_coins
-        let wallet = WalletUnlocked::new_random(None);
+        let signer = PrivateKeySigner::random(&mut thread_rng());
         let coins = setup_single_asset_coins(
-            wallet.address(),
+            signer.address(),
             Default::default(),
             DEFAULT_NUM_COINS,
             DEFAULT_COIN_AMOUNT,
@@ -146,19 +150,18 @@ mod tests {
 
         use fuels::prelude::*;
         // ANCHOR: transfer_multiple_setup
-        let mut wallet_1 = WalletUnlocked::new_random(None);
-        let mut wallet_2 = WalletUnlocked::new_random(None);
+        let wallet_1_signer = PrivateKeySigner::random(&mut thread_rng());
 
         const NUM_ASSETS: u64 = 5;
         const AMOUNT: u64 = 100_000;
         const NUM_COINS: u64 = 1;
         let (coins, _) =
-            setup_multiple_assets_coins(wallet_1.address(), NUM_ASSETS, NUM_COINS, AMOUNT);
+            setup_multiple_assets_coins(wallet_1_signer.address(), NUM_ASSETS, NUM_COINS, AMOUNT);
 
         let provider = setup_test_provider(coins, vec![], None, None).await?;
 
-        wallet_1.set_provider(provider.clone());
-        wallet_2.set_provider(provider.clone());
+        let wallet_1 = Wallet::new(wallet_1_signer, provider.clone());
+        let wallet_2 = Wallet::random(&mut thread_rng(), provider.clone());
         // ANCHOR_END: transfer_multiple_setup
 
         // ANCHOR: transfer_multiple_input
@@ -190,7 +193,7 @@ mod tests {
         // ANCHOR: transfer_multiple_transaction
         let mut tb =
             ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
-        tb.add_signer(wallet_1.clone())?;
+        wallet_1.add_witnesses(&mut tb)?;
 
         let tx = tb.build(&provider).await?;
 
@@ -232,8 +235,7 @@ mod tests {
 
     #[tokio::test]
     async fn custom_transaction() -> Result<()> {
-        let mut hot_wallet = WalletUnlocked::new_random(None);
-        let mut cold_wallet = WalletUnlocked::new_random(None);
+        let hot_wallet_signer = PrivateKeySigner::random(&mut thread_rng());
 
         let code_path = "../../e2e/sway/predicates/swap/out/release/swap.bin";
         let mut predicate = Predicate::load_from(code_path)?;
@@ -241,8 +243,12 @@ mod tests {
         let num_coins = 5;
         let amount = 1000;
         let bridged_asset_id = AssetId::from([1u8; 32]);
-        let base_coins =
-            setup_single_asset_coins(hot_wallet.address(), AssetId::zeroed(), num_coins, amount);
+        let base_coins = setup_single_asset_coins(
+            hot_wallet_signer.address(),
+            AssetId::zeroed(),
+            num_coins,
+            amount,
+        );
         let other_coins =
             setup_single_asset_coins(predicate.address(), bridged_asset_id, num_coins, amount);
 
@@ -256,8 +262,8 @@ mod tests {
 
         provider.produce_blocks(100, None).await?;
 
-        hot_wallet.set_provider(provider.clone());
-        cold_wallet.set_provider(provider.clone());
+        let hot_wallet = Wallet::new(hot_wallet_signer, provider.clone());
+        let cold_wallet = Wallet::random(&mut thread_rng(), provider.clone());
         predicate.set_provider(provider.clone());
 
         // ANCHOR: custom_tx_receiver
@@ -307,7 +313,7 @@ mod tests {
         // ANCHOR_END: custom_tx_io
 
         // ANCHOR: custom_tx_add_signer
-        tb.add_signer(hot_wallet.clone())?;
+        tb.add_signer(hot_wallet.signer().clone())?;
         // ANCHOR_END: custom_tx_add_signer
 
         // ANCHOR: custom_tx_adjust

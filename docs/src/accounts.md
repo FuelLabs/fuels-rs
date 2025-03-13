@@ -2,13 +2,12 @@
 
 The `ViewOnlyAccount` trait provides a common interface to query balances.
 
-The `Account` trait, in addition to the above, also provides a common interface to retrieve spendable resources or transfer assets. When performing actions in the SDK that lead to a transaction, you will typically need to provide an account that will be used to allocate resources required by the transaction, including transaction fees.
+The `Account` trait, in addition to the above, also provides a way to transfer assets. When performing actions in the SDK that lead to a transaction, you will typically need to provide an account that will be used to allocate resources required by the transaction, including transaction fees.
 
 The traits are implemented by the following types:
 
 - [`Wallet`](./wallets/index.md)
 - [`Predicate`](./predicates/index.md)
-- [`ImpersonatedAccount`](#account-impersonation)
 
 ## Transferring assets
 
@@ -39,11 +38,3 @@ For transferring assets to the base layer chain, you can use `wallet.withdraw_to
 ```
 
 The above example creates an `Address` from a string and converts it to a `Bech32Address`. Next, it calls `wallet.withdraw_to_base_layer` by providing the address, the amount to be transferred, and the transaction policies. Lastly, to verify that the transfer succeeded, the relevant message proof is retrieved with `provider.get_message_proof,` and the amount and the recipient are verified.
-
-## Account impersonation
-
-To facilitate account impersonation, the Rust SDK provides the `ImpersonatedAccount` struct. Since it implements `Account`, we can use it to simulate ownership of assets held by an account with a given address. This also implies that we can impersonate contract calls from that address. `ImpersonatedAccount` will only succeed in unlocking assets if the network is set up with `utxo_validation = false`.
-
-```rust,ignore
-{{#include ../../examples/contracts/src/lib.rs:contract_call_impersonation}}
-```
