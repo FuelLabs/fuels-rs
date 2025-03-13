@@ -151,7 +151,6 @@ mod tests {
         use fuels::prelude::*;
         // ANCHOR: transfer_multiple_setup
         let wallet_1_signer = PrivateKeySigner::random(&mut thread_rng());
-        let wallet_2_signer = PrivateKeySigner::random(&mut thread_rng());
 
         const NUM_ASSETS: u64 = 5;
         const AMOUNT: u64 = 100_000;
@@ -162,7 +161,7 @@ mod tests {
         let provider = setup_test_provider(coins, vec![], None, None).await?;
 
         let wallet_1 = Wallet::new(wallet_1_signer, provider.clone());
-        let wallet_2 = Wallet::new(wallet_2_signer, provider.clone());
+        let wallet_2 = Wallet::random(&mut thread_rng(), provider.clone());
         // ANCHOR_END: transfer_multiple_setup
 
         // ANCHOR: transfer_multiple_input
@@ -237,7 +236,6 @@ mod tests {
     #[tokio::test]
     async fn custom_transaction() -> Result<()> {
         let hot_wallet_signer = PrivateKeySigner::random(&mut thread_rng());
-        let cold_wallet_signer = PrivateKeySigner::random(&mut thread_rng());
 
         let code_path = "../../e2e/sway/predicates/swap/out/release/swap.bin";
         let mut predicate = Predicate::load_from(code_path)?;
@@ -265,7 +263,7 @@ mod tests {
         provider.produce_blocks(100, None).await?;
 
         let hot_wallet = Wallet::new(hot_wallet_signer, provider.clone());
-        let cold_wallet = Wallet::new(cold_wallet_signer, provider.clone());
+        let cold_wallet = Wallet::random(&mut thread_rng(), provider.clone());
         predicate.set_provider(provider.clone());
 
         // ANCHOR: custom_tx_receiver

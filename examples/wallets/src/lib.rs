@@ -90,8 +90,13 @@ mod tests {
         let password = "my_master_password";
 
         // Encrypt and store the key on disk. It can be recovered using `Keystore::load_key`.
-        let _uuid = keystore.save_key(key, password, thread_rng())?;
+        let uuid = keystore.save_key(key, password, thread_rng())?;
+
+        // Recover key from disk
+        let recovered_key = keystore.load_key(&uuid, password)?;
         // ANCHOR_END: create_and_store_mnemonic_key
+
+        assert_eq!(key, recovered_key);
         Ok(())
     }
 

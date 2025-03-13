@@ -378,14 +378,13 @@ async fn test_wallet_get_coins() -> Result<()> {
 
 async fn setup_transfer_test(amount: u64) -> Result<(Wallet, Wallet)> {
     let wallet_1_signer = PrivateKeySigner::random(&mut rand::thread_rng());
-    let wallet_2_signer = PrivateKeySigner::random(&mut rand::thread_rng());
 
     let coins = setup_single_asset_coins(wallet_1_signer.address(), AssetId::zeroed(), 1, amount);
 
     let provider = setup_test_provider(coins, vec![], None, None).await?;
 
     let wallet_1 = Wallet::new(wallet_1_signer, provider.clone());
-    let wallet_2 = Wallet::new(wallet_2_signer, provider.clone());
+    let wallet_2 = Wallet::random(&mut thread_rng(), provider.clone());
 
     Ok((wallet_1, wallet_2))
 }
@@ -417,7 +416,6 @@ async fn transfer_more_than_owned() -> Result<()> {
 async fn transfer_coins_of_non_base_asset() -> Result<()> {
     const AMOUNT: u64 = 10000;
     let wallet_1_signer = PrivateKeySigner::random(&mut rand::thread_rng());
-    let wallet_2_signer = PrivateKeySigner::random(&mut rand::thread_rng());
 
     let asset_id: AssetId = AssetId::from([1; 32usize]);
     let mut coins = setup_single_asset_coins(wallet_1_signer.address(), asset_id, 1, AMOUNT);
@@ -429,7 +427,7 @@ async fn transfer_coins_of_non_base_asset() -> Result<()> {
     let provider = setup_test_provider(coins, vec![], None, None).await?;
 
     let wallet_1 = Wallet::new(wallet_1_signer, provider.clone());
-    let wallet_2 = Wallet::new(wallet_2_signer, provider.clone());
+    let wallet_2 = Wallet::random(&mut thread_rng(), provider.clone());
 
     const SEND_AMOUNT: u64 = 200;
     let _ = wallet_1
