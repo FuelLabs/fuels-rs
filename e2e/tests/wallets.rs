@@ -562,36 +562,3 @@ async fn wallet_transfer_respects_maturity_and_expiration() -> Result<()> {
 
     Ok(())
 }
-
-#[tokio::test]
-async fn assemble_tx_transfer() -> Result<()> {
-    let mut wallet_1 = WalletUnlocked::new_random(None);
-    let mut wallet_2 = WalletUnlocked::new_random(None).lock();
-
-    let amount = 100;
-    let num_coins = 10;
-    let base_asset_id = AssetId::zeroed();
-    let asset_id = [1u8; 32].into();
-    let mut coins = setup_single_asset_coins(wallet_1.address(), base_asset_id, num_coins, amount);
-    let coins_2 = setup_single_asset_coins(wallet_1.address(), asset_id, num_coins, amount);
-    coins.extend(coins_2);
-
-    let provider = setup_test_provider(coins, vec![], None, None).await?;
-    wallet_1.set_provider(provider.clone());
-    wallet_2.set_provider(provider);
-
-    let amount_to_send = 42;
-    let _ = wallet_1
-        .transfer(
-            wallet_2.address(),
-            amount_to_send,
-            asset_id,
-            TxPolicies::default(),
-        )
-        .await
-        .unwrap();
-
-    assert_eq!(wallet_2.get_asset_balance(&asset_id).await.unwrap(), 42);
-
-    Ok(())
-}

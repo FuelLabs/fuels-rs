@@ -731,10 +731,10 @@ impl ScriptTransactionBuilder {
                 self.resolve_fuel_tx_for_state_reading(provider).await?
             }
             ScriptBuildStrategy::AssembleTx {
-                ref required_balances,
+                ref mut required_balances,
                 fee_index,
             } => {
-                let required_balances = required_balances.clone(); //TODO: Fix this
+                let required_balances = std::mem::take(required_balances);
                 self.assemble_tx(
                     required_balances,
                     fee_index,
@@ -1137,10 +1137,10 @@ impl CreateTransactionBuilder {
                 self.resolve_fuel_tx(&provider).await?
             }
             Strategy::AssembleTx {
-                ref required_balances,
+                ref mut required_balances,
                 fee_index,
             } => {
-                let required_balances = required_balances.clone(); //TODO: Fix this
+                let required_balances = std::mem::take(required_balances);
                 self.assemble_tx(
                     required_balances,
                     fee_index,
@@ -1340,10 +1340,10 @@ impl UploadTransactionBuilder {
                 self.resolve_fuel_tx(&provider).await?
             }
             Strategy::AssembleTx {
-                ref required_balances,
+                ref mut required_balances,
                 fee_index,
             } => {
-                let required_balances = required_balances.clone(); //TODO: Fix this
+                let required_balances = std::mem::take(required_balances);
                 self.assemble_tx(
                     required_balances,
                     fee_index,
@@ -1558,10 +1558,10 @@ impl UpgradeTransactionBuilder {
                 self.resolve_fuel_tx(&provider).await?
             }
             Strategy::AssembleTx {
-                ref required_balances,
+                ref mut required_balances,
                 fee_index,
             } => {
-                let required_balances = required_balances.clone(); //TODO: Fix this
+                let required_balances = std::mem::take(required_balances);
                 self.assemble_tx(
                     required_balances,
                     fee_index,

@@ -8,10 +8,7 @@ mod tests {
         prelude::{LoadConfiguration, NodeConfig, StorageConfiguration},
         programs::debug::ScriptType,
         test_helpers::{ChainConfig, StateConfig},
-        types::{
-            errors::{transaction::Reason, Result},
-            Bits256,
-        },
+        types::{errors::Result, Bits256},
     };
     use rand::{thread_rng, Rng};
 
