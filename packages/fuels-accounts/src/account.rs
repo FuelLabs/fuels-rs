@@ -40,7 +40,7 @@ pub struct WithdrawToBaseResponse {
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
-pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync + Clone {
+pub trait ViewOnlyAccount: Send + Sync {
     fn address(&self) -> &Bech32Address;
 
     fn try_provider(&self) -> Result<&Provider>;
@@ -327,7 +327,6 @@ pub trait Account: ViewOnlyAccount {
             amount,
             vec![],
             tx_policies,
-            base_asset_id,
         )
         .with_build_strategy(ScriptBuildStrategy::AssembleTx {
             required_balances,
@@ -364,40 +363,9 @@ mod tests {
         traits::Signer,
         types::{transaction::Transaction, DryRun, DryRunner},
     };
-    use rand::{rngs::StdRng, RngCore, SeedableRng};
 
     use super::*;
-    use crate::wallet::WalletUnlocked;
-
-    #[tokio::test]
-    async fn sign_and_verify() -> Result<()> {
-        // ANCHOR: sign_message
-        let mut rng = StdRng::seed_from_u64(2322u64);
-        let mut secret_seed = [0u8; 32];
-        rng.fill_bytes(&mut secret_seed);
-
-        let secret = secret_seed.as_slice().try_into()?;
-
-        // Create a wallet using the private key created above.
-        let wallet = WalletUnlocked::new_from_private_key(secret, None);
-
-        let message = Message::new("my message".as_bytes());
-        let signature = wallet.sign(message).await?;
-
-        // Check if signature is what we expect it to be
-        assert_eq!(signature, Signature::from_str("0x8eeb238db1adea4152644f1cd827b552dfa9ab3f4939718bb45ca476d167c6512a656f4d4c7356bfb9561b14448c230c6e7e4bd781df5ee9e5999faa6495163d")?);
-
-        // Recover address that signed the message
-        let recovered_address = signature.recover(&message)?;
-
-        assert_eq!(wallet.address().hash(), recovered_address.hash());
-
-        // Verify signature
-        signature.verify(&recovered_address, &message)?;
-        // ANCHOR_END: sign_message
-
-        Ok(())
-    }
+    use crate::signers::private_key::PrivateKeySigner;
 
     #[derive(Default)]
     struct MockDryRunner {
@@ -451,14 +419,14 @@ mod tests {
         let secret = SecretKey::from_str(
             "5f70feeff1f229e4a95e1056e8b4d80d0b24b565674860cc213bdb07127ce1b1",
         )?;
-        let wallet = WalletUnlocked::new_from_private_key(secret, None);
+        let signer = PrivateKeySigner::new(secret);
 
         // Set up a transaction
         let mut tb = {
             let input_coin = Input::ResourceSigned {
                 resource: CoinType::Coin(Coin {
                     amount: 10000000,
-                    owner: wallet.address().clone(),
+                    owner: signer.address().clone(),
                     ..Default::default()
                 }),
             };
@@ -470,7 +438,7 @@ mod tests {
                 1,
                 Default::default(),
             );
-            let change = Output::change(wallet.address().into(), 0, Default::default());
+            let change = Output::change(signer.address().into(), 0, Default::default());
 
             ScriptTransactionBuilder::prepare_transfer(
                 vec![input_coin],
@@ -480,7 +448,7 @@ mod tests {
         };
 
         // Add `Signer` to the transaction builder
-        tb.add_signer(wallet.clone())?;
+        tb.add_signer(signer.clone())?;
         // ANCHOR_END: sign_tb
 
         let tx = tb.build(MockDryRunner::default()).await?; // Resolve signatures and add corresponding witness indexes
@@ -491,7 +459,7 @@ mod tests {
 
         // Sign the transaction manually
         let message = Message::from_bytes(*tx.id(0.into()));
-        let signature = wallet.sign(message).await?;
+        let signature = signer.sign(message).await?;
 
         // Check if the signatures are the same
         assert_eq!(signature, tx_signature);
@@ -502,7 +470,7 @@ mod tests {
         // Recover the address that signed the transaction
         let recovered_address = signature.recover(&message)?;
 
-        assert_eq!(wallet.address().hash(), recovered_address.hash());
+        assert_eq!(signer.address().hash(), recovered_address.hash());
 
         // Verify signature
         signature.verify(&recovered_address, &message)?;

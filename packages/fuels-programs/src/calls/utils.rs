@@ -80,29 +80,6 @@ pub(crate) async fn transaction_builder_from_contract_calls(
         .with_max_fee_estimation_tolerance(DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE))
 }
 
-/// Creates a [`ScriptTransaction`] from contract calls. The internal [Transaction] is
-/// initialized with the actual script instructions, script data needed to perform the call and
-/// transaction inputs/outputs consisting of assets and contracts.
-pub(crate) async fn build_with_tb(
-    calls: &[ContractCall],
-    mut tb: ScriptTransactionBuilder,
-    account: &impl Account,
-) -> Result<ScriptTransaction> {
-    let consensus_parameters = account.try_provider()?.consensus_parameters().await?;
-    let base_asset_id = *consensus_parameters.base_asset_id();
-    let required_asset_amounts = calculate_required_asset_amounts(calls, base_asset_id);
-
-    let used_base_amount = required_asset_amounts
-        .iter()
-        .find_map(|(asset_id, amount)| (*asset_id == base_asset_id).then_some(*amount))
-        .unwrap_or_default();
-
-    account.add_witnesses(&mut tb)?;
-    account.adjust_for_fee(&mut tb, used_base_amount).await?;
-
-    tb.build(account.try_provider()?).await
-}
-
 /// Compute the length of the calling scripts for the two types of contract calls: those that return
 /// a heap type, and those that don't.
 fn compute_calls_instructions_len(calls: &[ContractCall]) -> usize {
@@ -369,13 +346,13 @@ pub(crate) async fn assemble_tx(
 mod test {
     use std::slice;
 
-    use fuels_accounts::wallet::WalletUnlocked;
+    use fuels_accounts::signers::private_key::PrivateKeySigner;
     use fuels_core::types::{
         coin::{Coin, CoinStatus},
         coin_type::CoinType,
         param_types::ParamType,
     };
-    use rand::Rng;
+    use rand::{thread_rng, Rng};
 
     use super::*;
     use crate::calls::{traits::ContractDependencyConfigurator, CallParameters};
@@ -403,12 +380,12 @@ mod test {
     fn contract_input_present() {
         let call = new_contract_call_with_random_id();
 
-        let wallet = WalletUnlocked::new_random(None);
+        let signer = PrivateKeySigner::random(&mut thread_rng());
 
         let (inputs, _) = get_transaction_inputs_outputs(
             slice::from_ref(&call),
             Default::default(),
-            wallet.address(),
+            signer.address(),
             AssetId::zeroed(),
         );
 
@@ -430,14 +407,14 @@ mod test {
         let call_w_same_contract =
             new_contract_call_with_random_id().with_contract_id(call.contract_id.clone());
 
-        let wallet = WalletUnlocked::new_random(None);
+        let signer = PrivateKeySigner::random(&mut thread_rng());
 
         let calls = [call, call_w_same_contract];
 
         let (inputs, _) = get_transaction_inputs_outputs(
             &calls,
             Default::default(),
-            wallet.address(),
+            signer.address(),
             AssetId::zeroed(),
         );
 
@@ -457,12 +434,12 @@ mod test {
     fn contract_output_present() {
         let call = new_contract_call_with_random_id();
 
-        let wallet = WalletUnlocked::new_random(None);
+        let signer = PrivateKeySigner::random(&mut thread_rng());
 
         let (_, outputs) = get_transaction_inputs_outputs(
             &[call],
             Default::default(),
-            wallet.address(),
+            signer.address(),
             AssetId::zeroed(),
         );
 
@@ -479,13 +456,13 @@ mod test {
         let call = new_contract_call_with_random_id()
             .with_external_contracts(vec![external_contract_id.clone()]);
 
-        let wallet = WalletUnlocked::new_random(None);
+        let signer = PrivateKeySigner::random(&mut thread_rng());
 
         // when
         let (inputs, _) = get_transaction_inputs_outputs(
             slice::from_ref(&call),
             Default::default(),
-            wallet.address(),
+            signer.address(),
             AssetId::zeroed(),
         );
 
@@ -523,13 +500,13 @@ mod test {
         let call =
             new_contract_call_with_random_id().with_external_contracts(vec![external_contract_id]);
 
-        let wallet = WalletUnlocked::new_random(None);
+        let signer = PrivateKeySigner::random(&mut thread_rng());
 
         // when
         let (_, outputs) = get_transaction_inputs_outputs(
             &[call],
             Default::default(),
-            wallet.address(),
+            signer.address(),
             AssetId::zeroed(),
         );
 
@@ -562,11 +539,11 @@ mod test {
             .collect();
         let call = new_contract_call_with_random_id();
 
-        let wallet = WalletUnlocked::new_random(None);
+        let signer = PrivateKeySigner::random(&mut thread_rng());
 
         // when
         let (_, outputs) =
-            get_transaction_inputs_outputs(&[call], coins, wallet.address(), AssetId::zeroed());
+            get_transaction_inputs_outputs(&[call], coins, signer.address(), AssetId::zeroed());
 
         // then
         let change_outputs: HashSet<Output> = outputs[1..].iter().cloned().collect();
@@ -574,7 +551,7 @@ mod test {
         let expected_change_outputs = asset_ids
             .into_iter()
             .map(|asset_id| Output::Change {
-                to: wallet.address().into(),
+                to: signer.address().into(),
                 amount: 0,
                 asset_id,
             })

@@ -38,14 +38,14 @@ pub(crate) fn contract_bindings(
 
     let code = quote! {
         #[derive(Debug, Clone)]
-        pub struct #name<A: ::fuels::accounts::Account> {
+        pub struct #name<A> {
             contract_id: ::fuels::types::bech32::Bech32ContractId,
             account: A,
             log_decoder: ::fuels::core::codec::LogDecoder,
             encoder_config: ::fuels::core::codec::EncoderConfig,
         }
 
-        impl<A: ::fuels::accounts::Account> #name<A>
+        impl<A> #name<A>
         {
             pub fn new(
                 contract_id: impl ::core::convert::Into<::fuels::types::bech32::Bech32ContractId>,
@@ -61,8 +61,8 @@ pub(crate) fn contract_bindings(
                 &self.contract_id
             }
 
-            pub fn account(&self) -> A {
-                self.account.clone()
+            pub fn account(&self) -> &A {
+                &self.account
             }
 
             pub fn with_account<U: ::fuels::accounts::Account>(self, account: U)
@@ -82,14 +82,14 @@ pub(crate) fn contract_bindings(
                 self
             }
 
-            pub async fn get_balances(&self) -> ::fuels::types::errors::Result<::std::collections::HashMap<::fuels::types::AssetId, u64>> {
+            pub async fn get_balances(&self) -> ::fuels::types::errors::Result<::std::collections::HashMap<::fuels::types::AssetId, u64>> where A: ::fuels::accounts::ViewOnlyAccount {
                 ::fuels::accounts::ViewOnlyAccount::try_provider(&self.account)?
                                   .get_contract_balances(&self.contract_id)
                                   .await
                                   .map_err(::std::convert::Into::into)
             }
 
-            pub fn methods(&self) -> #methods_name<A> {
+            pub fn methods(&self) -> #methods_name<A> where A: Clone {
                 #methods_name {
                     contract_id: self.contract_id.clone(),
                     account: self.account.clone(),
@@ -100,18 +100,18 @@ pub(crate) fn contract_bindings(
         }
 
         // Implement struct that holds the contract methods
-        pub struct #methods_name<A: ::fuels::accounts::Account> {
+        pub struct #methods_name<A> {
             contract_id: ::fuels::types::bech32::Bech32ContractId,
             account: A,
             log_decoder: ::fuels::core::codec::LogDecoder,
             encoder_config: ::fuels::core::codec::EncoderConfig,
         }
 
-        impl<A: ::fuels::accounts::Account> #methods_name<A> {
+        impl<A: ::fuels::accounts::Account + Clone> #methods_name<A> {
             #contract_functions
         }
 
-        impl<A: ::fuels::accounts::Account>
+        impl<A>
             ::fuels::programs::calls::ContractDependency for #name<A>
         {
             fn id(&self) -> ::fuels::types::bech32::Bech32ContractId {
@@ -338,7 +338,7 @@ mod tests {
         // when
         let result = expand_fn(&FullABIFunction::from_counterpart(&the_function, &types)?);
 
-        //then
+        // then
 
         // Some more editing was required because it is not rustfmt-compatible (adding/removing parentheses or commas)
         let expected = quote! {

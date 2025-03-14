@@ -9,6 +9,9 @@ repository = { workspace = true }
 rust-version = { workspace = true }
 description = "Fuel Rust SDK accounts."
 
+[package.metadata.cargo-machete]
+ignored = ["aws-config"]
+
 [dependencies]
 async-trait = { workspace = true, default-features = false }
 aws-config = { workspace = true, features = [
@@ -17,7 +20,6 @@ aws-config = { workspace = true, features = [
 aws-sdk-kms = { workspace = true, features = ["default"], optional = true }
 chrono = { workspace = true }
 cynic = { workspace = true, optional = true }
-elliptic-curve = { workspace = true, default-features = false }
 eth-keystore = { workspace = true, optional = true }
 fuel-core-client = { workspace = true, optional = true }
 fuel-core-types = { workspace = true }
@@ -25,8 +27,9 @@ fuel-crypto = { workspace = true, features = ["random"] }
 fuel-tx = { workspace = true }
 fuel-types = { workspace = true, features = ["random"] }
 fuels-core = { workspace = true, default-features = false }
+google-cloud-kms = { workspace = true, features = ["auth"], optional = true }
 itertools = { workspace = true }
-k256 = { workspace = true, features = ["ecdsa-core"] }
+k256 = { workspace = true, features = ["ecdsa-core", "pem"] }
 rand = { workspace = true, default-features = false }
 semver = { workspace = true }
 tai64 = { workspace = true, features = ["serde"] }
@@ -42,13 +45,9 @@ tokio = { workspace = true, features = ["test-util"] }
 
 [features]
 default = ["std"]
-coin-cache = ["tokio?/time"]
-std = [
-  "fuels-core/std",
-  "dep:tokio",
-  "fuel-core-client/default",
-  "dep:eth-keystore",
-  "dep:cynic",
-]
+coin-cache = ["tokio/time"]
+std = ["fuels-core/std", "dep:tokio", "fuel-core-client/default", "dep:cynic"]
 test-helpers = []
-kms-signer = ["dep:aws-sdk-kms", "dep:aws-config"]
+keystore = ["dep:eth-keystore"]
+signer-aws-kms = ["dep:aws-sdk-kms", "dep:aws-config"]
+signer-google-kms = ["dep:google-cloud-kms"]
