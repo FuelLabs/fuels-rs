@@ -1992,7 +1992,6 @@ half-word   byte   op                raw           notes
             .add_signer(wallet_2.signer().clone())
             .call()
             .await?;
-
 </code></pre>
 <blockquote>
 <p><strong>Note:</strong> if custom inputs include coins that need to be signed, use the <code>add_signer</code> method to add the appropriate signer.</p>
@@ -2370,7 +2369,6 @@ let is_error = response.is_err();
             .add_signer(wallet_1.signer().clone())
             .call()
             .await?;
-
 </code></pre>
 <blockquote>
 <p><strong>Note:</strong> if custom inputs include coins that need to be signed, use the <code>add_signer</code> method to add the appropriate signer.</p>
