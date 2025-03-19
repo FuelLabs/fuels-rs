@@ -2,6 +2,7 @@ use core::{fmt::Debug, marker::PhantomData};
 use std::sync::Arc;
 
 use fuel_tx::{AssetId, Bytes32};
+use fuel_types::BlockHeight;
 use fuels_accounts::{provider::TransactionCost, Account};
 use fuels_core::{
     codec::{ABIEncoder, DecoderConfig, EncoderConfig, LogDecoder},
@@ -25,7 +26,7 @@ use crate::{
     calls::{
         receipt_parser::ReceiptParser,
         traits::{ContractDependencyConfigurator, ResponseParser, TransactionTuner},
-        utils::find_id_of_missing_contract,
+        utils::find_ids_of_missing_contracts,
         CallParameters, ContractCall, Execution, ScriptCall,
     },
     responses::{CallResponse, SubmitResponse},
@@ -199,7 +200,11 @@ where
 
     /// Call a contract's method on the node, in a simulated manner, meaning the state of the
     /// blockchain is *not* modified but simulated.
-    pub async fn simulate(&mut self, execution: Execution) -> Result<CallResponse<T>> {
+    pub async fn simulate(
+        &mut self,
+        execution: Execution,
+        at_height: Option<BlockHeight>,
+    ) -> Result<CallResponse<T>> {
         let provider = self.account.try_provider()?;
 
         let tx_status = if let Execution::StateReadOnly = execution {
@@ -210,10 +215,12 @@ where
                 .build(provider)
                 .await?;
 
-            provider.dry_run_opt(tx, false, Some(0)).await?
+            provider
+                .dry_run_opt(tx, Some(false), Some(0), at_height)
+                .await?
         } else {
             let tx = self.build_tx().await?;
-            provider.dry_run(tx).await?
+            provider.dry_run_opt(tx, None, None, at_height).await?
         };
 
         self.get_response(tx_status)
@@ -235,24 +242,20 @@ where
         })
     }
 
-    pub async fn determine_missing_contracts(mut self, max_attempts: Option<u64>) -> Result<Self> {
-        let attempts = max_attempts.unwrap_or(10);
+    pub async fn determine_missing_contracts(mut self) -> Result<Self> {
+        match self.simulate(Execution::Realistic, None).await {
+            Ok(_) => Ok(self),
 
-        for _ in 0..attempts {
-            match self.simulate(Execution::Realistic).await {
-                Ok(_) => return Ok(self),
-
-                Err(Error::Transaction(Reason::Reverted { ref receipts, .. })) => {
-                    if let Some(contract_id) = find_id_of_missing_contract(receipts) {
-                        self.call.append_external_contract(contract_id);
-                    }
+            Err(Error::Transaction(Reason::Failure { ref receipts, .. })) => {
+                for contract_id in find_ids_of_missing_contracts(receipts) {
+                    self.call.append_external_contract(contract_id);
                 }
 
-                Err(other_error) => return Err(other_error),
+                Ok(self)
             }
-        }
 
-        self.simulate(Execution::Realistic).await.map(|_| self)
+            Err(other_error) => Err(other_error),
+        }
     }
 }
 
@@ -485,6 +488,7 @@ where
     pub async fn simulate<T: Tokenizable + Debug>(
         &mut self,
         execution: Execution,
+        at_height: Option<BlockHeight>,
     ) -> Result<CallResponse<T>> {
         let provider = self.account.try_provider()?;
 
@@ -496,10 +500,12 @@ where
                 .build(provider)
                 .await?;
 
-            provider.dry_run_opt(tx, false, Some(0)).await?
+            provider
+                .dry_run_opt(tx, Some(false), Some(0), at_height)
+                .await?
         } else {
             let tx = self.build_tx().await?;
-            provider.dry_run(tx).await?
+            provider.dry_run_opt(tx, None, None, at_height).await?
         };
 
         self.get_response(tx_status)
@@ -541,23 +547,19 @@ where
 
     /// Simulates the call and attempts to resolve missing contract outputs.
     /// Forwards the received error if it cannot be fixed.
-    pub async fn determine_missing_contracts(mut self, max_attempts: Option<u64>) -> Result<Self> {
-        let attempts = max_attempts.unwrap_or(10);
+    pub async fn determine_missing_contracts(mut self) -> Result<Self> {
+        match self.simulate_without_decode().await {
+            Ok(_) => Ok(self),
 
-        for _ in 0..attempts {
-            match self.simulate_without_decode().await {
-                Ok(_) => return Ok(self),
-
-                Err(Error::Transaction(Reason::Reverted { ref receipts, .. })) => {
-                    if let Some(contract_id) = find_id_of_missing_contract(receipts) {
-                        self = self.append_external_contract(contract_id)?;
-                    }
+            Err(Error::Transaction(Reason::Failure { ref receipts, .. })) => {
+                for contract_id in find_ids_of_missing_contracts(receipts) {
+                    self = self.append_external_contract(contract_id)?;
                 }
 
-                Err(other_error) => return Err(other_error),
+                Ok(self)
             }
-        }
 
-        self.simulate_without_decode().await.map(|_| self)
+            Err(other_error) => Err(other_error),
+        }
     }
 }

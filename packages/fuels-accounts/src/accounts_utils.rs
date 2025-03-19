@@ -19,11 +19,11 @@ pub fn extract_message_nonce(receipts: &[Receipt]) -> Option<Nonce> {
 
 pub async fn calculate_missing_base_amount(
     tb: &impl TransactionBuilder,
-    available_base_amount: u64,
-    reserved_base_amount: u64,
+    available_base_amount: u128,
+    reserved_base_amount: u128,
     provider: &Provider,
-) -> Result<u64> {
-    let max_fee = tb.estimate_max_fee(provider).await?;
+) -> Result<u128> {
+    let max_fee: u128 = tb.estimate_max_fee(provider).await?.into();
 
     let total_used = max_fee + reserved_base_amount;
     let missing_amount = if total_used > available_base_amount {
@@ -42,8 +42,8 @@ pub async fn calculate_missing_base_amount(
 pub fn available_base_assets_and_amount(
     tb: &impl TransactionBuilder,
     base_asset_id: &AssetId,
-) -> (Vec<CoinTypeId>, u64) {
-    let mut sum = 0;
+) -> (Vec<CoinTypeId>, u128) {
+    let mut sum = 0u128;
     let iter =
         tb.inputs()
             .iter()
@@ -53,12 +53,12 @@ pub fn available_base_assets_and_amount(
                     CoinType::Coin(Coin {
                         amount, asset_id, ..
                     }) if asset_id == base_asset_id => {
-                        sum += amount;
+                        sum += u128::from(*amount);
                         resource.id()
                     }
                     CoinType::Message(message) => {
                         if message.data.is_empty() {
-                            sum += message.amount;
+                            sum += u128::from(message.amount);
 
                             resource.id()
                         } else {

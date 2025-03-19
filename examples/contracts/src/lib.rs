@@ -372,7 +372,7 @@ mod tests {
         // you would mint 100 coins if the transaction wasn't simulated
         let counter = contract_methods
             .mint_coins(100)
-            .simulate(Execution::Realistic)
+            .simulate(Execution::Realistic, None)
             .await?;
         // ANCHOR_END: simulate
 
@@ -382,7 +382,7 @@ mod tests {
             // you don't need any funds to read state
             let balance = contract_methods
                 .get_balance(contract_id, AssetId::zeroed())
-                .simulate(Execution::StateReadOnly)
+                .simulate(Execution::StateReadOnly, None)
                 .await?
                 .value;
             // ANCHOR_END: simulate_read_state
@@ -444,7 +444,7 @@ mod tests {
 
         assert!(matches!(
             response,
-            Err(Error::Transaction(Reason::Reverted { .. }))
+            Err(Error::Transaction(Reason::Failure { .. }))
         ));
         // ANCHOR_END: dependency_estimation_fail
 
@@ -465,7 +465,7 @@ mod tests {
         let response = contract_methods
             .mint_then_increment_from_contract(called_contract_id, amount, address.into())
             .with_variable_output_policy(VariableOutputPolicy::EstimateMinimum)
-            .determine_missing_contracts(Some(2))
+            .determine_missing_contracts()
             .await?
             .call()
             .await?;
@@ -782,7 +782,7 @@ mod tests {
                 Bytes(function_selector),
                 Bytes(call_data),
             )
-            .determine_missing_contracts(None)
+            .determine_missing_contracts()
             .await?
             .call()
             .await?;

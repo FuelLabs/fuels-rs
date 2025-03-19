@@ -481,10 +481,10 @@ async fn predicate_transfer_with_signed_resources() -> Result<()> {
     predicate.set_provider(provider.clone());
 
     let mut inputs = wallet
-        .get_asset_inputs_for_amount(asset_id, wallet_balance, None)
+        .get_asset_inputs_for_amount(asset_id, wallet_balance.into(), None)
         .await?;
     let predicate_inputs = predicate
-        .get_asset_inputs_for_amount(asset_id, predicate_balance, None)
+        .get_asset_inputs_for_amount(asset_id, predicate_balance.into(), None)
         .await?;
     inputs.extend(predicate_inputs);
 
@@ -843,7 +843,7 @@ async fn predicate_transfer_non_base_asset() -> Result<()> {
     let wallet = Wallet::new(signer.clone(), provider.clone());
 
     let inputs = predicate
-        .get_asset_inputs_for_amount(non_base_asset_id, amount, None)
+        .get_asset_inputs_for_amount(non_base_asset_id, amount.into(), None)
         .await?;
     let consensus_parameters = provider.consensus_parameters().await?;
     let outputs = vec![
@@ -900,9 +900,9 @@ async fn predicate_can_access_manually_added_witnesses() -> Result<()> {
 
     predicate.set_provider(provider.clone());
 
-    let amount_to_send = 12;
+    let amount_to_send = 12u64;
     let inputs = predicate
-        .get_asset_inputs_for_amount(asset_id, amount_to_send, None)
+        .get_asset_inputs_for_amount(asset_id, amount_to_send.into(), None)
         .await?;
     let outputs =
         predicate.get_asset_outputs_for_amount(receiver.address(), asset_id, amount_to_send);
@@ -967,9 +967,9 @@ async fn tx_id_not_changed_after_adding_witnesses() -> Result<()> {
 
     predicate.set_provider(provider.clone());
 
-    let amount_to_send = 12;
+    let amount_to_send = 12u64;
     let inputs = predicate
-        .get_asset_inputs_for_amount(asset_id, amount_to_send, None)
+        .get_asset_inputs_for_amount(asset_id, amount_to_send.into(), None)
         .await?;
     let outputs =
         predicate.get_asset_outputs_for_amount(receiver.address(), asset_id, amount_to_send);

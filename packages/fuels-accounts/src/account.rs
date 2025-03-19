@@ -85,7 +85,7 @@ pub trait ViewOnlyAccount: Send + Sync {
     async fn get_spendable_resources(
         &self,
         asset_id: AssetId,
-        amount: u64,
+        amount: u128,
         excluded_coins: Option<Vec<CoinTypeId>>,
     ) -> Result<Vec<CoinType>> {
         let (excluded_utxos, excluded_message_nonces) =
@@ -122,7 +122,7 @@ pub trait ViewOnlyAccount: Send + Sync {
     async fn get_asset_inputs_for_amount(
         &self,
         asset_id: AssetId,
-        amount: u64,
+        amount: u128,
         excluded_coins: Option<Vec<CoinTypeId>>,
     ) -> Result<Vec<Input>>;
 
@@ -133,7 +133,7 @@ pub trait ViewOnlyAccount: Send + Sync {
     async fn adjust_for_fee<Tb: TransactionBuilder + Sync>(
         &self,
         tb: &mut Tb,
-        used_base_amount: u64,
+        used_base_amount: u128,
     ) -> Result<()> {
         let provider = self.try_provider()?;
         let consensus_parameters = provider.consensus_parameters().await?;
@@ -182,7 +182,7 @@ pub trait Account: ViewOnlyAccount {
         let provider = self.try_provider()?;
 
         let inputs = self
-            .get_asset_inputs_for_amount(asset_id, amount, None)
+            .get_asset_inputs_for_amount(asset_id, amount.into(), None)
             .await?;
         let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
 
@@ -193,7 +193,7 @@ pub trait Account: ViewOnlyAccount {
 
         let consensus_parameters = provider.consensus_parameters().await?;
         let used_base_amount = if asset_id == *consensus_parameters.base_asset_id() {
-            amount
+            amount.into()
         } else {
             0
         };
@@ -241,7 +241,7 @@ pub trait Account: ViewOnlyAccount {
         )];
 
         inputs.extend(
-            self.get_asset_inputs_for_amount(asset_id, balance, None)
+            self.get_asset_inputs_for_amount(asset_id, balance.into(), None)
                 .await?,
         );
 
@@ -261,7 +261,7 @@ pub trait Account: ViewOnlyAccount {
         );
 
         self.add_witnesses(&mut tb)?;
-        self.adjust_for_fee(&mut tb, balance).await?;
+        self.adjust_for_fee(&mut tb, balance.into()).await?;
 
         let tx = tb.build(provider).await?;
 
@@ -289,7 +289,7 @@ pub trait Account: ViewOnlyAccount {
         let consensus_parameters = provider.consensus_parameters().await?;
 
         let inputs = self
-            .get_asset_inputs_for_amount(*consensus_parameters.base_asset_id(), amount, None)
+            .get_asset_inputs_for_amount(*consensus_parameters.base_asset_id(), amount.into(), None)
             .await?;
 
         let mut tb = ScriptTransactionBuilder::prepare_message_to_output(
@@ -301,7 +301,7 @@ pub trait Account: ViewOnlyAccount {
         );
 
         self.add_witnesses(&mut tb)?;
-        self.adjust_for_fee(&mut tb, amount).await?;
+        self.adjust_for_fee(&mut tb, amount.into()).await?;
 
         let tx = tb.build(provider).await?;
         let tx_id = tx.id(consensus_parameters.chain_id());
