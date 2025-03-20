@@ -356,14 +356,25 @@ mod tests {
             abi = "e2e/sway/contracts/token_ops/out/release/token_ops-abi.json"
         ));
 
-        let wallet = launch_provider_and_get_wallet().await?;
+        let wallet_config = WalletsConfig::default();
+
+        let node_config = NodeConfig {
+            starting_gas_price: 1100,
+            database_type: DbType::RocksDb(None),
+            historical_execution: true,
+            ..NodeConfig::default()
+        };
+
+        let wallets =
+            launch_custom_provider_and_get_wallets(wallet_config, Some(node_config), None).await?;
+        let wallet = wallets.first().expect("is there");
 
         let contract_id = Contract::load_from(
             "../../e2e/sway/contracts/token_ops/out/release/token_ops\
         .bin",
             LoadConfiguration::default(),
         )?
-        .deploy(&wallet, TxPolicies::default())
+        .deploy(wallet, TxPolicies::default())
         .await?
         .contract_id;
 
@@ -386,6 +397,17 @@ mod tests {
                 .await?
                 .value;
             // ANCHOR_END: simulate_read_state
+        }
+        {
+            let block_height = wallet.provider().latest_block_height().await?;
+            let contract_id = contract_id.clone();
+            // ANCHOR: simulate_read_state_at_height
+            let balance = contract_methods
+                .get_balance(contract_id, AssetId::zeroed())
+                .simulate(Execution::state_read_only().at_height(block_height))
+                .await?
+                .value;
+            // ANCHOR_END: simulate_read_state_at_height
         }
 
         let response = contract_methods.mint_coins(1_000_000).call().await?;
