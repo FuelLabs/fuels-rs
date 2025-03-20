@@ -356,8 +356,6 @@ mod tests {
             abi = "e2e/sway/contracts/token_ops/out/release/token_ops-abi.json"
         ));
 
-        let wallet_config = WalletsConfig::default();
-
         let node_config = NodeConfig {
             starting_gas_price: 1100,
             database_type: DbType::RocksDb(None),
@@ -365,8 +363,12 @@ mod tests {
             ..NodeConfig::default()
         };
 
-        let wallets =
-            launch_custom_provider_and_get_wallets(wallet_config, Some(node_config), None).await?;
+        let wallets = launch_custom_provider_and_get_wallets(
+            WalletsConfig::default(),
+            Some(node_config),
+            None,
+        )
+        .await?;
         let wallet = wallets.first().expect("is there");
 
         let contract_id = Contract::load_from(
