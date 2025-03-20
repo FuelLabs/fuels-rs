@@ -15,8 +15,9 @@ As mentioned in previous chapters, you can specify the external contract and add
 ```
 
 But this requires you to know the contract ID of the external contract and the needed number of output variables. Alternatively, by chaining
+
 - `.with_variable_output_policy(VariableOutputPolicy::EstimateMinimum)` and
-- ` .determine_missing_contracts()`
+- `.determine_missing_contracts()`
 
 the dependencies will be estimated by the SDK and set automatically.
 
@@ -24,6 +25,4 @@ the dependencies will be estimated by the SDK and set automatically.
 {{#include ../../../examples/contracts/src/lib.rs:dependency_estimation}}
 ```
 
-> **Note:** Both `with_variable_output_policy` and `determine_missing_contracts` can also be used when working with script calls or multi calls.
-
- > **Note:** `determine_missing_contracts()` will not enable logging from an external contract. For more information, see [here](./other-contracts.md).
+> **Note:** Both `with_variable_output_policy` and `determine_missing_contracts` can also be used when working with script calls or multi calls. `determine_missing_contracts()` will not enable logging from an external contract. For more information, see [here](./other-contracts.md).
