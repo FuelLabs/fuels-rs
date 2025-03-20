@@ -1316,24 +1316,21 @@ async fn low_level_call() -> Result<()> {
             .methods()
             .read_counter()
             .call()
-            .await
-            .unwrap()
+            .await?
             .value;
 
         let result_bool = target_contract_instance
             .methods()
             .get_bool_value()
             .call()
-            .await
-            .unwrap()
+            .await?
             .value;
 
         let result_str = target_contract_instance
             .methods()
             .get_str_value()
             .call()
-            .await
-            .unwrap()
+            .await?
             .value;
 
         assert_eq!(result_uint, 2);
@@ -1958,26 +1955,27 @@ async fn setup_node_with_high_price(historical_execution: bool) -> Result<Vec<Wa
         fee_params: fee_parameters,
         ..Default::default()
     });
-    let node_config = if historical_execution {
-        Some(NodeConfig {
-            starting_gas_price: 1100,
-            database_type: DbType::RocksDb(None),
-            historical_execution: true,
-            ..NodeConfig::default()
-        })
-    } else {
-        Some(NodeConfig {
-            starting_gas_price: 1100,
-            ..NodeConfig::default()
-        })
+
+    let mut node_config = NodeConfig {
+        starting_gas_price: 1100,
+        ..NodeConfig::default()
     };
+
+    if historical_execution {
+        node_config.database_type = DbType::RocksDb(None);
+        node_config.historical_execution = true;
+    }
+
     let chain_config = ChainConfig {
         consensus_parameters,
         ..ChainConfig::default()
     };
-    let wallets =
-        launch_custom_provider_and_get_wallets(wallet_config, node_config, Some(chain_config))
-            .await?;
+    let wallets = launch_custom_provider_and_get_wallets(
+        wallet_config,
+        Some(node_config),
+        Some(chain_config),
+    )
+    .await?;
 
     Ok(wallets)
 }
@@ -2001,7 +1999,7 @@ async fn simulations_can_be_made_without_coins() -> Result<()> {
     .contract_id;
 
     let provider = wallet.provider().clone();
-    let no_funds_wallet = Wallet::random(&mut thread_rng(), provider.clone());
+    let no_funds_wallet = Wallet::random(&mut thread_rng(), provider);
 
     let response = MyContract::new(contract_id, no_funds_wallet)
         .methods()
@@ -2015,7 +2013,7 @@ async fn simulations_can_be_made_without_coins() -> Result<()> {
 }
 
 #[tokio::test]
-async fn simulations_can_be_made_at_height() -> Result<()> {
+async fn simulations_can_be_made_at_specific_block_height() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
         abi = "e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
@@ -2032,7 +2030,7 @@ async fn simulations_can_be_made_at_height() -> Result<()> {
     .await?
     .contract_id;
 
-    let provider = wallet.provider().clone();
+    let provider = wallet.provider();
     let contract_methods = MyContract::new(&contract_id, wallet.clone()).methods();
 
     contract_methods.initialize_counter(42).call().await?;
@@ -2040,7 +2038,6 @@ async fn simulations_can_be_made_at_height() -> Result<()> {
     let block_height = provider.latest_block_height().await?;
 
     provider.produce_blocks(5, None).await?;
-
     contract_methods.increment_counter(24).call().await?;
 
     let no_funds_wallet = Wallet::random(&mut thread_rng(), provider.clone());
@@ -2085,7 +2082,7 @@ async fn simulations_can_be_made_without_coins_multicall() -> Result<()> {
 
     let provider = wallet.provider().clone();
 
-    let no_funds_wallet = Wallet::random(&mut thread_rng(), provider.clone());
+    let no_funds_wallet = Wallet::random(&mut thread_rng(), provider);
     let contract_instance = MyContract::new(contract_id, no_funds_wallet.clone());
 
     let contract_methods = contract_instance.methods();
