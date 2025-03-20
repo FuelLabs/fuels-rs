@@ -374,7 +374,7 @@ async fn script_encoder_config_is_applied() {
 
         let encoding_error = script_instance_with_encoder_config
             .main(1, 2)
-            .simulate(Execution::Realistic, None)
+            .simulate(Execution::realistic())
             .await
             .expect_err("should error");
 
@@ -404,7 +404,7 @@ async fn simulations_can_be_made_without_coins() -> Result<()> {
 
     let value = script_instance
         .main(1000, 2000)
-        .simulate(Execution::StateReadOnly, None)
+        .simulate(Execution::state_read_only())
         .await?
         .value;
 

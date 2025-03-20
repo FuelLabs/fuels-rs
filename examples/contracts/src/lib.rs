@@ -372,7 +372,7 @@ mod tests {
         // you would mint 100 coins if the transaction wasn't simulated
         let counter = contract_methods
             .mint_coins(100)
-            .simulate(Execution::Realistic, None)
+            .simulate(Execution::realistic())
             .await?;
         // ANCHOR_END: simulate
 
@@ -382,7 +382,7 @@ mod tests {
             // you don't need any funds to read state
             let balance = contract_methods
                 .get_balance(contract_id, AssetId::zeroed())
-                .simulate(Execution::StateReadOnly, None)
+                .simulate(Execution::state_read_only())
                 .await?
                 .value;
             // ANCHOR_END: simulate_read_state

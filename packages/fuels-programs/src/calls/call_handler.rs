@@ -2,7 +2,6 @@ use core::{fmt::Debug, marker::PhantomData};
 use std::sync::Arc;
 
 use fuel_tx::{AssetId, Bytes32};
-use fuel_types::BlockHeight;
 use fuels_accounts::{provider::TransactionCost, Account};
 use fuels_core::{
     codec::{ABIEncoder, DecoderConfig, EncoderConfig, LogDecoder},
@@ -27,7 +26,7 @@ use crate::{
         receipt_parser::ReceiptParser,
         traits::{ContractDependencyConfigurator, ResponseParser, TransactionTuner},
         utils::find_ids_of_missing_contracts,
-        CallParameters, ContractCall, Execution, ScriptCall,
+        CallParameters, ContractCall, Execution, ExecutionType, ScriptCall,
     },
     responses::{CallResponse, SubmitResponse},
 };
@@ -202,12 +201,14 @@ where
     /// blockchain is *not* modified but simulated.
     pub async fn simulate(
         &mut self,
-        execution: Execution,
-        at_height: Option<BlockHeight>,
+        Execution {
+            execution_type,
+            at_height,
+        }: Execution,
     ) -> Result<CallResponse<T>> {
         let provider = self.account.try_provider()?;
 
-        let tx_status = if let Execution::StateReadOnly = execution {
+        let tx_status = if let ExecutionType::StateReadOnly = execution_type {
             let tx = self
                 .transaction_builder()
                 .await?
@@ -243,7 +244,7 @@ where
     }
 
     pub async fn determine_missing_contracts(mut self) -> Result<Self> {
-        match self.simulate(Execution::Realistic, None).await {
+        match self.simulate(Execution::realistic()).await {
             Ok(_) => Ok(self),
 
             Err(Error::Transaction(Reason::Failure { ref receipts, .. })) => {
@@ -487,12 +488,14 @@ where
     /// [call]: Self::call
     pub async fn simulate<T: Tokenizable + Debug>(
         &mut self,
-        execution: Execution,
-        at_height: Option<BlockHeight>,
+        Execution {
+            execution_type,
+            at_height,
+        }: Execution,
     ) -> Result<CallResponse<T>> {
         let provider = self.account.try_provider()?;
 
-        let tx_status = if let Execution::StateReadOnly = execution {
+        let tx_status = if let ExecutionType::StateReadOnly = execution_type {
             let tx = self
                 .transaction_builder()
                 .await?

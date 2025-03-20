@@ -175,14 +175,14 @@ async fn test_multiple_read_calls() -> Result<()> {
     // run a transaction, but just a dry-run
     let stored = contract_methods
         .read()
-        .simulate(Execution::StateReadOnly, None)
+        .simulate(Execution::state_read_only())
         .await?;
 
     assert_eq!(stored.value, 42);
 
     let stored = contract_methods
         .read()
-        .simulate(Execution::StateReadOnly, None)
+        .simulate(Execution::state_read_only())
         .await?;
 
     assert_eq!(stored.value, 42);
@@ -1814,7 +1814,7 @@ async fn contract_encoder_config_is_applied() -> Result<()> {
         let encoding_error = instance_with_encoder_config
             .methods()
             .get(0, 1)
-            .simulate(Execution::Realistic, None)
+            .simulate(Execution::realistic())
             .await
             .expect_err("should error");
 
@@ -2006,7 +2006,7 @@ async fn simulations_can_be_made_without_coins() -> Result<()> {
     let response = MyContract::new(contract_id, no_funds_wallet)
         .methods()
         .get(5, 6)
-        .simulate(Execution::StateReadOnly, None)
+        .simulate(Execution::state_read_only())
         .await?;
 
     assert_eq!(response.value, 11);
@@ -2048,7 +2048,7 @@ async fn simulations_can_be_made_at_height() -> Result<()> {
     {
         let response = no_funds_methods
             .read_counter()
-            .simulate(Execution::StateReadOnly, None)
+            .simulate(Execution::state_read_only())
             .await?;
 
         assert_eq!(response.value, 66);
@@ -2056,7 +2056,7 @@ async fn simulations_can_be_made_at_height() -> Result<()> {
     {
         let response = no_funds_methods
             .read_counter()
-            .simulate(Execution::StateReadOnly, Some(block_height.into()))
+            .simulate(Execution::state_read_only().at_height(block_height))
             .await?;
 
         assert_eq!(response.value, 42);
@@ -2098,7 +2098,7 @@ async fn simulations_can_be_made_without_coins_multicall() -> Result<()> {
         .add_call(call_handler_2);
 
     let value: (u64, u64) = multi_call_handler
-        .simulate(Execution::StateReadOnly, None)
+        .simulate(Execution::state_read_only())
         .await?
         .value;
 
