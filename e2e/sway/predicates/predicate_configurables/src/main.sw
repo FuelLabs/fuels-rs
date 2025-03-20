@@ -1,12 +1,13 @@
 predicate;
 
-impl Eq for StructWithGeneric<u8> {
+impl PartialEq for StructWithGeneric<u8> {
     fn eq(self, other: Self) -> bool {
         self.field_1 == other.field_1 && self.field_2 == other.field_2
     }
 }
+impl Eq for StructWithGeneric<u8> {}
 
-impl Eq for EnumWithGeneric<bool> {
+impl PartialEq for EnumWithGeneric<bool> {
     fn eq(self, other: Self) -> bool {
         match (self, other) {
             (EnumWithGeneric::VariantOne, EnumWithGeneric::VariantOne) => true,
@@ -15,6 +16,7 @@ impl Eq for EnumWithGeneric<bool> {
         }
     }
 }
+impl Eq for EnumWithGeneric<bool> {}
 
 // ANCHOR: predicate_configurables
 #[allow(dead_code)]
