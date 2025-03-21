@@ -28,10 +28,10 @@ pub struct SqueezedOut {
 }
 
 #[derive(Debug, Clone)]
-pub struct Revert {
+pub struct Failure {
     pub reason: String,
     pub receipts: Vec<Receipt>,
-    pub revert_id: u64,
+    pub revert_id: Option<u64>,
     pub total_fee: u64,
     pub total_gas: u64,
 }
@@ -39,9 +39,11 @@ pub struct Revert {
 #[derive(Debug, Clone)]
 pub enum TxStatus {
     Success(Success),
+    PreconfirmationSuccess(Success),
     Submitted,
     SqueezedOut(SqueezedOut),
-    Revert(Revert),
+    Failure(Failure),
+    PreconfirmationFailure(Failure),
 }
 
 impl TxStatus {
@@ -50,12 +52,17 @@ impl TxStatus {
             Self::SqueezedOut(SqueezedOut { reason }) => {
                 Err(Error::Transaction(Reason::SqueezedOut(reason.clone())))
             }
-            Self::Revert(Revert {
+            Self::Failure(Failure {
                 receipts,
                 reason,
-                revert_id: id,
+                revert_id,
                 ..
-            }) => Err(Self::map_revert_error(receipts, reason, *id, log_decoder)),
+            }) => Err(Self::map_revert_error(
+                receipts.clone(),
+                reason,
+                *revert_id,
+                log_decoder,
+            )),
             _ => Ok(()),
         }
     }
@@ -65,23 +72,34 @@ impl TxStatus {
             Self::SqueezedOut(SqueezedOut { reason }) => {
                 Err(Error::Transaction(Reason::SqueezedOut(reason.clone())))
             }
-            Self::Revert(Revert {
+            Self::Failure(Failure {
                 receipts,
                 reason,
-                revert_id: id,
+                revert_id,
                 ..
-            }) => Err(Self::map_revert_error(&receipts, &reason, id, log_decoder)),
+            })
+            | Self::PreconfirmationFailure(Failure {
+                receipts,
+                reason,
+                revert_id,
+                ..
+            }) => Err(Self::map_revert_error(
+                receipts,
+                &reason,
+                revert_id,
+                log_decoder,
+            )),
             Self::Submitted => Err(Error::Transaction(Reason::Other(
                 "transactions was not yet included".to_owned(),
             ))),
-            Self::Success(success) => Ok(success),
+            Self::Success(success) | Self::PreconfirmationSuccess(success) => Ok(success),
         }
     }
 
     pub fn total_gas(&self) -> u64 {
         match self {
             TxStatus::Success(Success { total_gas, .. })
-            | TxStatus::Revert(Revert { total_gas, .. }) => *total_gas,
+            | TxStatus::Failure(Failure { total_gas, .. }) => *total_gas,
             _ => 0,
         }
     }
@@ -89,26 +107,26 @@ impl TxStatus {
     pub fn total_fee(&self) -> u64 {
         match self {
             TxStatus::Success(Success { total_fee, .. })
-            | TxStatus::Revert(Revert { total_fee, .. }) => *total_fee,
+            | TxStatus::Failure(Failure { total_fee, .. }) => *total_fee,
             _ => 0,
         }
     }
 
     fn map_revert_error(
-        receipts: &[Receipt],
+        receipts: Vec<Receipt>,
         reason: &str,
-        id: u64,
+        revert_id: Option<u64>,
         log_decoder: Option<&LogDecoder>,
     ) -> Error {
-        let reason = match (id, log_decoder) {
-            (FAILED_REQUIRE_SIGNAL, Some(log_decoder)) => log_decoder
-                .decode_last_log(receipts)
+        let reason = match (revert_id, log_decoder) {
+            (Some(FAILED_REQUIRE_SIGNAL), Some(log_decoder)) => log_decoder
+                .decode_last_log(&receipts)
                 .unwrap_or_else(|err| format!("failed to decode log from require revert: {err}")),
-            (REVERT_WITH_LOG_SIGNAL, Some(log_decoder)) => log_decoder
-                .decode_last_log(receipts)
+            (Some(REVERT_WITH_LOG_SIGNAL), Some(log_decoder)) => log_decoder
+                .decode_last_log(&receipts)
                 .unwrap_or_else(|err| format!("failed to decode log from revert_with_log: {err}")),
-            (FAILED_ASSERT_EQ_SIGNAL, Some(log_decoder)) => {
-                match log_decoder.decode_last_two_logs(receipts) {
+            (Some(FAILED_ASSERT_EQ_SIGNAL), Some(log_decoder)) => {
+                match log_decoder.decode_last_two_logs(&receipts) {
                     Ok((lhs, rhs)) => format!(
                         "assertion failed: `(left == right)`\n left: `{lhs:?}`\n right: `{rhs:?}`"
                     ),
@@ -117,8 +135,8 @@ impl TxStatus {
                     }
                 }
             }
-            (FAILED_ASSERT_NE_SIGNAL, Some(log_decoder)) => {
-                match log_decoder.decode_last_two_logs(receipts) {
+            (Some(FAILED_ASSERT_NE_SIGNAL), Some(log_decoder)) => {
+                match log_decoder.decode_last_two_logs(&receipts) {
                     Ok((lhs, rhs)) => format!(
                         "assertion failed: `(left != right)`\n left: `{lhs:?}`\n right: `{rhs:?}`"
                     ),
@@ -127,16 +145,16 @@ impl TxStatus {
                     }
                 }
             }
-            (FAILED_ASSERT_SIGNAL, _) => "assertion failed".into(),
-            (FAILED_SEND_MESSAGE_SIGNAL, _) => "failed to send message".into(),
-            (FAILED_TRANSFER_TO_ADDRESS_SIGNAL, _) => "failed transfer to address".into(),
+            (Some(FAILED_ASSERT_SIGNAL), _) => "assertion failed".into(),
+            (Some(FAILED_SEND_MESSAGE_SIGNAL), _) => "failed to send message".into(),
+            (Some(FAILED_TRANSFER_TO_ADDRESS_SIGNAL), _) => "failed transfer to address".into(),
             _ => reason.to_string(),
         };
 
-        Error::Transaction(Reason::Reverted {
+        Error::Transaction(Reason::Failure {
             reason,
-            revert_id: id,
-            receipts: receipts.to_vec(),
+            revert_id,
+            receipts,
         })
     }
 
@@ -148,7 +166,7 @@ impl TxStatus {
     pub fn take_receipts(self) -> Vec<Receipt> {
         match self {
             TxStatus::Success(Success { receipts, .. })
-            | TxStatus::Revert(Revert { receipts, .. }) => receipts,
+            | TxStatus::Failure(Failure { receipts, .. }) => receipts,
             _ => vec![],
         }
     }
@@ -169,6 +187,16 @@ impl From<ClientTransactionStatus> for TxStatus {
                 total_gas,
                 total_fee,
             }),
+            ClientTransactionStatus::PreconfirmationSuccess {
+                receipts,
+                total_gas,
+                total_fee,
+                ..
+            } => TxStatus::PreconfirmationSuccess(Success {
+                receipts: receipts.unwrap_or_default(),
+                total_gas,
+                total_fee,
+            }),
             ClientTransactionStatus::Failure {
                 reason,
                 program_state,
@@ -177,13 +205,12 @@ impl From<ClientTransactionStatus> for TxStatus {
                 total_fee,
                 ..
             } => {
-                let revert_id = program_state
-                    .and_then(|state| match state {
-                        ProgramState::Revert(revert_id) => Some(revert_id),
-                        _ => None,
-                    })
-                    .expect("Transaction failed without a `revert_id`");
-                TxStatus::Revert(Revert {
+                let revert_id = program_state.and_then(|state| match state {
+                    ProgramState::Revert(revert_id) => Some(revert_id),
+                    _ => None,
+                });
+
+                TxStatus::Failure(Failure {
                     receipts,
                     reason,
                     revert_id,
@@ -191,6 +218,19 @@ impl From<ClientTransactionStatus> for TxStatus {
                     total_fee,
                 })
             }
+            ClientTransactionStatus::PreconfirmationFailure {
+                reason,
+                receipts,
+                total_gas,
+                total_fee,
+                ..
+            } => TxStatus::Failure(Failure {
+                receipts: receipts.unwrap_or_default(),
+                reason,
+                revert_id: None,
+                total_gas,
+                total_fee,
+            }),
             ClientTransactionStatus::SqueezedOut { reason } => {
                 TxStatus::SqueezedOut(SqueezedOut { reason })
             }
@@ -219,14 +259,13 @@ impl From<TransactionExecutionStatus> for TxStatus {
                 total_fee,
                 ..
             } => {
-                let revert_id = result
-                    .and_then(|result| match result {
-                        ProgramState::Revert(revert_id) => Some(revert_id),
-                        _ => None,
-                    })
-                    .expect("Transaction failed without a `revert_id`");
+                let revert_id = result.and_then(|result| match result {
+                    ProgramState::Revert(revert_id) => Some(revert_id),
+                    _ => None,
+                });
                 let reason = TransactionExecutionResult::reason(&receipts, &result);
-                Self::Revert(Revert {
+
+                Self::Failure(Failure {
                     receipts,
                     reason,
                     revert_id,

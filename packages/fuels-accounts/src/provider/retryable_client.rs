@@ -197,9 +197,13 @@ impl RetryableClient {
         tx: &[Transaction],
         utxo_validation: Option<bool>,
         gas_price: Option<u64>,
+        at_height: Option<BlockHeight>,
     ) -> RequestResult<Vec<TransactionExecutionStatus>> {
-        self.wrap(|| self.client.dry_run_opt(tx, utxo_validation, gas_price))
-            .await
+        self.wrap(|| {
+            self.client
+                .dry_run_opt(tx, utxo_validation, gas_price, at_height)
+        })
+        .await
     }
 
     pub async fn coins(
@@ -215,7 +219,7 @@ impl RetryableClient {
     pub async fn coins_to_spend(
         &self,
         owner: &Address,
-        spend_query: Vec<(AssetId, u64, Option<u32>)>,
+        spend_query: Vec<(AssetId, u128, Option<u16>)>,
         excluded_ids: Option<(Vec<UtxoId>, Vec<Nonce>)>,
     ) -> RequestResult<Vec<Vec<CoinType>>> {
         self.wrap(move || {

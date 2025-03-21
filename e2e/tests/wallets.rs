@@ -196,14 +196,14 @@ async fn adjust_fee_resources_to_transfer_with_base_asset() -> Result<()> {
     let base_amount = 30;
     let base_asset_id = AssetId::zeroed();
     let inputs = wallet
-        .get_asset_inputs_for_amount(base_asset_id, base_amount, None)
+        .get_asset_inputs_for_amount(base_asset_id, base_amount.into(), None)
         .await?;
     let outputs =
         wallet.get_asset_outputs_for_amount(&Address::zeroed().into(), base_asset_id, base_amount);
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
 
-    wallet.adjust_for_fee(&mut tb, base_amount).await?;
+    wallet.adjust_for_fee(&mut tb, base_amount.into()).await?;
     wallet.add_witnesses(&mut tb)?;
 
     let tx = tb.build(wallet.provider()).await?;
@@ -459,7 +459,7 @@ async fn test_transfer_with_multiple_signatures() -> Result<()> {
 
     let receiver = Wallet::random(&mut thread_rng(), provider.clone());
 
-    let amount_to_transfer = 20;
+    let amount_to_transfer = 20u64;
 
     let mut inputs = vec![];
     let consensus_parameters = provider.consensus_parameters().await?;
@@ -468,7 +468,7 @@ async fn test_transfer_with_multiple_signatures() -> Result<()> {
             wallet
                 .get_asset_inputs_for_amount(
                     *consensus_parameters.base_asset_id(),
-                    amount_to_transfer,
+                    amount_to_transfer.into(),
                     None,
                 )
                 .await?,

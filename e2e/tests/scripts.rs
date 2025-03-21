@@ -133,7 +133,7 @@ async fn test_output_variable_estimation() -> Result<()> {
         Identity::Address(receiver.address().into()),
     );
     let inputs = wallet
-        .get_asset_inputs_for_amount(asset_id, amount, None)
+        .get_asset_inputs_for_amount(asset_id, amount.into(), None)
         .await?;
     let output = Output::change(wallet.address().into(), 0, asset_id);
     let _ = script_call
@@ -374,7 +374,7 @@ async fn script_encoder_config_is_applied() {
 
         let encoding_error = script_instance_with_encoder_config
             .main(1, 2)
-            .simulate(Execution::Realistic)
+            .simulate(Execution::realistic())
             .await
             .expect_err("should error");
 
@@ -404,7 +404,7 @@ async fn simulations_can_be_made_without_coins() -> Result<()> {
 
     let value = script_instance
         .main(1000, 2000)
-        .simulate(Execution::StateReadOnly)
+        .simulate(Execution::state_read_only())
         .await?
         .value;
 

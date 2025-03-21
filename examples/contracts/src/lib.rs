@@ -349,6 +349,7 @@ mod tests {
 
     #[tokio::test]
     #[allow(unused_variables)]
+    #[cfg(any(not(feature = "fuel-core-lib"), feature = "rocksdb"))]
     async fn token_ops_tests() -> Result<()> {
         use fuels::prelude::*;
         abigen!(Contract(
@@ -356,14 +357,27 @@ mod tests {
             abi = "e2e/sway/contracts/token_ops/out/release/token_ops-abi.json"
         ));
 
-        let wallet = launch_provider_and_get_wallet().await?;
+        let node_config = NodeConfig {
+            starting_gas_price: 1100,
+            database_type: DbType::RocksDb(None),
+            historical_execution: true,
+            ..NodeConfig::default()
+        };
+
+        let wallets = launch_custom_provider_and_get_wallets(
+            WalletsConfig::default(),
+            Some(node_config),
+            None,
+        )
+        .await?;
+        let wallet = wallets.first().expect("is there");
 
         let contract_id = Contract::load_from(
             "../../e2e/sway/contracts/token_ops/out/release/token_ops\
         .bin",
             LoadConfiguration::default(),
         )?
-        .deploy(&wallet, TxPolicies::default())
+        .deploy(wallet, TxPolicies::default())
         .await?
         .contract_id;
 
@@ -372,7 +386,7 @@ mod tests {
         // you would mint 100 coins if the transaction wasn't simulated
         let counter = contract_methods
             .mint_coins(100)
-            .simulate(Execution::Realistic)
+            .simulate(Execution::realistic())
             .await?;
         // ANCHOR_END: simulate
 
@@ -382,10 +396,21 @@ mod tests {
             // you don't need any funds to read state
             let balance = contract_methods
                 .get_balance(contract_id, AssetId::zeroed())
-                .simulate(Execution::StateReadOnly)
+                .simulate(Execution::state_read_only())
                 .await?
                 .value;
             // ANCHOR_END: simulate_read_state
+        }
+        {
+            let block_height = wallet.provider().latest_block_height().await?;
+            let contract_id = contract_id.clone();
+            // ANCHOR: simulate_read_state_at_height
+            let balance = contract_methods
+                .get_balance(contract_id, AssetId::zeroed())
+                .simulate(Execution::state_read_only().at_height(block_height))
+                .await?
+                .value;
+            // ANCHOR_END: simulate_read_state_at_height
         }
 
         let response = contract_methods.mint_coins(1_000_000).call().await?;
@@ -444,7 +469,7 @@ mod tests {
 
         assert!(matches!(
             response,
-            Err(Error::Transaction(Reason::Reverted { .. }))
+            Err(Error::Transaction(Reason::Failure { .. }))
         ));
         // ANCHOR_END: dependency_estimation_fail
 
@@ -465,7 +490,7 @@ mod tests {
         let response = contract_methods
             .mint_then_increment_from_contract(called_contract_id, amount, address.into())
             .with_variable_output_policy(VariableOutputPolicy::EstimateMinimum)
-            .determine_missing_contracts(Some(2))
+            .determine_missing_contracts()
             .await?
             .call()
             .await?;
@@ -782,7 +807,7 @@ mod tests {
                 Bytes(function_selector),
                 Bytes(call_data),
             )
-            .determine_missing_contracts(None)
+            .determine_missing_contracts()
             .await?
             .call()
             .await?;
