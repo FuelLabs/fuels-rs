@@ -349,6 +349,7 @@ mod tests {
 
     #[tokio::test]
     #[allow(unused_variables)]
+    #[cfg(any(not(feature = "fuel-core-lib"), feature = "rocksdb"))]
     async fn token_ops_tests() -> Result<()> {
         use fuels::prelude::*;
         abigen!(Contract(

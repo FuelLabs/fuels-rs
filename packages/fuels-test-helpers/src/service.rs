@@ -116,6 +116,7 @@ impl FuelService {
             },
             combined_db_config,
             snapshot_reader,
+            historical_execution: node_config.historical_execution,
             utxo_validation: node_config.utxo_validation,
             debug: node_config.debug,
             block_production: node_config.block_production.into(),

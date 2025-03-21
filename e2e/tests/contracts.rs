@@ -2013,6 +2013,7 @@ async fn simulations_can_be_made_without_coins() -> Result<()> {
 }
 
 #[tokio::test]
+#[cfg(any(not(feature = "fuel-core-lib"), feature = "rocksdb"))]
 async fn simulations_can_be_made_at_specific_block_height() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
