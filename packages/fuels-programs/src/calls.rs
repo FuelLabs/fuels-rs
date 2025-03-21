@@ -11,7 +11,7 @@ use fuel_types::BlockHeight;
 pub use script_call::*;
 
 /// Used to control simulations/dry-runs
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct Execution {
     execution_type: ExecutionType,
     at_height: Option<BlockHeight>,
@@ -43,9 +43,14 @@ impl Execution {
     }
 }
 
-#[derive(Debug, Clone, Default)]
+impl Default for Execution {
+    fn default() -> Self {
+        Self::realistic()
+    }
+}
+
+#[derive(Debug, Clone)]
 pub(crate) enum ExecutionType {
-    #[default]
     Realistic,
     StateReadOnly,
 }
