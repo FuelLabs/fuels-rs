@@ -179,7 +179,7 @@
 <p>Additionally, you can set custom <code>TxParameters</code> when deploying the loaded contract.</p>
 <pre><code class="language-rust ignore">        // Optional: Add `Salt`
         let rng = &amp;mut StdRng::seed_from_u64(2322u64);
-        let salt: [u8; 32] = rng.gen();
+        let salt: [u8; 32] = rng.r#gen();
 
         // Optional: Configure storage
         let key = Bytes32::from([1u8; 32]);

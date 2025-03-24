@@ -904,7 +904,12 @@ own, custom ones, that implement <code>Signer</code>):</p>
         let signature = signer.sign(message).await?;
 
         // Check if signature is what we expect it to be
-        assert_eq!(signature, Signature::from_str(&quot;0x8eeb238db1adea4152644f1cd827b552dfa9ab3f4939718bb45ca476d167c6512a656f4d4c7356bfb9561b14448c230c6e7e4bd781df5ee9e5999faa6495163d&quot;)?);
+        assert_eq!(
+            signature,
+            Signature::from_str(
+                &quot;0x8eeb238db1adea4152644f1cd827b552dfa9ab3f4939718bb45ca476d167c6512a656f4d4c7356bfb9561b14448c230c6e7e4bd781df5ee9e5999faa6495163d&quot;
+            )?
+        );
 
         // Recover address that signed the message
         let recovered_address = signature.recover(&amp;message)?;
@@ -1391,7 +1396,7 @@ pub use abigen_bindings::my_contract_mod::MyContractMethods;
 <p>Additionally, you can set custom <code>TxParameters</code> when deploying the loaded contract.</p>
 <pre><code class="language-rust ignore">        // Optional: Add `Salt`
         let rng = &amp;mut StdRng::seed_from_u64(2322u64);
-        let salt: [u8; 32] = rng.gen();
+        let salt: [u8; 32] = rng.r#gen();
 
         // Optional: Configure storage
         let key = Bytes32::from([1u8; 32]);
@@ -3068,7 +3073,7 @@ from subsequent callers.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="bech32"><a class="header" href="#bech32"><code>Bech32</code></a></h1>
 <p><code>Bech32Address</code> and <code>Bech32ContractId</code> enable the use of addresses and contract IDs in the <code>bech32</code> format. They can easily be converted to their counterparts <code>Address</code> and <code>ContractId</code>.</p>
 <p>Here are the main ways of creating a <code>Bech32Address</code>, but note that the same applies to <code>Bech32ContractId</code>:</p>
-<pre><code class="language-rust ignore">        use fuels::types::{bech32::Bech32Address, Address, Bytes32};
+<pre><code class="language-rust ignore">        use fuels::types::{Address, Bytes32, bech32::Bech32Address};
 
         // New from HRP string and a hash
         let hrp = &quot;fuel&quot;;
@@ -3108,8 +3113,10 @@ from subsequent callers.</p>
 }
 </code></pre>
 <p>After using the <code>abigen!</code> macro, <code>CounterConfig</code> will be accessible in your Rust file! Here's an example:</p>
-<pre><code class="language-rust ignore">    abigen!(Contract(name=&quot;MyContract&quot;,
-                     abi=&quot;e2e/sway/types/contracts/complex_types_contract/out/release/complex_types_contract-abi.json&quot;));
+<pre><code class="language-rust ignore">    abigen!(Contract(
+        name = &quot;MyContract&quot;,
+        abi = &quot;e2e/sway/types/contracts/complex_types_contract/out/release/complex_types_contract-abi.json&quot;
+    ));
 
     // Here we can use `CounterConfig`, a struct originally
     // defined in the contract.
@@ -4174,7 +4181,9 @@ used by the node to identify which method we wish to execute.</p>
 
         assert_eq!(
             selector,
-            [0, 0, 0, 0, 0, 0, 0, 12, 115, 111, 109, 101, 95, 102, 110, 95, 110, 97, 109, 101]
+            [
+                0, 0, 0, 0, 0, 0, 0, 12, 115, 111, 109, 101, 95, 102, 110, 95, 110, 97, 109, 101
+            ]
         );
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="decoding-script-transactions"><a class="header" href="#decoding-script-transactions">Decoding script transactions</a></h1>

@@ -149,8 +149,10 @@
 }
 </code></pre>
 <p>After using the <code>abigen!</code> macro, <code>CounterConfig</code> will be accessible in your Rust file! Here's an example:</p>
-<pre><code class="language-rust ignore">    abigen!(Contract(name=&quot;MyContract&quot;,
-                     abi=&quot;e2e/sway/types/contracts/complex_types_contract/out/release/complex_types_contract-abi.json&quot;));
+<pre><code class="language-rust ignore">    abigen!(Contract(
+        name = &quot;MyContract&quot;,
+        abi = &quot;e2e/sway/types/contracts/complex_types_contract/out/release/complex_types_contract-abi.json&quot;
+    ));
 
     // Here we can use `CounterConfig`, a struct originally
     // defined in the contract.
