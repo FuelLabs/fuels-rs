@@ -363,7 +363,7 @@ mod test {
     }
 
     fn random_bech32_contract_id() -> Bech32ContractId {
-        Bech32ContractId::new("fuel", rand::thread_rng().gen::<[u8; 32]>())
+        Bech32ContractId::new("fuel", rand::thread_rng().r#gen::<[u8; 32]>())
     }
 
     #[test]

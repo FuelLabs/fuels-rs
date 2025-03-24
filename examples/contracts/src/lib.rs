@@ -4,16 +4,16 @@ mod tests {
 
     use fuels::{
         accounts::signers::{fake::FakeSigner, private_key::PrivateKeySigner},
-        core::codec::{encode_fn_selector, ABIFormatter, DecoderConfig, EncoderConfig},
+        core::codec::{ABIFormatter, DecoderConfig, EncoderConfig, encode_fn_selector},
         prelude::{LoadConfiguration, NodeConfig, StorageConfiguration},
         programs::debug::ScriptType,
         test_helpers::{ChainConfig, StateConfig},
         types::{
-            errors::{transaction::Reason, Result},
             Bits256,
+            errors::{Result, transaction::Reason},
         },
     };
-    use rand::{thread_rng, Rng};
+    use rand::{Rng, thread_rng};
 
     #[tokio::test]
     async fn instantiate_client() -> Result<()> {
@@ -147,7 +147,7 @@ mod tests {
         // ANCHOR: deploy_with_parameters
         // Optional: Add `Salt`
         let rng = &mut StdRng::seed_from_u64(2322u64);
-        let salt: [u8; 32] = rng.gen();
+        let salt: [u8; 32] = rng.r#gen();
 
         // Optional: Configure storage
         let key = Bytes32::from([1u8; 32]);
@@ -310,7 +310,7 @@ mod tests {
             .with_tx_policies(tx_policies) // Chain the tx policies
             .call() // Perform the contract call
             .await?; // This is an async call, `.await` it.
-                     // ANCHOR_END: tx_policies
+        // ANCHOR_END: tx_policies
 
         // ANCHOR: tx_policies_default
         let response = contract_methods
@@ -687,7 +687,7 @@ mod tests {
             .get_msg_amount() // Our contract method
             .call() // Perform the contract call.
             .await?; // This is an async call, `.await` for it.
-                     // ANCHOR_END: connect_wallet
+        // ANCHOR_END: connect_wallet
 
         Ok(())
     }
@@ -709,7 +709,7 @@ mod tests {
             )
         );
 
-        let some_addr: Bech32Address = thread_rng().gen();
+        let some_addr: Bech32Address = thread_rng().r#gen();
 
         // ANCHOR: add_custom_assets
         let amount = 1000;
@@ -1029,7 +1029,7 @@ mod tests {
 
         let provider: Provider = main_wallet.provider().clone();
 
-        let random_salt = || Salt::new(rand::thread_rng().gen());
+        let random_salt = || Salt::new(rand::thread_rng().r#gen());
         // ANCHOR: show_contract_is_too_big
         let contract = Contract::load_from(
             contract_binary,

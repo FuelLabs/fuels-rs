@@ -510,7 +510,7 @@ async fn wallet_transfer_respects_maturity_and_expiration() -> Result<()> {
     let wallet_balance = wallet.get_asset_balance(&asset_id).await?;
 
     let provider = wallet.provider();
-    let receiver = thread_rng().gen::<Bech32Address>();
+    let receiver = thread_rng().r#gen::<Bech32Address>();
 
     let maturity = 10;
     let expiration = 20;

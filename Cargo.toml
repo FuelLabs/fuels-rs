@@ -33,7 +33,7 @@ members = [
 
 [workspace.package]
 authors = ["Fuel Labs <contact@fuel.sh>"]
-edition = "2021"
+edition = "2024"
 homepage = "https://fuel.network/"
 readme = "README.md"
 license = "Apache-2.0"

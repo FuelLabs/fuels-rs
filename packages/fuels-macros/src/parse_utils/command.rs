@@ -1,10 +1,10 @@
 use proc_macro2::{Ident, TokenStream};
 use syn::{
+    Error, Meta,
+    Meta::List,
     parse::{ParseStream, Parser},
     punctuated::Punctuated,
     token::Comma,
-    Error, Meta,
-    Meta::List,
 };
 
 #[derive(Debug)]

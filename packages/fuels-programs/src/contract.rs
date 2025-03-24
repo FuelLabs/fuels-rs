@@ -114,7 +114,12 @@ mod tests {
         let Error::Other(msg) = error else {
             panic!("expected an error of type `Other`");
         };
-        assert_eq!(msg, format!("could not autoload storage slots from file: {storage_slots_path:?}. Either provide the file or disable autoloading in `StorageConfiguration`"));
+        assert_eq!(
+            msg,
+            format!(
+                "could not autoload storage slots from file: {storage_slots_path:?}. Either provide the file or disable autoloading in `StorageConfiguration`"
+            )
+        );
     }
 
     fn save_slots(slots: &Vec<StorageSlot>, path: &Path) {

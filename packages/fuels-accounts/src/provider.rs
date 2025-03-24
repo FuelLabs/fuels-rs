@@ -30,6 +30,7 @@ use fuels_core::types::coin_type_id::CoinTypeId;
 use fuels_core::{
     constants::{DEFAULT_GAS_ESTIMATION_BLOCK_HORIZON, DEFAULT_GAS_ESTIMATION_TOLERANCE},
     types::{
+        DryRun, DryRunner,
         bech32::{Bech32Address, Bech32ContractId},
         block::{Block, Header},
         chain_info::ChainInfo,
@@ -43,7 +44,6 @@ use fuels_core::{
         transaction_builders::{Blob, BlobId},
         transaction_response::TransactionResponse,
         tx_status::TxStatus,
-        DryRun, DryRunner,
     },
 };
 pub use retry_util::{Backoff, RetryConfig};
@@ -276,7 +276,7 @@ impl Provider {
         &self,
         coin_ids: impl IntoIterator<Item = (&'a (Bech32Address, AssetId), &'a Vec<CoinTypeId>)>,
     ) -> Result<()> {
-        use fuels_core::types::errors::{transaction, Error};
+        use fuels_core::types::errors::{Error, transaction};
 
         if let Some(((addr, asset_id), coin_type_id)) = self.find_in_cache(coin_ids).await {
             let msg = match coin_type_id {
@@ -284,7 +284,9 @@ impl Provider {
                 CoinTypeId::Nonce(nonce) => format!("message with nonce: `{nonce}`"),
             };
             Err(Error::Transaction(transaction::Reason::Validation(
-                format!("{msg} was submitted recently in a transaction - attempting to spend it again will result in an error. Wallet address: `{addr}`, asset id: `{asset_id}`"),
+                format!(
+                    "{msg} was submitted recently in a transaction - attempting to spend it again will result in an error. Wallet address: `{addr}`, asset id: `{asset_id}`"
+                ),
             )))
         } else {
             Ok(())
