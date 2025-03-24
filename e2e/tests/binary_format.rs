@@ -1,8 +1,8 @@
 #[cfg(test)]
 mod tests {
+    use std::{convert::TryInto, ops::Range};
+
     use fuels::programs::executable::{Executable, Regular};
-    use std::convert::TryInto;
-    use std::ops::Range;
 
     const DATA_OFFSET_LOCATION: Range<usize> = 8..16;
     const CONFIGURABLES_OFFSET_LOCATION: Range<usize> = 16..24;

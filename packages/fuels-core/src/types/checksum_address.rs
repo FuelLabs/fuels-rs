@@ -1,5 +1,6 @@
-use crate::types::errors::{Error, Result};
 use sha2::{Digest, Sha256};
+
+use crate::types::errors::{Error, Result};
 
 pub fn checksum_encode(address: &str) -> Result<String> {
     let trimmed = address.trim_start_matches("0x");

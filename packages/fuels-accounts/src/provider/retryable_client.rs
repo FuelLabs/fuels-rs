@@ -362,11 +362,11 @@ impl RetryableClient {
 }
 
 mod custom_queries {
-    use fuel_core_client::client::schema::blob::BlobIdFragment;
-    use fuel_core_client::client::schema::schema;
     use fuel_core_client::client::schema::{
         BlobId, ContractId, TransactionId,
+        blob::BlobIdFragment,
         contract::{ContractByIdArgsFields, ContractIdFragment},
+        schema,
         tx::TransactionIdFragment,
     };
 

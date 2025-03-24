@@ -8,12 +8,12 @@ use fuels_core::{
     },
 };
 
-use crate::assembly::script_and_predicate_loader::{
-    extract_data_offset, has_configurables_section_offset,
-};
 use crate::{
     DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE,
-    assembly::script_and_predicate_loader::{LoaderCode, extract_configurables_offset},
+    assembly::script_and_predicate_loader::{
+        LoaderCode, extract_configurables_offset, extract_data_offset,
+        has_configurables_section_offset,
+    },
 };
 
 /// This struct represents a standard executable with its associated bytecode and configurables.
@@ -208,10 +208,12 @@ fn validate_loader_can_be_made_from_code(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use fuels_core::Configurables;
     use std::io::Write;
+
+    use fuels_core::Configurables;
     use tempfile::NamedTempFile;
+
+    use super::*;
 
     fn legacy_indicating_instruction() -> Vec<u8> {
         fuel_asm::op::jmpf(0x0, 0x02).to_bytes().to_vec()

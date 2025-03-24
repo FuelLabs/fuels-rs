@@ -15,12 +15,11 @@ use fuels_core::{
     },
 };
 
-use crate::DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE;
-
 use super::{
     BlobsNotUploaded, Contract, Loader, StorageConfiguration, compute_contract_id_and_state_root,
     validate_path_and_extension,
 };
+use crate::DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE;
 
 #[derive(Clone, Debug)]
 pub struct DeployResponse {

@@ -11,9 +11,8 @@ use fuels_core::{
     },
 };
 
-use crate::{DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE, assembly::contract_call::loader_contract_asm};
-
 use super::{Contract, DeployResponse, Regular, compute_contract_id_and_state_root};
+use crate::{DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE, assembly::contract_call::loader_contract_asm};
 
 #[derive(Debug, Clone)]
 pub struct BlobsUploaded {

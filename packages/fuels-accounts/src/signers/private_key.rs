@@ -72,9 +72,8 @@ mod tests {
 
     use rand::{SeedableRng, rngs::StdRng};
 
-    use crate::signers::derivation::DEFAULT_DERIVATION_PATH;
-
     use super::*;
+    use crate::signers::derivation::DEFAULT_DERIVATION_PATH;
 
     #[tokio::test]
     async fn mnemonic_generation() -> Result<()> {

@@ -1,17 +1,16 @@
-use color_eyre::eyre::OptionExt;
 use std::{
     fs,
     path::{Path, PathBuf},
 };
-use toml::Value;
 
 use clap::{Parser, Subcommand};
 use color_eyre::{
     Result,
-    eyre::{ContextCompat, bail},
+    eyre::{ContextCompat, OptionExt, bail},
 };
 use fuels_accounts::provider::SUPPORTED_FUEL_CORE_VERSION;
 use semver::Version;
+use toml::Value;
 
 fn write_version_to_file(version: Version, version_file_path: impl AsRef<Path>) -> Result<()> {
     let Version {

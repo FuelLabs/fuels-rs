@@ -8,7 +8,6 @@ mod retryable_client;
 mod supported_fuel_core_version;
 mod supported_versions;
 
-use crate::provider::cache::CacheableRpcs;
 pub use cache::TtlConfig;
 use cache::{CachedClient, SystemClock};
 use chrono::{DateTime, Utc};
@@ -54,7 +53,7 @@ use tokio::sync::Mutex;
 
 #[cfg(feature = "coin-cache")]
 use crate::coin_cache::CoinsCache;
-use crate::provider::retryable_client::RetryableClient;
+use crate::provider::{cache::CacheableRpcs, retryable_client::RetryableClient};
 
 const NUM_RESULTS_PER_REQUEST: i32 = 100;
 

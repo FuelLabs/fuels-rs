@@ -65,14 +65,13 @@ impl FuelService {
     ) -> ServiceConfig {
         use std::time::Duration;
 
+        #[cfg(feature = "rocksdb")]
+        use fuel_core::state::rocks_db::{ColumnsPolicy, DatabaseConfig};
         use fuel_core::{
             combined_database::CombinedDatabaseConfig,
             fuel_core_graphql_api::ServiceConfig as GraphQLConfig,
         };
         use fuel_core_chain_config::SnapshotReader;
-
-        #[cfg(feature = "rocksdb")]
-        use fuel_core::state::rocks_db::{ColumnsPolicy, DatabaseConfig};
 
         use crate::DbType;
 

@@ -28,11 +28,10 @@ mod unlocked {
     };
     use rand::{CryptoRng, RngCore};
 
+    use super::{Locked, Wallet};
     use crate::{
         Account, ViewOnlyAccount, provider::Provider, signers::private_key::PrivateKeySigner,
     };
-
-    use super::{Locked, Wallet};
 
     #[derive(Debug, Clone)]
     pub struct Unlocked<S> {
@@ -122,9 +121,8 @@ mod locked {
         bech32::Bech32Address, coin_type_id::CoinTypeId, errors::Result, input::Input,
     };
 
-    use crate::{ViewOnlyAccount, provider::Provider};
-
     use super::Wallet;
+    use crate::{ViewOnlyAccount, provider::Provider};
 
     #[derive(Debug, Clone)]
     pub struct Locked {
