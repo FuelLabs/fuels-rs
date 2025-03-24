@@ -377,7 +377,7 @@ mod tests {
         .bin",
             LoadConfiguration::default(),
         )?
-        .deploy(wallet, TxPolicies::default())
+        .deploy_if_not_exists(wallet, TxPolicies::default())
         .await?
         .contract_id;
 

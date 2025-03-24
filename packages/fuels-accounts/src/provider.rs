@@ -366,7 +366,7 @@ impl Provider {
     pub async fn dry_run_opt(
         &self,
         tx: impl Transaction,
-        utxo_validation: Option<bool>,
+        utxo_validation: bool,
         gas_price: Option<u64>,
         at_height: Option<BlockHeight>,
     ) -> Result<TxStatus> {
@@ -374,7 +374,7 @@ impl Provider {
             .uncached_client()
             .dry_run_opt(
                 Transactions::new().insert(tx).as_slice(),
-                utxo_validation,
+                Some(utxo_validation),
                 gas_price,
                 at_height,
             )
@@ -741,9 +741,7 @@ impl Provider {
         let tolerance = tolerance.unwrap_or(DEFAULT_GAS_ESTIMATION_TOLERANCE);
 
         let EstimateGasPrice { gas_price, .. } = self.estimate_gas_price(block_horizon).await?;
-        let tx_status = self
-            .dry_run_opt(tx.clone(), Some(false), None, None)
-            .await?;
+        let tx_status = self.dry_run_opt(tx.clone(), false, None, None).await?;
 
         let total_gas = Self::apply_tolerance(tx_status.total_gas(), tolerance);
         let total_fee = Self::apply_tolerance(tx_status.total_fee(), tolerance);

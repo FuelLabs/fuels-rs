@@ -1987,14 +1987,13 @@ async fn simulations_can_be_made_without_coins() -> Result<()> {
         abi = "e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
     ));
 
-    let wallets = setup_node_with_high_price(false).await?;
-    let wallet = wallets.first().expect("has wallet");
+    let wallet = setup_node_with_high_price(true).await?.pop().unwrap();
 
     let contract_id = Contract::load_from(
         "sway/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
-    .deploy_if_not_exists(wallet, TxPolicies::default())
+    .deploy_if_not_exists(&wallet, TxPolicies::default())
     .await?
     .contract_id;
 
@@ -2015,24 +2014,24 @@ async fn simulations_can_be_made_without_coins() -> Result<()> {
 #[tokio::test]
 #[cfg(any(not(feature = "fuel-core-lib"), feature = "rocksdb"))]
 async fn simulations_can_be_made_at_specific_block_height() -> Result<()> {
-    abigen!(Contract(
-        name = "MyContract",
-        abi = "e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
-    ));
+    let wallet = setup_node_with_high_price(true).await?.pop().unwrap();
 
-    let wallets = setup_node_with_high_price(true).await?;
-    let wallet = wallets.first().expect("has wallet");
-
-    let contract_id = Contract::load_from(
-        "sway/contracts/contract_test/out/release/contract_test.bin",
-        LoadConfiguration::default(),
-    )?
-    .deploy_if_not_exists(wallet, TxPolicies::default())
-    .await?
-    .contract_id;
+    setup_program_test!(
+        Abigen(Contract(
+            name = "MyContract",
+            project = "e2e/sway/contracts/contract_test"
+        )),
+        Deploy(
+            name = "contract_instance",
+            contract = "MyContract",
+            wallet = "wallet",
+            random_salt = false,
+        ),
+    );
+    let contract_id = contract_instance.contract_id();
 
     let provider = wallet.provider();
-    let contract_methods = MyContract::new(&contract_id, wallet.clone()).methods();
+    let contract_methods = contract_instance.methods();
 
     contract_methods.initialize_counter(42).call().await?;
     provider.produce_blocks(5, None).await?;
@@ -2070,14 +2069,13 @@ async fn simulations_can_be_made_without_coins_multicall() -> Result<()> {
         abi = "e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
     ));
 
-    let wallets = setup_node_with_high_price(false).await?;
-    let wallet = wallets.first().expect("has wallet");
+    let wallet = setup_node_with_high_price(true).await?.pop().unwrap();
 
     let contract_id = Contract::load_from(
         "sway/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
-    .deploy_if_not_exists(wallet, TxPolicies::default())
+    .deploy_if_not_exists(&wallet, TxPolicies::default())
     .await?
     .contract_id;
 

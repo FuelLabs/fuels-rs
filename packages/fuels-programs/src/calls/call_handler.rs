@@ -216,12 +216,10 @@ where
                 .build(provider)
                 .await?;
 
-            provider
-                .dry_run_opt(tx, Some(false), Some(0), at_height)
-                .await?
+            provider.dry_run_opt(tx, false, Some(0), at_height).await?
         } else {
             let tx = self.build_tx().await?;
-            provider.dry_run_opt(tx, None, None, at_height).await?
+            provider.dry_run_opt(tx, true, None, at_height).await?
         };
 
         self.get_response(tx_status)
@@ -503,12 +501,10 @@ where
                 .build(provider)
                 .await?;
 
-            provider
-                .dry_run_opt(tx, Some(false), Some(0), at_height)
-                .await?
+            provider.dry_run_opt(tx, false, Some(0), at_height).await?
         } else {
             let tx = self.build_tx().await?;
-            provider.dry_run_opt(tx, None, None, at_height).await?
+            provider.dry_run_opt(tx, true, None, at_height).await?
         };
 
         self.get_response(tx_status)
