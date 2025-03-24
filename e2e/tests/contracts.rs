@@ -1961,15 +1961,27 @@ async fn setup_node_with_high_price(historical_execution: bool) -> Result<Vec<Wa
         ..NodeConfig::default()
     };
 
-    if historical_execution {
-        node_config.database_type = DbType::RocksDb(None);
-        node_config.historical_execution = true;
-    }
-
-    let chain_config = ChainConfig {
+    let mut chain_config = ChainConfig {
         consensus_parameters,
         ..ChainConfig::default()
     };
+
+    if historical_execution {
+        let temp_dir = tempfile::tempdir().expect("failed to make tempdir");
+        let temp_dir_name = temp_dir
+            .path()
+            .file_name()
+            .expect("failed to get file name")
+            .to_string_lossy()
+            .to_string();
+        let temp_database_path = temp_dir.path().join("db");
+
+        node_config.database_type = DbType::RocksDb(Some(temp_database_path));
+        node_config.historical_execution = true;
+
+        chain_config.chain_name = temp_dir_name;
+    }
+
     let wallets = launch_custom_provider_and_get_wallets(
         wallet_config,
         Some(node_config),
@@ -1987,7 +1999,7 @@ async fn simulations_can_be_made_without_coins() -> Result<()> {
         abi = "e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
     ));
 
-    let wallet = setup_node_with_high_price(true).await?.pop().unwrap();
+    let wallet = setup_node_with_high_price(false).await?.pop().unwrap();
 
     let contract_id = Contract::load_from(
         "sway/contracts/contract_test/out/release/contract_test.bin",
