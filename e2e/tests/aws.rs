@@ -3,10 +3,10 @@ mod tests {
     use anyhow::Result;
     use e2e::e2e_helpers::start_aws_kms;
     use fuels::{
-        accounts::{signers::kms::aws::AwsKmsSigner, wallet::Wallet, Account, ViewOnlyAccount},
+        accounts::{Account, ViewOnlyAccount, signers::kms::aws::AwsKmsSigner, wallet::Wallet},
         core::traits::Signer,
         prelude::{
-            launch_provider_and_get_wallet, AssetId, Contract, LoadConfiguration, TxPolicies,
+            AssetId, Contract, LoadConfiguration, TxPolicies, launch_provider_and_get_wallet,
         },
         types::errors::Context,
     };

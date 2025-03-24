@@ -7,8 +7,8 @@ use toml::Value;
 
 use clap::{Parser, Subcommand};
 use color_eyre::{
-    eyre::{bail, ContextCompat},
     Result,
+    eyre::{ContextCompat, bail},
 };
 use fuels_accounts::provider::SUPPORTED_FUEL_CORE_VERSION;
 use semver::Version;

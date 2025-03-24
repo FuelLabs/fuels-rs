@@ -2,8 +2,8 @@ use std::path::PathBuf;
 
 use argh::FromArgs;
 use color_eyre::{
-    eyre::{eyre, Context},
     Result,
+    eyre::{Context, eyre},
 };
 use regex::Regex;
 use versions_replacer::{

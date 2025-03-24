@@ -1,7 +1,7 @@
 use fuel_abi_types::abi::full_program::{FullABIFunction, FullProgramABI};
 use itertools::Itertools;
 use proc_macro2::{Ident, TokenStream};
-use quote::{quote, TokenStreamExt};
+use quote::{TokenStreamExt, quote};
 
 use crate::{
     error::Result,
@@ -13,7 +13,7 @@ use crate::{
         },
         generated_code::GeneratedCode,
     },
-    utils::{ident, TypePath},
+    utils::{TypePath, ident},
 };
 
 pub(crate) fn contract_bindings(

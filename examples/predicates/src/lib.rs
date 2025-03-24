@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use fuels::{
-        accounts::{predicate::Predicate, signers::private_key::PrivateKeySigner, Account},
+        accounts::{Account, predicate::Predicate, signers::private_key::PrivateKeySigner},
         crypto::Message,
         prelude::*,
         types::B512,

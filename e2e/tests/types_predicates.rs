@@ -1,9 +1,9 @@
 use std::{default::Default, path::Path};
 
 use fuels::{
-    accounts::{predicate::Predicate, signers::private_key::PrivateKeySigner, Account},
+    accounts::{Account, predicate::Predicate, signers::private_key::PrivateKeySigner},
     prelude::*,
-    types::{coin::Coin, message::Message, AssetId, Bits256, U256},
+    types::{AssetId, Bits256, U256, coin::Coin, message::Message},
 };
 
 async fn assert_predicate_spendable(data: Vec<u8>, project_path: impl AsRef<Path>) -> Result<()> {
@@ -301,7 +301,6 @@ async fn spend_predicate_coins_messages_bytes_hash() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
         abi = "e2e/sway/types/predicates/predicate_bytes_hash/out/release/predicate_bytes_hash-abi.json"
-
     ));
 
     let bytes = Bytes::from_hex_str(

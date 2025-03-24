@@ -1,19 +1,19 @@
 use fuels_core::{
+    Configurables,
     types::{
         errors::Result,
         transaction::Transaction,
         transaction_builders::{Blob, BlobTransactionBuilder},
         tx_response::TxResponse,
     },
-    Configurables,
 };
 
 use crate::assembly::script_and_predicate_loader::{
     extract_data_offset, has_configurables_section_offset,
 };
 use crate::{
-    assembly::script_and_predicate_loader::{extract_configurables_offset, LoaderCode},
     DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE,
+    assembly::script_and_predicate_loader::{LoaderCode, extract_configurables_offset},
 };
 
 /// This struct represents a standard executable with its associated bytecode and configurables.

@@ -96,7 +96,7 @@ mod tests {
     use fuels_core::types::{coin_type::CoinType, errors::Result};
     use rand::Fill;
 
-    use crate::{launch_custom_provider_and_get_wallets, AssetConfig, WalletsConfig};
+    use crate::{AssetConfig, WalletsConfig, launch_custom_provider_and_get_wallets};
 
     #[tokio::test]
     async fn test_wallet_config() -> Result<()> {
@@ -126,8 +126,8 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_wallet_config_multiple_assets(
-    ) -> std::result::Result<(), Box<dyn std::error::Error>> {
+    async fn test_wallet_config_multiple_assets()
+    -> std::result::Result<(), Box<dyn std::error::Error>> {
         let mut rng = rand::thread_rng();
         let num_wallets = 3;
 

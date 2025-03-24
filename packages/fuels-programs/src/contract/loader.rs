@@ -5,15 +5,15 @@ use fuels_accounts::Account;
 use fuels_core::{
     constants::WORD_SIZE,
     types::{
-        errors::{error, Result},
+        errors::{Result, error},
         transaction::TxPolicies,
         transaction_builders::{Blob, BlobId, BlobTransactionBuilder, TransactionBuilder},
     },
 };
 
-use crate::{assembly::contract_call::loader_contract_asm, DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE};
+use crate::{DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE, assembly::contract_call::loader_contract_asm};
 
-use super::{compute_contract_id_and_state_root, Contract, DeployResponse, Regular};
+use super::{Contract, DeployResponse, Regular, compute_contract_id_and_state_root};
 
 #[derive(Debug, Clone)]
 pub struct BlobsUploaded {

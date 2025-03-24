@@ -1,1 +1,1 @@
-pub use fuel_abi_types::utils::{ident, safe_ident, TypePath};
+pub use fuel_abi_types::utils::{TypePath, ident, safe_ident};

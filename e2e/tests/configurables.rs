@@ -322,8 +322,10 @@ async fn configurable_encoder_config_is_applied() {
             .with_STRUCT(new_struct)
             .expect_err("should error");
 
-        assert!(configurables_error
-            .to_string()
-            .contains("token limit `1` reached while encoding. Try increasing it"),)
+        assert!(
+            configurables_error
+                .to_string()
+                .contains("token limit `1` reached while encoding. Try increasing it"),
+        )
     }
 }

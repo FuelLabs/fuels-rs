@@ -4,9 +4,9 @@ pub use {aws_config, aws_sdk_kms};
 
 use async_trait::async_trait;
 use aws_sdk_kms::{
+    Client,
     primitives::Blob,
     types::{KeySpec, MessageType, SigningAlgorithmSpec},
-    Client,
 };
 use fuel_crypto::{Message, PublicKey, Signature};
 use fuels_core::traits::Signer;
@@ -14,7 +14,7 @@ use fuels_core::types::{
     bech32::{Bech32Address, FUEL_BECH32_HRP},
     errors::{Error, Result},
 };
-use k256::{pkcs8::DecodePublicKey, PublicKey as K256PublicKey};
+use k256::{PublicKey as K256PublicKey, pkcs8::DecodePublicKey};
 
 const AWS_KMS_ERROR_PREFIX: &str = "AWS KMS Error";
 

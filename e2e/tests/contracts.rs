@@ -1,16 +1,16 @@
 use std::time::Duration;
 
 use fuel_tx::{
-    consensus_parameters::{ConsensusParametersV1, FeeParametersV1},
     ConsensusParameters, FeeParameters, Output,
+    consensus_parameters::{ConsensusParametersV1, FeeParametersV1},
 };
 use fuels::{
     accounts::signers::private_key::PrivateKeySigner,
-    core::codec::{calldata, encode_fn_selector, DecoderConfig, EncoderConfig},
+    core::codec::{DecoderConfig, EncoderConfig, calldata, encode_fn_selector},
     prelude::*,
     programs::DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE,
     tx::ContractParameters,
-    types::{errors::transaction::Reason, input::Input, Bits256, Identity},
+    types::{Bits256, Identity, errors::transaction::Reason, input::Input},
 };
 use rand::thread_rng;
 use tokio::time::Instant;
@@ -699,8 +699,8 @@ async fn test_connect_wallet() -> Result<()> {
     Ok(())
 }
 
-async fn setup_output_variable_estimation_test(
-) -> Result<(Vec<Wallet>, [Identity; 3], AssetId, Bech32ContractId)> {
+async fn setup_output_variable_estimation_test()
+-> Result<(Vec<Wallet>, [Identity; 3], AssetId, Bech32ContractId)> {
     let wallet_config = WalletsConfig::new(Some(3), None, None);
     let wallets = launch_custom_provider_and_get_wallets(wallet_config, None, None).await?;
 
@@ -1353,7 +1353,7 @@ fn db_rocksdb() {
     use fuels::{
         accounts::wallet::Wallet,
         client::{PageDirection, PaginationRequest},
-        prelude::{setup_test_provider, DbType, Error, ViewOnlyAccount, DEFAULT_COIN_AMOUNT},
+        prelude::{DEFAULT_COIN_AMOUNT, DbType, Error, ViewOnlyAccount, setup_test_provider},
     };
 
     let temp_dir = tempfile::tempdir().expect("failed to make tempdir");
@@ -2237,9 +2237,9 @@ async fn blob_contract_deployment() -> Result<()> {
         .len();
 
     assert!(
-         contract_size > 150_000,
-         "the testnet size limit was around 100kB, we want a contract bigger than that to reflect prod (current: {contract_size}B)"
-     );
+        contract_size > 150_000,
+        "the testnet size limit was around 100kB, we want a contract bigger than that to reflect prod (current: {contract_size}B)"
+    );
 
     let wallets =
         launch_custom_provider_and_get_wallets(WalletsConfig::new(Some(2), None, None), None, None)
@@ -2251,9 +2251,9 @@ async fn blob_contract_deployment() -> Result<()> {
 
     let contract_max_size = consensus_parameters.contract_params().contract_max_size();
     assert!(
-         contract_size > contract_max_size,
-         "this test should ideally be run with a contract bigger than the max contract size ({contract_max_size}B) so that we know deployment couldn't have happened without blobs"
-     );
+        contract_size > contract_max_size,
+        "this test should ideally be run with a contract bigger than the max contract size ({contract_max_size}B) so that we know deployment couldn't have happened without blobs"
+    );
 
     let contract = Contract::load_from(contract_binary, LoadConfiguration::default())?;
 

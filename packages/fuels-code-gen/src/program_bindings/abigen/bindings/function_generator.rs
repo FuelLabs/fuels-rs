@@ -1,14 +1,14 @@
 use fuel_abi_types::abi::full_program::FullABIFunction;
 use proc_macro2::TokenStream;
-use quote::{quote, ToTokens};
+use quote::{ToTokens, quote};
 
 use crate::{
     error::Result,
     program_bindings::{
         resolved_type::TypeResolver,
-        utils::{get_equivalent_bech32_type, Components},
+        utils::{Components, get_equivalent_bech32_type},
     },
-    utils::{safe_ident, TypePath},
+    utils::{TypePath, safe_ident},
 };
 
 #[derive(Debug)]

@@ -1,6 +1,6 @@
 use fuels_code_gen::utils::TypePath;
 use proc_macro2::{Ident, TokenStream};
-use quote::{quote, ToTokens};
+use quote::{ToTokens, quote};
 use syn::{Attribute, Error, Expr, ExprLit, Fields, Lit, Meta, Result, Variant};
 
 use crate::parse_utils::has_ignore_attr;
@@ -176,7 +176,7 @@ fn validate_variant_type(variant: &Variant) -> Result<()> {
             return Err(Error::new_spanned(
                 named_fields.clone(),
                 "struct like enum variants are not supported".to_string(),
-            ))
+            ));
         }
         Fields::Unnamed(unnamed_fields) => {
             let fields = &unnamed_fields.unnamed;

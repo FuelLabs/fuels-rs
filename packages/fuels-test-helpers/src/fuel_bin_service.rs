@@ -10,7 +10,7 @@ use fuel_core_services::State;
 use fuel_core_types::blockchain::header::LATEST_STATE_TRANSITION_VERSION;
 use fuels_core::{error, types::errors::Result as FuelResult};
 use portpicker::{is_free, pick_unused_port};
-use tempfile::{tempdir, TempDir};
+use tempfile::{TempDir, tempdir};
 use tokio::{process::Command, spawn, task::JoinHandle, time::sleep};
 
 use crate::node_types::{DbType, NodeConfig, Trigger};
@@ -136,7 +136,7 @@ impl FuelService {
                 return Err(error!(
                     IO,
                     "could not find a free port to start a fuel node"
-                ))
+                ));
             }
         };
 
@@ -227,7 +227,9 @@ async fn run_node(extended_config: ExtendedConfig) -> FuelResult<JoinHandle<()>>
             .expect("error: could not find `fuel-core` in PATH`");
         let stdout = String::from_utf8_lossy(&result.stdout);
         let stderr = String::from_utf8_lossy(&result.stderr);
-        eprintln!("the exit status from the fuel binary was: {result:?}, stdout: {stdout}, stderr: {stderr}");
+        eprintln!(
+            "the exit status from the fuel binary was: {result:?}, stdout: {stdout}, stderr: {stderr}"
+        );
     });
 
     Ok(join_handle)

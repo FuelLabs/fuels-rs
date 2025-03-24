@@ -163,8 +163,8 @@ mod tests {
     use std::sync::Mutex;
 
     use fuel_core_client::client::schema::{
-        node_info::{IndexationFlags, TxPoolStats},
         U64,
+        node_info::{IndexationFlags, TxPoolStats},
     };
     use fuel_types::ChainId;
 

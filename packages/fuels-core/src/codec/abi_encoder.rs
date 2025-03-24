@@ -4,7 +4,7 @@ use std::default::Default;
 
 use crate::{
     codec::abi_encoder::bounded_encoder::BoundedEncoder,
-    types::{errors::Result, Token},
+    types::{Token, errors::Result},
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -53,9 +53,9 @@ mod tests {
     use crate::{
         to_named,
         types::{
+            StaticStringToken, U256,
             errors::Error,
             param_types::{EnumVariants, ParamType},
-            StaticStringToken, U256,
         },
     };
 

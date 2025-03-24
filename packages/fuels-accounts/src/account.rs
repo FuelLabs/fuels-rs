@@ -328,7 +328,7 @@ mod tests {
     use fuel_tx::{Address, ConsensusParameters, Output, Transaction as FuelTransaction};
     use fuels_core::{
         traits::Signer,
-        types::{transaction::Transaction, DryRun, DryRunner},
+        types::{DryRun, DryRunner, transaction::Transaction},
     };
 
     use super::*;
@@ -418,7 +418,12 @@ mod tests {
         assert_eq!(signature, tx_signature);
 
         // Check if the signature is what we expect it to be
-        assert_eq!(signature, Signature::from_str("faa616776a1c336ef6257f7cb0cb5cd932180e2d15faba5f17481dae1cbcaf314d94617bd900216a6680bccb1ea62438e4ca93b0d5733d33788ef9d79cc24e9f")?);
+        assert_eq!(
+            signature,
+            Signature::from_str(
+                "faa616776a1c336ef6257f7cb0cb5cd932180e2d15faba5f17481dae1cbcaf314d94617bd900216a6680bccb1ea62438e4ca93b0d5733d33788ef9d79cc24e9f"
+            )?
+        );
 
         // Recover the address that signed the transaction
         let recovered_address = signature.recover(&message)?;

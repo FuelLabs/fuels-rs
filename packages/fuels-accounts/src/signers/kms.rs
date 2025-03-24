@@ -7,8 +7,8 @@ mod signature_utils {
     use fuel_crypto::{Message, Signature};
     use fuels_core::types::errors::{Error, Result};
     use k256::{
-        ecdsa::{RecoveryId, Signature as K256Signature, VerifyingKey},
         PublicKey as K256PublicKey,
+        ecdsa::{RecoveryId, Signature as K256Signature, VerifyingKey},
     };
 
     pub fn normalize_signature(

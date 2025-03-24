@@ -10,7 +10,7 @@ use google_cloud_kms::client::Client;
 use google_cloud_kms::grpc::kms::v1::crypto_key_version::CryptoKeyVersionAlgorithm::EcSignSecp256k1Sha256;
 use google_cloud_kms::grpc::kms::v1::digest::Digest::Sha256;
 use google_cloud_kms::grpc::kms::v1::{AsymmetricSignRequest, Digest, GetPublicKeyRequest};
-use k256::{pkcs8::DecodePublicKey, PublicKey as K256PublicKey};
+use k256::{PublicKey as K256PublicKey, pkcs8::DecodePublicKey};
 
 use super::signature_utils;
 

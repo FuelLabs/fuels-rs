@@ -3,7 +3,7 @@ use std::{collections::HashMap, io::Read};
 use fuel_abi_types::abi::unified_program::UnifiedProgramABI;
 use itertools::Itertools;
 
-use crate::{error, types::param_types::ParamType, Result};
+use crate::{Result, error, types::param_types::ParamType};
 
 use super::{ABIDecoder, DecoderConfig};
 

@@ -1,7 +1,7 @@
 use std::vec::IntoIter;
 
 use proc_macro2::{Span, TokenStream};
-use syn::{parse::Parser, punctuated::Punctuated, spanned::Spanned, token::Comma, LitStr, Result};
+use syn::{LitStr, Result, parse::Parser, punctuated::Punctuated, spanned::Spanned, token::Comma};
 
 use crate::parse_utils::validate_no_duplicates;
 

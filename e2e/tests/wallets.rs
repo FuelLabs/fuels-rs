@@ -3,7 +3,7 @@ use fuels::{
     prelude::*,
     types::{coin_type::CoinType, input::Input, output::Output},
 };
-use rand::{thread_rng, Rng};
+use rand::{Rng, thread_rng};
 
 async fn assert_address_balance(
     address: &Bech32Address,

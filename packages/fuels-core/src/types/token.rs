@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::types::{
     core::U256,
-    errors::{error, Error, Result},
+    errors::{Error, Result, error},
     param_types::EnumVariants,
 };
 
