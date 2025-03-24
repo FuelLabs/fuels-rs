@@ -1,4 +1,4 @@
-use fuels_core::types::errors::{error, Error};
+use fuels_core::types::errors::{Error, error};
 
 pub fn prepend_msg<'a>(msg: impl AsRef<str> + 'a) -> impl Fn(Error) -> Error + 'a {
     move |err| match err {

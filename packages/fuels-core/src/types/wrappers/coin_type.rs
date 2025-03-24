@@ -3,7 +3,7 @@
 use fuel_core_client::client::types::CoinType as ClientCoinType;
 
 use crate::types::{
-    bech32::Bech32Address, coin::Coin, coin_type_id::CoinTypeId, message::Message, AssetId,
+    AssetId, bech32::Bech32Address, coin::Coin, coin_type_id::CoinTypeId, message::Message,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

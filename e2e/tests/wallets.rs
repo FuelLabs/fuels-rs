@@ -3,7 +3,7 @@ use fuels::{
     prelude::*,
     types::{coin_type::CoinType, input::Input, output::Output},
 };
-use rand::{thread_rng, Rng};
+use rand::{Rng, thread_rng};
 
 async fn assert_address_balance(
     address: &Bech32Address,
@@ -510,7 +510,7 @@ async fn wallet_transfer_respects_maturity_and_expiration() -> Result<()> {
     let wallet_balance = wallet.get_asset_balance(&asset_id).await?;
 
     let provider = wallet.provider();
-    let receiver = thread_rng().gen::<Bech32Address>();
+    let receiver = thread_rng().r#gen::<Bech32Address>();
 
     let maturity = 10;
     let expiration = 20;

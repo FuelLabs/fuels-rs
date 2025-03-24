@@ -1,7 +1,7 @@
 use fuels::{
     core::codec::DecoderConfig,
     prelude::*,
-    types::{errors::transaction::Reason, AsciiString, Bits256, SizedAsciiString},
+    types::{AsciiString, Bits256, SizedAsciiString, errors::transaction::Reason},
 };
 
 #[tokio::test]
@@ -1634,7 +1634,10 @@ async fn can_configure_decoder_for_contract_log_decoding() -> Result<()> {
         );
 
         let logs = response.decode_logs();
-        assert!(!logs.filter_failed().is_empty(), "Should have had failed to decode logs since there are more tokens than what is supported by default");
+        assert!(
+            !logs.filter_failed().is_empty(),
+            "Should have had failed to decode logs since there are more tokens than what is supported by default"
+        );
     }
     {
         // Single call: increasing limits makes the test pass
@@ -1669,7 +1672,10 @@ async fn can_configure_decoder_for_contract_log_decoding() -> Result<()> {
         );
 
         let logs = response.decode_logs();
-        assert!(!logs.filter_failed().is_empty(), "should have had failed to decode logs since there are more tokens than what is supported by default");
+        assert!(
+            !logs.filter_failed().is_empty(),
+            "should have had failed to decode logs since there are more tokens than what is supported by default"
+        );
     }
     {
         // Multi call: increasing limits makes the test pass

@@ -3,25 +3,26 @@ use std::{fmt::Debug, iter::repeat, sync::Arc};
 use async_trait::async_trait;
 use fuel_crypto::Signature;
 use fuel_tx::{
+    BlobIdExt, Chargeable, Output, Transaction as FuelTransaction, UniqueIdentifier, Witness,
     field::{Policies as PoliciesField, Witnesses},
     policies::{Policies, PolicyType},
-    BlobIdExt, Chargeable, Output, Transaction as FuelTransaction, UniqueIdentifier, Witness,
 };
 use fuel_types::bytes::padded_len_usize;
 use itertools::Itertools;
 
 use super::{
-    generate_missing_witnesses, impl_tx_builder_trait, resolve_fuel_inputs, BuildableTransaction,
-    Strategy, TransactionBuilder, UnresolvedWitnessIndexes, GAS_ESTIMATION_BLOCK_HORIZON,
+    BuildableTransaction, GAS_ESTIMATION_BLOCK_HORIZON, Strategy, TransactionBuilder,
+    UnresolvedWitnessIndexes, generate_missing_witnesses, impl_tx_builder_trait,
+    resolve_fuel_inputs,
 };
 use crate::{
     constants::SIGNATURE_WITNESS_SIZE,
     traits::Signer,
     types::{
-        errors::{error, error_transaction, Result},
+        DryRunner,
+        errors::{Result, error, error_transaction},
         input::Input,
         transaction::{BlobTransaction, EstimablePredicates, Transaction, TxPolicies},
-        DryRunner,
     },
     utils::{calculate_witnesses_size, sealed},
 };

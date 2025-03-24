@@ -5,7 +5,7 @@ use fuels_core::types::{
     coin::Coin,
     coin_type::CoinType,
     coin_type_id::CoinTypeId,
-    errors::{error, Error, Result},
+    errors::{Error, Result, error},
     input::Input,
     transaction_builders::TransactionBuilder,
 };

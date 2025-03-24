@@ -1,9 +1,9 @@
 use crate::{
     codec::{
-        utils::{CodecDirection, CounterWithLimit},
         EncoderConfig,
+        utils::{CodecDirection, CounterWithLimit},
     },
-    types::{errors::Result, EnumSelector, StaticStringToken, Token, U256},
+    types::{EnumSelector, StaticStringToken, Token, U256, errors::Result},
 };
 
 pub(crate) struct BoundedEncoder {

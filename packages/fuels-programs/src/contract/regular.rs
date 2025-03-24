@@ -3,6 +3,7 @@ use std::{default::Default, fmt::Debug, path::Path};
 use fuel_tx::{Bytes32, ContractId, Salt, StorageSlot, TxId};
 use fuels_accounts::Account;
 use fuels_core::{
+    Configurables,
     constants::WORD_SIZE,
     error,
     types::{
@@ -12,15 +13,13 @@ use fuels_core::{
         transaction_builders::{Blob, CreateTransactionBuilder},
         tx_status::Success,
     },
-    Configurables,
 };
-
-use crate::DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE;
 
 use super::{
-    compute_contract_id_and_state_root, validate_path_and_extension, BlobsNotUploaded, Contract,
-    Loader, StorageConfiguration,
+    BlobsNotUploaded, Contract, Loader, StorageConfiguration, compute_contract_id_and_state_root,
+    validate_path_and_extension,
 };
+use crate::DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE;
 
 #[derive(Clone, Debug)]
 pub struct DeployResponse {

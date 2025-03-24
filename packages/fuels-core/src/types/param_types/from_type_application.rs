@@ -6,7 +6,7 @@ use fuel_abi_types::{
 };
 
 use crate::types::{
-    errors::{error, Error, Result},
+    errors::{Error, Result, error},
     param_types::{EnumVariants, NamedParamType, ParamType},
 };
 

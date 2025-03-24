@@ -22,7 +22,7 @@ impl TryFrom<Command> for DeployContractCommand {
         let name = name_values.get_as_lit_str("name")?.value();
         let contract = name_values.get_as_lit_str("contract")?.clone();
         let wallet = name_values.get_as_lit_str("wallet")?.value();
-        let random_salt = name_values.try_get("random_salt").map_or(true, |opt| {
+        let random_salt = name_values.try_get("random_salt").is_none_or(|opt| {
             let Lit::Bool(b) = opt else { return true };
             b.value()
         });

@@ -2,7 +2,7 @@ use std::fmt::{Debug, Display, Formatter};
 
 use serde::{Deserialize, Serialize};
 
-use crate::types::errors::{error, Error, Result};
+use crate::types::errors::{Error, Result, error};
 
 // To be used when interacting with contracts which have string slices in their ABI.
 // The FuelVM strings only support ascii characters.
@@ -14,7 +14,8 @@ pub struct AsciiString {
 impl AsciiString {
     pub fn new(data: String) -> Result<Self> {
         if !data.is_ascii() {
-            return Err(error!(Other,
+            return Err(error!(
+                Other,
                 "`AsciiString` must be constructed from a string containing only ascii encodable characters. Got: `{data}`"
             ));
         }
@@ -88,12 +89,14 @@ pub struct SizedAsciiString<const LEN: usize> {
 impl<const LEN: usize> SizedAsciiString<LEN> {
     pub fn new(data: String) -> Result<Self> {
         if !data.is_ascii() {
-            return Err(error!(Other,
+            return Err(error!(
+                Other,
                 "`SizedAsciiString` must be constructed from a `String` containing only ascii encodable characters. Got: `{data}`"
             ));
         }
         if data.len() != LEN {
-            return Err(error!(Other,
+            return Err(error!(
+                Other,
                 "`SizedAsciiString<{LEN}>` must be constructed from a `String` of length {LEN}. Got: `{data}`"
             ));
         }

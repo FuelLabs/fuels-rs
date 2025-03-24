@@ -4,19 +4,19 @@ mod tests {
 
     use fuels::{
         accounts::{
-            predicate::Predicate, signers::private_key::PrivateKeySigner, wallet::Wallet,
-            ViewOnlyAccount,
+            ViewOnlyAccount, predicate::Predicate, signers::private_key::PrivateKeySigner,
+            wallet::Wallet,
         },
         prelude::Result,
         test_helpers::{setup_single_asset_coins, setup_test_provider},
         types::{
+            AssetId,
             bech32::Bech32Address,
             transaction::TxPolicies,
             transaction_builders::{
                 BuildableTransaction, ScriptTransactionBuilder, TransactionBuilder,
             },
             tx_status::TxStatus,
-            AssetId,
         },
     };
     use rand::thread_rng;

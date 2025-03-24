@@ -38,8 +38,9 @@ pub mod transaction {
     }
 }
 
-use crate::sealed::Sealed;
 use std::fmt::Display;
+
+use crate::sealed::Sealed;
 
 #[derive(thiserror::Error, Debug, Clone)]
 pub enum Error {

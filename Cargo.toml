@@ -33,12 +33,12 @@ members = [
 
 [workspace.package]
 authors = ["Fuel Labs <contact@fuel.sh>"]
-edition = "2021"
+edition = "2024"
 homepage = "https://fuel.network/"
 readme = "README.md"
 license = "Apache-2.0"
 repository = "https://github.com/FuelLabs/fuels-rs"
-rust-version = "1.81.0"
+rust-version = "1.85.0"
 version = "0.71.0"
 
 [workspace.dependencies]

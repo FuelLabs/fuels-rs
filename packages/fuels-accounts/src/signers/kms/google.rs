@@ -1,16 +1,22 @@
 use async_trait::async_trait;
 use fuel_crypto::{Message, PublicKey, Signature};
-use fuels_core::traits::Signer;
-use fuels_core::types::{
-    bech32::{Bech32Address, FUEL_BECH32_HRP},
-    errors::{Error, Result},
+use fuels_core::{
+    traits::Signer,
+    types::{
+        bech32::{Bech32Address, FUEL_BECH32_HRP},
+        errors::{Error, Result},
+    },
 };
 pub use google_cloud_kms;
-use google_cloud_kms::client::Client;
-use google_cloud_kms::grpc::kms::v1::crypto_key_version::CryptoKeyVersionAlgorithm::EcSignSecp256k1Sha256;
-use google_cloud_kms::grpc::kms::v1::digest::Digest::Sha256;
-use google_cloud_kms::grpc::kms::v1::{AsymmetricSignRequest, Digest, GetPublicKeyRequest};
-use k256::{pkcs8::DecodePublicKey, PublicKey as K256PublicKey};
+use google_cloud_kms::{
+    client::Client,
+    grpc::kms::v1::{
+        AsymmetricSignRequest, Digest, GetPublicKeyRequest,
+        crypto_key_version::CryptoKeyVersionAlgorithm::EcSignSecp256k1Sha256,
+        digest::Digest::Sha256,
+    },
+};
+use k256::{PublicKey as K256PublicKey, pkcs8::DecodePublicKey};
 
 use super::signature_utils;
 

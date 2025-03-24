@@ -307,7 +307,7 @@ mod tests {
         use std::collections::HashMap;
 
         use fuels::{
-            prelude::{launch_provider_and_get_wallet, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS},
+            prelude::{DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS, launch_provider_and_get_wallet},
             types::AssetId,
         };
 

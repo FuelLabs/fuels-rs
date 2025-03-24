@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use fuels::{
     prelude::*,
-    types::{Bits256, EvmAddress, Identity, SizedAsciiString, B512, U256},
+    types::{B512, Bits256, EvmAddress, Identity, SizedAsciiString, U256},
 };
 
 pub fn null_contract_id() -> Bech32ContractId {
@@ -63,8 +63,10 @@ async fn call_with_structs() -> Result<()> {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `MyContract`.
     // ANCHOR: struct_generation
-    abigen!(Contract(name="MyContract",
-                     abi="e2e/sway/types/contracts/complex_types_contract/out/release/complex_types_contract-abi.json"));
+    abigen!(Contract(
+        name = "MyContract",
+        abi = "e2e/sway/types/contracts/complex_types_contract/out/release/complex_types_contract-abi.json"
+    ));
 
     // Here we can use `CounterConfig`, a struct originally
     // defined in the contract.

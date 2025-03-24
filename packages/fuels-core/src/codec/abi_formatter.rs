@@ -3,9 +3,8 @@ use std::{collections::HashMap, io::Read};
 use fuel_abi_types::abi::unified_program::UnifiedProgramABI;
 use itertools::Itertools;
 
-use crate::{error, types::param_types::ParamType, Result};
-
 use super::{ABIDecoder, DecoderConfig};
+use crate::{Result, error, types::param_types::ParamType};
 
 pub struct ABIFormatter {
     functions: HashMap<String, Vec<ParamType>>,
@@ -109,9 +108,8 @@ impl ABIFormatter {
 
 #[cfg(test)]
 mod tests {
-    use crate::types::errors::Error;
-
     use super::*;
+    use crate::types::errors::Error;
 
     #[test]
     fn gracefully_handles_missing_fn() {

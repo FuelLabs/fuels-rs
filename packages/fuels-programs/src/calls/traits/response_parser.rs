@@ -1,10 +1,10 @@
 use fuel_tx::Receipt;
 use fuels_core::{
     codec::DecoderConfig,
-    types::{errors::Result, param_types::ParamType, Token},
+    types::{Token, errors::Result, param_types::ParamType},
 };
 
-use crate::calls::{receipt_parser::ReceiptParser, utils::sealed, ContractCall, ScriptCall};
+use crate::calls::{ContractCall, ScriptCall, receipt_parser::ReceiptParser, utils::sealed};
 
 pub trait ResponseParser: sealed::Sealed {
     fn parse_call(

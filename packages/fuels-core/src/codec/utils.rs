@@ -1,4 +1,4 @@
-use crate::types::errors::{error, Result};
+use crate::types::errors::{Result, error};
 
 pub(crate) struct CounterWithLimit {
     count: usize,

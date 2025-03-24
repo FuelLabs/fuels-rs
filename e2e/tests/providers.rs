@@ -5,18 +5,18 @@ use fuel_asm::RegId;
 use fuel_tx::Witness;
 use fuels::{
     accounts::{
-        signers::{fake::FakeSigner, private_key::PrivateKeySigner},
         Account,
+        signers::{fake::FakeSigner, private_key::PrivateKeySigner},
     },
     client::{PageDirection, PaginationRequest},
     prelude::*,
     tx::Receipt,
     types::{
+        Bits256,
         coin_type::CoinType,
         message::Message,
         transaction_builders::{BuildableTransaction, ScriptTransactionBuilder},
         tx_status::{Success, TxStatus},
-        Bits256,
     },
 };
 use rand::thread_rng;
@@ -287,7 +287,10 @@ async fn can_retrieve_latest_block_time() -> Result<()> {
 
 #[tokio::test]
 async fn contract_deployment_respects_maturity_and_expiration() -> Result<()> {
-    abigen!(Contract(name="MyContract", abi="e2e/sway/contracts/transaction_block_height/out/release/transaction_block_height-abi.json"));
+    abigen!(Contract(
+        name = "MyContract",
+        abi = "e2e/sway/contracts/transaction_block_height/out/release/transaction_block_height-abi.json"
+    ));
 
     let wallet = launch_provider_and_get_wallet().await?;
     let provider = wallet.provider().clone();
@@ -823,9 +826,10 @@ async fn transactions_with_the_same_utxo() -> Result<()> {
         err,
         Error::Transaction(transaction::Reason::Validation(..))
     ));
-    assert!(err
-        .to_string()
-        .contains("was submitted recently in a transaction "));
+    assert!(
+        err.to_string()
+            .contains("was submitted recently in a transaction ")
+    );
 
     Ok(())
 }
@@ -1171,7 +1175,7 @@ async fn can_setup_static_gas_price() -> Result<()> {
 
 #[tokio::test]
 async fn tx_with_witness_data() -> Result<()> {
-    use fuel_asm::{op, GTFArgs};
+    use fuel_asm::{GTFArgs, op};
 
     let wallet = launch_provider_and_get_wallet().await?;
     let provider = wallet.provider();

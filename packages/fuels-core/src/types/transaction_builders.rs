@@ -8,17 +8,17 @@ use std::{
 };
 
 use async_trait::async_trait;
-use fuel_asm::{op, GTFArgs, RegId};
+use fuel_asm::{GTFArgs, RegId, op};
 use fuel_crypto::{Hasher, Message as CryptoMessage, Signature};
 use fuel_tx::{
-    field::{Outputs, Policies as PoliciesField, ScriptGasLimit, Witnesses},
-    policies::{Policies, PolicyType},
     Chargeable, ConsensusParameters, Create, Input as FuelInput, Output, Script, StorageSlot,
     Transaction as FuelTransaction, TransactionFee, TxPointer, UniqueIdentifier, Upgrade, Upload,
     UploadBody, Witness,
+    field::{Outputs, Policies as PoliciesField, ScriptGasLimit, Witnesses},
+    policies::{Policies, PolicyType},
 };
 pub use fuel_tx::{UpgradePurpose, UploadSubsection};
-use fuel_types::{bytes::padded_len_usize, Bytes32, Salt};
+use fuel_types::{Bytes32, Salt, bytes::padded_len_usize};
 use itertools::Itertools;
 use script_tx_estimator::ScriptTxEstimator;
 
@@ -26,17 +26,17 @@ use crate::{
     constants::{DEFAULT_GAS_ESTIMATION_BLOCK_HORIZON, SIGNATURE_WITNESS_SIZE, WORD_SIZE},
     traits::Signer,
     types::{
+        Address, AssetId, ContractId, DryRunner,
         bech32::Bech32Address,
         coin::Coin,
         coin_type::CoinType,
-        errors::{error, error_transaction, Result},
+        errors::{Result, error, error_transaction},
         input::Input,
         message::Message,
         transaction::{
             CreateTransaction, EstimablePredicates, ScriptTransaction, Transaction, TxPolicies,
             UpgradeTransaction, UploadTransaction,
         },
-        Address, AssetId, ContractId, DryRunner,
     },
     utils::{calculate_witnesses_size, sealed},
 };
@@ -1509,10 +1509,10 @@ mod tests {
     use std::iter::repeat_with;
 
     use fuel_crypto::Signature;
-    use fuel_tx::{input::coin::CoinSigned, ConsensusParameters, UtxoId};
+    use fuel_tx::{ConsensusParameters, UtxoId, input::coin::CoinSigned};
 
     use super::*;
-    use crate::types::{bech32::Bech32Address, message::MessageStatus, DryRun};
+    use crate::types::{DryRun, bech32::Bech32Address, message::MessageStatus};
 
     #[test]
     fn storage_slots_are_sorted_when_set() {
