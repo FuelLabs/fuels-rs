@@ -357,24 +357,37 @@ mod tests {
             abi = "e2e/sway/contracts/token_ops/out/release/token_ops-abi.json"
         ));
 
+        let temp_dir = tempfile::tempdir().expect("failed to make tempdir");
+        let temp_dir_name = temp_dir
+            .path()
+            .file_name()
+            .expect("failed to get file name")
+            .to_string_lossy()
+            .to_string();
+        let temp_database_path = temp_dir.path().join("db");
+
         let node_config = NodeConfig {
             starting_gas_price: 1100,
-            database_type: DbType::RocksDb(None),
+            database_type: DbType::RocksDb(Some(temp_database_path)),
             historical_execution: true,
             ..NodeConfig::default()
+        };
+
+        let chain_config = ChainConfig {
+            chain_name: temp_dir_name,
+            ..ChainConfig::default()
         };
 
         let wallets = launch_custom_provider_and_get_wallets(
             WalletsConfig::default(),
             Some(node_config),
-            None,
+            Some(chain_config),
         )
         .await?;
         let wallet = wallets.first().expect("is there");
 
         let contract_id = Contract::load_from(
-            "../../e2e/sway/contracts/token_ops/out/release/token_ops\
-        .bin",
+            "../../e2e/sway/contracts/token_ops/out/release/token_ops.bin",
             LoadConfiguration::default(),
         )?
         .deploy_if_not_exists(wallet, TxPolicies::default())
@@ -402,8 +415,11 @@ mod tests {
             // ANCHOR_END: simulate_read_state
         }
         {
-            let block_height = wallet.provider().latest_block_height().await?;
+            let provider = wallet.provider();
+            provider.produce_blocks(2, None).await?;
+            let block_height = provider.latest_block_height().await?;
             let contract_id = contract_id.clone();
+
             // ANCHOR: simulate_read_state_at_height
             let balance = contract_methods
                 .get_balance(contract_id, AssetId::zeroed())
