@@ -1021,9 +1021,11 @@ async fn predicate_encoder_config_is_applied() -> Result<()> {
             .encode_data(4097, 4097)
             .expect_err("should fail");
 
-        assert!(encoding_error
-            .to_string()
-            .contains("token limit `1` reached while encoding"));
+        assert!(
+            encoding_error
+                .to_string()
+                .contains("token limit `1` reached while encoding")
+        );
     }
 
     Ok(())

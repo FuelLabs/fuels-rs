@@ -1,7 +1,7 @@
 use std::{collections::HashSet, iter, vec};
 
 use fuel_abi_types::error_codes::FAILED_TRANSFER_TO_ADDRESS_SIGNAL;
-use fuel_asm::{op, RegId};
+use fuel_asm::{RegId, op};
 use fuel_tx::{AssetId, Bytes32, ContractId, Output, PanicReason, Receipt, TxPointer, UtxoId};
 use fuels_accounts::Account;
 use fuels_core::{
@@ -17,12 +17,12 @@ use fuels_core::{
         },
     },
 };
-use itertools::{chain, Itertools};
+use itertools::{Itertools, chain};
 
 use crate::{
+    DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE,
     assembly::contract_call::{CallOpcodeParamsOffset, ContractCallInstructions},
     calls::ContractCall,
-    DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE,
 };
 
 pub(crate) mod sealed {
@@ -223,7 +223,7 @@ fn generate_custom_outputs(calls: &[ContractCall]) -> Vec<Output> {
     calls
         .iter()
         .flat_map(|call| &call.custom_assets)
-        .group_by(|custom| (custom.0 .0, custom.0 .1.clone()))
+        .group_by(|custom| (custom.0.0, custom.0.1.clone()))
         .into_iter()
         .filter_map(|(asset_id_address, groups_w_same_asset_id_address)| {
             let total_amount_in_group = groups_w_same_asset_id_address
@@ -342,10 +342,10 @@ mod test {
         coin_type::CoinType,
         param_types::ParamType,
     };
-    use rand::{thread_rng, Rng};
+    use rand::{Rng, thread_rng};
 
     use super::*;
-    use crate::calls::{traits::ContractDependencyConfigurator, CallParameters};
+    use crate::calls::{CallParameters, traits::ContractDependencyConfigurator};
 
     fn new_contract_call_with_random_id() -> ContractCall {
         ContractCall {
@@ -363,7 +363,7 @@ mod test {
     }
 
     fn random_bech32_contract_id() -> Bech32ContractId {
-        Bech32ContractId::new("fuel", rand::thread_rng().gen::<[u8; 32]>())
+        Bech32ContractId::new("fuel", rand::thread_rng().r#gen::<[u8; 32]>())
     }
 
     #[test]

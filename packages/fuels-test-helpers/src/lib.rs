@@ -13,7 +13,7 @@ use fuels_core::types::{
     message::{Message, MessageStatus},
 };
 pub use node_types::*;
-use rand::{rngs::StdRng, Fill, Rng, SeedableRng};
+use rand::{Fill, Rng, SeedableRng, rngs::StdRng};
 use utils::{into_coin_configs, into_message_configs};
 pub use wallets_config::*;
 mod node_types;
@@ -172,7 +172,7 @@ fn testnet_chain_config() -> ChainConfig {
 }
 
 pub fn generate_random_salt() -> [u8; 32] {
-    StdRng::from_entropy().gen()
+    StdRng::from_entropy().r#gen()
 }
 
 #[cfg(test)]
@@ -234,9 +234,11 @@ mod tests {
         assert_eq!(coins.len() as u64, number_of_assets * coins_per_asset);
         assert_eq!(unique_asset_ids.len() as u64, number_of_assets);
         // Check that the wallet has base assets to pay for gas
-        assert!(unique_asset_ids
-            .iter()
-            .any(|&asset_id| asset_id == AssetId::zeroed()));
+        assert!(
+            unique_asset_ids
+                .iter()
+                .any(|&asset_id| asset_id == AssetId::zeroed())
+        );
         for asset_id in unique_asset_ids {
             let coins_asset_id: Vec<Coin> = coins
                 .clone()

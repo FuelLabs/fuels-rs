@@ -2,13 +2,14 @@ use core::{fmt::Debug, marker::PhantomData};
 use std::sync::Arc;
 
 use fuel_tx::{AssetId, Bytes32};
-use fuels_accounts::{provider::TransactionCost, Account};
+use fuels_accounts::{Account, provider::TransactionCost};
 use fuels_core::{
     codec::{ABIEncoder, DecoderConfig, EncoderConfig, LogDecoder},
     traits::{Parameterize, Signer, Tokenizable},
     types::{
+        Selector, Token,
         bech32::{Bech32Address, Bech32ContractId},
-        errors::{error, transaction::Reason, Error, Result},
+        errors::{Error, Result, error, transaction::Reason},
         input::Input,
         output::Output,
         transaction::{ScriptTransaction, Transaction, TxPolicies},
@@ -17,16 +18,15 @@ use fuels_core::{
             TransactionBuilder, VariableOutputPolicy,
         },
         tx_status::TxStatus,
-        Selector, Token,
     },
 };
 
 use crate::{
     calls::{
+        CallParameters, ContractCall, Execution, ScriptCall,
         receipt_parser::ReceiptParser,
         traits::{ContractDependencyConfigurator, ResponseParser, TransactionTuner},
         utils::find_id_of_missing_contract,
-        CallParameters, ContractCall, Execution, ScriptCall,
     },
     responses::{CallResponse, SubmitResponse},
 };

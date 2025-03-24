@@ -8,7 +8,7 @@ use crate::{
         utils,
         utils::{find_attr, get_path_from_attr_or, std_lib_path},
     },
-    parse_utils::{validate_and_extract_generic_types, Members},
+    parse_utils::{Members, validate_and_extract_generic_types},
 };
 
 pub fn generate_tokenizable_impl(input: DeriveInput) -> Result<TokenStream> {

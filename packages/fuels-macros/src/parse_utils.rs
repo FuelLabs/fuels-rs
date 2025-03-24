@@ -1,7 +1,7 @@
 pub(crate) use command::Command;
-use itertools::{chain, Itertools};
+use itertools::{Itertools, chain};
 use proc_macro2::{Ident, TokenStream};
-use quote::{quote, ToTokens};
+use quote::{ToTokens, quote};
 use syn::{
     Attribute, DataEnum, DataStruct, Error, Fields, GenericParam, Generics, TypeParam, Variant,
 };
@@ -172,7 +172,7 @@ impl Members {
                             return Err(Error::new_spanned(
                                 named_fields,
                                 "struct-like enum variants are not supported",
-                            ))
+                            ));
                         }
                     }
                     .map(|field| field.ty.into_token_stream())

@@ -5,11 +5,11 @@ use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
 use crate::{
-    error::{error, Result},
+    error::{Result, error},
     program_bindings::{
         custom_types::utils::extract_generic_parameters,
         generated_code::GeneratedCode,
-        utils::{tokenize_generics, Components},
+        utils::{Components, tokenize_generics},
     },
 };
 

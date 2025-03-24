@@ -1,17 +1,16 @@
 use std::{fmt::Debug, fs};
 
 #[cfg(feature = "std")]
-use fuels_core::types::{coin_type_id::CoinTypeId, input::Input, AssetId};
+use fuels_core::types::{AssetId, coin_type_id::CoinTypeId, input::Input};
 use fuels_core::{
-    error,
+    Configurables, error,
     types::{bech32::Bech32Address, errors::Result},
-    Configurables,
 };
 
 #[cfg(feature = "std")]
 use crate::accounts_utils::try_provider_error;
 #[cfg(feature = "std")]
-use crate::{provider::Provider, Account, ViewOnlyAccount};
+use crate::{Account, ViewOnlyAccount, provider::Provider};
 
 #[derive(Debug, Clone)]
 pub struct Predicate {

@@ -1,7 +1,7 @@
 use std::{collections::HashMap, path::Path};
 
 use cargo_metadata::MetadataCommand;
-use color_eyre::{eyre::Context, Result};
+use color_eyre::{Result, eyre::Context};
 use serde::Deserialize;
 
 #[derive(Deserialize)]

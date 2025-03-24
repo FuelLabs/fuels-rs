@@ -9,7 +9,7 @@ mod tests {
         core::{codec::ABIEncoder, traits::Tokenizable},
         macros::wasm_abigen,
         programs::debug::ScriptType,
-        types::{bech32::Bech32Address, errors::Result, AssetId},
+        types::{AssetId, bech32::Bech32Address, errors::Result},
     };
     use fuels_core::codec::abi_formatter::ABIFormatter;
     use wasm_bindgen_test::wasm_bindgen_test;
@@ -217,8 +217,12 @@ mod tests {
 
     #[wasm_bindgen_test]
     fn can_decode_a_contract_calling_script() -> Result<()> {
-        let script = hex::decode("724028d8724428b05d451000724828b82d41148a724029537244292b5d451000724829332d41148a24040000")?;
-        let script_data = hex::decode("000000000000000a00000000000000000000000000000000000000000000000000000000000000001e62ecaa5c32f1e51954f46149d5e542472bdba45838199406464af46ab147ed000000000000290800000000000029260000000000000016636865636b5f7374727563745f696e746567726974790000000201000000000000001400000000000000000000000000000000000000000000000000000000000000001e62ecaa5c32f1e51954f46149d5e542472bdba45838199406464af46ab147ed000000000000298300000000000029a20000000000000017695f616d5f63616c6c65645f646966666572656e746c7900000002011e62ecaa5c32f1e51954f46149d5e542472bdba45838199406464af46ab147ed000000000000007b00000000000001c8")?;
+        let script = hex::decode(
+            "724028d8724428b05d451000724828b82d41148a724029537244292b5d451000724829332d41148a24040000",
+        )?;
+        let script_data = hex::decode(
+            "000000000000000a00000000000000000000000000000000000000000000000000000000000000001e62ecaa5c32f1e51954f46149d5e542472bdba45838199406464af46ab147ed000000000000290800000000000029260000000000000016636865636b5f7374727563745f696e746567726974790000000201000000000000001400000000000000000000000000000000000000000000000000000000000000001e62ecaa5c32f1e51954f46149d5e542472bdba45838199406464af46ab147ed000000000000298300000000000029a20000000000000017695f616d5f63616c6c65645f646966666572656e746c7900000002011e62ecaa5c32f1e51954f46149d5e542472bdba45838199406464af46ab147ed000000000000007b00000000000001c8",
+        )?;
 
         let abi = r#"{
             "programType": "contract",
@@ -442,8 +446,14 @@ mod tests {
         assert!(call_description.gas_forwarded.is_none());
 
         assert_eq!(
-            decoder.decode_fn_args(&call_description.decode_fn_selector().unwrap(), &call_description.encoded_args)?,
-            vec!["AllStruct { some_struct: SomeStruct { field: 2, field_2: true } }", "MemoryAddress { contract_id: std::contract_id::ContractId { bits: Bits256([30, 98, 236, 170, 92, 50, 241, 229, 25, 84, 244, 97, 73, 213, 229, 66, 71, 43, 219, 164, 88, 56, 25, 148, 6, 70, 74, 244, 106, 177, 71, 237]) }, function_selector: 123, function_data: 456 }"]
+            decoder.decode_fn_args(
+                &call_description.decode_fn_selector().unwrap(),
+                &call_description.encoded_args
+            )?,
+            vec![
+                "AllStruct { some_struct: SomeStruct { field: 2, field_2: true } }",
+                "MemoryAddress { contract_id: std::contract_id::ContractId { bits: Bits256([30, 98, 236, 170, 92, 50, 241, 229, 25, 84, 244, 97, 73, 213, 229, 66, 71, 43, 219, 164, 88, 56, 25, 148, 6, 70, 74, 244, 106, 177, 71, 237]) }, function_selector: 123, function_data: 456 }"
+            ]
         );
 
         Ok(())

@@ -7,7 +7,7 @@ use crate::{
     codec::abi_decoder::{
         bounded_decoder::BoundedDecoder, decode_as_debug_str::decode_as_debug_str,
     },
-    types::{errors::Result, param_types::ParamType, Token},
+    types::{Token, errors::Result, param_types::ParamType},
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -142,7 +142,7 @@ mod tests {
         constants::WORD_SIZE,
         to_named,
         traits::Parameterize,
-        types::{errors::Error, param_types::EnumVariants, StaticStringToken, U256},
+        types::{StaticStringToken, U256, errors::Error, param_types::EnumVariants},
     };
 
     #[test]

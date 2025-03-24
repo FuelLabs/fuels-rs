@@ -12,7 +12,7 @@ use fuel_vm::state::ProgramState;
 
 use crate::{
     codec::LogDecoder,
-    types::errors::{transaction::Reason, Error, Result},
+    types::errors::{Error, Result, transaction::Reason},
 };
 
 #[derive(Debug, Clone)]

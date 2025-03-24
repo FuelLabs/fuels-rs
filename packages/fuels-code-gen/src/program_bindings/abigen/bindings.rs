@@ -2,11 +2,11 @@ use crate::{
     error::Result,
     program_bindings::{
         abigen::{
+            ProgramType,
             abigen_target::AbigenTarget,
             bindings::{
                 contract::contract_bindings, predicate::predicate_bindings, script::script_bindings,
             },
-            ProgramType,
         },
         generated_code::GeneratedCode,
     },

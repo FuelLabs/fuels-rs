@@ -5,12 +5,12 @@ use fuels::{
     accounts::signers::private_key::PrivateKeySigner,
     client::{PageDirection, PaginationRequest},
     core::{
+        Configurables,
         codec::{DecoderConfig, EncoderConfig},
         traits::Tokenizable,
-        Configurables,
     },
     prelude::*,
-    programs::{executable::Executable, DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE},
+    programs::{DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE, executable::Executable},
     types::{Bits256, Identity},
 };
 use rand::thread_rng;

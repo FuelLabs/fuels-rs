@@ -4,11 +4,11 @@ use std::net::SocketAddr;
 use fuel_core::service::{Config as ServiceConfig, FuelService as CoreFuelService};
 use fuel_core_chain_config::{ChainConfig, StateConfig};
 use fuel_core_services::State;
-use fuels_core::types::errors::{error, Result};
+use fuels_core::types::errors::{Result, error};
 
+use crate::NodeConfig;
 #[cfg(not(feature = "fuel-core-lib"))]
 use crate::fuel_bin_service::FuelService as BinFuelService;
-use crate::NodeConfig;
 
 pub struct FuelService {
     #[cfg(feature = "fuel-core-lib")]
@@ -65,14 +65,13 @@ impl FuelService {
     ) -> ServiceConfig {
         use std::time::Duration;
 
+        #[cfg(feature = "rocksdb")]
+        use fuel_core::state::rocks_db::{ColumnsPolicy, DatabaseConfig};
         use fuel_core::{
             combined_database::CombinedDatabaseConfig,
             fuel_core_graphql_api::ServiceConfig as GraphQLConfig,
         };
         use fuel_core_chain_config::SnapshotReader;
-
-        #[cfg(feature = "rocksdb")]
-        use fuel_core::state::rocks_db::{ColumnsPolicy, DatabaseConfig};
 
         use crate::DbType;
 

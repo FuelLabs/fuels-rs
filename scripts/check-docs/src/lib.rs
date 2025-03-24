@@ -3,8 +3,8 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use anyhow::{anyhow, bail, Error};
-use itertools::{chain, Itertools};
+use anyhow::{Error, anyhow, bail};
+use itertools::{Itertools, chain};
 use regex::Regex;
 
 pub fn report_errors(error_type: &str, errors: &[Error]) {
@@ -150,7 +150,9 @@ pub fn filter_unused_ends<'a>(ends: &'a [Anchor], pairs: &[(Anchor, Anchor)]) ->
 
 pub fn check_validity_of_anchor_pair(begin: &Anchor, end: &Anchor) -> Option<anyhow::Error> {
     if begin.line_no > end.line_no {
-        Some(anyhow!("The end of the anchor appears before the beginning. End anchor: {end:?}. Begin anchor: {begin:?}"))
+        Some(anyhow!(
+            "The end of the anchor appears before the beginning. End anchor: {end:?}. Begin anchor: {begin:?}"
+        ))
     } else {
         None
     }

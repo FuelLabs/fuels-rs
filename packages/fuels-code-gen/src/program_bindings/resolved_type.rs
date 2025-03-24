@@ -5,10 +5,10 @@ use fuel_abi_types::{
     utils::{self, extract_array_len, extract_generic_name, extract_str_len, has_tuple_format},
 };
 use proc_macro2::{Ident, TokenStream};
-use quote::{quote, ToTokens};
+use quote::{ToTokens, quote};
 
 use crate::{
-    error::{error, Result},
+    error::{Result, error},
     program_bindings::utils::sdk_provided_custom_types_lookup,
     utils::TypePath,
 };

@@ -1,12 +1,12 @@
 use fuels::{
     accounts::signers::kms::aws::{
-        aws_config::{defaults, BehaviorVersion, Region},
+        AwsKmsSigner,
+        aws_config::{BehaviorVersion, Region, defaults},
         aws_sdk_kms::{
+            Client,
             config::Credentials,
             types::{KeySpec, KeyUsageType},
-            Client,
         },
-        AwsKmsSigner,
     },
     prelude::Error,
     types::errors::{Context, Result},

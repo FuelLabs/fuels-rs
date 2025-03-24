@@ -8,7 +8,7 @@ use std::{
 use fuel_abi_types::abi::full_program::FullProgramABI;
 use proc_macro2::Ident;
 
-use crate::error::{error, Error, Result};
+use crate::error::{Error, Result, error};
 
 #[derive(Debug, Clone)]
 pub struct AbigenTarget {
@@ -136,7 +136,7 @@ impl FromStr for ProgramType {
             _ => {
                 return Err(error!(
                     "`{string}` is not a valid program type. Expected one of: `Script`, `Contract`, `Predicate`"
-                ))
+                ));
             }
         };
 

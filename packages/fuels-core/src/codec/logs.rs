@@ -10,7 +10,7 @@ use fuel_tx::{ContractId, Receipt};
 use crate::{
     codec::{ABIDecoder, DecoderConfig},
     traits::{Parameterize, Tokenizable},
-    types::errors::{error, Error, Result},
+    types::errors::{Error, Result, error},
 };
 
 #[derive(Clone)]

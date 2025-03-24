@@ -5,8 +5,8 @@ use itertools::Itertools;
 pub(crate) use load_script::LoadScriptCommand;
 pub(crate) use set_options::{BuildProfile, SetOptionsCommand};
 use syn::{
-    parse::{Parse, ParseStream},
     Result,
+    parse::{Parse, ParseStream},
 };
 
 use crate::setup_program_test::parsing::{

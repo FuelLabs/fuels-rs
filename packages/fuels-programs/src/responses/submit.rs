@@ -9,8 +9,8 @@ use fuels_core::{
 
 use crate::{
     calls::{
-        traits::{ContractDependencyConfigurator, ResponseParser, TransactionTuner},
         CallHandler, ContractCall,
+        traits::{ContractDependencyConfigurator, ResponseParser, TransactionTuner},
     },
     responses::CallResponse,
 };

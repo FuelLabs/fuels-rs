@@ -7,7 +7,7 @@
 //!
 //! For more information on Sway, please visit the [Sway GitHub repository](https://github.com/FuelLabs/sway).
 
-use fuel_asm::{op, Instruction, RegId};
+use fuel_asm::{Instruction, RegId, op};
 use fuels_core::{constants::WORD_SIZE, types::errors::Result};
 use itertools::Itertools;
 
