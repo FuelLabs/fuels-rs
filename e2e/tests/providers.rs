@@ -678,7 +678,7 @@ async fn test_get_spendable_with_exclusion() -> Result<()> {
         let resources = wallet
             .get_spendable_resources(
                 *consensus_parameters.base_asset_id(),
-                requested_amount,
+                requested_amount.into(),
                 None,
             )
             .await
@@ -689,7 +689,7 @@ async fn test_get_spendable_with_exclusion() -> Result<()> {
     {
         let filter = ResourceFilter {
             from: wallet.address().clone(),
-            amount: coin_amount_1,
+            amount: coin_amount_1.into(),
             excluded_utxos: vec![coin_2_utxo_id],
             excluded_message_nonces: vec![message_nonce],
             ..Default::default()
@@ -793,13 +793,13 @@ async fn create_transfer(
 ) -> Result<ScriptTransaction> {
     let asset_id = AssetId::zeroed();
     let inputs = wallet
-        .get_asset_inputs_for_amount(asset_id, amount, None)
+        .get_asset_inputs_for_amount(asset_id, amount.into(), None)
         .await?;
     let outputs = wallet.get_asset_outputs_for_amount(to, asset_id, amount);
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
 
-    wallet.adjust_for_fee(&mut tb, amount).await?;
+    wallet.adjust_for_fee(&mut tb, amount.into()).await?;
     wallet.add_witnesses(&mut tb)?;
 
     tb.build(wallet.provider()).await
@@ -877,16 +877,16 @@ async fn test_caching() -> Result<()> {
 async fn create_revert_tx(wallet: &Wallet) -> Result<ScriptTransaction> {
     let script = std::fs::read("sway/scripts/reverting/out/release/reverting.bin")?;
 
-    let amount = 1;
+    let amount = 1u64;
     let asset_id = AssetId::zeroed();
     let inputs = wallet
-        .get_asset_inputs_for_amount(asset_id, amount, None)
+        .get_asset_inputs_for_amount(asset_id, amount.into(), None)
         .await?;
     let outputs = wallet.get_asset_outputs_for_amount(&Bech32Address::default(), asset_id, amount);
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default())
         .with_script(script);
-    wallet.adjust_for_fee(&mut tb, amount).await?;
+    wallet.adjust_for_fee(&mut tb, amount.into()).await?;
     wallet.add_witnesses(&mut tb)?;
 
     tb.build(wallet.provider()).await
@@ -922,7 +922,7 @@ async fn test_cache_invalidation_on_await() -> Result<()> {
     // tx inputs should be cached and then invalidated due to the tx failing
     let tx_status = provider.send_transaction_and_await_commit(tx).await?;
 
-    assert!(matches!(tx_status, TxStatus::Revert { .. }));
+    assert!(matches!(tx_status, TxStatus::Failure { .. }));
 
     let consensus_parameters = provider.consensus_parameters().await?;
     let coins = wallet

@@ -113,7 +113,7 @@ impl ViewOnlyAccount for Predicate {
     async fn get_asset_inputs_for_amount(
         &self,
         asset_id: AssetId,
-        amount: u64,
+        amount: u128,
         excluded_coins: Option<Vec<CoinTypeId>>,
     ) -> Result<Vec<Input>> {
         Ok(self

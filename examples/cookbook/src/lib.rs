@@ -172,7 +172,6 @@ mod tests {
         let mut outputs = vec![];
         for (id_string, amount) in balances {
             let id = AssetId::from_str(&id_string)?;
-            let amount = amount as u64;
 
             let input = wallet_1
                 .get_asset_inputs_for_amount(id, amount, None)
@@ -181,9 +180,9 @@ mod tests {
 
             // we don't transfer the full base asset so we can cover fees
             let output = if id == *consensus_parameters.base_asset_id() {
-                wallet_1.get_asset_outputs_for_amount(wallet_2.address(), id, amount / 2)
+                wallet_1.get_asset_outputs_for_amount(wallet_2.address(), id, (amount / 2) as u64)
             } else {
-                wallet_1.get_asset_outputs_for_amount(wallet_2.address(), id, amount)
+                wallet_1.get_asset_outputs_for_amount(wallet_2.address(), id, amount as u64)
             };
 
             outputs.extend(output);
@@ -287,7 +286,7 @@ mod tests {
         let base_outputs = hot_wallet.get_asset_outputs_for_amount(
             &receiver,
             *consensus_parameters.base_asset_id(),
-            ask_amount,
+            ask_amount as u64,
         );
         // ANCHOR_END: custom_tx_io_base
 
@@ -335,7 +334,10 @@ mod tests {
         let status = provider.tx_status(&tx_id).await?;
         assert!(matches!(status, TxStatus::Success { .. }));
 
-        let balance = cold_wallet.get_asset_balance(&bridged_asset_id).await?;
+        let balance: u128 = cold_wallet
+            .get_asset_balance(&bridged_asset_id)
+            .await?
+            .into();
         assert_eq!(balance, locked_amount);
         // ANCHOR_END: custom_tx_verify
 

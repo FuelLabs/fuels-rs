@@ -8,9 +8,9 @@ pub mod transaction {
         #[error("squeezedOut: {0}")]
         SqueezedOut(String),
         #[error("reverted: {reason}, receipts: {receipts:?}")]
-        Reverted {
+        Failure {
             reason: String,
-            revert_id: u64,
+            revert_id: Option<u64>,
             receipts: Vec<fuel_tx::Receipt>,
         },
         #[error(": {0}")]
@@ -23,11 +23,11 @@ pub mod transaction {
                 Reason::Builder(msg) => Reason::Builder(format!("{context}: {msg}")),
                 Reason::Validation(msg) => Reason::Validation(format!("{context}: {msg}")),
                 Reason::SqueezedOut(msg) => Reason::SqueezedOut(format!("{context}: {msg}")),
-                Reason::Reverted {
+                Reason::Failure {
                     reason,
                     revert_id,
                     receipts,
-                } => Reason::Reverted {
+                } => Reason::Failure {
                     reason: format!("{context}: {reason}"),
                     revert_id,
                     receipts,

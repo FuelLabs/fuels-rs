@@ -53,9 +53,9 @@ pub(crate) async fn transaction_builder_from_contract_calls(
 
     // Find the spendable resources required for those calls
     let mut asset_inputs = vec![];
-    for (asset_id, amount) in &required_asset_amounts {
+    for &(asset_id, amount) in &required_asset_amounts {
         let resources = account
-            .get_asset_inputs_for_amount(*asset_id, *amount, None)
+            .get_asset_inputs_for_amount(asset_id, amount, None)
             .await?;
         asset_inputs.extend(resources);
     }
@@ -126,7 +126,7 @@ fn compute_calls_instructions_len(calls: &[ContractCall]) -> usize {
 pub(crate) fn calculate_required_asset_amounts(
     calls: &[ContractCall],
     base_asset_id: AssetId,
-) -> Vec<(AssetId, u64)> {
+) -> Vec<(AssetId, u128)> {
     let call_param_assets = calls.iter().map(|call| {
         (
             call.call_parameters.asset_id().unwrap_or(base_asset_id),
@@ -145,7 +145,9 @@ pub(crate) fn calculate_required_asset_amounts(
     grouped_assets
         .into_iter()
         .filter_map(|(asset_id, groups_w_same_asset_id)| {
-            let total_amount_in_group = groups_w_same_asset_id.map(|(_, amount)| amount).sum();
+            let total_amount_in_group = groups_w_same_asset_id
+                .map(|(_, amount)| u128::from(amount))
+                .sum();
 
             (total_amount_in_group != 0).then_some((asset_id, total_amount_in_group))
         })
@@ -317,19 +319,22 @@ pub fn is_missing_output_variables(receipts: &[Receipt]) -> bool {
     )
 }
 
-pub fn find_id_of_missing_contract(receipts: &[Receipt]) -> Option<Bech32ContractId> {
-    receipts.iter().find_map(|receipt| match receipt {
-        Receipt::Panic {
-            reason,
-            contract_id,
-            ..
-        } if *reason.reason() == PanicReason::ContractNotInInputs => {
-            let contract_id = contract_id
-                .expect("panic caused by a contract not in inputs must have a contract id");
-            Some(Bech32ContractId::from(contract_id))
-        }
-        _ => None,
-    })
+pub fn find_ids_of_missing_contracts(receipts: &[Receipt]) -> Vec<Bech32ContractId> {
+    receipts
+        .iter()
+        .filter_map(|receipt| match receipt {
+            Receipt::Panic {
+                reason,
+                contract_id,
+                ..
+            } if *reason.reason() == PanicReason::ContractNotInInputs => {
+                let contract_id = contract_id
+                    .expect("panic caused by a contract not in inputs must have a contract id");
+                Some(Bech32ContractId::from(contract_id))
+            }
+            _ => None,
+        })
+        .collect()
 }
 
 #[cfg(test)]
