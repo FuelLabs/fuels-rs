@@ -21,7 +21,6 @@ itertools = { workspace = true }
 rand = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true }
-fuel-core-client = { workspace = true } #TODO: remove this and use fuels-core types
 
 [dev-dependencies]
 tempfile = "3.8.1"
