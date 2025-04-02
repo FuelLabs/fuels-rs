@@ -1975,6 +1975,7 @@ async fn setup_node_with_high_price() -> Result<Vec<Wallet>> {
     Ok(wallets)
 }
 
+#[cfg(any(not(feature = "fuel-core-lib"), feature = "rocksdb"))]
 async fn setup_node_with_high_price_historical_execution()
 -> Result<(Vec<Wallet>, tempfile::TempDir)> {
     let (wallet_config, mut node_config, chain_config) = config_for_high_price_node();
