@@ -1938,9 +1938,7 @@ async fn variable_output_estimation_is_optimized() -> Result<()> {
     Ok(())
 }
 
-async fn setup_node_with_high_price(
-    historical_execution: bool,
-) -> Result<(Vec<Wallet>, tempfile::TempDir)> {
+fn config_for_high_price_node() -> (WalletsConfig, NodeConfig, ChainConfig) {
     let wallet_config = WalletsConfig::new(None, None, None);
     let fee_parameters = FeeParameters::V1(FeeParametersV1 {
         gas_price_factor: 92000,
@@ -1951,24 +1949,41 @@ async fn setup_node_with_high_price(
         ..Default::default()
     });
 
-    let mut node_config = NodeConfig {
+    let node_config = NodeConfig {
         starting_gas_price: 1100,
         ..NodeConfig::default()
     };
-
-    let temp_dir = tempfile::tempdir().expect("failed to make tempdir");
-
-    if historical_execution {
-        let temp_database_path = temp_dir.path().join("db");
-
-        node_config.database_type = DbType::RocksDb(Some(temp_database_path));
-        node_config.historical_execution = true;
-    }
 
     let chain_config = ChainConfig {
         consensus_parameters,
         ..ChainConfig::default()
     };
+
+    (wallet_config, node_config, chain_config)
+}
+
+async fn setup_node_with_high_price() -> Result<Vec<Wallet>> {
+    let (wallet_config, node_config, chain_config) = config_for_high_price_node();
+
+    let wallets = launch_custom_provider_and_get_wallets(
+        wallet_config,
+        Some(node_config),
+        Some(chain_config),
+    )
+    .await?;
+
+    Ok(wallets)
+}
+
+async fn setup_node_with_high_price_historical_execution()
+-> Result<(Vec<Wallet>, tempfile::TempDir)> {
+    let (wallet_config, mut node_config, chain_config) = config_for_high_price_node();
+
+    let temp_dir = tempfile::tempdir().expect("failed to make tempdir");
+    let temp_database_path = temp_dir.path().join("db");
+
+    node_config.database_type = DbType::RocksDb(Some(temp_database_path));
+    node_config.historical_execution = true;
 
     let wallets = launch_custom_provider_and_get_wallets(
         wallet_config,
@@ -1987,8 +2002,7 @@ async fn simulations_can_be_made_without_coins() -> Result<()> {
         abi = "e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
     ));
 
-    let (mut wallets, _temp_dir) = setup_node_with_high_price(false).await?;
-    let wallet = wallets.pop().unwrap();
+    let wallet = setup_node_with_high_price().await?.pop().unwrap();
 
     let contract_id = Contract::load_from(
         "sway/contracts/contract_test/out/release/contract_test.bin",
@@ -2015,7 +2029,7 @@ async fn simulations_can_be_made_without_coins() -> Result<()> {
 #[tokio::test]
 #[cfg(any(not(feature = "fuel-core-lib"), feature = "rocksdb"))]
 async fn simulations_can_be_made_at_specific_block_height() -> Result<()> {
-    let (mut wallets, _temp_dir) = setup_node_with_high_price(false).await?;
+    let (mut wallets, _temp_dir) = setup_node_with_high_price_historical_execution().await?;
     let wallet = wallets.pop().unwrap();
 
     setup_program_test!(
@@ -2071,8 +2085,7 @@ async fn simulations_can_be_made_without_coins_multicall() -> Result<()> {
         abi = "e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
     ));
 
-    let (mut wallets, _temp_dir) = setup_node_with_high_price(false).await?;
-    let wallet = wallets.pop().unwrap();
+    let wallet = setup_node_with_high_price().await?.pop().unwrap();
 
     let contract_id = Contract::load_from(
         "sway/contracts/contract_test/out/release/contract_test.bin",

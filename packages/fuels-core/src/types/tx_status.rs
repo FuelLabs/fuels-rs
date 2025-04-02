@@ -58,7 +58,7 @@ impl TxStatus {
                 revert_id,
                 ..
             }) => Err(Self::map_revert_error(
-                &receipts,
+                receipts.clone(),
                 reason,
                 *revert_id,
                 log_decoder,
@@ -84,7 +84,7 @@ impl TxStatus {
                 revert_id,
                 ..
             }) => Err(Self::map_revert_error(
-                &receipts,
+                receipts,
                 &reason,
                 revert_id,
                 log_decoder,
@@ -113,7 +113,7 @@ impl TxStatus {
     }
 
     fn map_revert_error(
-        receipts: &[Receipt],
+        receipts: Vec<Receipt>,
         reason: &str,
         revert_id: Option<u64>,
         log_decoder: Option<&LogDecoder>,
