@@ -425,8 +425,8 @@ async fn test_multi_call_contract_with_contract_logs() -> Result<()> {
 }
 
 fn assert_revert_containing_msg(msg: &str, error: Error) {
-    assert!(matches!(error, Error::Transaction(Reason::Reverted { .. })));
-    if let Error::Transaction(Reason::Reverted { reason, .. }) = error {
+    assert!(matches!(error, Error::Transaction(Reason::Failure { .. })));
+    if let Error::Transaction(Reason::Failure { reason, .. }) = error {
         assert!(
             reason.contains(msg),
             "message: \"{msg}\" not contained in reason: \"{reason}\""
@@ -465,7 +465,7 @@ async fn test_revert_logs() -> Result<()> {
             let error = contract_instance
                 .methods()
                 .$method()
-                .simulate(Execution::Realistic)
+                .simulate(Execution::realistic())
                 .await
                 .expect_err("should return a revert error");
 
@@ -537,7 +537,7 @@ async fn test_multi_call_revert_logs_single_contract() -> Result<()> {
             .add_call(call_handler_2);
 
         let error = multi_call_handler
-            .simulate::<((), ())>(Execution::Realistic)
+            .simulate::<((), ())>(Execution::realistic())
             .await
             .expect_err("should return a revert error");
 
@@ -559,7 +559,7 @@ async fn test_multi_call_revert_logs_single_contract() -> Result<()> {
             .add_call(call_handler_2);
 
         let error = multi_call_handler
-            .simulate::<((), ())>(Execution::Realistic)
+            .simulate::<((), ())>(Execution::realistic())
             .await
             .expect_err("should return a revert error");
 
@@ -612,7 +612,7 @@ async fn test_multi_call_revert_logs_multi_contract() -> Result<()> {
             .add_call(call_handler_2);
 
         let error = multi_call_handler
-            .simulate::<((), ())>(Execution::Realistic)
+            .simulate::<((), ())>(Execution::realistic())
             .await
             .expect_err("should return a revert error");
 
@@ -634,7 +634,7 @@ async fn test_multi_call_revert_logs_multi_contract() -> Result<()> {
             .add_call(call_handler_2);
 
         let error = multi_call_handler
-            .simulate::<((), ())>(Execution::Realistic)
+            .simulate::<((), ())>(Execution::realistic())
             .await
             .expect_err("should return a revert error");
 
@@ -951,7 +951,7 @@ async fn test_script_require_log() -> Result<()> {
         ($arg:expr, simulate, $msg:expr) => {
             let error = script_instance
                 .main($arg)
-                .simulate(Execution::Realistic)
+                .simulate(Execution::realistic())
                 .await
                 .expect_err("should return a revert error");
             assert_revert_containing_msg($msg, error);
@@ -1237,7 +1237,7 @@ async fn test_contract_asserts_log() -> Result<()> {
             let error = contract_instance
                 .methods()
                 .$method($($arg,)*)
-                .simulate(Execution::Realistic)
+                .simulate(Execution::realistic())
                 .await
                 .expect_err("should return a revert error");
             assert_revert_containing_msg($msg, error);
@@ -1389,7 +1389,7 @@ async fn test_script_asserts_log() -> Result<()> {
         ($arg:expr, simulate, $msg:expr) => {
             let error = script_instance
                 .main($arg)
-                .simulate(Execution::Realistic)
+                .simulate(Execution::realistic())
                 .await
                 .expect_err("should return a revert error");
             assert_revert_containing_msg($msg, error);
@@ -1408,7 +1408,7 @@ async fn test_script_asserts_log() -> Result<()> {
         ($arg:expr, simulate, $msg:expr) => {
             let error = script_instance
                 .main($arg)
-                .simulate(Execution::Realistic)
+                .simulate(Execution::realistic())
                 .await
                 .expect_err("should return a revert error");
             assert_revert_containing_msg($msg, error);
@@ -1545,7 +1545,7 @@ async fn contract_token_ops_error_messages() -> Result<()> {
 
         let error = contract_methods
             .transfer(1_000_000, asset_id, address.into())
-            .simulate(Execution::Realistic)
+            .simulate(Execution::realistic())
             .await
             .expect_err("should return a revert error");
         assert_revert_containing_msg("failed transfer to address", error);

@@ -91,6 +91,10 @@ impl ExtendedConfig {
             [
                 (self.node_config.vm_backtrace, "--vm-backtrace"),
                 (self.node_config.utxo_validation, "--utxo-validation"),
+                (
+                    self.node_config.historical_execution,
+                    "--historical-execution",
+                ),
                 (self.node_config.debug, "--debug"),
             ]
             .into_iter()
