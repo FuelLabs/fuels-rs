@@ -1,17 +1,17 @@
-use fuel_crypto::{Message as CryptoMessage, Signature};
 use std::{fmt::Debug, iter::repeat, sync::Arc};
 
 use async_trait::async_trait;
 use fuel_core_client::client::types::assemble_tx::RequiredBalance;
+use fuel_crypto::{Message as CryptoMessage, Signature};
 use fuel_tx::{
+    BlobIdExt, Chargeable, ConsensusParameters, Input as FuelInput, Output,
+    Transaction as FuelTransaction, UniqueIdentifier, Witness,
     field::{Inputs, Policies as PoliciesField, Witnesses},
     input::{
         coin::CoinSigned,
         message::{MessageCoinSigned, MessageDataSigned},
     },
     policies::{Policies, PolicyType},
-    BlobIdExt, Chargeable, ConsensusParameters, Input as FuelInput, Output,
-    Transaction as FuelTransaction, UniqueIdentifier, Witness,
 };
 use fuel_types::bytes::padded_len_usize;
 use itertools::Itertools;
