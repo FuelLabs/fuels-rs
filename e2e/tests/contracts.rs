@@ -1353,12 +1353,6 @@ fn db_rocksdb() {
     };
 
     let temp_dir = tempfile::tempdir().expect("failed to make tempdir");
-    let temp_dir_name = temp_dir
-        .path()
-        .file_name()
-        .expect("failed to get file name")
-        .to_string_lossy()
-        .to_string();
     let temp_database_path = temp_dir.path().join("db");
 
     tokio::runtime::Runtime::new()
@@ -1378,7 +1372,6 @@ fn db_rocksdb() {
             };
 
             let chain_config = ChainConfig {
-                chain_name: temp_dir_name.clone(),
                 consensus_parameters: Default::default(),
                 ..ChainConfig::local_testnet()
             };
@@ -1961,26 +1954,20 @@ async fn setup_node_with_high_price(historical_execution: bool) -> Result<Vec<Wa
         ..NodeConfig::default()
     };
 
-    let mut chain_config = ChainConfig {
-        consensus_parameters,
-        ..ChainConfig::default()
-    };
-
     if historical_execution {
+        // The temp dir will be deleted at the end of this scope
+        // which is ok as we only need an unique path for the db.
         let temp_dir = tempfile::tempdir().expect("failed to make tempdir");
-        let temp_dir_name = temp_dir
-            .path()
-            .file_name()
-            .expect("failed to get file name")
-            .to_string_lossy()
-            .to_string();
         let temp_database_path = temp_dir.path().join("db");
 
         node_config.database_type = DbType::RocksDb(Some(temp_database_path));
         node_config.historical_execution = true;
-
-        chain_config.chain_name = temp_dir_name;
     }
+
+    let chain_config = ChainConfig {
+        consensus_parameters,
+        ..ChainConfig::default()
+    };
 
     let wallets = launch_custom_provider_and_get_wallets(
         wallet_config,
