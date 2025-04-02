@@ -70,11 +70,10 @@ impl Signer for PrivateKeySigner {
 mod tests {
     use std::str::FromStr;
 
-    use rand::{rngs::StdRng, SeedableRng};
-
-    use crate::signers::derivation::DEFAULT_DERIVATION_PATH;
+    use rand::{SeedableRng, rngs::StdRng};
 
     use super::*;
+    use crate::signers::derivation::DEFAULT_DERIVATION_PATH;
 
     #[tokio::test]
     async fn mnemonic_generation() -> Result<()> {
@@ -103,7 +102,12 @@ mod tests {
         let signature = signer.sign(message).await?;
 
         // Check if signature is what we expect it to be
-        assert_eq!(signature, Signature::from_str("0x8eeb238db1adea4152644f1cd827b552dfa9ab3f4939718bb45ca476d167c6512a656f4d4c7356bfb9561b14448c230c6e7e4bd781df5ee9e5999faa6495163d")?);
+        assert_eq!(
+            signature,
+            Signature::from_str(
+                "0x8eeb238db1adea4152644f1cd827b552dfa9ab3f4939718bb45ca476d167c6512a656f4d4c7356bfb9561b14448c230c6e7e4bd781df5ee9e5999faa6495163d"
+            )?
+        );
 
         // Recover address that signed the message
         let recovered_address = signature.recover(&message)?;

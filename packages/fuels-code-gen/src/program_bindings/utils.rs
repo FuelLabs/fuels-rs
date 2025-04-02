@@ -9,7 +9,7 @@ use quote::quote;
 use crate::{
     error::Result,
     program_bindings::resolved_type::{GenericType, ResolvedType, TypeResolver},
-    utils::{self, safe_ident, TypePath},
+    utils::{self, TypePath, safe_ident},
 };
 
 #[derive(Debug)]

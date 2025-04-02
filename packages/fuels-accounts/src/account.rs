@@ -90,7 +90,7 @@ pub trait ViewOnlyAccount: Send + Sync {
     async fn get_spendable_resources(
         &self,
         asset_id: AssetId,
-        amount: u64,
+        amount: u128,
         excluded_coins: Option<Vec<CoinTypeId>>,
     ) -> Result<Vec<CoinType>> {
         let (excluded_utxos, excluded_message_nonces) =
@@ -99,7 +99,7 @@ pub trait ViewOnlyAccount: Send + Sync {
         let filter = ResourceFilter {
             from: self.address().clone(),
             asset_id: Some(asset_id),
-            amount: amount as u128, //TODO: check if we should change fn signatures types as well
+            amount,
             excluded_utxos,
             excluded_message_nonces,
         };
@@ -127,7 +127,7 @@ pub trait ViewOnlyAccount: Send + Sync {
     async fn get_asset_inputs_for_amount(
         &self,
         asset_id: AssetId,
-        amount: u64,
+        amount: u128,
         excluded_coins: Option<Vec<CoinTypeId>>,
     ) -> Result<Vec<Input>>;
 
@@ -138,7 +138,7 @@ pub trait ViewOnlyAccount: Send + Sync {
     async fn adjust_for_fee<Tb: TransactionBuilder + Sync>(
         &self,
         tb: &mut Tb,
-        used_base_amount: u64,
+        used_base_amount: u128,
     ) -> Result<()> {
         let provider = self.try_provider()?;
         let consensus_parameters = provider.consensus_parameters().await?;
@@ -361,7 +361,7 @@ mod tests {
     use fuel_tx::{Address, ConsensusParameters, Output, Transaction as FuelTransaction};
     use fuels_core::{
         traits::Signer,
-        types::{transaction::Transaction, DryRun, DryRunner},
+        types::{DryRun, DryRunner, transaction::Transaction},
     };
 
     use super::*;
@@ -465,7 +465,12 @@ mod tests {
         assert_eq!(signature, tx_signature);
 
         // Check if the signature is what we expect it to be
-        assert_eq!(signature, Signature::from_str("faa616776a1c336ef6257f7cb0cb5cd932180e2d15faba5f17481dae1cbcaf314d94617bd900216a6680bccb1ea62438e4ca93b0d5733d33788ef9d79cc24e9f")?);
+        assert_eq!(
+            signature,
+            Signature::from_str(
+                "faa616776a1c336ef6257f7cb0cb5cd932180e2d15faba5f17481dae1cbcaf314d94617bd900216a6680bccb1ea62438e4ca93b0d5733d33788ef9d79cc24e9f"
+            )?
+        );
 
         // Recover the address that signed the transaction
         let recovered_address = signature.recover(&message)?;

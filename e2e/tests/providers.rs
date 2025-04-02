@@ -5,18 +5,18 @@ use fuel_asm::RegId;
 use fuel_tx::Witness;
 use fuels::{
     accounts::{
-        signers::{fake::FakeSigner, private_key::PrivateKeySigner},
         Account,
+        signers::{fake::FakeSigner, private_key::PrivateKeySigner},
     },
     client::{PageDirection, PaginationRequest},
     prelude::*,
     tx::Receipt,
     types::{
+        Bits256,
         coin_type::CoinType,
         message::Message,
         transaction_builders::{BuildableTransaction, ScriptTransactionBuilder},
         tx_status::{Success, TxStatus},
-        Bits256,
     },
 };
 use rand::thread_rng;
@@ -287,7 +287,10 @@ async fn can_retrieve_latest_block_time() -> Result<()> {
 
 #[tokio::test]
 async fn contract_deployment_respects_maturity_and_expiration() -> Result<()> {
-    abigen!(Contract(name="MyContract", abi="e2e/sway/contracts/transaction_block_height/out/release/transaction_block_height-abi.json"));
+    abigen!(Contract(
+        name = "MyContract",
+        abi = "e2e/sway/contracts/transaction_block_height/out/release/transaction_block_height-abi.json"
+    ));
 
     let wallet = launch_provider_and_get_wallet().await?;
     let provider = wallet.provider().clone();
@@ -372,7 +375,7 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<()> {
 
     //TODO: decide what to do here and what to report to user as gas limit is set automatically
     // assert_eq!(gas_limit, gas_forwarded + gas_used_by_script);
-    assert_eq!(2596, gas_forwarded + gas_used_by_script);
+    assert_eq!(2615, gas_forwarded + gas_used_by_script);
 
     Ok(())
 }
@@ -676,7 +679,7 @@ async fn test_get_spendable_with_exclusion() -> Result<()> {
         let resources = wallet
             .get_spendable_resources(
                 *consensus_parameters.base_asset_id(),
-                requested_amount,
+                requested_amount.into(),
                 None,
             )
             .await
@@ -687,7 +690,7 @@ async fn test_get_spendable_with_exclusion() -> Result<()> {
     {
         let filter = ResourceFilter {
             from: wallet.address().clone(),
-            amount: coin_amount_1 as u128,
+            amount: coin_amount_1.into(),
             excluded_utxos: vec![coin_2_utxo_id],
             excluded_message_nonces: vec![message_nonce],
             ..Default::default()
@@ -791,13 +794,13 @@ async fn create_transfer(
 ) -> Result<ScriptTransaction> {
     let asset_id = AssetId::zeroed();
     let inputs = wallet
-        .get_asset_inputs_for_amount(asset_id, amount, None)
+        .get_asset_inputs_for_amount(asset_id, amount.into(), None)
         .await?;
     let outputs = wallet.get_asset_outputs_for_amount(to, asset_id, amount);
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
 
-    wallet.adjust_for_fee(&mut tb, amount).await?;
+    wallet.adjust_for_fee(&mut tb, amount.into()).await?;
     wallet.add_witnesses(&mut tb)?;
 
     tb.build(wallet.provider()).await
@@ -824,9 +827,10 @@ async fn transactions_with_the_same_utxo() -> Result<()> {
         err,
         Error::Transaction(transaction::Reason::Validation(..))
     ));
-    assert!(err
-        .to_string()
-        .contains("was submitted recently in a transaction "));
+    assert!(
+        err.to_string()
+            .contains("was submitted recently in a transaction ")
+    );
 
     Ok(())
 }
@@ -874,16 +878,16 @@ async fn test_caching() -> Result<()> {
 async fn create_revert_tx(wallet: &Wallet) -> Result<ScriptTransaction> {
     let script = std::fs::read("sway/scripts/reverting/out/release/reverting.bin")?;
 
-    let amount = 1;
+    let amount = 1u64;
     let asset_id = AssetId::zeroed();
     let inputs = wallet
-        .get_asset_inputs_for_amount(asset_id, amount, None)
+        .get_asset_inputs_for_amount(asset_id, amount.into(), None)
         .await?;
     let outputs = wallet.get_asset_outputs_for_amount(&Bech32Address::default(), asset_id, amount);
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default())
         .with_script(script);
-    wallet.adjust_for_fee(&mut tb, amount).await?;
+    wallet.adjust_for_fee(&mut tb, amount.into()).await?;
     wallet.add_witnesses(&mut tb)?;
 
     tb.build(wallet.provider()).await
@@ -919,7 +923,7 @@ async fn test_cache_invalidation_on_await() -> Result<()> {
     // tx inputs should be cached and then invalidated due to the tx failing
     let tx_status = provider.send_transaction_and_await_commit(tx).await?;
 
-    assert!(matches!(tx_status, TxStatus::Revert { .. }));
+    assert!(matches!(tx_status, TxStatus::Failure { .. }));
 
     let consensus_parameters = provider.consensus_parameters().await?;
     let coins = wallet
@@ -1148,7 +1152,7 @@ async fn tx_respects_policies() -> Result<()> {
     assert_eq!(script.witness_limit().unwrap(), witness_limit);
     assert_eq!(script.max_fee().unwrap(), max_fee);
     //TODO: decide what to do here and what to report to user as gas limit is set automatically
-    assert_eq!(script.gas_limit(), 2596);
+    assert_eq!(script.gas_limit(), 2615);
 
     Ok(())
 }
@@ -1174,7 +1178,7 @@ async fn can_setup_static_gas_price() -> Result<()> {
 //TODO: check this test. The code here should not have changed
 #[tokio::test]
 async fn tx_with_witness_data() -> Result<()> {
-    use fuel_asm::{op, GTFArgs};
+    use fuel_asm::{GTFArgs, op};
 
     let wallet = launch_provider_and_get_wallet().await?;
     let provider = wallet.provider();

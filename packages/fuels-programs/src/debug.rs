@@ -2,11 +2,12 @@ use fuel_asm::{Instruction, Opcode};
 use fuels_core::{error, types::errors::Result};
 use itertools::Itertools;
 
-use crate::assembly::script_and_predicate_loader::get_offset_for_section_containing_configurables;
 use crate::{
     assembly::{
         contract_call::{ContractCallData, ContractCallInstructions},
-        script_and_predicate_loader::LoaderCode,
+        script_and_predicate_loader::{
+            LoaderCode, get_offset_for_section_containing_configurables,
+        },
     },
     utils::prepend_msg,
 };
@@ -174,12 +175,11 @@ mod tests {
     use rand::{RngCore, SeedableRng};
     use test_case::test_case;
 
+    use super::*;
     use crate::assembly::{
         contract_call::{CallOpcodeParamsOffset, ContractCallInstructions},
         script_and_predicate_loader::loader_instructions_w_configurables,
     };
-
-    use super::*;
 
     #[test]
     fn can_handle_empty_scripts() {

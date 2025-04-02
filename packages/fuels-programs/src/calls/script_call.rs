@@ -3,7 +3,7 @@ use std::{collections::HashSet, fmt::Debug};
 use fuel_tx::{ContractId, Output};
 use fuels_core::types::{
     bech32::Bech32ContractId,
-    errors::{error, Result},
+    errors::{Result, error},
     input::Input,
 };
 use itertools::chain;

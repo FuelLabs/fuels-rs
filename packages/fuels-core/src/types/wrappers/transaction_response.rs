@@ -22,20 +22,22 @@ impl From<ClientTransactionResponse> for TransactionResponse {
     fn from(client_response: ClientTransactionResponse) -> Self {
         let block_height = match &client_response.status {
             ClientTransactionStatus::Submitted { .. }
-            | ClientTransactionStatus::SqueezedOut { .. } => None,
+            | ClientTransactionStatus::SqueezedOut { .. }
+            | ClientTransactionStatus::PreconfirmationSuccess { .. }
+            | ClientTransactionStatus::PreconfirmationFailure { .. } => None,
             ClientTransactionStatus::Success { block_height, .. }
             | ClientTransactionStatus::Failure { block_height, .. } => Some(*block_height),
-            _ => todo!(), //TODO: add the rest of the statuses
         };
 
         let time = match &client_response.status {
             ClientTransactionStatus::Submitted { .. }
-            | ClientTransactionStatus::SqueezedOut { .. } => None,
+            | ClientTransactionStatus::SqueezedOut { .. }
+            | ClientTransactionStatus::PreconfirmationSuccess { .. }
+            | ClientTransactionStatus::PreconfirmationFailure { .. } => None,
             ClientTransactionStatus::Success { time, .. }
             | ClientTransactionStatus::Failure { time, .. } => {
                 DateTime::from_timestamp(time.to_unix(), 0)
             }
-            _ => todo!(), //TODO: add the rest of the statuses
         };
 
         let transaction = match client_response.transaction {

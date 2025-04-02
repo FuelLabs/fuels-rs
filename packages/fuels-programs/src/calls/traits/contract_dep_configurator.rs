@@ -1,6 +1,6 @@
 use fuels_core::types::bech32::Bech32ContractId;
 
-use crate::calls::{utils::sealed, ContractCall, ScriptCall};
+use crate::calls::{ContractCall, ScriptCall, utils::sealed};
 
 pub trait ContractDependencyConfigurator: sealed::Sealed {
     fn append_external_contract(&mut self, contract_id: Bech32ContractId);

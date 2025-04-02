@@ -1,7 +1,7 @@
 use std::{collections::HashSet, iter, vec};
 
 use fuel_abi_types::error_codes::FAILED_TRANSFER_TO_ADDRESS_SIGNAL;
-use fuel_asm::{op, RegId};
+use fuel_asm::{RegId, op};
 use fuel_tx::{
     Address, AssetId, Bytes32, ContractId, Output, PanicReason, Receipt, TxPointer, UtxoId,
 };
@@ -19,12 +19,12 @@ use fuels_core::{
         },
     },
 };
-use itertools::{chain, Itertools};
+use itertools::{Itertools, chain};
 
 use crate::{
+    DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE,
     assembly::contract_call::{CallOpcodeParamsOffset, ContractCallInstructions},
     calls::ContractCall,
-    DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE,
 };
 
 pub(crate) mod sealed {
@@ -55,9 +55,9 @@ pub(crate) async fn transaction_builder_from_contract_calls(
 
     // Find the spendable resources required for those calls
     let mut asset_inputs = vec![];
-    for (asset_id, amount) in &required_asset_amounts {
+    for &(asset_id, amount) in &required_asset_amounts {
         let resources = account
-            .get_asset_inputs_for_amount(*asset_id, *amount, None)
+            .get_asset_inputs_for_amount(asset_id, amount, None)
             .await?;
         asset_inputs.extend(resources);
     }
@@ -105,7 +105,7 @@ fn compute_calls_instructions_len(calls: &[ContractCall]) -> usize {
 pub(crate) fn calculate_required_asset_amounts(
     calls: &[ContractCall],
     base_asset_id: AssetId,
-) -> Vec<(AssetId, u64)> {
+) -> Vec<(AssetId, u128)> {
     let call_param_assets = calls.iter().map(|call| {
         (
             call.call_parameters.asset_id().unwrap_or(base_asset_id),
@@ -124,7 +124,9 @@ pub(crate) fn calculate_required_asset_amounts(
     grouped_assets
         .into_iter()
         .filter_map(|(asset_id, groups_w_same_asset_id)| {
-            let total_amount_in_group = groups_w_same_asset_id.map(|(_, amount)| amount).sum();
+            let total_amount_in_group = groups_w_same_asset_id
+                .map(|(_, amount)| u128::from(amount))
+                .sum();
 
             (total_amount_in_group != 0).then_some((asset_id, total_amount_in_group))
         })
@@ -202,7 +204,7 @@ fn generate_custom_outputs(calls: &[ContractCall]) -> Vec<Output> {
     calls
         .iter()
         .flat_map(|call| &call.custom_assets)
-        .group_by(|custom| (custom.0 .0, custom.0 .1.clone()))
+        .group_by(|custom| (custom.0.0, custom.0.1.clone()))
         .into_iter()
         .filter_map(|(asset_id_address, groups_w_same_asset_id_address)| {
             let total_amount_in_group = groups_w_same_asset_id_address
@@ -296,19 +298,22 @@ pub fn is_missing_output_variables(receipts: &[Receipt]) -> bool {
     )
 }
 
-pub fn find_id_of_missing_contract(receipts: &[Receipt]) -> Option<Bech32ContractId> {
-    receipts.iter().find_map(|receipt| match receipt {
-        Receipt::Panic {
-            reason,
-            contract_id,
-            ..
-        } if *reason.reason() == PanicReason::ContractNotInInputs => {
-            let contract_id = contract_id
-                .expect("panic caused by a contract not in inputs must have a contract id");
-            Some(Bech32ContractId::from(contract_id))
-        }
-        _ => None,
-    })
+pub fn find_ids_of_missing_contracts(receipts: &[Receipt]) -> Vec<Bech32ContractId> {
+    receipts
+        .iter()
+        .filter_map(|receipt| match receipt {
+            Receipt::Panic {
+                reason,
+                contract_id,
+                ..
+            } if *reason.reason() == PanicReason::ContractNotInInputs => {
+                let contract_id = contract_id
+                    .expect("panic caused by a contract not in inputs must have a contract id");
+                Some(Bech32ContractId::from(contract_id))
+            }
+            _ => None,
+        })
+        .collect()
 }
 
 fn find_base_asset_change_address(outputs: &[Output], base_asset_id: &AssetId) -> Option<Address> {
@@ -352,10 +357,10 @@ mod test {
         coin_type::CoinType,
         param_types::ParamType,
     };
-    use rand::{thread_rng, Rng};
+    use rand::{Rng, thread_rng};
 
     use super::*;
-    use crate::calls::{traits::ContractDependencyConfigurator, CallParameters};
+    use crate::calls::{CallParameters, traits::ContractDependencyConfigurator};
 
     fn new_contract_call_with_random_id() -> ContractCall {
         ContractCall {
@@ -373,7 +378,7 @@ mod test {
     }
 
     fn random_bech32_contract_id() -> Bech32ContractId {
-        Bech32ContractId::new("fuel", rand::thread_rng().gen::<[u8; 32]>())
+        Bech32ContractId::new("fuel", rand::thread_rng().r#gen::<[u8; 32]>())
     }
 
     #[test]

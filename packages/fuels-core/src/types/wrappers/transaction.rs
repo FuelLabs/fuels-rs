@@ -3,6 +3,9 @@ use std::{collections::HashMap, fmt::Debug};
 use async_trait::async_trait;
 use fuel_crypto::{Message, Signature};
 use fuel_tx::{
+    Blob, Bytes32, Cacheable, Chargeable, ConsensusParameters, Create, FormatValidityChecks, Input,
+    Mint, Output, Salt as FuelSalt, Script, StorageSlot, Transaction as FuelTransaction,
+    TransactionFee, UniqueIdentifier, Upgrade, Upload, Witness,
     field::{
         Inputs, MintAmount, MintAssetId, Outputs, Policies as PoliciesField, Script as ScriptField,
         ScriptData, ScriptGasLimit, WitnessLimit, Witnesses,
@@ -14,19 +17,16 @@ use fuel_tx::{
         },
     },
     policies::PolicyType,
-    Blob, Bytes32, Cacheable, Chargeable, ConsensusParameters, Create, FormatValidityChecks, Input,
-    Mint, Output, Salt as FuelSalt, Script, StorageSlot, Transaction as FuelTransaction,
-    TransactionFee, UniqueIdentifier, Upgrade, Upload, Witness,
 };
-use fuel_types::{bytes::padded_len_usize, AssetId, ChainId};
+use fuel_types::{AssetId, ChainId, bytes::padded_len_usize};
 use itertools::Itertools;
 
 use crate::{
     traits::Signer,
     types::{
-        bech32::Bech32Address,
-        errors::{error, error_transaction, Error, Result},
         DryRunner,
+        bech32::Bech32Address,
+        errors::{Error, Result, error, error_transaction},
     },
     utils::{calculate_witnesses_size, sealed},
 };

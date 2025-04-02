@@ -2,13 +2,13 @@ use std::{io::Read, iter::repeat, str};
 
 use crate::{
     codec::{
-        utils::{CodecDirection, CounterWithLimit},
         DecoderConfig,
+        utils::{CodecDirection, CounterWithLimit},
     },
     types::{
-        errors::{error, Result},
-        param_types::{EnumVariants, NamedParamType, ParamType},
         StaticStringToken, Token, U256,
+        errors::{Result, error},
+        param_types::{EnumVariants, NamedParamType, ParamType},
     },
 };
 

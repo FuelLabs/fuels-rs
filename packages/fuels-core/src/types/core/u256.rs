@@ -1,14 +1,14 @@
 #![allow(clippy::assign_op_pattern)]
 
-use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 use uint::construct_uint;
 
 use crate::{
     traits::{Parameterize, Tokenizable},
     types::{
-        errors::{error, Result as FuelsResult},
-        param_types::ParamType,
         Token,
+        errors::{Result as FuelsResult, error},
+        param_types::ParamType,
     },
 };
 

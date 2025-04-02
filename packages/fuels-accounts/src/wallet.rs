@@ -28,11 +28,10 @@ mod unlocked {
     };
     use rand::{CryptoRng, RngCore};
 
-    use crate::{
-        provider::Provider, signers::private_key::PrivateKeySigner, Account, ViewOnlyAccount,
-    };
-
     use super::{Locked, Wallet};
+    use crate::{
+        Account, ViewOnlyAccount, provider::Provider, signers::private_key::PrivateKeySigner,
+    };
 
     #[derive(Debug, Clone)]
     pub struct Unlocked<S> {
@@ -89,7 +88,7 @@ mod unlocked {
         async fn get_asset_inputs_for_amount(
             &self,
             asset_id: AssetId,
-            amount: u64,
+            amount: u128,
             excluded_coins: Option<Vec<CoinTypeId>>,
         ) -> Result<Vec<Input>> {
             Ok(self
@@ -122,9 +121,8 @@ mod locked {
         bech32::Bech32Address, coin_type_id::CoinTypeId, errors::Result, input::Input,
     };
 
-    use crate::{provider::Provider, ViewOnlyAccount};
-
     use super::Wallet;
+    use crate::{ViewOnlyAccount, provider::Provider};
 
     #[derive(Debug, Clone)]
     pub struct Locked {
@@ -159,7 +157,7 @@ mod locked {
         async fn get_asset_inputs_for_amount(
             &self,
             asset_id: AssetId,
-            amount: u64,
+            amount: u128,
             excluded_coins: Option<Vec<CoinTypeId>>,
         ) -> Result<Vec<Input>> {
             Ok(self

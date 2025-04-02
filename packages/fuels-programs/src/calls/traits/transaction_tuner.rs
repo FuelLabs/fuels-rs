@@ -1,16 +1,16 @@
 use fuels_accounts::Account;
 use fuels_core::types::{
-    errors::{error, Result},
+    errors::{Result, error},
     transaction::{ScriptTransaction, TxPolicies},
     transaction_builders::{ScriptTransactionBuilder, TransactionBuilder, VariableOutputPolicy},
 };
 
 use crate::{
-    calls::{
-        utils::{assemble_tx, sealed, transaction_builder_from_contract_calls},
-        ContractCall, ScriptCall,
-    },
     DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE,
+    calls::{
+        ContractCall, ScriptCall,
+        utils::{assemble_tx, sealed, transaction_builder_from_contract_calls},
+    },
 };
 
 #[async_trait::async_trait]

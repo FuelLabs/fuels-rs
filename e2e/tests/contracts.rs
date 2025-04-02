@@ -1,16 +1,16 @@
 use std::time::Duration;
 
 use fuel_tx::{
-    consensus_parameters::{ConsensusParametersV1, FeeParametersV1},
     ConsensusParameters, FeeParameters, Output,
+    consensus_parameters::{ConsensusParametersV1, FeeParametersV1},
 };
 use fuels::{
     accounts::signers::private_key::PrivateKeySigner,
-    core::codec::{calldata, encode_fn_selector, DecoderConfig, EncoderConfig},
+    core::codec::{DecoderConfig, EncoderConfig, calldata, encode_fn_selector},
     prelude::*,
     programs::DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE,
     tx::ContractParameters,
-    types::{errors::transaction::Reason, input::Input, Bits256, Identity},
+    types::{Bits256, Identity, SizedAsciiString, errors::transaction::Reason, input::Input},
 };
 use rand::thread_rng;
 use tokio::time::Instant;
@@ -146,7 +146,7 @@ async fn test_reverting_transaction() -> Result<()> {
 
     assert!(matches!(
         response,
-        Err(Error::Transaction(Reason::Reverted { revert_id, .. })) if revert_id == 128
+        Err(Error::Transaction(Reason::Failure { revert_id, .. })) if revert_id == Some(128)
     ));
 
     Ok(())
@@ -175,14 +175,14 @@ async fn test_multiple_read_calls() -> Result<()> {
     // run a transaction, but just a dry-run
     let stored = contract_methods
         .read()
-        .simulate(Execution::StateReadOnly)
+        .simulate(Execution::state_read_only())
         .await?;
 
     assert_eq!(stored.value, 42);
 
     let stored = contract_methods
         .read()
-        .simulate(Execution::StateReadOnly)
+        .simulate(Execution::state_read_only())
         .await?;
 
     assert_eq!(stored.value, 42);
@@ -295,7 +295,7 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
     let tolerance = Some(0.2);
     let block_horizon = Some(1);
     let _expected_script_gas = 800; //TODO: see todo below
-    let expected_total_gas = 10618;
+    let expected_total_gas = 10641;
     let expected_metered_bytes_size = 824;
 
     let estimated_transaction_cost = contract_instance
@@ -702,8 +702,8 @@ async fn test_connect_wallet() -> Result<()> {
     Ok(())
 }
 
-async fn setup_output_variable_estimation_test(
-) -> Result<(Vec<Wallet>, [Identity; 3], AssetId, Bech32ContractId)> {
+async fn setup_output_variable_estimation_test()
+-> Result<(Vec<Wallet>, [Identity; 3], AssetId, Bech32ContractId)> {
     let wallet_config = WalletsConfig::new(Some(3), None, None);
     let wallets = launch_custom_provider_and_get_wallets(wallet_config, None, None).await?;
 
@@ -750,7 +750,7 @@ async fn test_output_variable_estimation() -> Result<()> {
 
         // assert!(matches!(
         //     response,
-        //     Err(Error::Transaction(Reason::Reverted { .. }))
+        //     Err(Error::Transaction(Reason::Failure { .. }))
         // ));
     }
 
@@ -942,14 +942,14 @@ async fn test_contract_set_estimation() -> Result<()> {
 
         // assert!(matches!(
         //     res,
-        //     Err(Error::Transaction(Reason::Reverted { .. }))
+        //     Err(Error::Transaction(Reason::Failure { .. }))
         // ));
     }
 
     let res = contract_caller_instance
         .methods()
         .increment_from_contract(lib_contract_id, 42)
-        .determine_missing_contracts(None)
+        .determine_missing_contracts()
         .await?
         .call()
         .await?;
@@ -1015,7 +1015,7 @@ async fn test_output_variable_contract_id_estimation_multicall() -> Result<()> {
     multi_call_handler = multi_call_handler.add_call(call_handler);
 
     let call_response = multi_call_handler
-        .determine_missing_contracts(None)
+        .determine_missing_contracts()
         .await?
         .call::<(u64, u64, u64, u64)>()
         .await?;
@@ -1248,8 +1248,6 @@ async fn multi_call_from_calls_with_different_account_types() -> Result<()> {
 
 #[tokio::test]
 async fn low_level_call() -> Result<()> {
-    use fuels::types::SizedAsciiString;
-
     setup_program_test!(
         Wallets("wallet"),
         Abigen(
@@ -1275,77 +1273,75 @@ async fn low_level_call() -> Result<()> {
             random_salt = false,
         ),
     );
+    {
+        let function_selector = encode_fn_selector("initialize_counter");
+        let call_data = calldata!(42u64)?;
+        caller_contract_instance
+            .methods()
+            .call_low_level_call(
+                target_contract_instance.id(),
+                Bytes(function_selector),
+                Bytes(call_data),
+            )
+            .determine_missing_contracts()
+            .await?
+            .call()
+            .await?;
 
-    let function_selector = encode_fn_selector("initialize_counter");
-    let call_data = calldata!(42u64)?;
+        let response = target_contract_instance
+            .methods()
+            .read_counter()
+            .call()
+            .await?;
+        assert_eq!(response.value, 42);
+    }
+    {
+        let function_selector = encode_fn_selector("set_value_multiple_complex");
+        let call_data = calldata!(
+            MyStruct {
+                a: true,
+                b: [1, 2, 3],
+            },
+            SizedAsciiString::<4>::try_from("fuel")?
+        )?;
 
-    caller_contract_instance
-        .methods()
-        .call_low_level_call(
-            target_contract_instance.id(),
-            Bytes(function_selector),
-            Bytes(call_data),
-        )
-        .determine_missing_contracts(None)
-        .await?
-        .call()
-        .await?;
+        caller_contract_instance
+            .methods()
+            .call_low_level_call(
+                target_contract_instance.id(),
+                Bytes(function_selector),
+                Bytes(call_data),
+            )
+            .determine_missing_contracts()
+            .await?
+            .call()
+            .await?;
 
-    let response = target_contract_instance
-        .methods()
-        .read_counter()
-        .call()
-        .await?;
-    assert_eq!(response.value, 42);
+        let result_uint = target_contract_instance
+            .methods()
+            .read_counter()
+            .call()
+            .await?
+            .value;
 
-    let function_selector = encode_fn_selector("set_value_multiple_complex");
-    let call_data = calldata!(
-        MyStruct {
-            a: true,
-            b: [1, 2, 3],
-        },
-        SizedAsciiString::<4>::try_from("fuel")?
-    )?;
+        let result_bool = target_contract_instance
+            .methods()
+            .get_bool_value()
+            .call()
+            .await?
+            .value;
 
-    caller_contract_instance
-        .methods()
-        .call_low_level_call(
-            target_contract_instance.id(),
-            Bytes(function_selector),
-            Bytes(call_data),
-        )
-        .determine_missing_contracts(None)
-        .await?
-        .call()
-        .await?;
+        let result_str = target_contract_instance
+            .methods()
+            .get_str_value()
+            .call()
+            .await?
+            .value;
 
-    let result_uint = target_contract_instance
-        .methods()
-        .read_counter()
-        .call()
-        .await
-        .unwrap()
-        .value;
-
-    let result_bool = target_contract_instance
-        .methods()
-        .get_bool_value()
-        .call()
-        .await
-        .unwrap()
-        .value;
-
-    let result_str = target_contract_instance
-        .methods()
-        .get_str_value()
-        .call()
-        .await
-        .unwrap()
-        .value;
-
-    assert_eq!(result_uint, 2);
-    assert!(result_bool);
-    assert_eq!(result_str, "fuel");
+        assert_eq!(result_uint, 2);
+        assert!(result_bool);
+        assert_eq!(result_str, "fuel");
+    }
 
     Ok(())
 }
@@ -1358,16 +1354,10 @@ fn db_rocksdb() {
     use fuels::{
         accounts::wallet::Wallet,
         client::{PageDirection, PaginationRequest},
-        prelude::{setup_test_provider, DbType, Error, ViewOnlyAccount, DEFAULT_COIN_AMOUNT},
+        prelude::{DEFAULT_COIN_AMOUNT, DbType, Error, ViewOnlyAccount, setup_test_provider},
     };
 
     let temp_dir = tempfile::tempdir().expect("failed to make tempdir");
-    let temp_dir_name = temp_dir
-        .path()
-        .file_name()
-        .expect("failed to get file name")
-        .to_string_lossy()
-        .to_string();
     let temp_database_path = temp_dir.path().join("db");
 
     tokio::runtime::Runtime::new()
@@ -1387,7 +1377,6 @@ fn db_rocksdb() {
             };
 
             let chain_config = ChainConfig {
-                chain_name: temp_dir_name.clone(),
                 consensus_parameters: Default::default(),
                 ..ChainConfig::local_testnet()
             };
@@ -1820,7 +1809,7 @@ async fn contract_encoder_config_is_applied() -> Result<()> {
         let encoding_error = instance_with_encoder_config
             .methods()
             .get(0, 1)
-            .simulate(Execution::Realistic)
+            .simulate(Execution::realistic())
             .await
             .expect_err("should error");
 
@@ -1954,7 +1943,7 @@ async fn variable_output_estimation_is_optimized() -> Result<()> {
     Ok(())
 }
 
-async fn setup_node_with_high_price() -> Result<Vec<Wallet>> {
+fn config_for_high_price_node() -> (WalletsConfig, NodeConfig, ChainConfig) {
     let wallet_config = WalletsConfig::new(None, None, None);
     let fee_parameters = FeeParameters::V1(FeeParametersV1 {
         gas_price_factor: 92000,
@@ -1964,19 +1953,52 @@ async fn setup_node_with_high_price() -> Result<Vec<Wallet>> {
         fee_params: fee_parameters,
         ..Default::default()
     });
-    let node_config = Some(NodeConfig {
+
+    let node_config = NodeConfig {
         starting_gas_price: 1100,
         ..NodeConfig::default()
-    });
+    };
+
     let chain_config = ChainConfig {
         consensus_parameters,
         ..ChainConfig::default()
     };
-    let wallets =
-        launch_custom_provider_and_get_wallets(wallet_config, node_config, Some(chain_config))
-            .await?;
+
+    (wallet_config, node_config, chain_config)
+}
+
+async fn setup_node_with_high_price() -> Result<Vec<Wallet>> {
+    let (wallet_config, node_config, chain_config) = config_for_high_price_node();
+
+    let wallets = launch_custom_provider_and_get_wallets(
+        wallet_config,
+        Some(node_config),
+        Some(chain_config),
+    )
+    .await?;
 
     Ok(wallets)
+}
+
+#[cfg(any(not(feature = "fuel-core-lib"), feature = "rocksdb"))]
+async fn setup_node_with_high_price_historical_execution()
+-> Result<(Vec<Wallet>, tempfile::TempDir)> {
+    let (wallet_config, mut node_config, chain_config) = config_for_high_price_node();
+
+    let temp_dir = tempfile::tempdir().expect("failed to make tempdir");
+    let temp_database_path = temp_dir.path().join("db");
+
+    node_config.database_type = DbType::RocksDb(Some(temp_database_path));
+    node_config.historical_execution = true;
+
+    let wallets = launch_custom_provider_and_get_wallets(
+        wallet_config,
+        Some(node_config),
+        Some(chain_config),
+    )
+    .await?;
+
+    Ok((wallets, temp_dir))
 }
 
 #[tokio::test]
@@ -1986,27 +2008,78 @@ async fn simulations_can_be_made_without_coins() -> Result<()> {
         abi = "e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
     ));
 
-    let wallets = setup_node_with_high_price().await?;
-    let wallet = wallets.first().expect("has wallet");
+    let wallet = setup_node_with_high_price().await?.pop().unwrap();
 
     let contract_id = Contract::load_from(
         "sway/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
-    .deploy_if_not_exists(wallet, TxPolicies::default())
+    .deploy_if_not_exists(&wallet, TxPolicies::default())
     .await?
     .contract_id;
 
     let provider = wallet.provider().clone();
-    let no_funds_wallet = Wallet::random(&mut thread_rng(), provider.clone());
+    let no_funds_wallet = Wallet::random(&mut thread_rng(), provider);
 
     let response = MyContract::new(contract_id, no_funds_wallet)
         .methods()
         .get(5, 6)
-        .simulate(Execution::StateReadOnly)
+        .simulate(Execution::state_read_only())
         .await?;
 
     assert_eq!(response.value, 11);
+
+    Ok(())
+}
+
+#[tokio::test]
+#[cfg(any(not(feature = "fuel-core-lib"), feature = "rocksdb"))]
+async fn simulations_can_be_made_at_specific_block_height() -> Result<()> {
+    let (mut wallets, _temp_dir) = setup_node_with_high_price_historical_execution().await?;
+    let wallet = wallets.pop().unwrap();
+
+    setup_program_test!(
+        Abigen(Contract(
+            name = "MyContract",
+            project = "e2e/sway/contracts/contract_test"
+        )),
+        Deploy(
+            name = "contract_instance",
+            contract = "MyContract",
+            wallet = "wallet",
+            random_salt = false,
+        ),
+    );
+    let contract_id = contract_instance.contract_id();
+
+    let provider = wallet.provider();
+    let contract_methods = contract_instance.methods();
+
+    contract_methods.initialize_counter(42).call().await?;
+    provider.produce_blocks(5, None).await?;
+    let block_height = provider.latest_block_height().await?;
+
+    provider.produce_blocks(5, None).await?;
+    contract_methods.increment_counter(24).call().await?;
+
+    let no_funds_wallet = Wallet::random(&mut thread_rng(), provider.clone());
+    let no_funds_methods = MyContract::new(contract_id, no_funds_wallet).methods();
+    {
+        let response = no_funds_methods
+            .read_counter()
+            .simulate(Execution::state_read_only())
+            .await?;
+
+        assert_eq!(response.value, 66);
+    }
+    {
+        let response = no_funds_methods
+            .read_counter()
+            .simulate(Execution::state_read_only().at_height(block_height))
+            .await?;
+
+        assert_eq!(response.value, 42);
+    }
 
     Ok(())
 }
@@ -2018,20 +2091,19 @@ async fn simulations_can_be_made_without_coins_multicall() -> Result<()> {
         abi = "e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
     ));
 
-    let wallets = setup_node_with_high_price().await?;
-    let wallet = wallets.first().expect("has wallet");
+    let wallet = setup_node_with_high_price().await?.pop().unwrap();
 
     let contract_id = Contract::load_from(
         "sway/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
-    .deploy_if_not_exists(wallet, TxPolicies::default())
+    .deploy_if_not_exists(&wallet, TxPolicies::default())
     .await?
     .contract_id;
 
     let provider = wallet.provider().clone();
 
-    let no_funds_wallet = Wallet::random(&mut thread_rng(), provider.clone());
+    let no_funds_wallet = Wallet::random(&mut thread_rng(), provider);
     let contract_instance = MyContract::new(contract_id, no_funds_wallet.clone());
 
     let contract_methods = contract_instance.methods();
@@ -2044,7 +2116,7 @@ async fn simulations_can_be_made_without_coins_multicall() -> Result<()> {
         .add_call(call_handler_2);
 
     let value: (u64, u64) = multi_call_handler
-        .simulate(Execution::StateReadOnly)
+        .simulate(Execution::state_read_only())
         .await?
         .value;
 
@@ -2242,9 +2314,9 @@ async fn blob_contract_deployment() -> Result<()> {
         .len();
 
     assert!(
-         contract_size > 150_000,
-         "the testnet size limit was around 100kB, we want a contract bigger than that to reflect prod (current: {contract_size}B)"
-     );
+        contract_size > 150_000,
+        "the testnet size limit was around 100kB, we want a contract bigger than that to reflect prod (current: {contract_size}B)"
+    );
 
     let wallets =
         launch_custom_provider_and_get_wallets(WalletsConfig::new(Some(2), None, None), None, None)
@@ -2256,9 +2328,9 @@ async fn blob_contract_deployment() -> Result<()> {
 
     let contract_max_size = consensus_parameters.contract_params().contract_max_size();
     assert!(
-         contract_size > contract_max_size,
-         "this test should ideally be run with a contract bigger than the max contract size ({contract_max_size}B) so that we know deployment couldn't have happened without blobs"
-     );
+        contract_size > contract_max_size,
+        "this test should ideally be run with a contract bigger than the max contract size ({contract_max_size}B) so that we know deployment couldn't have happened without blobs"
+    );
 
     let contract = Contract::load_from(contract_binary, LoadConfiguration::default())?;
 

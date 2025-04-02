@@ -1,9 +1,9 @@
 use std::iter::zip;
 
 use crate::types::{
-    errors::{error, Result},
-    param_types::ParamType,
     Token,
+    errors::{Result, error},
+    param_types::ParamType,
 };
 
 fn inner_types_debug(tokens: &[Token], inner_type: &ParamType, join_str: &str) -> Result<String> {
@@ -87,7 +87,7 @@ pub(crate) fn decode_as_debug_str(param_type: &ParamType, token: &Token) -> Resu
             return Err(error!(
                 Codec,
                 "could not decode debug from param type: `{param_type:?}` and token: `{token:?}`"
-            ))
+            ));
         }
     };
     Ok(result)
@@ -99,8 +99,8 @@ mod tests {
         codec::ABIDecoder,
         traits::Parameterize,
         types::{
-            errors::Result, AsciiString, Bits256, Bytes, EvmAddress, RawSlice, SizedAsciiString,
-            U256,
+            AsciiString, Bits256, Bytes, EvmAddress, RawSlice, SizedAsciiString, U256,
+            errors::Result,
         },
     };
 

@@ -26,7 +26,6 @@ If you need to add specific inputs and outputs to script calls, you can use the 
 
 ```rust,ignore
 {{#include ../../e2e/tests/scripts.rs:script_custom_inputs_outputs}}
-
 ```
 
 > **Note:** if custom inputs include coins that need to be signed, use the `add_signer` method to add the appropriate signer.

@@ -5,12 +5,12 @@ use fuels_core::{
     constants::DEFAULT_CALL_PARAMS_AMOUNT,
     error,
     types::{
+        Selector,
         bech32::{Bech32Address, Bech32ContractId},
         errors::Result,
         input::Input,
         output::Output,
         param_types::ParamType,
-        Selector,
     },
 };
 

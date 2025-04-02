@@ -1,7 +1,7 @@
 use anyhow::Error;
 use check_docs::{
-    extract_starts_and_ends, filter_valid_anchors, find_files, parse_includes, parse_md_files,
-    search_for_pattern, validate_includes, validate_md_files, Anchor, Include,
+    Anchor, Include, extract_starts_and_ends, filter_valid_anchors, find_files, parse_includes,
+    parse_md_files, search_for_pattern, validate_includes, validate_md_files,
 };
 
 enum TestEnum {
@@ -39,11 +39,23 @@ fn test_anchors() -> anyhow::Result<()> {
         &anchor_err_vec,
         "Missing anchor start for Anchor { line_no: 10, name: \"test_no_anchor_beginning\""
     ));
-    assert!(contains_any(&anchor_err_vec, "Couldn't find a matching end anchor for Anchor { line_no: 12, name: \"test_no_anchor_end\""));
-    assert!(contains_any(&anchor_err_vec, "The end of the anchor appears before the beginning. End anchor: Anchor { line_no: 14, name: \"test_end_before_beginning\""));
+    assert!(contains_any(
+        &anchor_err_vec,
+        "Couldn't find a matching end anchor for Anchor { line_no: 12, name: \"test_no_anchor_end\""
+    ));
+    assert!(contains_any(
+        &anchor_err_vec,
+        "The end of the anchor appears before the beginning. End anchor: Anchor { line_no: 14, name: \"test_end_before_beginning\""
+    ));
 
-    assert!(contains_any(&anchor_err_vec, "Found too many matching anchor ends for anchor: Anchor { line_no: 17, name: \"test_same_name_multiple_time\""));
-    assert!(contains_any(&anchor_err_vec, "Found too many matching anchor ends for anchor: Anchor { line_no: 20, name: \"test_same_name_multiple_time\""));
+    assert!(contains_any(
+        &anchor_err_vec,
+        "Found too many matching anchor ends for anchor: Anchor { line_no: 17, name: \"test_same_name_multiple_time\""
+    ));
+    assert!(contains_any(
+        &anchor_err_vec,
+        "Found too many matching anchor ends for anchor: Anchor { line_no: 20, name: \"test_same_name_multiple_time\""
+    ));
     // Caused by too many matching anchors
     assert!(contains_any(
         &anchor_err_vec,
