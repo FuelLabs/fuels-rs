@@ -1938,7 +1938,9 @@ async fn variable_output_estimation_is_optimized() -> Result<()> {
     Ok(())
 }
 
-async fn setup_node_with_high_price(historical_execution: bool) -> Result<Vec<Wallet>> {
+async fn setup_node_with_high_price(
+    historical_execution: bool,
+) -> Result<(Vec<Wallet>, tempfile::TempDir)> {
     let wallet_config = WalletsConfig::new(None, None, None);
     let fee_parameters = FeeParameters::V1(FeeParametersV1 {
         gas_price_factor: 92000,
@@ -1954,10 +1956,9 @@ async fn setup_node_with_high_price(historical_execution: bool) -> Result<Vec<Wa
         ..NodeConfig::default()
     };
 
+    let temp_dir = tempfile::tempdir().expect("failed to make tempdir");
+
     if historical_execution {
-        // The temp dir will be deleted at the end of this scope
-        // which is ok as we only need an unique path for the db.
-        let temp_dir = tempfile::tempdir().expect("failed to make tempdir");
         let temp_database_path = temp_dir.path().join("db");
 
         node_config.database_type = DbType::RocksDb(Some(temp_database_path));
@@ -1976,7 +1977,7 @@ async fn setup_node_with_high_price(historical_execution: bool) -> Result<Vec<Wa
     )
     .await?;
 
-    Ok(wallets)
+    Ok((wallets, temp_dir))
 }
 
 #[tokio::test]
@@ -1986,7 +1987,8 @@ async fn simulations_can_be_made_without_coins() -> Result<()> {
         abi = "e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
     ));
 
-    let wallet = setup_node_with_high_price(false).await?.pop().unwrap();
+    let (mut wallets, _temp_dir) = setup_node_with_high_price(false).await?;
+    let wallet = wallets.pop().unwrap();
 
     let contract_id = Contract::load_from(
         "sway/contracts/contract_test/out/release/contract_test.bin",
@@ -2013,7 +2015,8 @@ async fn simulations_can_be_made_without_coins() -> Result<()> {
 #[tokio::test]
 #[cfg(any(not(feature = "fuel-core-lib"), feature = "rocksdb"))]
 async fn simulations_can_be_made_at_specific_block_height() -> Result<()> {
-    let wallet = setup_node_with_high_price(true).await?.pop().unwrap();
+    let (mut wallets, _temp_dir) = setup_node_with_high_price(false).await?;
+    let wallet = wallets.pop().unwrap();
 
     setup_program_test!(
         Abigen(Contract(
@@ -2068,7 +2071,8 @@ async fn simulations_can_be_made_without_coins_multicall() -> Result<()> {
         abi = "e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
     ));
 
-    let wallet = setup_node_with_high_price(true).await?.pop().unwrap();
+    let (mut wallets, _temp_dir) = setup_node_with_high_price(false).await?;
+    let wallet = wallets.pop().unwrap();
 
     let contract_id = Contract::load_from(
         "sway/contracts/contract_test/out/release/contract_test.bin",
