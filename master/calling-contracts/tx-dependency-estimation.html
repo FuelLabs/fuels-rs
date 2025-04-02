@@ -150,7 +150,7 @@
 
         assert!(matches!(
             response,
-            Err(Error::Transaction(Reason::Reverted { .. }))
+            Err(Error::Transaction(Reason::Failure { .. }))
         ));
 </code></pre>
 <p>As mentioned in previous chapters, you can specify the external contract and add an output variable to resolve this:</p>
@@ -161,18 +161,22 @@
             .call()
             .await?;
 </code></pre>
-<p>But this requires you to know the contract ID of the external contract and the needed number of output variables. Alternatively, by chaining <code>.estimate_tx_dependencies()</code> instead, the dependencies will be estimated by the SDK and set automatically. The optional parameter is the maximum number of simulation attempts:</p>
+<p>But this requires you to know the contract ID of the external contract and the needed number of output variables. Alternatively, by chaining</p>
+<ul>
+<li><code>.with_variable_output_policy(VariableOutputPolicy::EstimateMinimum)</code> and</li>
+<li><code>.determine_missing_contracts()</code></li>
+</ul>
+<p>the dependencies will be estimated by the SDK and set automatically.</p>
 <pre><code class="language-rust ignore">        let response = contract_methods
             .mint_then_increment_from_contract(called_contract_id, amount, address.into())
             .with_variable_output_policy(VariableOutputPolicy::EstimateMinimum)
-            .determine_missing_contracts(Some(2))
+            .determine_missing_contracts()
             .await?
             .call()
             .await?;
 </code></pre>
-<p>The minimal number of attempts corresponds to the number of external contracts and output variables needed and defaults to 10.</p>
 <blockquote>
-<p><strong>Note:</strong> <code>estimate_tx_dependencies()</code> can also be used when working with script calls or multi calls. <code>estimate_tx_dependencies()</code> does not currently resolve the dependencies needed for logging from an external contract. For more information, see <a href="./logs.html">here</a>. If no resolution was found after exhausting all simulation attempts, the last received error will be propagated. The same will happen if an error is unrelated to transaction dependencies.</p>
+<p><strong>Note:</strong> Both <code>with_variable_output_policy</code> and <code>determine_missing_contracts</code> can also be used when working with script calls or multi calls. <code>determine_missing_contracts()</code> will not enable logging from an external contract. For more information, see <a href="./other-contracts.html">here</a>.</p>
 </blockquote>
 
                     </main>

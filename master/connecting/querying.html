@@ -188,7 +188,7 @@
 <pre><code class="language-rust ignore">pub struct ResourceFilter {
     pub from: Bech32Address,
     pub asset_id: Option&lt;AssetId&gt;,
-    pub amount: u64,
+    pub amount: u128,
     pub excluded_utxos: Vec&lt;UtxoId&gt;,
     pub excluded_message_nonces: Vec&lt;Nonce&gt;,
 }

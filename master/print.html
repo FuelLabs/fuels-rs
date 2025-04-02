@@ -385,7 +385,7 @@ To build these tests, run the following command:</p>
 <pre><code class="language-rust ignore">pub struct ResourceFilter {
     pub from: Bech32Address,
     pub asset_id: Option&lt;AssetId&gt;,
-    pub amount: u64,
+    pub amount: u128,
     pub excluded_utxos: Vec&lt;UtxoId&gt;,
     pub excluded_message_nonces: Vec&lt;Nonce&gt;,
 }
@@ -2128,21 +2128,28 @@ let is_error = response.is_err();
 <div style="break-before: page; page-break-before: always;"></div><h1 id="simulating-calls"><a class="header" href="#simulating-calls">Simulating calls</a></h1>
 <p>Sometimes you want to simulate a call to a contract without changing the state of the blockchain. This can be achieved by calling <code>.simulate</code> instead of <code>.call</code> and passing in the desired execution context:</p>
 <ul>
-<li><code>.simulate(Execution::Realistic)</code> simulates the transaction in a manner that closely resembles a real call. You need a wallet with base assets to cover the transaction cost, even though no funds will be consumed. This is useful for validating that a real call would succeed if made at that moment. It allows you to debug issues with your contract without spending gas.</li>
+<li><code>.simulate(Execution::realistic())</code> simulates the transaction in a manner that closely resembles a real call. You need a wallet with base assets to cover the transaction cost, even though no funds will be consumed. This is useful for validating that a real call would succeed if made at that moment. It allows you to debug issues with your contract without spending gas.</li>
 </ul>
 <pre><code class="language-rust ignore">        // you would mint 100 coins if the transaction wasn't simulated
         let counter = contract_methods
             .mint_coins(100)
-            .simulate(Execution::Realistic)
+            .simulate(Execution::realistic())
             .await?;
 </code></pre>
 <ul>
-<li><code>.simulate(Execution::StateReadOnly)</code> disables many validations, adds fake gas, extra variable outputs, blank witnesses, etc., enabling you to read state even with an account that has no funds.</li>
+<li><code>.simulate(Execution::state_read_only())</code> disables many validations, adds fake gas, extra variable outputs, blank witnesses, etc., enabling you to read state even with an account that has no funds.</li>
 </ul>
 <pre><code class="language-rust ignore">            // you don't need any funds to read state
             let balance = contract_methods
                 .get_balance(contract_id, AssetId::zeroed())
-                .simulate(Execution::StateReadOnly)
+                .simulate(Execution::state_read_only())
+                .await?
+                .value;
+</code></pre>
+<p>If the node supports historical execution (the node is using <code>rocksdb</code> and the <code>historical_execution</code> flag has been set), then both execution types can be chained with <code>at_height</code> to simulate the call at a specific block height.</p>
+<pre><code class="language-rust ignore">            let balance = contract_methods
+                .get_balance(contract_id, AssetId::zeroed())
+                .simulate(Execution::state_read_only().at_height(block_height))
                 .await?
                 .value;
 </code></pre>
@@ -2209,7 +2216,7 @@ let is_error = response.is_err();
 
         assert!(matches!(
             response,
-            Err(Error::Transaction(Reason::Reverted { .. }))
+            Err(Error::Transaction(Reason::Failure { .. }))
         ));
 </code></pre>
 <p>As mentioned in previous chapters, you can specify the external contract and add an output variable to resolve this:</p>
@@ -2220,18 +2227,22 @@ let is_error = response.is_err();
             .call()
             .await?;
 </code></pre>
-<p>But this requires you to know the contract ID of the external contract and the needed number of output variables. Alternatively, by chaining <code>.estimate_tx_dependencies()</code> instead, the dependencies will be estimated by the SDK and set automatically. The optional parameter is the maximum number of simulation attempts:</p>
+<p>But this requires you to know the contract ID of the external contract and the needed number of output variables. Alternatively, by chaining</p>
+<ul>
+<li><code>.with_variable_output_policy(VariableOutputPolicy::EstimateMinimum)</code> and</li>
+<li><code>.determine_missing_contracts()</code></li>
+</ul>
+<p>the dependencies will be estimated by the SDK and set automatically.</p>
 <pre><code class="language-rust ignore">        let response = contract_methods
             .mint_then_increment_from_contract(called_contract_id, amount, address.into())
             .with_variable_output_policy(VariableOutputPolicy::EstimateMinimum)
-            .determine_missing_contracts(Some(2))
+            .determine_missing_contracts()
             .await?
             .call()
             .await?;
 </code></pre>
-<p>The minimal number of attempts corresponds to the number of external contracts and output variables needed and defaults to 10.</p>
 <blockquote>
-<p><strong>Note:</strong> <code>estimate_tx_dependencies()</code> can also be used when working with script calls or multi calls. <code>estimate_tx_dependencies()</code> does not currently resolve the dependencies needed for logging from an external contract. For more information, see <a href="calling-contracts/./logs.html">here</a>. If no resolution was found after exhausting all simulation attempts, the last received error will be propagated. The same will happen if an error is unrelated to transaction dependencies.</p>
+<p><strong>Note:</strong> Both <code>with_variable_output_policy</code> and <code>determine_missing_contracts</code> can also be used when working with script calls or multi calls. <code>determine_missing_contracts()</code> will not enable logging from an external contract. For more information, see <a href="calling-contracts/./other-contracts.html">here</a>.</p>
 </blockquote>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="estimating-contract-call-cost"><a class="header" href="#estimating-contract-call-cost">Estimating contract call cost</a></h1>
 <p>With the function <code>estimate_transaction_cost(tolerance: Option&lt;f64&gt;, block_horizon: Option&lt;u32&gt;)</code> provided by <code>CallHandler</code>, you can get a cost estimation for a specific call. The return type, <code>TransactionCost</code>, is a struct that contains relevant information for the estimation:</p>
@@ -2321,7 +2332,7 @@ let is_error = response.is_err();
                 Bytes(function_selector),
                 Bytes(call_data),
             )
-            .determine_missing_contracts(None)
+            .determine_missing_contracts()
             .await?
             .call()
             .await?;
@@ -2860,7 +2871,7 @@ from subsequent callers.</p>
         let base_outputs = hot_wallet.get_asset_outputs_for_amount(
             &amp;receiver,
             *consensus_parameters.base_asset_id(),
-            ask_amount,
+            ask_amount as u64,
         );
 </code></pre>
 <p>Let's repeat the same process but this time for transferring the assets held by the predicate to our cold storage:</p>
@@ -2906,7 +2917,10 @@ from subsequent callers.</p>
 <pre><code class="language-rust ignore">        let status = provider.tx_status(&amp;tx_id).await?;
         assert!(matches!(status, TxStatus::Success { .. }));
 
-        let balance = cold_wallet.get_asset_balance(&amp;bridged_asset_id).await?;
+        let balance: u128 = cold_wallet
+            .get_asset_balance(&amp;bridged_asset_id)
+            .await?
+            .into();
         assert_eq!(balance, locked_amount);
 </code></pre>
 <h2 id="building-a-transaction-without-signatures"><a class="header" href="#building-a-transaction-without-signatures">Building a transaction without signatures</a></h2>
@@ -4126,7 +4140,6 @@ impl LiquidityPool for Contract {
         let mut outputs = vec![];
         for (id_string, amount) in balances {
             let id = AssetId::from_str(&amp;id_string)?;
-            let amount = amount as u64;
 
             let input = wallet_1
                 .get_asset_inputs_for_amount(id, amount, None)
@@ -4135,9 +4148,9 @@ impl LiquidityPool for Contract {
 
             // we don't transfer the full base asset so we can cover fees
             let output = if id == *consensus_parameters.base_asset_id() {
-                wallet_1.get_asset_outputs_for_amount(wallet_2.address(), id, amount / 2)
+                wallet_1.get_asset_outputs_for_amount(wallet_2.address(), id, (amount / 2) as u64)
             } else {
-                wallet_1.get_asset_outputs_for_amount(wallet_2.address(), id, amount)
+                wallet_1.get_asset_outputs_for_amount(wallet_2.address(), id, amount as u64)
             };
 
             outputs.extend(output);

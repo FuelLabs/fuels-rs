@@ -170,7 +170,7 @@
         let base_outputs = hot_wallet.get_asset_outputs_for_amount(
             &amp;receiver,
             *consensus_parameters.base_asset_id(),
-            ask_amount,
+            ask_amount as u64,
         );
 </code></pre>
 <p>Let's repeat the same process but this time for transferring the assets held by the predicate to our cold storage:</p>
@@ -216,7 +216,10 @@
 <pre><code class="language-rust ignore">        let status = provider.tx_status(&amp;tx_id).await?;
         assert!(matches!(status, TxStatus::Success { .. }));
 
-        let balance = cold_wallet.get_asset_balance(&amp;bridged_asset_id).await?;
+        let balance: u128 = cold_wallet
+            .get_asset_balance(&amp;bridged_asset_id)
+            .await?
+            .into();
         assert_eq!(balance, locked_amount);
 </code></pre>
 <h2 id="building-a-transaction-without-signatures"><a class="header" href="#building-a-transaction-without-signatures">Building a transaction without signatures</a></h2>
