@@ -1227,16 +1227,13 @@ async fn tx_with_witness_data() -> Result<()> {
     let expected_data = 15u64;
     let witness = Witness::from(expected_data.to_be_bytes().to_vec());
     tb.witnesses_mut().push(witness);
-    dbg!(&tb.witnesses());
 
     let tx = tb
         .with_tx_policies(TxPolicies::default().with_witness_limit(1000))
         .build(provider)
         .await?;
-    dbg!(&tx);
 
     let status = provider.send_transaction_and_await_commit(tx).await?;
-    dbg!(&status);
 
     match status {
         TxStatus::Success(Success { receipts, .. }) => {

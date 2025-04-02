@@ -236,7 +236,6 @@ async fn pay_with_predicate() -> Result<()> {
     )?
     .deploy_if_not_exists(&predicate, TxPolicies::default())
     .await?;
-    dbg!("halil");
     let contract_methods =
         MyContract::new(deploy_response.contract_id.clone(), predicate.clone()).methods();
 
@@ -249,13 +248,11 @@ async fn pay_with_predicate() -> Result<()> {
         predicate_balance - deploy_fee
     );
 
-    dbg!("halil2");
     let response = contract_methods
         .initialize_counter(42) // Build the ABI call
         .call()
         .await?;
 
-    dbg!("halil3");
     assert_eq!(42, response.value);
     assert_eq!(
         predicate
@@ -1442,7 +1439,6 @@ async fn predicate_tx_input_output() -> Result<()> {
             .await
             .unwrap_err();
 
-        dbg!(err.to_string());
         assert!(err.to_string().contains("PredicateVerificationFailed"));
     }
 

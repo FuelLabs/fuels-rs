@@ -775,9 +775,6 @@ impl ScriptTransactionBuilder {
         if let Some(max_fee) = self.tx_policies.max_fee() {
             tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
         };
-        dbg!(&tx);
-        dbg!(&required_balances);
-        dbg!("y");
         let fuel_tx = FuelTransaction::Script(tx);
         let mut tx = dry_runner
             .assemble_tx(
@@ -794,8 +791,6 @@ impl ScriptTransactionBuilder {
             .as_script()
             .expect("is script")
             .clone(); //TODO: do not clone
-        dbg!(&tx);
-        dbg!("n");
 
         let id = tx.id(&consensus_parameters.chain_id());
 
