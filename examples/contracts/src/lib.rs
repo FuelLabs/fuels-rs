@@ -8,10 +8,7 @@ mod tests {
         prelude::{LoadConfiguration, NodeConfig, StorageConfiguration},
         programs::debug::ScriptType,
         test_helpers::{ChainConfig, StateConfig},
-        types::{
-            Bits256,
-            errors::{Result, transaction::Reason},
-        },
+        types::{Bits256, errors::Result},
     };
     use rand::{Rng, thread_rng};
 
@@ -478,15 +475,16 @@ mod tests {
         let address = wallet.address();
         let amount = 100;
 
-        let response = contract_methods
-            .mint_then_increment_from_contract(called_contract_id, amount, address.into())
-            .call()
-            .await;
+        //TODO: decide what to do here and what to report to users as this will not fail anymore
+        // let _response = contract_methods
+        //     .mint_then_increment_from_contract(called_contract_id, amount, address.into())
+        //     .call()
+        //     .await?;
 
-        assert!(matches!(
-            response,
-            Err(Error::Transaction(Reason::Failure { .. }))
-        ));
+        // assert!(matches!(
+        //     response,
+        //     Err(Error::Transaction(Reason::Failure { .. }))
+        // ));
         // ANCHOR_END: dependency_estimation_fail
 
         // ANCHOR: dependency_estimation_manual

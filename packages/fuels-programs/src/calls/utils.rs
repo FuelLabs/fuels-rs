@@ -2,7 +2,9 @@ use std::{collections::HashSet, iter, vec};
 
 use fuel_abi_types::error_codes::FAILED_TRANSFER_TO_ADDRESS_SIGNAL;
 use fuel_asm::{RegId, op};
-use fuel_tx::{AssetId, Bytes32, ContractId, Output, PanicReason, Receipt, TxPointer, UtxoId};
+use fuel_tx::{
+    Address, AssetId, Bytes32, ContractId, Output, PanicReason, Receipt, TxPointer, UtxoId,
+};
 use fuels_accounts::Account;
 use fuels_core::{
     offsets::call_script_data_offset,
@@ -12,8 +14,8 @@ use fuels_core::{
         input::Input,
         transaction::{ScriptTransaction, TxPolicies},
         transaction_builders::{
-            BuildableTransaction, ScriptTransactionBuilder, TransactionBuilder,
-            VariableOutputPolicy,
+            BuildableTransaction, ScriptBuildStrategy, ScriptTransactionBuilder,
+            TransactionBuilder, VariableOutputPolicy,
         },
     },
 };
@@ -76,29 +78,6 @@ pub(crate) async fn transaction_builder_from_contract_calls(
         .with_outputs(outputs)
         .with_gas_estimation_tolerance(DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE)
         .with_max_fee_estimation_tolerance(DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE))
-}
-
-/// Creates a [`ScriptTransaction`] from contract calls. The internal [Transaction] is
-/// initialized with the actual script instructions, script data needed to perform the call and
-/// transaction inputs/outputs consisting of assets and contracts.
-pub(crate) async fn build_with_tb(
-    calls: &[ContractCall],
-    mut tb: ScriptTransactionBuilder,
-    account: &impl Account,
-) -> Result<ScriptTransaction> {
-    let consensus_parameters = account.try_provider()?.consensus_parameters().await?;
-    let base_asset_id = *consensus_parameters.base_asset_id();
-    let required_asset_amounts = calculate_required_asset_amounts(calls, base_asset_id);
-
-    let used_base_amount = required_asset_amounts
-        .iter()
-        .find_map(|(asset_id, amount)| (*asset_id == base_asset_id).then_some(*amount))
-        .unwrap_or_default();
-
-    account.add_witnesses(&mut tb)?;
-    account.adjust_for_fee(&mut tb, used_base_amount).await?;
-
-    tb.build(account.try_provider()?).await
 }
 
 /// Compute the length of the calling scripts for the two types of contract calls: those that return
@@ -335,6 +314,37 @@ pub fn find_ids_of_missing_contracts(receipts: &[Receipt]) -> Vec<Bech32Contract
             _ => None,
         })
         .collect()
+}
+
+fn find_base_asset_change_address(outputs: &[Output], base_asset_id: &AssetId) -> Option<Address> {
+    outputs.iter().find_map(|output| match output {
+        Output::Change { asset_id, to, .. } if asset_id == base_asset_id => Some(*to),
+        _ => None,
+    })
+}
+
+pub(crate) async fn assemble_tx(
+    tb: ScriptTransactionBuilder,
+    account: &impl Account,
+) -> Result<ScriptTransaction> {
+    let provider = account.try_provider()?;
+    let consensus_parameters = provider.consensus_parameters().await?;
+    let base_asset_id = consensus_parameters.base_asset_id();
+
+    let fee_index = 0u16;
+    let change_address = find_base_asset_change_address(&tb.outputs, base_asset_id);
+    let required_balances = vec![account.required_balance(0, *base_asset_id, change_address)];
+
+    let mut tb = tb
+        .with_build_strategy(ScriptBuildStrategy::AssembleTx {
+            required_balances,
+            fee_index,
+        })
+        .enable_burn(true); //TODO: refactor this
+
+    account.add_witnesses(&mut tb)?;
+
+    tb.build(account.try_provider()?).await
 }
 
 #[cfg(test)]

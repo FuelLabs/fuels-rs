@@ -236,7 +236,6 @@ async fn pay_with_predicate() -> Result<()> {
     )?
     .deploy_if_not_exists(&predicate, TxPolicies::default())
     .await?;
-
     let contract_methods =
         MyContract::new(deploy_response.contract_id.clone(), predicate.clone()).methods();
 
@@ -494,6 +493,9 @@ async fn predicate_transfer_with_signed_resources() -> Result<()> {
     tb.add_signer(signer)?;
 
     let tx = tb.build(&provider).await?;
+
+    //TODO: If added to builder remove this
+    let tx = provider.prepare_transaction_for_sending(tx).await?;
 
     let tx_status = provider.send_transaction_and_await_commit(tx).await?;
 
@@ -866,6 +868,9 @@ async fn predicate_transfer_non_base_asset() -> Result<()> {
 
     let tx = tb.build(&provider).await?;
 
+    //TODO: If added to builder remove this
+    let tx = provider.prepare_transaction_for_sending(tx).await?;
+
     provider
         .send_transaction_and_await_commit(tx)
         .await?
@@ -920,6 +925,9 @@ async fn predicate_can_access_manually_added_witnesses() -> Result<()> {
 
     tx.append_witness(witness.into())?;
     tx.append_witness(witness2.into())?;
+
+    //TODO: If added to builder remove this
+    let tx = provider.prepare_transaction_for_sending(tx).await?;
 
     let tx_status = provider.send_transaction_and_await_commit(tx).await?;
 
@@ -1350,7 +1358,7 @@ async fn predicate_tx_input_output() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet_1",
+            wallet = "wallet_2",
             random_salt = false,
         ),
     );
@@ -1397,7 +1405,6 @@ async fn predicate_tx_input_output() -> Result<()> {
             .methods()
             .initialize_counter(36)
             .with_inputs(custom_inputs)
-            .add_signer(wallet_2.signer().clone())
             .with_outputs(custom_output)
             .call()
             .await?
@@ -1427,6 +1434,7 @@ async fn predicate_tx_input_output() -> Result<()> {
             .methods()
             .initialize_counter(36)
             .with_inputs(custom_inputs)
+            .add_signer(wallet_1.signer().clone())
             .call()
             .await
             .unwrap_err();

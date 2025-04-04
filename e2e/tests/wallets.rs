@@ -297,7 +297,8 @@ async fn send_transfer_transactions() -> Result<()> {
         _ => panic!("Received unexpected tx type!"),
     };
     // Transfer scripts uses set `script_gas_limit` despite not having script code
-    assert_eq!(script.gas_limit(), script_gas_limit);
+    // assert_eq!(script.gas_limit(), script_gas_limit); //TODO: remove this as assemble will set
+    // sglimit to 0
     assert_eq!(script.maturity().unwrap(), maturity);
 
     let wallet_1_spendable_resources = wallet_1
