@@ -2,20 +2,17 @@ use std::{collections::HashSet, iter, vec};
 
 use fuel_abi_types::error_codes::FAILED_TRANSFER_TO_ADDRESS_SIGNAL;
 use fuel_asm::{RegId, op};
-use fuel_tx::{
-    Address, AssetId, Bytes32, ContractId, Output, PanicReason, Receipt, TxPointer, UtxoId,
-};
+use fuel_tx::{Address, AssetId, Bytes32, ContractId, Output, Receipt, TxPointer, UtxoId};
 use fuels_accounts::Account;
 use fuels_core::{
     offsets::call_script_data_offset,
     types::{
-        bech32::{Bech32Address, Bech32ContractId},
+        bech32::Bech32Address,
         errors::Result,
         input::Input,
         transaction::{ScriptTransaction, TxPolicies},
         transaction_builders::{
-            BuildableTransaction, ScriptBuildStrategy, ScriptTransactionBuilder,
-            TransactionBuilder, VariableOutputPolicy,
+            BuildableTransaction, ScriptBuildStrategy, ScriptTransactionBuilder, TransactionBuilder,
         },
     },
 };
@@ -35,7 +32,6 @@ pub(crate) mod sealed {
 pub(crate) async fn transaction_builder_from_contract_calls(
     calls: &[ContractCall],
     tx_policies: TxPolicies,
-    variable_outputs: VariableOutputPolicy,
     account: &impl Account,
 ) -> Result<ScriptTransactionBuilder> {
     let calls_instructions_len = compute_calls_instructions_len(calls);
@@ -70,7 +66,6 @@ pub(crate) async fn transaction_builder_from_contract_calls(
     );
 
     Ok(ScriptTransactionBuilder::default()
-        .with_variable_output_policy(variable_outputs)
         .with_tx_policies(tx_policies)
         .with_script(script)
         .with_script_data(script_data.clone())
@@ -298,24 +293,6 @@ pub fn is_missing_output_variables(receipts: &[Receipt]) -> bool {
     )
 }
 
-pub fn find_ids_of_missing_contracts(receipts: &[Receipt]) -> Vec<Bech32ContractId> {
-    receipts
-        .iter()
-        .filter_map(|receipt| match receipt {
-            Receipt::Panic {
-                reason,
-                contract_id,
-                ..
-            } if *reason.reason() == PanicReason::ContractNotInInputs => {
-                let contract_id = contract_id
-                    .expect("panic caused by a contract not in inputs must have a contract id");
-                Some(Bech32ContractId::from(contract_id))
-            }
-            _ => None,
-        })
-        .collect()
-}
-
 fn find_base_asset_change_address(outputs: &[Output], base_asset_id: &AssetId) -> Option<Address> {
     outputs.iter().find_map(|output| match output {
         Output::Change { asset_id, to, .. } if asset_id == base_asset_id => Some(*to),
@@ -340,7 +317,7 @@ pub(crate) async fn assemble_tx(
             required_balances,
             fee_index,
         })
-        .enable_burn(true); //TODO: refactor this
+        .enable_burn(true); // assemble tx will add missing change outputs
 
     account.add_witnesses(&mut tb)?;
 
@@ -353,6 +330,7 @@ mod test {
 
     use fuels_accounts::signers::private_key::PrivateKeySigner;
     use fuels_core::types::{
+        bech32::Bech32ContractId,
         coin::{Coin, CoinStatus},
         coin_type::CoinType,
         param_types::ParamType,
@@ -360,7 +338,7 @@ mod test {
     use rand::{Rng, thread_rng};
 
     use super::*;
-    use crate::calls::{CallParameters, traits::ContractDependencyConfigurator};
+    use crate::calls::CallParameters;
 
     fn new_contract_call_with_random_id() -> ContractCall {
         ContractCall {

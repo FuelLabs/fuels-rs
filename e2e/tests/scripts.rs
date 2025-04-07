@@ -623,7 +623,6 @@ async fn loader_script_calling_loader_proxy() -> Result<()> {
         .convert_into_loader()
         .await?
         .main(proxy_id.clone())
-        .with_contract_ids(&[contract_id, proxy_id])
         .call()
         .await?;
 

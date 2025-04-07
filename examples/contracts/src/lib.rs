@@ -434,7 +434,6 @@ mod tests {
         // withdraw some tokens to wallet
         let response = contract_methods
             .transfer(1_000_000, asset_id, address.into())
-            .with_variable_output_policy(VariableOutputPolicy::Exactly(1))
             .call()
             .await?;
         // ANCHOR_END: variable_outputs
@@ -471,27 +470,12 @@ mod tests {
         let contract_methods =
             MyContract::new(caller_contract_id.clone(), wallet.clone()).methods();
 
-        // ANCHOR: dependency_estimation_fail
         let address = wallet.address();
         let amount = 100;
-
-        //TODO: decide what to do here and what to report to users as this will not fail anymore
-        // let _response = contract_methods
-        //     .mint_then_increment_from_contract(called_contract_id, amount, address.into())
-        //     .call()
-        //     .await?;
-
-        // assert!(matches!(
-        //     response,
-        //     Err(Error::Transaction(Reason::Failure { .. }))
-        // ));
-        // ANCHOR_END: dependency_estimation_fail
 
         // ANCHOR: dependency_estimation_manual
         let response = contract_methods
             .mint_then_increment_from_contract(called_contract_id, amount, address.into())
-            .with_variable_output_policy(VariableOutputPolicy::Exactly(1))
-            .with_contract_ids(&[called_contract_id.into()])
             .call()
             .await?;
         // ANCHOR_END: dependency_estimation_manual
@@ -503,9 +487,6 @@ mod tests {
         // ANCHOR: dependency_estimation
         let response = contract_methods
             .mint_then_increment_from_contract(called_contract_id, amount, address.into())
-            .with_variable_output_policy(VariableOutputPolicy::EstimateMinimum)
-            .determine_missing_contracts()
-            .await?
             .call()
             .await?;
         // ANCHOR_END: dependency_estimation
@@ -817,12 +798,10 @@ mod tests {
         caller_contract_instance
             .methods()
             .call_low_level_call(
-                target_contract_instance.id(),
+                target_contract_instance.contract_id(),
                 Bytes(function_selector),
                 Bytes(call_data),
             )
-            .determine_missing_contracts()
-            .await?
             .call()
             .await?;
         // ANCHOR_END: low_level_call

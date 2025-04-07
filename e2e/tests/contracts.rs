@@ -91,8 +91,6 @@ async fn test_contract_calling_contract() -> Result<()> {
     let response = contract_caller_instance
         .methods()
         .increment_from_contracts(lib_contract_id, lib_contract_id2, 42)
-        // Note that the two lib_contract_instances have different types
-        .with_contracts(&[&lib_contract_instance, &lib_contract_instance2])
         .call()
         .await?;
 
@@ -102,7 +100,6 @@ async fn test_contract_calling_contract() -> Result<()> {
     let response = contract_caller_instance
         .methods()
         .increment_from_contract(lib_contract_id, 42)
-        .with_contracts(&[&lib_contract_instance])
         .call()
         .await?;
     // ANCHOR_END: external_contract
@@ -113,7 +110,6 @@ async fn test_contract_calling_contract() -> Result<()> {
     let response = contract_caller_instance
         .methods()
         .increment_from_contract(lib_contract_id, 42)
-        .with_contract_ids(&[lib_contract_id.clone()])
         .call()
         .await?;
     // ANCHOR_END: external_contract_ids
@@ -604,7 +600,6 @@ async fn test_contract_setup_macro_deploy_with_salt() -> Result<()> {
     let response = contract_caller_instance
         .methods()
         .increment_from_contract(lib_contract_id, 42)
-        .with_contracts(&[&lib_contract_instance])
         .call()
         .await?;
 
@@ -613,7 +608,6 @@ async fn test_contract_setup_macro_deploy_with_salt() -> Result<()> {
     let response = contract_caller_instance2
         .methods()
         .increment_from_contract(lib_contract_id, 42)
-        .with_contracts(&[&lib_contract_instance])
         .call()
         .await?;
 
@@ -727,7 +721,7 @@ async fn setup_output_variable_estimation_test()
 }
 
 #[tokio::test]
-async fn test_output_variable_estimation() -> Result<()> {
+async fn output_variable_estimation() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
         abi = "e2e/sway/contracts/token_ops/out/release/token_ops-abi.json"
@@ -740,39 +734,22 @@ async fn test_output_variable_estimation() -> Result<()> {
     let contract_methods = contract_instance.methods();
     let amount = 1000;
 
-    //TODO: decide what to do here and what to report to user as this will not fail anymore
-    {
-        // Should fail due to lack of output variables
-        // let _response = contract_methods
-        //     .mint_to_addresses(amount, addresses)
-        //     .call()
-        //     .await?;
+    // Should add 3 output variables automatically
+    let _ = contract_methods
+        .mint_to_addresses(amount, addresses)
+        .call()
+        .await?;
 
-        // assert!(matches!(
-        //     response,
-        //     Err(Error::Transaction(Reason::Failure { .. }))
-        // ));
-    }
-
-    {
-        // Should add 3 output variables automatically
-        let _ = contract_methods
-            .mint_to_addresses(amount, addresses)
-            .with_variable_output_policy(VariableOutputPolicy::EstimateMinimum)
-            .call()
-            .await?;
-
-        for wallet in wallets.iter() {
-            let balance = wallet.get_asset_balance(&mint_asset_id).await?;
-            assert_eq!(balance, amount);
-        }
+    for wallet in wallets.iter() {
+        let balance = wallet.get_asset_balance(&mint_asset_id).await?;
+        assert_eq!(balance, amount);
     }
 
     Ok(())
 }
 
 #[tokio::test]
-async fn test_output_variable_estimation_multicall() -> Result<()> {
+async fn output_variable_estimation_multicall() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
         abi = "e2e/sway/contracts/token_ops/out/release/token_ops-abi.json"
@@ -807,10 +784,7 @@ async fn test_output_variable_estimation_multicall() -> Result<()> {
     let call_handler = contract_methods.send_message(base_layer_address, amount);
     multi_call_handler = multi_call_handler.add_call(call_handler);
 
-    let _ = multi_call_handler
-        .with_variable_output_policy(VariableOutputPolicy::EstimateMinimum)
-        .call::<((), (), ())>()
-        .await?;
+    let _ = multi_call_handler.call::<((), (), ())>().await?;
 
     for wallet in wallets.iter() {
         let balance = wallet.get_asset_balance(&mint_asset_id).await?;
@@ -900,7 +874,7 @@ async fn contract_call_futures_implement_send() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_contract_set_estimation() -> Result<()> {
+async fn external_contract_estimation() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(
@@ -931,26 +905,9 @@ async fn test_contract_set_estimation() -> Result<()> {
     let res = lib_contract_instance.methods().increment(42).call().await?;
     assert_eq!(43, res.value);
 
-    //TODO: decide what to do here and what to report to user as this will not fail anymore
-    {
-        // Should fail due to missing external contracts
-        let _res = contract_caller_instance
-            .methods()
-            .increment_from_contract(lib_contract_id, 42)
-            .call()
-            .await?;
-
-        // assert!(matches!(
-        //     res,
-        //     Err(Error::Transaction(Reason::Failure { .. }))
-        // ));
-    }
-
     let res = contract_caller_instance
         .methods()
         .increment_from_contract(lib_contract_id, 42)
-        .determine_missing_contracts()
-        .await?
         .call()
         .await?;
 
@@ -959,7 +916,7 @@ async fn test_contract_set_estimation() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_output_variable_contract_id_estimation_multicall() -> Result<()> {
+async fn output_variable_contract_id_estimation_multicall() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(
@@ -1014,11 +971,7 @@ async fn test_output_variable_contract_id_estimation_multicall() -> Result<()> {
 
     multi_call_handler = multi_call_handler.add_call(call_handler);
 
-    let call_response = multi_call_handler
-        .determine_missing_contracts()
-        .await?
-        .call::<(u64, u64, u64, u64)>()
-        .await?;
+    let call_response = multi_call_handler.call::<(u64, u64, u64, u64)>().await?;
 
     assert_eq!(call_response.value, (43, 43, 43, 11));
 
@@ -1279,12 +1232,10 @@ async fn low_level_call() -> Result<()> {
         caller_contract_instance
             .methods()
             .call_low_level_call(
-                target_contract_instance.id(),
+                target_contract_instance.contract_id(),
                 Bytes(function_selector),
                 Bytes(call_data),
             )
-            .determine_missing_contracts()
-            .await?
             .call()
             .await?;
 
@@ -1308,12 +1259,10 @@ async fn low_level_call() -> Result<()> {
         caller_contract_instance
             .methods()
             .call_low_level_call(
-                target_contract_instance.id(),
+                target_contract_instance.contract_id(),
                 Bytes(function_selector),
                 Bytes(call_data),
             )
-            .determine_missing_contracts()
-            .await?
             .call()
             .await?;
 
@@ -1924,11 +1873,7 @@ async fn variable_output_estimation_is_optimized() -> Result<()> {
     let coins = 252;
     let recipient = Identity::Address(wallet.address().into());
     let start = Instant::now();
-    let _ = contract_methods
-        .mint(coins, recipient)
-        .with_variable_output_policy(VariableOutputPolicy::EstimateMinimum)
-        .call()
-        .await?;
+    let _ = contract_methods.mint(coins, recipient).call().await?;
 
     // debug builds are slower (20x for `fuel-core-lib`, 4x for a release-fuel-core-binary)
     // we won't validate in that case so we don't have to maintain two expectations
@@ -2521,13 +2466,7 @@ async fn loader_works_via_proxy() -> Result<()> {
         .call()
         .await?;
 
-    let response = proxy
-        .methods()
-        .something()
-        .with_contract_ids(&[contract_id])
-        .call()
-        .await?
-        .value;
+    let response = proxy.methods().something().call().await?.value;
 
     assert_eq!(response, 1001);
 
@@ -2578,30 +2517,13 @@ async fn loader_storage_works_via_proxy() -> Result<()> {
         .call()
         .await?;
 
-    let response = proxy
-        .methods()
-        .read_some_u64()
-        .with_contract_ids(&[contract_id.clone()])
-        .call()
-        .await?
-        .value;
+    let response = proxy.methods().read_some_u64().call().await?.value;
 
     assert_eq!(response, 42);
 
-    let _res = proxy
-        .methods()
-        .write_some_u64(36)
-        .with_contract_ids(&[contract_id.clone()])
-        .call()
-        .await?;
+    let _res = proxy.methods().write_some_u64(36).call().await?;
 
-    let response = proxy
-        .methods()
-        .read_some_u64()
-        .with_contract_ids(&[contract_id])
-        .call()
-        .await?
-        .value;
+    let response = proxy.methods().read_some_u64().call().await?.value;
 
     assert_eq!(response, 36);
 

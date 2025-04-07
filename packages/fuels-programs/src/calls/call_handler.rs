@@ -9,13 +9,12 @@ use fuels_core::{
     types::{
         Selector, Token,
         bech32::{Bech32Address, Bech32ContractId},
-        errors::{Error, Result, error, transaction::Reason},
+        errors::{Result, error},
         input::Input,
         output::Output,
         transaction::{ScriptTransaction, Transaction, TxPolicies},
         transaction_builders::{
-            BuildableTransaction, ScriptBuildStrategy, ScriptTransactionBuilder,
-            TransactionBuilder, VariableOutputPolicy,
+            BuildableTransaction, ScriptBuildStrategy, ScriptTransactionBuilder, TransactionBuilder,
         },
         tx_status::TxStatus,
     },
@@ -25,18 +24,10 @@ use crate::{
     calls::{
         CallParameters, ContractCall, Execution, ExecutionType, ScriptCall,
         receipt_parser::ReceiptParser,
-        traits::{ContractDependencyConfigurator, ResponseParser, TransactionTuner},
-        utils::find_ids_of_missing_contracts,
+        traits::{ResponseParser, TransactionTuner},
     },
     responses::{CallResponse, SubmitResponse},
 };
-
-// Trait implemented by contract instances so that
-// they can be passed to the `with_contracts` method
-pub trait ContractDependency {
-    fn id(&self) -> Bech32ContractId;
-    fn log_decoder(&self) -> LogDecoder;
-}
 
 #[derive(Debug, Clone)]
 #[must_use = "contract calls do nothing unless you `call` them"]
@@ -50,7 +41,6 @@ pub struct CallHandler<A, C, T> {
     decoder_config: DecoderConfig,
     // Initially `None`, gets set to the right tx id after the transaction is submitted
     cached_tx_id: Option<Bytes32>,
-    variable_output_policy: VariableOutputPolicy,
     unresolved_signers: Vec<Arc<dyn Signer + Send + Sync>>,
 }
 
@@ -72,18 +62,6 @@ impl<A, C, T> CallHandler<A, C, T> {
         self
     }
 
-    /// If this method is not called, the default policy is to not add any variable outputs.
-    ///
-    /// # Parameters
-    /// - `variable_outputs`: The [`VariableOutputPolicy`] to apply for the contract call.
-    ///
-    /// # Returns
-    /// - `Self`: The updated SDK configuration.
-    pub fn with_variable_output_policy(mut self, variable_outputs: VariableOutputPolicy) -> Self {
-        self.variable_output_policy = variable_outputs;
-        self
-    }
-
     pub fn add_signer(mut self, signer: impl Signer + Send + Sync + 'static) -> Self {
         self.unresolved_signers.push(Arc::new(signer));
         self
@@ -99,7 +77,7 @@ where
     pub async fn transaction_builder(&self) -> Result<ScriptTransactionBuilder> {
         let mut tb = self
             .call
-            .transaction_builder(self.tx_policies, self.variable_output_policy, &self.account)
+            .transaction_builder(self.tx_policies, &self.account)
             .await?;
 
         tb.add_signers(&self.unresolved_signers)?;
@@ -134,41 +112,11 @@ where
 impl<A, C, T> CallHandler<A, C, T>
 where
     A: Account,
-    C: ContractDependencyConfigurator + TransactionTuner + ResponseParser,
+    C: TransactionTuner + ResponseParser,
     T: Tokenizable + Parameterize + Debug,
 {
-    /// Sets external contracts as dependencies to this contract's call.
-    /// Effectively, this will be used to create [`fuel_tx::Input::Contract`]/[`fuel_tx::Output::Contract`]
-    /// pairs and set them into the transaction. Note that this is a builder
-    /// method, i.e. use it as a chain:
-    ///
-    /// ```ignore
-    /// my_contract_instance.my_method(...).with_contract_ids(&[another_contract_id]).call()
-    /// ```
-    ///
-    /// [`Input::Contract`]: fuel_tx::Input::Contract
-    /// [`Output::Contract`]: fuel_tx::Output::Contract
-    pub fn with_contract_ids(mut self, contract_ids: &[Bech32ContractId]) -> Self {
-        self.call = self.call.with_external_contracts(contract_ids.to_vec());
-
-        self
-    }
-
-    /// Sets external contract instances as dependencies to this contract's call.
-    /// Effectively, this will be used to: merge `LogDecoder`s and create
-    /// [`fuel_tx::Input::Contract`]/[`fuel_tx::Output::Contract`] pairs and set them into the transaction.
-    /// Note that this is a builder method, i.e. use it as a chain:
-    ///
-    /// ```ignore
-    /// my_contract_instance.my_method(...).with_contracts(&[another_contract_instance]).call()
-    /// ```
-    pub fn with_contracts(mut self, contracts: &[&dyn ContractDependency]) -> Self {
-        self.call = self
-            .call
-            .with_external_contracts(contracts.iter().map(|c| c.id()).collect());
-        for c in contracts {
-            self.log_decoder.merge(c.log_decoder());
-        }
+    pub fn add_log_decoder(mut self, log_decoder: LogDecoder) -> Self {
+        self.log_decoder.merge(log_decoder);
 
         self
     }
@@ -240,22 +188,6 @@ where
             tx_status: success,
         })
     }
-
-    pub async fn determine_missing_contracts(mut self) -> Result<Self> {
-        match self.simulate(Execution::realistic()).await {
-            Ok(_) => Ok(self),
-
-            Err(Error::Transaction(Reason::Failure { ref receipts, .. })) => {
-                for contract_id in find_ids_of_missing_contracts(receipts) {
-                    self.call.append_external_contract(contract_id);
-                }
-
-                Ok(self)
-            }
-
-            Err(other_error) => Err(other_error),
-        }
-    }
 }
 
 impl<A, T> CallHandler<A, ContractCall, T>
@@ -292,7 +224,6 @@ where
             datatype: PhantomData,
             decoder_config: DecoderConfig::default(),
             cached_tx_id: None,
-            variable_output_policy: VariableOutputPolicy::default(),
             unresolved_signers: vec![],
         }
     }
@@ -385,7 +316,6 @@ where
             datatype: PhantomData,
             decoder_config: DecoderConfig::default(),
             cached_tx_id: None,
-            variable_output_policy: VariableOutputPolicy::default(),
             unresolved_signers: vec![],
         }
     }
@@ -418,25 +348,8 @@ where
             datatype: PhantomData,
             decoder_config: DecoderConfig::default(),
             cached_tx_id: None,
-            variable_output_policy: VariableOutputPolicy::default(),
             unresolved_signers: vec![],
         }
-    }
-
-    fn append_external_contract(mut self, contract_id: Bech32ContractId) -> Result<Self> {
-        if self.call.is_empty() {
-            return Err(error!(
-                Other,
-                "no calls added. Have you used '.add_calls()'?"
-            ));
-        }
-
-        self.call
-            .iter_mut()
-            .take(1)
-            .for_each(|call| call.append_external_contract(contract_id.clone()));
-
-        Ok(self)
     }
 
     /// Adds a contract call to be bundled in the transaction.
@@ -510,16 +423,6 @@ where
         self.get_response(tx_status)
     }
 
-    /// Simulates a call without needing to resolve the generic for the return type
-    async fn simulate_without_decode(&self) -> Result<()> {
-        let provider = self.account.try_provider()?;
-        let tx = self.build_tx().await?;
-
-        provider.dry_run(tx).await?.check(None)?;
-
-        Ok(())
-    }
-
     /// Create a [`CallResponse`] from `TxStatus`
     pub fn get_response<T: Tokenizable + Debug>(
         &self,
@@ -542,23 +445,5 @@ where
             tx_id: self.cached_tx_id,
             tx_status: success,
         })
-    }
-
-    /// Simulates the call and attempts to resolve missing contract outputs.
-    /// Forwards the received error if it cannot be fixed.
-    pub async fn determine_missing_contracts(mut self) -> Result<Self> {
-        match self.simulate_without_decode().await {
-            Ok(_) => Ok(self),
-
-            Err(Error::Transaction(Reason::Failure { ref receipts, .. })) => {
-                for contract_id in find_ids_of_missing_contracts(receipts) {
-                    self = self.append_external_contract(contract_id)?;
-                }
-
-                Ok(self)
-            }
-
-            Err(other_error) => Err(other_error),
-        }
     }
 }

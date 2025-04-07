@@ -2,7 +2,7 @@ use fuels_accounts::Account;
 use fuels_core::types::{
     errors::{Result, error},
     transaction::{ScriptTransaction, TxPolicies},
-    transaction_builders::{ScriptTransactionBuilder, TransactionBuilder, VariableOutputPolicy},
+    transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
 };
 
 use crate::{
@@ -18,7 +18,6 @@ pub trait TransactionTuner: sealed::Sealed {
     async fn transaction_builder<T: Account>(
         &self,
         tx_policies: TxPolicies,
-        variable_output_policy: VariableOutputPolicy,
         account: &T,
     ) -> Result<ScriptTransactionBuilder>;
 
@@ -34,16 +33,10 @@ impl TransactionTuner for ContractCall {
     async fn transaction_builder<T: Account>(
         &self,
         tx_policies: TxPolicies,
-        variable_output_policy: VariableOutputPolicy,
         account: &T,
     ) -> Result<ScriptTransactionBuilder> {
-        transaction_builder_from_contract_calls(
-            std::slice::from_ref(self),
-            tx_policies,
-            variable_output_policy,
-            account,
-        )
-        .await
+        transaction_builder_from_contract_calls(std::slice::from_ref(self), tx_policies, account)
+            .await
     }
 
     async fn build_tx<T: Account>(
@@ -60,13 +53,11 @@ impl TransactionTuner for ScriptCall {
     async fn transaction_builder<T: Account>(
         &self,
         tx_policies: TxPolicies,
-        variable_output_policy: VariableOutputPolicy,
         _account: &T,
     ) -> Result<ScriptTransactionBuilder> {
         let (inputs, outputs) = self.prepare_inputs_outputs()?;
 
         Ok(ScriptTransactionBuilder::default()
-            .with_variable_output_policy(variable_output_policy)
             .with_tx_policies(tx_policies)
             .with_script(self.script_binary.clone())
             .with_script_data(self.compute_script_data()?)
@@ -92,13 +83,11 @@ impl TransactionTuner for Vec<ContractCall> {
     async fn transaction_builder<T: Account>(
         &self,
         tx_policies: TxPolicies,
-        variable_output_policy: VariableOutputPolicy,
         account: &T,
     ) -> Result<ScriptTransactionBuilder> {
         validate_contract_calls(self)?;
 
-        transaction_builder_from_contract_calls(self, tx_policies, variable_output_policy, account)
-            .await
+        transaction_builder_from_contract_calls(self, tx_policies, account).await
     }
 
     /// Returns the script that executes the contract calls
