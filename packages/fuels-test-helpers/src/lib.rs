@@ -8,7 +8,7 @@ use fuel_types::{AssetId, Nonce};
 use fuels_accounts::provider::Provider;
 use fuels_core::types::{
     bech32::Bech32Address,
-    coin::{Coin, CoinStatus},
+    coin::{Coin, CoinStatus, DataCoin},
     errors::Result,
     message::{Message, MessageStatus},
 };
@@ -123,8 +123,40 @@ pub fn setup_single_message(
     }
 }
 
+pub fn setup_single_asset_data_coins(
+    owner: &Bech32Address,
+    asset_id: AssetId,
+    num_coins: u64,
+    amount_per_coin: u64,
+    data: Vec<u8>,
+) -> Vec<DataCoin> {
+    let mut rng = rand::thread_rng();
+
+    let coins: Vec<DataCoin> = (1..=num_coins)
+        .map(|_i| {
+            let mut r = Bytes32::zeroed();
+            r.try_fill(&mut rng)
+                .expect("failed to fill with random data");
+            let utxo_id = UtxoId::new(r, 0);
+
+            DataCoin {
+                owner: owner.clone(),
+                utxo_id,
+                amount: amount_per_coin,
+                asset_id,
+                status: CoinStatus::Unspent,
+                block_created: Default::default(),
+                data: data.clone(),
+            }
+        })
+        .collect();
+
+    coins
+}
+
 pub async fn setup_test_provider(
     coins: Vec<Coin>,
+    // data_coins: Vec<DataCoin>,
     messages: Vec<Message>,
     node_config: Option<NodeConfig>,
     chain_config: Option<ChainConfig>,

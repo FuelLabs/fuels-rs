@@ -114,6 +114,102 @@ async fn setup_predicate_test(
 }
 
 #[tokio::test]
+async fn data_coins() -> Result<()> {
+    abigen!(Predicate(
+        name = "MyPredicate",
+        abi = "e2e/sway/predicates/data_coins/out/release/data_coins-abi.json"
+    ));
+
+    let num_coins = 2;
+    let num_messages = 0;
+    let amount = 64;
+    let balance_to_send = 42;
+
+    let signer = PrivateKeySigner::random(&mut thread_rng());
+
+    let (coins, messages, asset_id) =
+        get_test_coins_and_messages(signer.address(), num_coins, num_messages, amount, 0);
+
+    let provider = setup_test_provider(coins, messages, None, None).await?;
+    let chain_id = provider.consensus_parameters().await?.chain_id();
+
+    let wallet = Wallet::new(signer, provider.clone());
+
+    let predicate = Predicate::load_from("sway/predicates/data_coins/out/release/data_coins.bin")?
+        .with_provider(provider.clone());
+
+    wallet
+        .transfer(
+            predicate.address(),
+            balance_to_send,
+            asset_id,
+            TxPolicies::default(),
+        )
+        .await?;
+
+    // The predicate has received the funds
+    assert_address_balance(predicate.address(), &provider, asset_id, balance_to_send).await;
+
+    let predicate_coin = predicate
+        .get_asset_inputs_for_amount(asset_id, balance_to_send as u128, None)
+        .await?
+        .pop()
+        .unwrap();
+    let wallet_coin = wallet
+        .get_asset_inputs_for_amount(asset_id, 10, None)
+        .await?
+        .pop()
+        .unwrap();
+
+    let data_coin_data = DataCoinConfig {
+        num_participants: 1,
+    };
+    let encoded_data = ABIEncoder::default().encode(&[data_coin_data.into_token()])?;
+
+    let outputs = vec![
+        Output::data_coin(
+            predicate.address().into(),
+            balance_to_send,
+            asset_id,
+            encoded_data,
+        ),
+        Output::change(wallet.address().into(), 0, asset_id),
+    ];
+
+    let mut tb = ScriptTransactionBuilder::prepare_transfer(
+        vec![predicate_coin, wallet_coin],
+        outputs,
+        TxPolicies::default(),
+    )
+    .enable_burn(true);
+    tb.add_signer(wallet.signer().clone())?;
+
+    let tx = tb.build(&provider).await?;
+
+    let tx_id = tx.id(chain_id);
+
+    dbg!(&tx.inputs());
+
+    let tx_status = provider.send_transaction_and_await_commit(tx).await?;
+
+    dbg!(&tx_status);
+
+    let tx_from_client = match provider
+        .get_transaction_by_id(&tx_id)
+        .await?
+        .unwrap()
+        .transaction
+    {
+        TransactionType::Script(script) => script,
+        _ => panic!("nani"),
+    };
+
+    dbg!(&tx_from_client.outputs());
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn transfer_coins_and_messages_to_predicate() -> Result<()> {
     let num_coins = 16;
     let num_messages = 32;
