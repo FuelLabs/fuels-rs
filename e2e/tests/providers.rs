@@ -836,9 +836,9 @@ async fn transactions_with_the_same_utxo() -> Result<()> {
 
 #[cfg(feature = "coin-cache")]
 #[tokio::test]
-async fn test_caching() -> Result<()> {
+async fn coin_caching() -> Result<()> {
     let amount = 1000;
-    let num_coins = 10;
+    let num_coins = 50;
     let mut wallets = launch_custom_provider_and_get_wallets(
         WalletsConfig::new(Some(1), Some(num_coins), Some(amount)),
         Some(NodeConfig::default()),
@@ -852,9 +852,11 @@ async fn test_caching() -> Result<()> {
     // Consecutively send transfer txs. Without caching, the txs will
     // end up trying to use the same input coins because 'get_spendable_coins()'
     // won't filter out recently used coins.
+    let num_iterations = 10;
+    let amount_to_send = 100;
     let mut tx_ids = vec![];
-    for _ in 0..10 {
-        let tx = create_transfer(&wallet_1, 100, wallet_2.address()).await?;
+    for _ in 0..num_iterations {
+        let tx = create_transfer(&wallet_1, amount_to_send, wallet_2.address()).await?;
         let tx_id = provider.send_transaction(tx).await?;
         tx_ids.push(tx_id);
     }
@@ -868,7 +870,10 @@ async fn test_caching() -> Result<()> {
     }
 
     // Verify the transfers were successful
-    assert_eq!(wallet_2.get_asset_balance(&AssetId::zeroed()).await?, 1000);
+    assert_eq!(
+        wallet_2.get_asset_balance(&AssetId::zeroed()).await?,
+        num_iterations * amount_to_send
+    );
 
     Ok(())
 }
