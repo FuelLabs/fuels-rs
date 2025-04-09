@@ -911,13 +911,13 @@ own, custom ones, that implement <code>Signer</code>):</p>
             )?
         );
 
-        // Recover address that signed the message
-        let recovered_address = signature.recover(&amp;message)?;
+        // Recover the public key that signed the message
+        let recovered_pub_key: PublicKey = signature.recover(&amp;message)?;
 
-        assert_eq!(signer.address().hash(), recovered_address.hash());
+        assert_eq!(signer.address().hash(), recovered_pub_key.hash());
 
         // Verify signature
-        signature.verify(&amp;recovered_address, &amp;message)?;
+        signature.verify(&amp;recovered_pub_key, &amp;message)?;
 </code></pre>
 <h2 id="adding-signers-to-a-transaction-builder"><a class="header" href="#adding-signers-to-a-transaction-builder">Adding <code>Signers</code> to a transaction builder</a></h2>
 <p>Every signed resource in the inputs needs to have a witness index that points to a valid witness. Changing the witness index inside an input will change the transaction ID. This means that we need to set all witness indexes before finally signing the transaction. We have to make sure that the witness indexes and the order of the witnesses are correct. To automate this process, the SDK will keep track of the signers in the transaction builder and resolve the final transaction automatically. This is done by storing signers until the final transaction is built.</p>
