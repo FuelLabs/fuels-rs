@@ -109,13 +109,13 @@ mod tests {
             )?
         );
 
-        // Recover address that signed the message
-        let recovered_address = signature.recover(&message)?;
+        // Recover the public key that signed the message
+        let recovered_pub_key: PublicKey = signature.recover(&message)?;
 
-        assert_eq!(signer.address().hash(), recovered_address.hash());
+        assert_eq!(signer.address().hash(), recovered_pub_key.hash());
 
         // Verify signature
-        signature.verify(&recovered_address, &message)?;
+        signature.verify(&recovered_pub_key, &message)?;
         // ANCHOR_END: sign_message
 
         Ok(())
