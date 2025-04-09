@@ -110,7 +110,7 @@ mod tests {
         );
 
         // Recover the public key that signed the message
-        let recovered_pub_key = signature.recover(&message)?;
+        let recovered_pub_key: PublicKey = signature.recover(&message)?;
 
         assert_eq!(signer.address().hash(), recovered_pub_key.hash());
 
