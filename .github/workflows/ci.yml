@@ -147,7 +147,17 @@ jobs:
         with:
           toolchain: ${{ env.RUST_VERSION }}
 
+      - name: Conditional check
+        id: conditional_check # We add an ID to reference this step
+        run: |
+          if [[ -n "${{ env.FUEL_CORE_PATCH_BRANCH }}" || -n "${{ env.FUEL_CORE_PATCH_REVISION }}" ]]; then
+            echo "should_publish=false" >> $GITHUB_OUTPUT
+          else
+            echo "should_publish=true" >> $GITHUB_OUTPUT
+          fi
+
       - name: Publish crate check
+        if: steps.conditional_check.outputs.should_publish == 'true'
         uses: FuelLabs/publish-crates@v1
         with:
           dry-run: true
