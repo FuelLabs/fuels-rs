@@ -95,14 +95,14 @@ testcontainers = { version = "0.23", default-features = false }
 k256 = { version = "0.13", default-features = false }
 
 # Dependencies from the `fuel-core` repository:
-fuel-core = { git = "https://github.com/fuellabs/fuel-core", branch = "master", default-features = false, features = [
+fuel-core = { git = "https://github.com/fuellabs/fuel-core", branch = "chore/fix-compilation-on-rust-sdk", default-features = false, features = [
   "wasm-executor",
 ] }
-fuel-core-chain-config = { git = "https://github.com/fuellabs/fuel-core", branch = "master", default-features = false }
-fuel-core-client = { git = "https://github.com/fuellabs/fuel-core", branch = "master", default-features = false }
-fuel-core-poa = { git = "https://github.com/fuellabs/fuel-core", branch = "master", default-features = false }
-fuel-core-services = { git = "https://github.com/fuellabs/fuel-core", branch = "master", default-features = false }
-fuel-core-types = { git = "https://github.com/fuellabs/fuel-core", branch = "master", default-features = false }
+fuel-core-chain-config = { git = "https://github.com/fuellabs/fuel-core", branch = "chore/fix-compilation-on-rust-sdk", default-features = false }
+fuel-core-client = { git = "https://github.com/fuellabs/fuel-core", branch = "chore/fix-compilation-on-rust-sdk", default-features = false }
+fuel-core-poa = { git = "https://github.com/fuellabs/fuel-core", branch = "chore/fix-compilation-on-rust-sdk", default-features = false }
+fuel-core-services = { git = "https://github.com/fuellabs/fuel-core", branch = "chore/fix-compilation-on-rust-sdk", default-features = false }
+fuel-core-types = { git = "https://github.com/fuellabs/fuel-core", branch = "chore/fix-compilation-on-rust-sdk", default-features = false }
 
 # Dependencies from the `fuel-vm` repository:
 fuel-asm = { version = "0.60.0" }
