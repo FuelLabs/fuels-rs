@@ -14,7 +14,7 @@ use fuels_core::types::{
 };
 pub use node_types::*;
 use rand::{Fill, Rng, SeedableRng, rngs::StdRng};
-use utils::{into_coin_configs, into_message_configs};
+use utils::{into_coin_configs, into_coin_configs2, into_message_configs};
 pub use wallets_config::*;
 mod node_types;
 
@@ -105,6 +105,29 @@ pub fn setup_single_asset_coins(
     coins
 }
 
+pub fn setup_single_data_coin(
+    owner: &Bech32Address,
+    asset_id: AssetId,
+    amount: u64,
+    data: Vec<u8>,
+) -> DataCoin {
+    let mut rng = rand::thread_rng();
+    let mut r = Bytes32::zeroed();
+    r.try_fill(&mut rng)
+        .expect("failed to fill with random data");
+    let utxo_id = UtxoId::new(r, 0);
+
+    DataCoin {
+        owner: owner.clone(),
+        utxo_id,
+        amount,
+        asset_id,
+        status: CoinStatus::Unspent,
+        block_created: Default::default(),
+        data,
+    }
+}
+
 pub fn setup_single_message(
     sender: &Bech32Address,
     recipient: &Bech32Address,
@@ -165,6 +188,37 @@ pub async fn setup_test_provider(
     let chain_config = chain_config.unwrap_or_else(testnet_chain_config);
 
     let coin_configs = into_coin_configs(coins);
+    let message_configs = into_message_configs(messages);
+
+    let state_config = StateConfig {
+        coins: coin_configs,
+        messages: message_configs,
+        ..StateConfig::local_testnet()
+    };
+
+    let srv = FuelService::start(node_config, chain_config, state_config).await?;
+
+    let address = srv.bound_address();
+
+    tokio::spawn(async move {
+        let _own_the_handle = srv;
+        let () = futures::future::pending().await;
+    });
+
+    Provider::from(address).await
+}
+
+pub async fn setup_test_provider2(
+    coins: Vec<Coin>,
+    data_coins: Vec<DataCoin>,
+    messages: Vec<Message>,
+    node_config: Option<NodeConfig>,
+    chain_config: Option<ChainConfig>,
+) -> Result<Provider> {
+    let node_config = node_config.unwrap_or_default();
+    let chain_config = chain_config.unwrap_or_else(testnet_chain_config);
+
+    let coin_configs = into_coin_configs2(coins, data_coins);
     let message_configs = into_message_configs(messages);
 
     let state_config = StateConfig {
