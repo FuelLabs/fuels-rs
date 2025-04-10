@@ -41,3 +41,4 @@ tokio = { workspace = true, features = ["test-util", "macros"] }
 [features]
 default = ["std"]
 std = ["dep:fuel-core-client", "fuel-core-types/std"]
+fault-proving = ["fuel-core-chain-config/fault-proving", "fuel-core-types/fault-proving", "fuel-core-client?/fault-proving"]

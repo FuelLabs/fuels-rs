@@ -29,3 +29,4 @@ test-case = { workspace = true }
 [features]
 default = ["std"]
 std = ["fuels-core/std", "fuels-accounts/std"]
+fault-proving = ["fuels-core/fault-proving", "fuels-accounts/fault-proving"]
