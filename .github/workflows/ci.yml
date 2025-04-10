@@ -16,8 +16,8 @@ env:
   CARGO_TERM_COLOR: always
   DASEL_VERSION: https://github.com/TomWright/dasel/releases/download/v2.3.6/dasel_linux_amd64
   RUSTFLAGS: "-D warnings"
-  FUEL_CORE_VERSION: 0.42.0
-  FUEL_CORE_PATCH_BRANCH: "master"
+  FUEL_CORE_VERSION: 0.43.0
+  FUEL_CORE_PATCH_BRANCH: ""
   FUEL_CORE_PATCH_REVISION: ""
   RUST_VERSION: 1.85.0
   FORC_VERSION: 0.67.0
@@ -147,17 +147,7 @@ jobs:
         with:
           toolchain: ${{ env.RUST_VERSION }}
 
-      - name: Conditional check
-        id: conditional_check # We add an ID to reference this step
-        run: |
-          if [[ -n "${{ env.FUEL_CORE_PATCH_BRANCH }}" || -n "${{ env.FUEL_CORE_PATCH_REVISION }}" ]]; then
-            echo "should_publish=false" >> $GITHUB_OUTPUT
-          else
-            echo "should_publish=true" >> $GITHUB_OUTPUT
-          fi
-
       - name: Publish crate check
-        if: steps.conditional_check.outputs.should_publish == 'true'
         uses: FuelLabs/publish-crates@v1
         with:
           dry-run: true
@@ -197,8 +187,8 @@ jobs:
             args: --skip-target-dir
           - command: test_wasm
             args:
-          # - command: check_fuel_core_version # this will fail for sure
-          #   args:
+          - command: check_fuel_core_version
+            args:
           - command: check_doc_anchors_valid
             args:
           - command: check_doc_unresolved_links
