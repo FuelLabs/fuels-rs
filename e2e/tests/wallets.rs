@@ -262,6 +262,52 @@ async fn test_transfer() -> Result<()> {
 }
 
 #[tokio::test]
+async fn test_transfer_more_than_u64_max() -> Result<()> {
+    let wallet_1_signer = PrivateKeySigner::random(&mut rand::thread_rng());
+    let wallet_2_signer = PrivateKeySigner::random(&mut rand::thread_rng());
+
+    let amount: u128 = u64::MAX as u128 * 2 + 1;
+    let num_coins = 1;
+    let base_asset_id = AssetId::zeroed();
+    let mut coins_1 = setup_single_asset_coins(
+        wallet_1_signer.address(),
+        base_asset_id,
+        num_coins,
+        u64::MAX,
+    );
+    let coins_2 = setup_single_asset_coins(
+        wallet_2_signer.address(),
+        base_asset_id,
+        num_coins,
+        u64::MAX,
+    );
+    let coins_3 = setup_single_asset_coins(wallet_2_signer.address(), base_asset_id, num_coins, 2);
+    coins_1.extend(coins_2);
+    coins_1.extend(coins_3);
+
+    let provider = setup_test_provider(coins_1, vec![], None, None).await?;
+    let wallet_1 = Wallet::new(wallet_1_signer, provider.clone());
+    let wallet_2 = Wallet::new(wallet_2_signer, provider.clone()).lock();
+
+    let _ = wallet_1
+        .transfer(
+            wallet_2.address(),
+            amount,
+            Default::default(),
+            TxPolicies::default(),
+        )
+        .await
+        .unwrap();
+
+    let wallet_2_coins = wallet_2.get_coins(base_asset_id).await.unwrap();
+    assert_eq!(wallet_2_coins.len(), 3);
+    assert_eq!(wallet_2_coins[0].amount, u64::MAX);
+    assert_eq!(wallet_2_coins[1].amount, u64::MAX);
+    assert_eq!(wallet_2_coins[2].amount, 1);
+    Ok(())
+}
+
+#[tokio::test]
 async fn send_transfer_transactions() -> Result<()> {
     let amount = 5;
     let (wallet_1, wallet_2) = setup_transfer_test(amount).await?;

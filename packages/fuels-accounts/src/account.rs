@@ -113,17 +113,18 @@ pub trait ViewOnlyAccount: Send + Sync {
         let mut outputs = Vec::new();
         let to: Address = to.into();
 
+        if amount >= u64::MAX as u128 * 254 {
+            return Err(error!(
+                Other,
+                "`amount` of transfer is too large to fit in a single transaction or 254 outputs"
+            ));
+        }
+
         // Split the amount into multiple Coin outputs, each with a maximum value of u64::MAX
         while remaining_amount > 0 {
             let output_amount = remaining_amount.min(u64::MAX as u128) as u64;
             outputs.push(Output::coin(to, output_amount, asset_id));
             remaining_amount -= output_amount as u128;
-            if outputs.len() >= 254 {
-                return Err(error!(
-                    Other,
-                    "`amount` of transfer is too large to fit in a single transaction or 254 outputs"
-                ));
-            }
         }
 
         outputs.push(Output::change(self.address().into(), 0, asset_id));
