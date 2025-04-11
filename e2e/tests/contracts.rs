@@ -2615,24 +2615,14 @@ async fn adjust_for_fee_errors() -> Result<()> {
 
     let contract_binary = "sway/contracts/contract_test/out/release/contract_test.bin";
 
-    let contract_id = Contract::load_from(contract_binary, LoadConfiguration::default())?
-        .deploy_if_not_exists(&wallet, TxPolicies::default().with_tip(10_000_000_000_000))
-        .await?
-        .contract_id;
-
-    // then
-    let contract_instance = MyContract::new(contract_id, wallet);
-
-    let err = contract_instance
-        .methods()
-        .read_counter()
-        .call()
+    let err = Contract::load_from(contract_binary, LoadConfiguration::default())?
+        .deploy(&wallet, TxPolicies::default().with_tip(10_000_000_000_000))
         .await
         .expect_err("should return error");
 
     assert!(
-        matches!(err, Error::Other(s) if s.contains("failed to adjust inputs to cover for missing \\
-                base asset: failed to get base asset \\
+        matches!(err, Error::Provider(s) if s.contains("failed to adjust inputs to cover for missing \
+                base asset: failed to get base asset \
                 (0000000000000000000000000000000000000000000000000000000000000000) inputs with amount:"))
     );
 
