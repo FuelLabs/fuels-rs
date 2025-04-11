@@ -38,6 +38,7 @@ pub struct CallHandler<A, C, T> {
     pub tx_policies: TxPolicies,
     pub log_decoder: LogDecoder,
     pub datatype: PhantomData<T>,
+    pub script_gas_limit: Option<u64>,
     decoder_config: DecoderConfig,
     // Initially `None`, gets set to the right tx id after the transaction is submitted
     cached_tx_id: Option<Bytes32>,
@@ -66,6 +67,11 @@ impl<A, C, T> CallHandler<A, C, T> {
         self.unresolved_signers.push(Arc::new(signer));
         self
     }
+
+    pub fn with_script_gas_limit(mut self, gas_limit: u64) -> Self {
+        self.script_gas_limit = Some(gas_limit);
+        self
+    }
 }
 
 impl<A, C, T> CallHandler<A, C, T>
@@ -80,6 +86,7 @@ where
             .transaction_builder(self.tx_policies, &self.account)
             .await?;
 
+        tb.script_gas_limit = self.script_gas_limit;
         tb.add_signers(&self.unresolved_signers)?;
 
         Ok(tb)
@@ -222,6 +229,7 @@ where
             tx_policies: TxPolicies::default(),
             log_decoder,
             datatype: PhantomData,
+            script_gas_limit: None,
             decoder_config: DecoderConfig::default(),
             cached_tx_id: None,
             unresolved_signers: vec![],
@@ -314,6 +322,7 @@ where
             tx_policies: TxPolicies::default(),
             log_decoder,
             datatype: PhantomData,
+            script_gas_limit: None,
             decoder_config: DecoderConfig::default(),
             cached_tx_id: None,
             unresolved_signers: vec![],
@@ -346,6 +355,7 @@ where
             tx_policies: TxPolicies::default(),
             log_decoder: LogDecoder::new(Default::default()),
             datatype: PhantomData,
+            script_gas_limit: None,
             decoder_config: DecoderConfig::default(),
             cached_tx_id: None,
             unresolved_signers: vec![],

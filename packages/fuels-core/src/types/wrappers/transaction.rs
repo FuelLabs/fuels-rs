@@ -109,7 +109,6 @@ pub struct TxPolicies {
     maturity: Option<u64>,
     expiration: Option<u64>,
     max_fee: Option<u64>,
-    script_gas_limit: Option<u64>,
 }
 // ANCHOR_END: tx_policies_struct
 
@@ -120,7 +119,6 @@ impl TxPolicies {
         maturity: Option<u64>,
         expiration: Option<u64>,
         max_fee: Option<u64>,
-        script_gas_limit: Option<u64>,
     ) -> Self {
         Self {
             tip,
@@ -128,7 +126,6 @@ impl TxPolicies {
             maturity,
             expiration,
             max_fee,
-            script_gas_limit,
         }
     }
 
@@ -175,15 +172,6 @@ impl TxPolicies {
 
     pub fn max_fee(&self) -> Option<u64> {
         self.max_fee
-    }
-
-    pub fn with_script_gas_limit(mut self, script_gas_limit: u64) -> Self {
-        self.script_gas_limit = Some(script_gas_limit);
-        self
-    }
-
-    pub fn script_gas_limit(&self) -> Option<u64> {
-        self.script_gas_limit
     }
 }
 

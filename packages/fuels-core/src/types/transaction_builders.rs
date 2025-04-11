@@ -560,6 +560,7 @@ pub struct ScriptTransactionBuilder {
     pub gas_price_estimation_block_horizon: u32,
     pub variable_output_policy: VariableOutputPolicy,
     pub build_strategy: ScriptBuildStrategy,
+    pub script_gas_limit: Option<u64>,
     unresolved_witness_indexes: UnresolvedWitnessIndexes,
     unresolved_signers: Vec<Arc<dyn Signer + Send + Sync>>,
     enable_burn: bool,
@@ -579,6 +580,7 @@ impl Default for ScriptTransactionBuilder {
             gas_price_estimation_block_horizon: GAS_ESTIMATION_BLOCK_HORIZON,
             variable_output_policy: Default::default(),
             build_strategy: Default::default(),
+            script_gas_limit: Default::default(),
             unresolved_witness_indexes: Default::default(),
             unresolved_signers: Default::default(),
             enable_burn: false,
@@ -791,6 +793,15 @@ impl ScriptTransactionBuilder {
             .as_script()
             .expect("is script")
             .clone(); //TODO: do not clone
+        //
+
+        //if user set `script_gas_limit` then we will use it's value only
+        //if it is higher then the one estimated by assemble_tx
+        if let Some(script_gas_limit) = self.script_gas_limit {
+            if script_gas_limit > *tx.script_gas_limit() {
+                *tx.script_gas_limit_mut() = script_gas_limit;
+            }
+        }
 
         let id = tx.id(&consensus_parameters.chain_id());
 
@@ -939,7 +950,7 @@ impl ScriptTransactionBuilder {
         tx: &mut fuel_tx::Script,
     ) -> Result<()> {
         let has_no_code = self.script.is_empty();
-        let script_gas_limit = if let Some(gas_limit) = self.tx_policies.script_gas_limit() {
+        let script_gas_limit = if let Some(gas_limit) = self.script_gas_limit {
             // Use the user defined value even if it makes the transaction revert.
             gas_limit
         } else if has_no_code {
@@ -1014,6 +1025,11 @@ impl ScriptTransactionBuilder {
 
     pub fn with_max_fee_estimation_tolerance(mut self, max_fee_estimation_tolerance: f32) -> Self {
         self.max_fee_estimation_tolerance = max_fee_estimation_tolerance;
+        self
+    }
+
+    pub fn with_script_gas_limit(mut self, gas_limit: u64) -> Self {
+        self.script_gas_limit = Some(gas_limit);
         self
     }
 
