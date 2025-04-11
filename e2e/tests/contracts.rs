@@ -2623,14 +2623,18 @@ async fn adjust_for_fee_errors() -> Result<()> {
     // then
     let contract_instance = MyContract::new(contract_id, wallet);
 
-    let response = contract_instance
+    let err = contract_instance
         .methods()
         .read_counter()
         .call()
-        .await?
-        .value;
+        .await
+        .expect_err("should return error");
 
-    assert_eq!(response, 0);
+    assert!(
+        matches!(err, Error::Other(s) if s.contains("failed to adjust inputs to cover for missing \\
+                base asset: failed to get base asset \\
+                (0000000000000000000000000000000000000000000000000000000000000000) inputs with amount:"))
+    );
 
     Ok(())
 }
