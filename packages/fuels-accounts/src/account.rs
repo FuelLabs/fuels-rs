@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use async_trait::async_trait;
 use fuel_core_client::client::pagination::{PaginatedResult, PaginationRequest};
-use fuel_tx::{Output, TxId, TxPointer, UtxoId};
+use fuel_tx::{Address, Output, TxId, TxPointer, UtxoId};
 use fuel_types::{AssetId, Bytes32, ContractId, Nonce};
 use fuels_core::types::{
     bech32::{Bech32Address, Bech32ContractId},
@@ -107,14 +107,21 @@ pub trait ViewOnlyAccount: Send + Sync {
         &self,
         to: &Bech32Address,
         asset_id: AssetId,
-        amount: u64,
+        amount: u128,
     ) -> Vec<Output> {
-        vec![
-            Output::coin(to.into(), amount, asset_id),
-            // Note that the change will be computed by the node.
-            // Here we only have to tell the node who will own the change and its asset ID.
-            Output::change(self.address().into(), 0, asset_id),
-        ]
+        let mut remaining_amount = amount;
+        let mut outputs = Vec::new();
+        let to: Address = to.into();
+
+        // Split the amount into multiple Coin outputs, each with a maximum value of u64::MAX
+        while remaining_amount > 0 {
+            let output_amount = remaining_amount.min(u64::MAX as u128) as u64;
+            outputs.push(Output::coin(to.clone(), output_amount, asset_id));
+            remaining_amount -= output_amount as u128;
+        }
+
+        outputs.push(Output::change(self.address().into(), 0, asset_id));
+        outputs
     }
 
     /// Returns a vector consisting of `Input::Coin`s and `Input::Message`s for the given
@@ -175,7 +182,7 @@ pub trait Account: ViewOnlyAccount {
     async fn transfer(
         &self,
         to: &Bech32Address,
-        amount: u64,
+        amount: u128,
         asset_id: AssetId,
         tx_policies: TxPolicies,
     ) -> Result<TxResponse> {

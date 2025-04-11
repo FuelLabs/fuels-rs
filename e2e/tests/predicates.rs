@@ -173,7 +173,7 @@ async fn spend_predicate_coins_messages_basic() -> Result<()> {
     let fee = predicate
         .transfer(
             receiver.address(),
-            amount_to_send,
+            amount_to_send as u128,
             asset_id,
             TxPolicies::default(),
         )

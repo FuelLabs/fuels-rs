@@ -180,9 +180,9 @@ mod tests {
 
             // we don't transfer the full base asset so we can cover fees
             let output = if id == *consensus_parameters.base_asset_id() {
-                wallet_1.get_asset_outputs_for_amount(wallet_2.address(), id, (amount / 2) as u64)
+                wallet_1.get_asset_outputs_for_amount(wallet_2.address(), id, (amount / 2) as u128)
             } else {
-                wallet_1.get_asset_outputs_for_amount(wallet_2.address(), id, amount as u64)
+                wallet_1.get_asset_outputs_for_amount(wallet_2.address(), id, amount as u128)
             };
 
             outputs.extend(output);
@@ -286,7 +286,7 @@ mod tests {
         let base_outputs = hot_wallet.get_asset_outputs_for_amount(
             &receiver,
             *consensus_parameters.base_asset_id(),
-            ask_amount as u64,
+            ask_amount as u128,
         );
         // ANCHOR_END: custom_tx_io_base
 

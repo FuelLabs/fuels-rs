@@ -144,7 +144,8 @@ async fn adjust_for_fee_with_message_data_input() -> Result<()> {
     let amount_to_send = 14;
     let message = wallet.get_messages().await?.pop().unwrap();
     let input = Input::resource_signed(CoinType::Message(message));
-    let outputs = wallet.get_asset_outputs_for_amount(receiver.address(), asset_id, amount_to_send);
+    let outputs =
+        wallet.get_asset_outputs_for_amount(receiver.address(), asset_id, amount_to_send as u128);
 
     {
         // message with data as only input - without adjust for fee
@@ -198,8 +199,11 @@ async fn adjust_fee_resources_to_transfer_with_base_asset() -> Result<()> {
     let inputs = wallet
         .get_asset_inputs_for_amount(base_asset_id, base_amount.into(), None)
         .await?;
-    let outputs =
-        wallet.get_asset_outputs_for_amount(&Address::zeroed().into(), base_asset_id, base_amount);
+    let outputs = wallet.get_asset_outputs_for_amount(
+        &Address::zeroed().into(),
+        base_asset_id,
+        base_amount as u128,
+    );
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
 
@@ -226,7 +230,7 @@ async fn test_transfer() -> Result<()> {
     let wallet_1_signer = PrivateKeySigner::random(&mut rand::thread_rng());
     let wallet_2_signer = PrivateKeySigner::random(&mut rand::thread_rng());
 
-    let amount = 100;
+    let amount: u64 = 100;
     let num_coins = 1;
     let base_asset_id = AssetId::zeroed();
     let mut coins_1 =
@@ -242,7 +246,7 @@ async fn test_transfer() -> Result<()> {
     let _ = wallet_1
         .transfer(
             wallet_2.address(),
-            amount / 2,
+            (amount / 2) as u128,
             Default::default(),
             TxPolicies::default(),
         )
@@ -329,7 +333,7 @@ async fn transfer_coins_with_change() -> Result<()> {
     let fee = wallet_1
         .transfer(
             wallet_2.address(),
-            SEND_AMOUNT,
+            SEND_AMOUNT as u128,
             AssetId::zeroed(),
             TxPolicies::default(),
         )
@@ -398,7 +402,7 @@ async fn transfer_more_than_owned() -> Result<()> {
     let response = wallet_1
         .transfer(
             wallet_2.address(),
-            AMOUNT * 2,
+            (AMOUNT * 2) as u128,
             Default::default(),
             TxPolicies::default(),
         )
@@ -433,7 +437,7 @@ async fn transfer_coins_of_non_base_asset() -> Result<()> {
     let _ = wallet_1
         .transfer(
             wallet_2.address(),
-            SEND_AMOUNT,
+            SEND_AMOUNT as u128,
             asset_id,
             TxPolicies::default(),
         )
@@ -459,7 +463,7 @@ async fn test_transfer_with_multiple_signatures() -> Result<()> {
 
     let receiver = Wallet::random(&mut thread_rng(), provider.clone());
 
-    let amount_to_transfer = 20u64;
+    let amount_to_transfer = 20u128;
 
     let mut inputs = vec![];
     let consensus_parameters = provider.consensus_parameters().await?;
@@ -475,7 +479,7 @@ async fn test_transfer_with_multiple_signatures() -> Result<()> {
         );
     }
 
-    let amount_to_receive = amount_to_transfer * wallets.len() as u64;
+    let amount_to_receive = amount_to_transfer * wallets.len() as u128;
 
     // all change goes to the first wallet
     let outputs = wallets[0].get_asset_outputs_for_amount(
@@ -496,7 +500,7 @@ async fn test_transfer_with_multiple_signatures() -> Result<()> {
     assert_eq!(
         receiver
             .get_asset_balance(consensus_parameters.base_asset_id())
-            .await?,
+            .await? as u128,
         amount_to_receive,
     );
 
@@ -552,12 +556,12 @@ async fn wallet_transfer_respects_maturity_and_expiration() -> Result<()> {
         wallet.address(),
         provider,
         asset_id,
-        wallet_balance - amount_to_send - expected_fee,
+        wallet_balance - amount_to_send as u64 - expected_fee,
     )
     .await;
 
     // Funds were transferred
-    assert_address_balance(&receiver, provider, asset_id, amount_to_send).await;
+    assert_address_balance(&receiver, provider, asset_id, amount_to_send as u64).await;
 
     Ok(())
 }
