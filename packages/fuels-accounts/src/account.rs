@@ -116,7 +116,7 @@ pub trait ViewOnlyAccount: Send + Sync {
         // Split the amount into multiple Coin outputs, each with a maximum value of u64::MAX
         while remaining_amount > 0 {
             let output_amount = remaining_amount.min(u64::MAX as u128) as u64;
-            outputs.push(Output::coin(to.clone(), output_amount, asset_id));
+            outputs.push(Output::coin(to, output_amount, asset_id));
             remaining_amount -= output_amount as u128;
         }
 
@@ -189,7 +189,7 @@ pub trait Account: ViewOnlyAccount {
         let provider = self.try_provider()?;
 
         let inputs = self
-            .get_asset_inputs_for_amount(asset_id, amount.into(), None)
+            .get_asset_inputs_for_amount(asset_id, amount, None)
             .await?;
         let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
 
@@ -200,7 +200,7 @@ pub trait Account: ViewOnlyAccount {
 
         let consensus_parameters = provider.consensus_parameters().await?;
         let used_base_amount = if asset_id == *consensus_parameters.base_asset_id() {
-            amount.into()
+            amount
         } else {
             0
         };
