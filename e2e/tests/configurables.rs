@@ -1,8 +1,8 @@
 use fuels::{
     core::{
+        ConfigurablesReader,
         codec::EncoderConfig,
         traits::{Parameterize, Tokenizable},
-        ConfigurablesReader,
     },
     prelude::*,
     types::{AsciiString, Bits256, SizedAsciiString, U256},
@@ -435,7 +435,7 @@ async fn contract_configurables_reader() -> Result<()> {
 
 #[tokio::test]
 async fn contract_configurables_reader_manual() -> Result<()> {
-    // TODO: add documentatio
+    // TODO: add documentation
     let configurables_reader = ConfigurablesReader::load_from(
         "sway/contracts/dyn_configurables/out/release/dyn_configurables.bin",
     )?;
@@ -459,7 +459,7 @@ async fn contract_configurables_reader_manual() -> Result<()> {
 
 #[tokio::test]
 async fn contract_configurables_reader_runtime() -> Result<()> {
-    // TODO: add documentatio
+    // TODO: add documentation
     let configurables_reader = ConfigurablesReader::load_from(
         "sway/contracts/dyn_configurables/out/release/dyn_configurables.bin",
     )?;
