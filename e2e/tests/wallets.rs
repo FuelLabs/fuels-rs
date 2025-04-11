@@ -267,23 +267,14 @@ async fn test_transfer_more_than_u64_max() -> Result<()> {
     let wallet_2_signer = PrivateKeySigner::random(&mut rand::thread_rng());
 
     let amount: u128 = u64::MAX as u128 * 2 + 1;
-    let num_coins = 1;
+    let num_coins = 3;
     let base_asset_id = AssetId::zeroed();
-    let mut coins_1 = setup_single_asset_coins(
+    let coins_1 = setup_single_asset_coins(
         wallet_1_signer.address(),
         base_asset_id,
         num_coins,
         u64::MAX,
     );
-    let coins_2 = setup_single_asset_coins(
-        wallet_2_signer.address(),
-        base_asset_id,
-        num_coins,
-        u64::MAX,
-    );
-    let coins_3 = setup_single_asset_coins(wallet_2_signer.address(), base_asset_id, num_coins, 2);
-    coins_1.extend(coins_2);
-    coins_1.extend(coins_3);
 
     let provider = setup_test_provider(coins_1, vec![], None, None).await?;
     let wallet_1 = Wallet::new(wallet_1_signer, provider.clone());
