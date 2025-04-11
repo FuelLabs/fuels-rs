@@ -8,8 +8,8 @@ use fuel_tx::{Address, Bytes32, ContractId, ContractIdExt};
 use fuel_types::AssetId;
 
 use crate::types::{
-    errors::{Error, Result},
     Bits256,
+    errors::{Error, Result},
 };
 
 // Fuel Network human-readable part for bech32 encoding
@@ -74,6 +74,14 @@ macro_rules! bech32type {
                 let encoding = bech32::encode(&self.hrp, &data_base32, Bech32m).unwrap();
 
                 write!(f, "{}", encoding)
+            }
+        }
+
+        impl ::rand::distributions::Distribution<$i> for rand::distributions::Standard {
+            fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> $i {
+                let hrp = FUEL_BECH32_HRP;
+                let hash: [u8; 32] = rng.r#gen();
+                $i::new(&hrp, hash)
             }
         }
     };

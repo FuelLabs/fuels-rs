@@ -1,6 +1,7 @@
 use std::default::Default;
 
 use fuels::{
+    accounts::signers::private_key::PrivateKeySigner,
     core::{
         codec::{ABIEncoder, EncoderConfig},
         traits::Tokenizable,
@@ -9,6 +10,7 @@ use fuels::{
     programs::executable::Executable,
     types::{coin::Coin, coin_type::CoinType, input::Input, message::Message, output::Output},
 };
+use rand::thread_rng;
 use test_case::test_case;
 
 async fn assert_address_balance(
@@ -65,26 +67,27 @@ async fn setup_predicate_test(
     num_coins: u64,
     num_messages: u64,
     amount: u64,
-) -> Result<(Provider, u64, WalletUnlocked, u64, AssetId, WalletUnlocked)> {
+) -> Result<(Provider, u64, Wallet, u64, AssetId, Wallet)> {
     let receiver_num_coins = 1;
     let receiver_amount = 1;
     let receiver_balance = receiver_num_coins * receiver_amount;
 
     let predicate_balance = (num_coins + num_messages) * amount;
-    let mut receiver = WalletUnlocked::new_random(None);
-    let mut extra_wallet = WalletUnlocked::new_random(None);
+    let mut rng = thread_rng();
+    let receiver_signer = PrivateKeySigner::random(&mut rng);
+    let extra_wallet_signer = PrivateKeySigner::random(&mut rng);
 
     let (mut coins, messages, asset_id) =
         get_test_coins_and_messages(predicate_address, num_coins, num_messages, amount, 0);
 
     coins.extend(setup_single_asset_coins(
-        receiver.address(),
+        receiver_signer.address(),
         asset_id,
         receiver_num_coins,
         receiver_amount,
     ));
     coins.extend(setup_single_asset_coins(
-        extra_wallet.address(),
+        extra_wallet_signer.address(),
         AssetId::zeroed(),
         10_000,
         10_000,
@@ -98,13 +101,13 @@ async fn setup_predicate_test(
     ));
 
     let provider = setup_test_provider(coins, messages, None, None).await?;
-    receiver.set_provider(provider.clone());
-    extra_wallet.set_provider(provider.clone());
+    let receiver_wallet = Wallet::new(receiver_signer.clone(), provider.clone());
+    let extra_wallet = Wallet::new(extra_wallet_signer.clone(), provider.clone());
 
     Ok((
         provider,
         predicate_balance,
-        receiver,
+        receiver_wallet,
         receiver_balance,
         asset_id,
         extra_wallet,
@@ -118,14 +121,14 @@ async fn transfer_coins_and_messages_to_predicate() -> Result<()> {
     let amount = 64;
     let balance_to_send = 42;
 
-    let mut wallet = WalletUnlocked::new_random(None);
+    let signer = PrivateKeySigner::random(&mut thread_rng());
 
     let (coins, messages, asset_id) =
-        get_test_coins_and_messages(wallet.address(), num_coins, num_messages, amount, 0);
+        get_test_coins_and_messages(signer.address(), num_coins, num_messages, amount, 0);
 
     let provider = setup_test_provider(coins, messages, None, None).await?;
 
-    wallet.set_provider(provider.clone());
+    let wallet = Wallet::new(signer, provider.clone());
 
     let predicate =
         Predicate::load_from("sway/predicates/basic_predicate/out/release/basic_predicate.bin")?
@@ -450,7 +453,7 @@ async fn predicate_transfer_with_signed_resources() -> Result<()> {
     let predicate_amount = 1000;
     let predicate_balance = (predicate_num_coins + predicate_num_messages) * predicate_amount;
 
-    let mut wallet = WalletUnlocked::new_random(None);
+    let signer = PrivateKeySigner::random(&mut thread_rng());
     let wallet_num_coins = 4;
     let wallet_num_messages = 3;
     let wallet_amount = 1000;
@@ -464,7 +467,7 @@ async fn predicate_transfer_with_signed_resources() -> Result<()> {
         0,
     );
     let (wallet_coins, wallet_messages, _) = get_test_coins_and_messages(
-        wallet.address(),
+        signer.address(),
         wallet_num_coins,
         wallet_num_messages,
         wallet_amount,
@@ -475,21 +478,21 @@ async fn predicate_transfer_with_signed_resources() -> Result<()> {
     messages.extend(wallet_messages);
 
     let provider = setup_test_provider(coins, messages, None, None).await?;
-    wallet.set_provider(provider.clone());
+    let wallet = Wallet::new(signer.clone(), provider.clone());
     predicate.set_provider(provider.clone());
 
     let mut inputs = wallet
-        .get_asset_inputs_for_amount(asset_id, wallet_balance, None)
+        .get_asset_inputs_for_amount(asset_id, wallet_balance.into(), None)
         .await?;
     let predicate_inputs = predicate
-        .get_asset_inputs_for_amount(asset_id, predicate_balance, None)
+        .get_asset_inputs_for_amount(asset_id, predicate_balance.into(), None)
         .await?;
     inputs.extend(predicate_inputs);
 
     let outputs = vec![Output::change(predicate.address().into(), 0, asset_id)];
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, Default::default());
-    tb.add_signer(wallet.clone())?;
+    tb.add_signer(signer)?;
 
     let tx = tb.build(&provider).await?;
 
@@ -907,13 +910,13 @@ async fn predicate_transfer_non_base_asset() -> Result<()> {
         Predicate::load_from("sway/predicates/basic_predicate/out/release/basic_predicate.bin")?
             .with_data(predicate_data);
 
-    let mut wallet = WalletUnlocked::new_random(None);
+    let signer = PrivateKeySigner::random(&mut thread_rng());
 
     let amount = 5;
     let non_base_asset_id = AssetId::new([1; 32]);
 
     // wallet has base and predicate non base asset
-    let mut coins = setup_single_asset_coins(wallet.address(), AssetId::zeroed(), 1, amount);
+    let mut coins = setup_single_asset_coins(signer.address(), AssetId::zeroed(), 1, amount);
     coins.extend(setup_single_asset_coins(
         predicate.address(),
         non_base_asset_id,
@@ -923,10 +926,10 @@ async fn predicate_transfer_non_base_asset() -> Result<()> {
 
     let provider = setup_test_provider(coins, vec![], None, None).await?;
     predicate.set_provider(provider.clone());
-    wallet.set_provider(provider.clone());
+    let wallet = Wallet::new(signer.clone(), provider.clone());
 
     let inputs = predicate
-        .get_asset_inputs_for_amount(non_base_asset_id, amount, None)
+        .get_asset_inputs_for_amount(non_base_asset_id, amount.into(), None)
         .await?;
     let consensus_parameters = provider.consensus_parameters().await?;
     let outputs = vec![
@@ -944,7 +947,7 @@ async fn predicate_transfer_non_base_asset() -> Result<()> {
         TxPolicies::default().with_tip(1),
     );
 
-    tb.add_signer(wallet.clone())?;
+    tb.add_signer(signer)?;
     wallet.adjust_for_fee(&mut tb, 0).await?;
 
     let tx = tb.build(&provider).await?;
@@ -983,9 +986,9 @@ async fn predicate_can_access_manually_added_witnesses() -> Result<()> {
 
     predicate.set_provider(provider.clone());
 
-    let amount_to_send = 12;
+    let amount_to_send = 12u64;
     let inputs = predicate
-        .get_asset_inputs_for_amount(asset_id, amount_to_send, None)
+        .get_asset_inputs_for_amount(asset_id, amount_to_send.into(), None)
         .await?;
     let outputs =
         predicate.get_asset_outputs_for_amount(receiver.address(), asset_id, amount_to_send);
@@ -1050,9 +1053,9 @@ async fn tx_id_not_changed_after_adding_witnesses() -> Result<()> {
 
     predicate.set_provider(provider.clone());
 
-    let amount_to_send = 12;
+    let amount_to_send = 12u64;
     let inputs = predicate
-        .get_asset_inputs_for_amount(asset_id, amount_to_send, None)
+        .get_asset_inputs_for_amount(asset_id, amount_to_send.into(), None)
         .await?;
     let outputs =
         predicate.get_asset_outputs_for_amount(receiver.address(), asset_id, amount_to_send);
@@ -1104,9 +1107,11 @@ async fn predicate_encoder_config_is_applied() -> Result<()> {
             .encode_data(4097, 4097)
             .expect_err("should fail");
 
-        assert!(encoding_error
-            .to_string()
-            .contains("token limit `1` reached while encoding"));
+        assert!(
+            encoding_error
+                .to_string()
+                .contains("token limit `1` reached while encoding")
+        );
     }
 
     Ok(())
@@ -1397,6 +1402,123 @@ async fn predicate_transfer_respects_maturity_and_expiration() -> Result<()> {
         receiver_balance + amount_to_send,
     )
     .await;
+
+    Ok(())
+}
+
+async fn transfer_to_predicate(
+    from: &impl Account,
+    address: &Bech32Address,
+    amount: u64,
+    asset_id: AssetId,
+) {
+    from.transfer(address, amount, asset_id, TxPolicies::default())
+        .await
+        .unwrap();
+
+    assert_address_balance(address, from.try_provider().unwrap(), asset_id, amount).await;
+}
+
+#[tokio::test]
+async fn predicate_tx_input_output() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet_1", "wallet_2"),
+        Abigen(
+            Contract(
+                name = "TestContract",
+                project = "e2e/sway/contracts/contract_test"
+            ),
+            Predicate(
+                name = "MyPredicate",
+                project = "e2e/sway/predicates/predicate_tx_input_output"
+            ),
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "TestContract",
+            wallet = "wallet_1",
+            random_salt = false,
+        ),
+    );
+
+    let provider = wallet_1.try_provider()?;
+
+    // Predicate expects `wallet_2` as owner
+    let configurables =
+        MyPredicateConfigurables::default().with_OWNER(wallet_2.address().into())?;
+
+    // Predicate will check first input and first output
+    let predicate_data = MyPredicateEncoder::default().encode_data(0, 0)?;
+
+    let mut predicate: Predicate = Predicate::load_from(
+        "sway/predicates/predicate_tx_input_output/out/release/predicate_tx_input_output.bin",
+    )?
+    .with_data(predicate_data)
+    .with_configurables(configurables)?;
+    predicate.set_provider(provider.clone());
+
+    let asset_id = AssetId::zeroed();
+    {
+        transfer_to_predicate(&wallet_2, predicate.address(), 42, asset_id).await;
+
+        // Call contract method with custom `wallet_2` input at first place, predicate at second
+        // and custom change to `wallet_2`
+        let wallet_input = wallet_2
+            .get_asset_inputs_for_amount(asset_id, 10, None)
+            .await?
+            .pop()
+            .unwrap();
+
+        let predicate_input = predicate
+            .get_asset_inputs_for_amount(asset_id, 10, None)
+            .await?
+            .pop()
+            .unwrap();
+
+        let custom_inputs = vec![wallet_input, predicate_input];
+
+        let custom_output = vec![Output::change(wallet_2.address().into(), 0, asset_id)];
+
+        let value = contract_instance
+            .methods()
+            .initialize_counter(36)
+            .with_inputs(custom_inputs)
+            .add_signer(wallet_2.signer().clone())
+            .with_outputs(custom_output)
+            .call()
+            .await?
+            .value;
+
+        assert_eq!(value, 36);
+    }
+    {
+        transfer_to_predicate(&wallet_2, predicate.address(), 42, asset_id).await;
+
+        // Add coin with wrong owner (`wallet_1`)
+        let wallet_input = wallet_1
+            .get_asset_inputs_for_amount(asset_id, 10, None)
+            .await?
+            .pop()
+            .unwrap();
+
+        let predicate_input = predicate
+            .get_asset_inputs_for_amount(asset_id, 10, None)
+            .await?
+            .pop()
+            .unwrap();
+
+        let custom_inputs = vec![wallet_input, predicate_input];
+
+        let err = contract_instance
+            .methods()
+            .initialize_counter(36)
+            .with_inputs(custom_inputs)
+            .call()
+            .await
+            .unwrap_err();
+
+        assert!(err.to_string().contains("PredicateVerificationFailed"));
+    }
 
     Ok(())
 }

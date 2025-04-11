@@ -3,7 +3,7 @@ use std::{collections::HashMap, io::Read};
 use fuel_abi_types::abi::unified_program::UnifiedProgramABI;
 use itertools::Itertools;
 
-use crate::{error, offsets::extract_offset_at, types::param_types::ParamType, Result};
+use crate::{Result, error, offsets::extract_offset_at, types::param_types::ParamType};
 
 use super::{ABIDecoder, DecoderConfig};
 
@@ -126,9 +126,8 @@ impl ABIFormatter {
 
 #[cfg(test)]
 mod tests {
-    use crate::types::errors::Error;
-
     use super::*;
+    use crate::types::errors::Error;
 
     #[test]
     fn gracefully_handles_missing_fn() {

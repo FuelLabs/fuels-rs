@@ -9,7 +9,7 @@ impl MyContract for Contract {
         let mut counter = 0;
         while counter < coins {
             counter += 1;
-            std::asset::mint_to(recipient, std::constants::ZERO_B256, 1);
+            std::asset::mint_to(recipient, b256::zero(), 1);
         }
     }
 }

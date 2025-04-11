@@ -1,8 +1,8 @@
 use fuel_types::{Address, AssetId, ContractId};
 
 use crate::types::{
-    param_types::{EnumVariants, ParamType},
     AsciiString, Bits256, Bytes, RawSlice, SizedAsciiString,
+    param_types::{EnumVariants, ParamType},
 };
 
 /// `abigen` requires `Parameterized` to construct nested types. It is also used by `try_from_bytes`

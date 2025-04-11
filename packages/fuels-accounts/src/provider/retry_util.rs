@@ -1,6 +1,6 @@
 use std::{fmt::Debug, future::Future, num::NonZeroU32, time::Duration};
 
-use fuels_core::types::errors::{error, Result};
+use fuels_core::types::errors::{Result, error};
 
 /// A set of strategies to control retry intervals between attempts.
 ///
@@ -153,10 +153,10 @@ mod tests {
     mod retry_until {
         use std::time::{Duration, Instant};
 
-        use fuels_core::types::errors::{error, Result};
+        use fuels_core::types::errors::{Result, error};
         use tokio::sync::Mutex;
 
-        use crate::provider::{retry_util, Backoff, RetryConfig};
+        use crate::provider::{Backoff, RetryConfig, retry_util};
 
         #[tokio::test]
         async fn returns_last_received_response() -> Result<()> {

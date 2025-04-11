@@ -4,10 +4,10 @@ use fuel_tx::{ContractId, Receipt};
 use fuels_core::{
     codec::{ABIDecoder, DecoderConfig},
     types::{
-        bech32::Bech32ContractId,
-        errors::{error, Error, Result},
-        param_types::ParamType,
         Token,
+        bech32::Bech32ContractId,
+        errors::{Error, Result, error},
+        param_types::ParamType,
     },
 };
 

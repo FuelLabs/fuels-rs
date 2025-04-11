@@ -1,5 +1,5 @@
 use fuel_asm::Instruction;
-use fuel_tx::{field::Script, ConsensusParameters};
+use fuel_tx::{ConsensusParameters, field::Script};
 use fuel_types::bytes::padded_len_usize;
 
 use crate::{error, types::errors::Result};

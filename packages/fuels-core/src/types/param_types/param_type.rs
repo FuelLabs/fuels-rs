@@ -1,4 +1,4 @@
-use crate::types::errors::{error, Result};
+use crate::types::errors::{Result, error};
 
 pub type NamedParamType = (String, ParamType);
 

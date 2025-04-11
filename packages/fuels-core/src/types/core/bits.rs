@@ -95,7 +95,7 @@ mod tests {
     use super::*;
     use crate::{
         traits::{Parameterize, Tokenizable},
-        types::{param_types::ParamType, Token},
+        types::{Token, param_types::ParamType},
     };
 
     #[test]

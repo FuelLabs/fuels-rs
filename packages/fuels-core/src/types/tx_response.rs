@@ -1,5 +1,6 @@
-use super::tx_status::Success;
 use fuel_tx::TxId;
+
+use super::tx_status::Success;
 
 #[derive(Clone, Debug)]
 pub struct TxResponse {

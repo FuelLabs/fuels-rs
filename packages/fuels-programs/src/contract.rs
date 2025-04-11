@@ -42,8 +42,9 @@ pub use regular::*;
 
 mod loader;
 // reexported to avoid doing a breaking change
-pub use crate::assembly::contract_call::loader_contract_asm;
 pub use loader::*;
+
+pub use crate::assembly::contract_call::loader_contract_asm;
 
 fn compute_contract_id_and_state_root(
     binary: &[u8],
@@ -69,9 +70,8 @@ mod tests {
     };
     use tempfile::tempdir;
 
-    use crate::assembly::contract_call::loader_contract_asm;
-
     use super::*;
+    use crate::assembly::contract_call::loader_contract_asm;
 
     #[test]
     fn autoload_storage_slots() {
@@ -114,7 +114,12 @@ mod tests {
         let Error::Other(msg) = error else {
             panic!("expected an error of type `Other`");
         };
-        assert_eq!(msg, format!("could not autoload storage slots from file: {storage_slots_path:?}. Either provide the file or disable autoloading in `StorageConfiguration`"));
+        assert_eq!(
+            msg,
+            format!(
+                "could not autoload storage slots from file: {storage_slots_path:?}. Either provide the file or disable autoloading in `StorageConfiguration`"
+            )
+        );
     }
 
     fn save_slots(slots: &Vec<StorageSlot>, path: &Path) {

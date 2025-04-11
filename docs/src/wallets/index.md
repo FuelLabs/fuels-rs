@@ -1,18 +1,47 @@
-# Managing wallets
+# Wallets
 
-<!-- This section should explain in general how you can use a wallet in the SDK -->
-<!-- wallets:example:start -->
-You can use wallets for many important things, for instance:
+Wallets serve as a centralized interface for all account-related behaviors. They allow you to:
 
-1. Checking your balance
-2. Transferring coins to a destination address or contract
-3. Signing messages and transactions
-4. Paying for network fees when sending transactions or deploying smart contracts
-<!-- wallets:example:end -->
+- **Inspect UTXOs:** Check available coins for spending.
+- **Prepare and send transactions:** Build, sign, and submit transfers.
+- **Manage network fees:** Pay for transaction execution and contract deployment.
 
-The SDK gives you many different ways to create and access wallets. Let's explore these different approaches in the following sub-chapters.
+Every wallet requires a **provider** to communicate with the network.
 
-<!-- This section should provide best security practices for using wallets in the SDK -->
-<!-- security:example:start -->
-> **Note:** Keep in mind that you should never share your private/secret key. And in the case of wallets that were derived from a mnemonic phrase, never share your mnemonic phrase. If you're planning on storing the wallet on disk, do not store the plain private/secret key and do not store the plain mnemonic phrase. Instead, use `Wallet::encrypt` to encrypt its content first before saving it to disk.
-<!-- security:example:end -->
+---
+
+## Types of Wallets
+
+There are two primary types of wallets available in the SDK:
+
+### [Locked Wallets](./access.md)
+
+- **Purpose:** Used for read-only operations.
+- **Interface:** Implements the [`ViewOnlyAccount`](../accounts.md) trait.
+- **Use Cases:** Checking balances, viewing UTXOs, and monitoring transactions without the ability to sign or submit transactions.
+
+### [Unlocked Wallets](./access.md)
+
+- **Purpose:** Supports full account functionality.
+- **Interface:** Implements the [`ViewOnlyAccount`](../accounts.md) and [`Account`](../accounts.md) traits.
+- **Additional Requirement:** In addition to a provider, an unlocked wallet must include a **signer**.
+- **Use Cases:** Transferring funds, signing messages, submitting transactions, and performing state-changing operations.
+
+---
+
+## Signer Options
+
+The SDK offers multiple signing methods to suit different scenarios:
+
+- [**Private Key Signer:**](./private_key_signer.md)  
+  Use when you have direct access to your account’s private key.
+- [**AWS KMS Signer:**](./kms.md)
+  Delegate signing operations to AWS Key Management Service, enhancing key security by offloading cryptographic operations.
+
+- [**Google KMS Signer:**](./kms.md)  
+  Similar to AWS KMS, this option delegates signing to Google’s Key Management Service.
+
+- [**Fake Signer:**](./fake_signer.md)  
+  Generates dummy signatures, which is useful for impersonation while testing. Only possible when using a network that does not enforce signature validation.
+
+---

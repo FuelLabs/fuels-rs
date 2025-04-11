@@ -1,6 +1,6 @@
 use fuels_accounts::Account;
 use fuels_core::types::{
-    errors::{error, Result},
+    errors::{Result, error},
     transaction::{ScriptTransaction, TxPolicies},
     transaction_builders::{
         BuildableTransaction, ScriptTransactionBuilder, TransactionBuilder, VariableOutputPolicy,
@@ -8,11 +8,11 @@ use fuels_core::types::{
 };
 
 use crate::{
-    calls::{
-        utils::{build_tx_from_contract_calls, sealed, transaction_builder_from_contract_calls},
-        ContractCall, ScriptCall,
-    },
     DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE,
+    calls::{
+        ContractCall, ScriptCall,
+        utils::{build_with_tb, sealed, transaction_builder_from_contract_calls},
+    },
 };
 
 #[async_trait::async_trait]
@@ -26,8 +26,7 @@ pub trait TransactionTuner: sealed::Sealed {
 
     async fn build_tx<T: Account>(
         &self,
-        tx_policies: TxPolicies,
-        variable_output_policy: VariableOutputPolicy,
+        tb: ScriptTransactionBuilder,
         account: &T,
     ) -> Result<ScriptTransaction>;
 }
@@ -51,17 +50,10 @@ impl TransactionTuner for ContractCall {
 
     async fn build_tx<T: Account>(
         &self,
-        tx_policies: TxPolicies,
-        variable_output_policy: VariableOutputPolicy,
+        tb: ScriptTransactionBuilder,
         account: &T,
     ) -> Result<ScriptTransaction> {
-        build_tx_from_contract_calls(
-            std::slice::from_ref(self),
-            tx_policies,
-            variable_output_policy,
-            account,
-        )
-        .await
+        build_with_tb(std::slice::from_ref(self), tb, account).await
     }
 }
 
@@ -89,14 +81,9 @@ impl TransactionTuner for ScriptCall {
 
     async fn build_tx<T: Account>(
         &self,
-        tx_policies: TxPolicies,
-        variable_output_policy: VariableOutputPolicy,
+        mut tb: ScriptTransactionBuilder,
         account: &T,
     ) -> Result<ScriptTransaction> {
-        let mut tb = self
-            .transaction_builder(tx_policies, variable_output_policy, account)
-            .await?;
-
         account.add_witnesses(&mut tb)?;
         account.adjust_for_fee(&mut tb, 0).await?;
 
@@ -123,13 +110,12 @@ impl TransactionTuner for Vec<ContractCall> {
     /// Returns the script that executes the contract calls
     async fn build_tx<T: Account>(
         &self,
-        tx_policies: TxPolicies,
-        variable_output_policy: VariableOutputPolicy,
+        tb: ScriptTransactionBuilder,
         account: &T,
     ) -> Result<ScriptTransaction> {
         validate_contract_calls(self)?;
 
-        build_tx_from_contract_calls(self, tx_policies, variable_output_policy, account).await
+        build_with_tb(self, tb, account).await
     }
 }
 

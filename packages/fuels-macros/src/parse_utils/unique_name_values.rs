@@ -4,11 +4,11 @@ use fuels_code_gen::utils::ident;
 use itertools::Itertools;
 use proc_macro2::{Ident, Span, TokenStream};
 use syn::{
-    parse::Parser, punctuated::Punctuated, spanned::Spanned, Error, Expr, Lit, LitStr,
-    MetaNameValue,
+    Error, Expr, Lit, LitStr, MetaNameValue, parse::Parser, punctuated::Punctuated,
+    spanned::Spanned,
 };
 
-use crate::parse_utils::{validate_no_duplicates, ErrorsExt};
+use crate::parse_utils::{ErrorsExt, validate_no_duplicates};
 
 #[derive(Debug)]
 pub struct UniqueNameValues {

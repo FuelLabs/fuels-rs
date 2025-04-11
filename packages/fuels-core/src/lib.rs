@@ -8,10 +8,10 @@ use std::{
     path::Path,
 };
 
-use codec::{try_from_bytes, ABIDecoder, ABIEncoder, DecoderConfig};
+use codec::{ABIDecoder, ABIEncoder, DecoderConfig, try_from_bytes};
 use offsets::{extract_data_offset, extract_offset_at};
 use traits::{Parameterize, Tokenizable};
-use types::{param_types::ParamType, Token};
+use types::{Token, param_types::ParamType};
 pub use utils::*;
 
 use crate::types::errors::Result;
@@ -370,7 +370,10 @@ mod tests {
 
         assert!(result.is_err());
         if let Err(e) = result {
-            assert!(e.to_string().contains("overflow occurred while shifting"));
+            assert!(
+                e.to_string()
+                    .contains("overflow occurred while shifting configurable's offset")
+            );
         }
     }
 
@@ -384,7 +387,10 @@ mod tests {
 
         assert!(result.is_err());
         if let Err(e) = result {
-            assert!(e.to_string().contains("overflow occurred while shifting"));
+            assert!(
+                e.to_string()
+                    .contains("overflow occurred while shifting configurable's offset")
+            );
         }
     }
 

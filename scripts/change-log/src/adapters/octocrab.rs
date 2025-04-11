@@ -1,4 +1,4 @@
-use octocrab::{models::pulls::PullRequest, Octocrab};
+use octocrab::{Octocrab, models::pulls::PullRequest};
 use regex::Regex;
 use serde_json::Value;
 

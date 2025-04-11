@@ -23,8 +23,8 @@ serde_json = { workspace = true }
 tokio = { workspace = true }
 
 [dev-dependencies]
-test-case = { workspace = true }
 tempfile = "3.8.1"
+test-case = { workspace = true }
 
 [features]
 default = ["std"]

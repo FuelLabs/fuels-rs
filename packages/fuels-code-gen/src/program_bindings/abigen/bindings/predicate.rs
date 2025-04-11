@@ -13,7 +13,7 @@ use crate::{
         },
         generated_code::GeneratedCode,
     },
-    utils::{ident, TypePath},
+    utils::{TypePath, ident},
 };
 
 pub(crate) fn predicate_bindings(

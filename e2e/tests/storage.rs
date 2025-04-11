@@ -60,7 +60,7 @@ async fn test_init_storage_automatically() -> Result<()> {
     let contract_methods = MyContract::new(contract_id, wallet.clone()).methods();
     {
         let key: Bytes32 =
-            "d95f4c8d717d52323d34c1118b3f0598a5ec3cabae386887507cabd6dd546a43".parse()?;
+            "eb390d9f85c8c849ff8aeb05c865ca66b37ba69a7bec8489b1c467f029b650af".parse()?;
 
         let value = contract_methods
             .get_value_b256(Bits256(*key))
@@ -72,7 +72,7 @@ async fn test_init_storage_automatically() -> Result<()> {
     }
     {
         let key: Bytes32 =
-            "c979570128d5f52725e9a343a7f4992d8ed386d7c8cfd25f1c646c51c2ac6b4b".parse()?;
+            "419b1120ea993203d7e223dfbe76184322453d6f8de946e827a8669102ab395b".parse()?;
 
         let value = contract_methods
             .get_value_u64(Bits256(*key))

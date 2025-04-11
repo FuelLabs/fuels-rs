@@ -3,7 +3,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use fuels_code_gen::{utils::ident, Abi, Abigen, AbigenTarget, ProgramType};
+use fuels_code_gen::{Abi, Abigen, AbigenTarget, ProgramType, utils::ident};
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
 use syn::LitStr;

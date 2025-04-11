@@ -4,26 +4,26 @@ use async_trait::async_trait;
 use custom_queries::{ContractExistsQuery, IsUserAccountQuery, IsUserAccountVariables};
 use cynic::QueryBuilder;
 use fuel_core_client::client::{
+    FuelClient,
     pagination::{PaginatedResult, PaginationRequest},
     schema::contract::ContractByIdArgs,
     types::{
-        gas_price::{EstimateGasPrice, LatestGasPrice},
-        primitives::{BlockId, TransactionId},
         Balance, Blob, Block, ChainInfo, Coin, CoinType, ContractBalance, Message, MessageProof,
         NodeInfo, TransactionResponse, TransactionStatus,
+        gas_price::{EstimateGasPrice, LatestGasPrice},
+        primitives::{BlockId, TransactionId},
     },
-    FuelClient,
 };
 use fuel_core_types::services::executor::TransactionExecutionStatus;
 use fuel_tx::{BlobId, ConsensusParameters, Transaction, TxId, UtxoId};
 use fuel_types::{Address, AssetId, BlockHeight, ContractId, Nonce};
-use fuels_core::types::errors::{error, Error, Result};
+use fuels_core::types::errors::{Error, Result, error};
 
 use super::{
     cache::CacheableRpcs,
     supported_versions::{self, VersionCompatibility},
 };
-use crate::provider::{retry_util, RetryConfig};
+use crate::provider::{RetryConfig, retry_util};
 
 #[derive(Debug, thiserror::Error)]
 pub(crate) enum RequestError {
@@ -50,7 +50,11 @@ pub(crate) struct RetryableClient {
 #[async_trait]
 impl CacheableRpcs for RetryableClient {
     async fn consensus_parameters(&self) -> Result<ConsensusParameters> {
-        Ok(self.client.chain_info().await?.consensus_parameters)
+        Ok(self.chain_info().await?.consensus_parameters)
+    }
+
+    async fn node_info(&self) -> Result<NodeInfo> {
+        Ok(self.node_info().await?)
     }
 }
 
@@ -193,9 +197,13 @@ impl RetryableClient {
         tx: &[Transaction],
         utxo_validation: Option<bool>,
         gas_price: Option<u64>,
+        at_height: Option<BlockHeight>,
     ) -> RequestResult<Vec<TransactionExecutionStatus>> {
-        self.wrap(|| self.client.dry_run_opt(tx, utxo_validation, gas_price))
-            .await
+        self.wrap(|| {
+            self.client
+                .dry_run_opt(tx, utxo_validation, gas_price, at_height)
+        })
+        .await
     }
 
     pub async fn coins(
@@ -211,7 +219,7 @@ impl RetryableClient {
     pub async fn coins_to_spend(
         &self,
         owner: &Address,
-        spend_query: Vec<(AssetId, u64, Option<u32>)>,
+        spend_query: Vec<(AssetId, u128, Option<u16>)>,
         excluded_ids: Option<(Vec<UtxoId>, Vec<Nonce>)>,
     ) -> RequestResult<Vec<Vec<CoinType>>> {
         self.wrap(move || {
@@ -358,12 +366,12 @@ impl RetryableClient {
 }
 
 mod custom_queries {
-    use fuel_core_client::client::schema::blob::BlobIdFragment;
-    use fuel_core_client::client::schema::schema;
     use fuel_core_client::client::schema::{
-        contract::{ContractByIdArgsFields, ContractIdFragment},
-        tx::TransactionIdFragment,
         BlobId, ContractId, TransactionId,
+        blob::BlobIdFragment,
+        contract::{ContractByIdArgsFields, ContractIdFragment},
+        schema,
+        tx::TransactionIdFragment,
     };
 
     #[derive(cynic::QueryVariables, Debug)]

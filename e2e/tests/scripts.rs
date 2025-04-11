@@ -2,16 +2,18 @@ use std::time::Duration;
 
 use fuel_tx::Output;
 use fuels::{
+    accounts::signers::private_key::PrivateKeySigner,
     client::{PageDirection, PaginationRequest},
     core::{
+        Configurables,
         codec::{DecoderConfig, EncoderConfig},
         traits::Tokenizable,
-        Configurables,
     },
     prelude::*,
-    programs::{executable::Executable, DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE},
+    programs::{DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE, executable::Executable},
     types::{Bits256, Identity},
 };
+use rand::thread_rng;
 
 #[tokio::test]
 async fn main_function_arguments() -> Result<()> {
@@ -120,9 +122,8 @@ async fn test_output_variable_estimation() -> Result<()> {
         )
     );
 
-    let provider = wallet.try_provider()?.clone();
-    let mut receiver = WalletUnlocked::new_random(None);
-    receiver.set_provider(provider);
+    let provider = wallet.provider().clone();
+    let receiver = Wallet::random(&mut thread_rng(), provider);
 
     let amount = 1000;
     let asset_id = AssetId::zeroed();
@@ -132,7 +133,7 @@ async fn test_output_variable_estimation() -> Result<()> {
         Identity::Address(receiver.address().into()),
     );
     let inputs = wallet
-        .get_asset_inputs_for_amount(asset_id, amount, None)
+        .get_asset_inputs_for_amount(asset_id, amount.into(), None)
         .await?;
     let output = Output::change(wallet.address().into(), 0, asset_id);
     let _ = script_call
@@ -309,7 +310,7 @@ async fn test_script_transaction_builder() -> Result<()> {
             wallet = "wallet"
         )
     );
-    let provider = wallet.try_provider()?;
+    let provider = wallet.provider();
 
     // ANCHOR: script_call_tb
     let script_call_handler = script_instance.main(1, 2);
@@ -319,7 +320,7 @@ async fn test_script_transaction_builder() -> Result<()> {
     // customize the builder...
 
     wallet.adjust_for_fee(&mut tb, 0).await?;
-    tb.add_signer(wallet.clone())?;
+    wallet.add_witnesses(&mut tb)?;
 
     let tx = tb.build(provider).await?;
 
@@ -373,7 +374,7 @@ async fn script_encoder_config_is_applied() {
 
         let encoding_error = script_instance_with_encoder_config
             .main(1, 2)
-            .simulate(Execution::Realistic)
+            .simulate(Execution::realistic())
             .await
             .expect_err("should error");
 
@@ -396,14 +397,14 @@ async fn simulations_can_be_made_without_coins() -> Result<()> {
             wallet = "wallet"
         )
     );
-    let provider = wallet.provider().cloned();
+    let provider = wallet.provider().clone();
 
-    let no_funds_wallet = WalletUnlocked::new_random(provider);
+    let no_funds_wallet = Wallet::random(&mut thread_rng(), provider);
     let script_instance = script_instance.with_account(no_funds_wallet);
 
     let value = script_instance
         .main(1000, 2000)
-        .simulate(Execution::StateReadOnly)
+        .simulate(Execution::state_read_only())
         .await?
         .value;
 
@@ -421,7 +422,7 @@ async fn can_be_run_in_blobs_builder() -> Result<()> {
 
     let binary_path = "./sway/scripts/script_blobs/out/release/script_blobs.bin";
     let wallet = launch_provider_and_get_wallet().await?;
-    let provider = wallet.try_provider()?.clone();
+    let provider = wallet.provider().clone();
 
     // ANCHOR: preload_low_level
     let regular = Executable::load_from(binary_path)?;
@@ -497,10 +498,10 @@ async fn high_level_blob_upload_sets_max_fee_tolerance() -> Result<()> {
         starting_gas_price: 1000000000,
         ..Default::default()
     };
-    let mut wallet = WalletUnlocked::new_random(None);
-    let coins = setup_single_asset_coins(wallet.address(), AssetId::zeroed(), 1, u64::MAX);
+    let signer = PrivateKeySigner::random(&mut thread_rng());
+    let coins = setup_single_asset_coins(signer.address(), AssetId::zeroed(), 1, u64::MAX);
     let provider = setup_test_provider(coins, vec![], Some(node_config), None).await?;
-    wallet.set_provider(provider.clone());
+    let wallet = Wallet::new(signer, provider.clone());
 
     setup_program_test!(
         Abigen(Script(
@@ -640,7 +641,7 @@ async fn loader_can_be_presented_as_a_normal_script_with_shifted_configurables()
 
     let binary_path = "./sway/scripts/script_blobs/out/release/script_blobs.bin";
     let wallet = launch_provider_and_get_wallet().await?;
-    let provider = wallet.try_provider()?.clone();
+    let provider = wallet.provider().clone();
 
     let regular = Executable::load_from(binary_path)?;
 
@@ -695,7 +696,7 @@ async fn script_call_respects_maturity_and_expiration() -> Result<()> {
         abi = "e2e/sway/scripts/basic_script/out/release/basic_script-abi.json"
     ));
     let wallet = launch_provider_and_get_wallet().await.expect("");
-    let provider = wallet.try_provider()?.clone();
+    let provider = wallet.provider().clone();
     let bin_path = "sway/scripts/basic_script/out/release/basic_script.bin";
 
     let script_instance = MyScript::new(wallet, bin_path);
@@ -730,6 +731,82 @@ async fn script_call_respects_maturity_and_expiration() -> Result<()> {
         let err = call_handler.call().await.expect_err("expiration reached");
 
         assert!(err.to_string().contains("TransactionExpiration"));
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn script_tx_input_output() -> Result<()> {
+    let [wallet_1, wallet_2] = launch_custom_provider_and_get_wallets(
+        WalletsConfig::new(Some(2), Some(10), Some(1000)),
+        None,
+        None,
+    )
+    .await?
+    .try_into()
+    .unwrap();
+
+    abigen!(Script(
+        name = "TxScript",
+        abi = "e2e/sway/scripts/script_tx_input_output/out/release/script_tx_input_output-abi.json"
+    ));
+    let script_binary =
+        "sway/scripts/script_tx_input_output/out/release/script_tx_input_output.bin";
+
+    // Set `wallet_1` as the custom input owner
+    let configurables = TxScriptConfigurables::default().with_OWNER(wallet_1.address().into())?;
+
+    let script_instance =
+        TxScript::new(wallet_2.clone(), script_binary).with_configurables(configurables);
+
+    let asset_id = AssetId::zeroed();
+
+    {
+        let custom_inputs = wallet_1
+            .get_asset_inputs_for_amount(asset_id, 10, None)
+            .await?
+            .into_iter()
+            .take(1)
+            .collect();
+
+        let custom_output = vec![Output::change(wallet_1.address().into(), 0, asset_id)];
+
+        // Input at first position is a coin owned by wallet_1
+        // Output at first position is change to wallet_1
+        // ANCHOR: script_custom_inputs_outputs
+        let _ = script_instance
+            .main(0, 0)
+            .with_inputs(custom_inputs)
+            .with_outputs(custom_output)
+            .add_signer(wallet_1.signer().clone())
+            .call()
+            .await?;
+        // ANCHOR_END: script_custom_inputs_outputs
+    }
+    {
+        // Input at first position is not a coin owned by wallet_1
+        let err = script_instance.main(0, 0).call().await.unwrap_err();
+
+        assert!(err.to_string().contains("wrong owner"));
+
+        let custom_input = wallet_1
+            .get_asset_inputs_for_amount(asset_id, 10, None)
+            .await?
+            .pop()
+            .unwrap();
+
+        // Input at first position is a coin owned by wallet_1
+        // Output at first position is not change to wallet_1
+        let err = script_instance
+            .main(0, 0)
+            .with_inputs(vec![custom_input])
+            .add_signer(wallet_1.signer().clone())
+            .call()
+            .await
+            .unwrap_err();
+
+        assert!(err.to_string().contains("wrong change address"));
     }
 
     Ok(())

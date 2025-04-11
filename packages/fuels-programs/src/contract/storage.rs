@@ -7,7 +7,7 @@ use std::{
 };
 
 use fuel_tx::{Bytes32, StorageSlot};
-use fuels_core::types::errors::{error, Result};
+use fuels_core::types::errors::{Result, error};
 
 /// Configuration for contract storage
 #[derive(Debug, Clone)]
