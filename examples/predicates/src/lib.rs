@@ -88,7 +88,7 @@ mod tests {
         wallet
             .transfer(
                 predicate.address(),
-                amount_to_predicate,
+                amount_to_predicate.into(),
                 asset_id,
                 TxPolicies::default(),
             )
@@ -103,7 +103,7 @@ mod tests {
         predicate
             .transfer(
                 receiver.address(),
-                amount_to_receiver,
+                amount_to_receiver.into(),
                 asset_id,
                 TxPolicies::default(),
             )

@@ -136,7 +136,7 @@ async fn transfer_coins_and_messages_to_predicate() -> Result<()> {
     wallet
         .transfer(
             predicate.address(),
-            balance_to_send,
+            balance_to_send.into(),
             asset_id,
             TxPolicies::default(),
         )
@@ -173,7 +173,7 @@ async fn spend_predicate_coins_messages_basic() -> Result<()> {
     let fee = predicate
         .transfer(
             receiver.address(),
-            amount_to_send as u128,
+            amount_to_send.into(),
             asset_id,
             TxPolicies::default(),
         )
@@ -682,7 +682,7 @@ async fn predicate_default_configurables() -> Result<()> {
     predicate
         .transfer(
             receiver.address(),
-            amount_to_send,
+            amount_to_send.into(),
             asset_id,
             TxPolicies::default(),
         )
@@ -748,7 +748,7 @@ async fn predicate_configurables() -> Result<()> {
     let fee = predicate
         .transfer(
             receiver.address(),
-            amount_to_send,
+            amount_to_send.into(),
             asset_id,
             TxPolicies::default(),
         )
@@ -905,7 +905,7 @@ async fn predicate_can_access_manually_added_witnesses() -> Result<()> {
         .get_asset_inputs_for_amount(asset_id, amount_to_send.into(), None)
         .await?;
     let outputs =
-        predicate.get_asset_outputs_for_amount(receiver.address(), asset_id, amount_to_send);
+        predicate.get_asset_outputs_for_amount(receiver.address(), asset_id, amount_to_send.into());
 
     let mut tx = ScriptTransactionBuilder::prepare_transfer(
         inputs,
@@ -972,7 +972,7 @@ async fn tx_id_not_changed_after_adding_witnesses() -> Result<()> {
         .get_asset_inputs_for_amount(asset_id, amount_to_send.into(), None)
         .await?;
     let outputs =
-        predicate.get_asset_outputs_for_amount(receiver.address(), asset_id, amount_to_send);
+        predicate.get_asset_outputs_for_amount(receiver.address(), asset_id, amount_to_send.into());
 
     let mut tx = ScriptTransactionBuilder::prepare_transfer(
         inputs,
@@ -1055,7 +1055,7 @@ async fn predicate_transfers_non_base_asset() -> Result<()> {
     predicate
         .transfer(
             receiver.address(),
-            send_amount,
+            send_amount.into(),
             other_asset_id,
             TxPolicies::default(),
         )
@@ -1095,7 +1095,7 @@ async fn predicate_with_invalid_data_fails() -> Result<()> {
     let error_string = predicate
         .transfer(
             receiver.address(),
-            send_amount,
+            send_amount.into(),
             other_asset_id,
             TxPolicies::default(),
         )
@@ -1148,7 +1148,7 @@ async fn predicate_blobs() -> Result<()> {
     predicate
         .transfer(
             receiver.address(),
-            predicate_balance - expected_fee,
+            (predicate_balance - expected_fee).into(),
             asset_id,
             TxPolicies::default(),
         )
@@ -1222,7 +1222,7 @@ async fn predicate_configurables_in_blobs() -> Result<()> {
     predicate
         .transfer(
             receiver.address(),
-            amount_to_send,
+            amount_to_send.into(),
             asset_id,
             TxPolicies::default(),
         )
@@ -1276,7 +1276,12 @@ async fn predicate_transfer_respects_maturity_and_expiration() -> Result<()> {
 
     {
         let err = predicate
-            .transfer(receiver.address(), amount_to_send, asset_id, tx_policies)
+            .transfer(
+                receiver.address(),
+                amount_to_send.into(),
+                asset_id,
+                tx_policies,
+            )
             .await
             .expect_err("maturity not reached");
 
@@ -1285,14 +1290,24 @@ async fn predicate_transfer_respects_maturity_and_expiration() -> Result<()> {
     {
         provider.produce_blocks(15, None).await?;
         predicate
-            .transfer(receiver.address(), amount_to_send, asset_id, tx_policies)
+            .transfer(
+                receiver.address(),
+                amount_to_send.into(),
+                asset_id,
+                tx_policies,
+            )
             .await
             .expect("should succeed. Block height between `maturity` and `expiration`");
     }
     {
         provider.produce_blocks(15, None).await?;
         let err = predicate
-            .transfer(receiver.address(), amount_to_send, asset_id, tx_policies)
+            .transfer(
+                receiver.address(),
+                amount_to_send.into(),
+                asset_id,
+                tx_policies,
+            )
             .await
             .expect_err("expiration reached");
 
@@ -1326,7 +1341,7 @@ async fn transfer_to_predicate(
     amount: u64,
     asset_id: AssetId,
 ) {
-    from.transfer(address, amount, asset_id, TxPolicies::default())
+    from.transfer(address, amount.into(), asset_id, TxPolicies::default())
         .await
         .unwrap();
 

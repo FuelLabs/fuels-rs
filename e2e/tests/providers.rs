@@ -788,18 +788,18 @@ async fn test_sway_timestamp() -> Result<()> {
 #[cfg(feature = "coin-cache")]
 async fn create_transfer(
     wallet: &Wallet,
-    amount: u64,
+    amount: u128,
     to: &Bech32Address,
 ) -> Result<ScriptTransaction> {
     let asset_id = AssetId::zeroed();
     let inputs = wallet
-        .get_asset_inputs_for_amount(asset_id, amount.into(), None)
+        .get_asset_inputs_for_amount(asset_id, amount, None)
         .await?;
     let outputs = wallet.get_asset_outputs_for_amount(to, asset_id, amount);
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
 
-    wallet.adjust_for_fee(&mut tb, amount.into()).await?;
+    wallet.adjust_for_fee(&mut tb, amount).await?;
     wallet.add_witnesses(&mut tb)?;
 
     tb.build(wallet.provider()).await
@@ -856,7 +856,7 @@ async fn coin_caching() -> Result<()> {
     let amount_to_send = 100;
     let mut tx_ids = vec![];
     for _ in 0..num_iterations {
-        let tx = create_transfer(&wallet_1, amount_to_send, wallet_2.address()).await?;
+        let tx = create_transfer(&wallet_1, amount_to_send.into(), wallet_2.address()).await?;
         let tx_id = provider.send_transaction(tx).await?;
         tx_ids.push(tx_id);
     }
@@ -887,7 +887,8 @@ async fn create_revert_tx(wallet: &Wallet) -> Result<ScriptTransaction> {
     let inputs = wallet
         .get_asset_inputs_for_amount(asset_id, amount.into(), None)
         .await?;
-    let outputs = wallet.get_asset_outputs_for_amount(&Bech32Address::default(), asset_id, amount);
+    let outputs =
+        wallet.get_asset_outputs_for_amount(&Bech32Address::default(), asset_id, amount.into());
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default())
         .with_script(script);

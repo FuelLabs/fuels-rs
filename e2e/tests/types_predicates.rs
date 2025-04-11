@@ -22,7 +22,7 @@ async fn assert_predicate_spendable(data: Vec<u8>, project_path: impl AsRef<Path
     let fee = predicate
         .transfer(
             receiver.address(),
-            amount_to_send as u128,
+            amount_to_send.into(),
             asset_id,
             TxPolicies::default(),
         )

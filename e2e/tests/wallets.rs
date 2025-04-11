@@ -145,7 +145,7 @@ async fn adjust_for_fee_with_message_data_input() -> Result<()> {
     let message = wallet.get_messages().await?.pop().unwrap();
     let input = Input::resource_signed(CoinType::Message(message));
     let outputs =
-        wallet.get_asset_outputs_for_amount(receiver.address(), asset_id, amount_to_send as u128);
+        wallet.get_asset_outputs_for_amount(receiver.address(), asset_id, amount_to_send.into());
 
     {
         // message with data as only input - without adjust for fee
@@ -202,7 +202,7 @@ async fn adjust_fee_resources_to_transfer_with_base_asset() -> Result<()> {
     let outputs = wallet.get_asset_outputs_for_amount(
         &Address::zeroed().into(),
         base_asset_id,
-        base_amount as u128,
+        base_amount.into(),
     );
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
@@ -246,7 +246,7 @@ async fn test_transfer() -> Result<()> {
     let _ = wallet_1
         .transfer(
             wallet_2.address(),
-            (amount / 2) as u128,
+            (amount / 2).into(),
             Default::default(),
             TxPolicies::default(),
         )
@@ -333,7 +333,7 @@ async fn transfer_coins_with_change() -> Result<()> {
     let fee = wallet_1
         .transfer(
             wallet_2.address(),
-            SEND_AMOUNT as u128,
+            SEND_AMOUNT.into(),
             AssetId::zeroed(),
             TxPolicies::default(),
         )
@@ -402,7 +402,7 @@ async fn transfer_more_than_owned() -> Result<()> {
     let response = wallet_1
         .transfer(
             wallet_2.address(),
-            (AMOUNT * 2) as u128,
+            (AMOUNT * 2).into(),
             Default::default(),
             TxPolicies::default(),
         )
@@ -437,7 +437,7 @@ async fn transfer_coins_of_non_base_asset() -> Result<()> {
     let _ = wallet_1
         .transfer(
             wallet_2.address(),
-            SEND_AMOUNT as u128,
+            SEND_AMOUNT.into(),
             asset_id,
             TxPolicies::default(),
         )
@@ -463,7 +463,7 @@ async fn test_transfer_with_multiple_signatures() -> Result<()> {
 
     let receiver = Wallet::random(&mut thread_rng(), provider.clone());
 
-    let amount_to_transfer = 20u128;
+    let amount_to_transfer = 20u64;
 
     let mut inputs = vec![];
     let consensus_parameters = provider.consensus_parameters().await?;
@@ -479,13 +479,13 @@ async fn test_transfer_with_multiple_signatures() -> Result<()> {
         );
     }
 
-    let amount_to_receive = amount_to_transfer * wallets.len() as u128;
+    let amount_to_receive = amount_to_transfer * wallets.len() as u64;
 
     // all change goes to the first wallet
     let outputs = wallets[0].get_asset_outputs_for_amount(
         receiver.address(),
         *consensus_parameters.base_asset_id(),
-        amount_to_receive,
+        amount_to_receive.into(),
     );
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
@@ -500,7 +500,7 @@ async fn test_transfer_with_multiple_signatures() -> Result<()> {
     assert_eq!(
         receiver
             .get_asset_balance(consensus_parameters.base_asset_id())
-            .await? as u128,
+            .await?,
         amount_to_receive,
     );
 

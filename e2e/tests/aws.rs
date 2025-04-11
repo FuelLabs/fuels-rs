@@ -21,7 +21,12 @@ mod tests {
         let address = key.address().clone();
 
         wallet
-            .transfer(&address, amount, AssetId::zeroed(), TxPolicies::default())
+            .transfer(
+                &address,
+                amount.into(),
+                AssetId::zeroed(),
+                TxPolicies::default(),
+            )
             .await
             .context("Failed to transfer funds")?;
 
