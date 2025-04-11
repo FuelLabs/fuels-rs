@@ -1,17 +1,19 @@
 use fuels_core::{
+    Configurables,
     types::{
         errors::{Context, Result},
+        transaction::Transaction,
         transaction_builders::{Blob, BlobTransactionBuilder},
+        tx_response::TxResponse,
     },
-    Configurables,
 };
 
-use crate::assembly::script_and_predicate_loader::{
-    extract_data_offset, has_configurables_section_offset,
-};
 use crate::{
-    assembly::script_and_predicate_loader::{extract_configurables_offset, LoaderCode},
     DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE,
+    assembly::script_and_predicate_loader::{
+        LoaderCode, extract_configurables_offset, extract_data_offset,
+        has_configurables_section_offset,
+    },
 };
 
 /// This struct represents a standard executable with its associated bytecode and configurables.
@@ -161,13 +163,17 @@ impl Executable<Loader> {
             .expect("checked before turning into a Executable<Loader>")
     }
 
-    /// Uploads a blob containing the original executable code minus the data section.
-    pub async fn upload_blob(&self, account: impl fuels_accounts::Account) -> Result<()> {
+    /// If not previously uploaded, uploads a blob containing the original executable code minus the data section.
+    pub async fn upload_blob(
+        &self,
+        account: impl fuels_accounts::Account,
+    ) -> Result<Option<TxResponse>> {
         let blob = self.blob();
         let provider = account.try_provider()?;
+        let consensus_parameters = provider.consensus_parameters().await?;
 
         if provider.blob_exists(blob.id()).await? {
-            return Ok(());
+            return Ok(None);
         }
 
         let mut tb = BlobTransactionBuilder::default()
@@ -177,17 +183,18 @@ impl Executable<Loader> {
         account
             .adjust_for_fee(&mut tb, 0)
             .await
-            .context("failed to adjust for fee")?;
+            .context("failed to adjust inputs to cover for missing base asset")?;
         account.add_witnesses(&mut tb)?;
 
         let tx = tb.build(provider).await?;
+        let tx_id = tx.id(consensus_parameters.chain_id());
 
-        provider
-            .send_transaction_and_await_commit(tx)
-            .await?
-            .check(None)?;
+        let tx_status = provider.send_transaction_and_await_commit(tx).await?;
 
-        Ok(())
+        Ok(Some(TxResponse {
+            tx_status: tx_status.take_success_checked(None)?,
+            tx_id,
+        }))
     }
 }
 
@@ -204,10 +211,12 @@ fn validate_loader_can_be_made_from_code(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use fuels_core::Configurables;
     use std::io::Write;
+
+    use fuels_core::Configurables;
     use tempfile::NamedTempFile;
+
+    use super::*;
 
     fn legacy_indicating_instruction() -> Vec<u8> {
         fuel_asm::op::jmpf(0x0, 0x02).to_bytes().to_vec()

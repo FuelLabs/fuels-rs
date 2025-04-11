@@ -1,4 +1,4 @@
-use fuel_asm::{op, Instruction, RegId, Word};
+use fuel_asm::{Instruction, RegId, Word, op};
 use fuel_tx::{AssetId, ContractId};
 use fuels_core::{constants::WORD_SIZE, error, types::errors::Result};
 

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use async_trait::async_trait;
 use fuel_core_client::client::pagination::{PaginatedResult, PaginationRequest};
-use fuel_tx::{Output, Receipt, TxId, TxPointer, UtxoId};
+use fuel_tx::{Output, TxId, TxPointer, UtxoId};
 use fuel_types::{AssetId, Bytes32, ContractId, Nonce};
 use fuels_core::types::{
     bech32::{Bech32Address, Bech32ContractId},
@@ -15,6 +15,8 @@ use fuels_core::types::{
     transaction::{Transaction, TxPolicies},
     transaction_builders::{BuildableTransaction, ScriptTransactionBuilder, TransactionBuilder},
     transaction_response::TransactionResponse,
+    tx_response::TxResponse,
+    tx_status::Success,
 };
 
 use crate::{
@@ -25,8 +27,15 @@ use crate::{
     provider::{Provider, ResourceFilter},
 };
 
+#[derive(Clone, Debug)]
+pub struct WithdrawToBaseResponse {
+    pub tx_status: Success,
+    pub tx_id: TxId,
+    pub nonce: Nonce,
+}
+
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
-pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync + Clone {
+pub trait ViewOnlyAccount: Send + Sync {
     fn address(&self) -> &Bech32Address;
 
     fn try_provider(&self) -> Result<&Provider>;
@@ -76,7 +85,7 @@ pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync + Clone {
     async fn get_spendable_resources(
         &self,
         asset_id: AssetId,
-        amount: u64,
+        amount: u128,
         excluded_coins: Option<Vec<CoinTypeId>>,
     ) -> Result<Vec<CoinType>> {
         let (excluded_utxos, excluded_message_nonces) =
@@ -113,7 +122,7 @@ pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync + Clone {
     async fn get_asset_inputs_for_amount(
         &self,
         asset_id: AssetId,
-        amount: u64,
+        amount: u128,
         excluded_coins: Option<Vec<CoinTypeId>>,
     ) -> Result<Vec<Input>>;
 
@@ -124,12 +133,12 @@ pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync + Clone {
     async fn adjust_for_fee<Tb: TransactionBuilder + Sync>(
         &self,
         tb: &mut Tb,
-        used_base_amount: u64,
+        used_base_amount: u128,
     ) -> Result<()> {
         let provider = self.try_provider()?;
         let consensus_parameters = provider.consensus_parameters().await?;
-        let (base_assets, base_amount) =
-            available_base_assets_and_amount(tb, consensus_parameters.base_asset_id());
+        let base_asset_id = consensus_parameters.base_asset_id();
+        let (base_assets, base_amount) = available_base_assets_and_amount(tb, base_asset_id);
         let missing_base_amount =
             calculate_missing_base_amount(tb, base_amount, used_base_amount, provider).await?;
 
@@ -142,7 +151,7 @@ pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync + Clone {
                 )
                 .await
                 .with_context(|| {
-                    format!("failed to get base asset inputs with amount: `{missing_base_amount}`")
+                    format!("failed to get base asset ({base_asset_id}) inputs with amount: `{missing_base_amount}`")
                 })?;
 
             tb.inputs_mut().extend(new_base_inputs);
@@ -170,11 +179,11 @@ pub trait Account: ViewOnlyAccount {
         amount: u64,
         asset_id: AssetId,
         tx_policies: TxPolicies,
-    ) -> Result<(TxId, Vec<Receipt>)> {
+    ) -> Result<TxResponse> {
         let provider = self.try_provider()?;
 
         let inputs = self
-            .get_asset_inputs_for_amount(asset_id, amount, None)
+            .get_asset_inputs_for_amount(asset_id, amount.into(), None)
             .await?;
         let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
 
@@ -185,22 +194,23 @@ pub trait Account: ViewOnlyAccount {
 
         let consensus_parameters = provider.consensus_parameters().await?;
         let used_base_amount = if asset_id == *consensus_parameters.base_asset_id() {
-            amount
+            amount.into()
         } else {
             0
         };
         self.adjust_for_fee(&mut tx_builder, used_base_amount)
             .await
-            .context("failed to adjust for fee")?;
+            .context("failed to adjust inputs to cover for missing base asset")?;
 
         let tx = tx_builder.build(provider).await?;
         let tx_id = tx.id(consensus_parameters.chain_id());
 
         let tx_status = provider.send_transaction_and_await_commit(tx).await?;
 
-        let receipts = tx_status.take_receipts_checked(None)?;
-
-        Ok((tx_id, receipts))
+        Ok(TxResponse {
+            tx_status: tx_status.take_success_checked(None)?,
+            tx_id,
+        })
     }
 
     /// Unconditionally transfers `balance` of type `asset_id` to
@@ -218,7 +228,7 @@ pub trait Account: ViewOnlyAccount {
         balance: u64,
         asset_id: AssetId,
         tx_policies: TxPolicies,
-    ) -> Result<(String, Vec<Receipt>)> {
+    ) -> Result<TxResponse> {
         let provider = self.try_provider()?;
 
         let zeroes = Bytes32::zeroed();
@@ -233,7 +243,7 @@ pub trait Account: ViewOnlyAccount {
         )];
 
         inputs.extend(
-            self.get_asset_inputs_for_amount(asset_id, balance, None)
+            self.get_asset_inputs_for_amount(asset_id, balance.into(), None)
                 .await?,
         );
 
@@ -253,19 +263,21 @@ pub trait Account: ViewOnlyAccount {
         );
 
         self.add_witnesses(&mut tb)?;
-        self.adjust_for_fee(&mut tb, balance)
+        self.adjust_for_fee(&mut tb, balance.into())
             .await
-            .context("failed to adjust for fee")?;
+            .context("failed to adjust inputs to cover for missing base asset")?;
 
         let tx = tb.build(provider).await?;
 
         let consensus_parameters = provider.consensus_parameters().await?;
         let tx_id = tx.id(consensus_parameters.chain_id());
+
         let tx_status = provider.send_transaction_and_await_commit(tx).await?;
 
-        let receipts = tx_status.take_receipts_checked(None)?;
-
-        Ok((tx_id.to_string(), receipts))
+        Ok(TxResponse {
+            tx_status: tx_status.take_success_checked(None)?,
+            tx_id,
+        })
     }
 
     /// Withdraws an amount of the base asset to
@@ -276,12 +288,12 @@ pub trait Account: ViewOnlyAccount {
         to: &Bech32Address,
         amount: u64,
         tx_policies: TxPolicies,
-    ) -> Result<(TxId, Nonce, Vec<Receipt>)> {
+    ) -> Result<WithdrawToBaseResponse> {
         let provider = self.try_provider()?;
         let consensus_parameters = provider.consensus_parameters().await?;
 
         let inputs = self
-            .get_asset_inputs_for_amount(*consensus_parameters.base_asset_id(), amount, None)
+            .get_asset_inputs_for_amount(*consensus_parameters.base_asset_id(), amount.into(), None)
             .await?;
 
         let mut tb = ScriptTransactionBuilder::prepare_message_to_output(
@@ -293,21 +305,24 @@ pub trait Account: ViewOnlyAccount {
         );
 
         self.add_witnesses(&mut tb)?;
-        self.adjust_for_fee(&mut tb, amount)
+        self.adjust_for_fee(&mut tb, amount.into())
             .await
-            .context("failed to adjust for fee")?;
+            .context("failed to adjust inputs to cover for missing base asset")?;
 
         let tx = tb.build(provider).await?;
-
         let tx_id = tx.id(consensus_parameters.chain_id());
+
         let tx_status = provider.send_transaction_and_await_commit(tx).await?;
+        let success = tx_status.take_success_checked(None)?;
 
-        let receipts = tx_status.take_receipts_checked(None)?;
-
-        let nonce = extract_message_nonce(&receipts)
+        let nonce = extract_message_nonce(&success.receipts)
             .expect("MessageId could not be retrieved from tx receipts.");
 
-        Ok((tx_id, nonce, receipts))
+        Ok(WithdrawToBaseResponse {
+            tx_status: success,
+            tx_id,
+            nonce,
+        })
     }
 }
 
@@ -319,42 +334,11 @@ mod tests {
     use fuel_tx::{Address, ConsensusParameters, Output, Transaction as FuelTransaction};
     use fuels_core::{
         traits::Signer,
-        types::{transaction::Transaction, DryRun, DryRunner},
+        types::{DryRun, DryRunner, transaction::Transaction},
     };
-    use rand::{rngs::StdRng, RngCore, SeedableRng};
 
     use super::*;
-    use crate::wallet::WalletUnlocked;
-
-    #[tokio::test]
-    async fn sign_and_verify() -> Result<()> {
-        // ANCHOR: sign_message
-        let mut rng = StdRng::seed_from_u64(2322u64);
-        let mut secret_seed = [0u8; 32];
-        rng.fill_bytes(&mut secret_seed);
-
-        let secret = secret_seed.as_slice().try_into()?;
-
-        // Create a wallet using the private key created above.
-        let wallet = WalletUnlocked::new_from_private_key(secret, None);
-
-        let message = Message::new("my message".as_bytes());
-        let signature = wallet.sign(message).await?;
-
-        // Check if signature is what we expect it to be
-        assert_eq!(signature, Signature::from_str("0x8eeb238db1adea4152644f1cd827b552dfa9ab3f4939718bb45ca476d167c6512a656f4d4c7356bfb9561b14448c230c6e7e4bd781df5ee9e5999faa6495163d")?);
-
-        // Recover address that signed the message
-        let recovered_address = signature.recover(&message)?;
-
-        assert_eq!(wallet.address().hash(), recovered_address.hash());
-
-        // Verify signature
-        signature.verify(&recovered_address, &message)?;
-        // ANCHOR_END: sign_message
-
-        Ok(())
-    }
+    use crate::signers::private_key::PrivateKeySigner;
 
     #[derive(Default)]
     struct MockDryRunner {
@@ -394,14 +378,14 @@ mod tests {
         let secret = SecretKey::from_str(
             "5f70feeff1f229e4a95e1056e8b4d80d0b24b565674860cc213bdb07127ce1b1",
         )?;
-        let wallet = WalletUnlocked::new_from_private_key(secret, None);
+        let signer = PrivateKeySigner::new(secret);
 
         // Set up a transaction
         let mut tb = {
             let input_coin = Input::ResourceSigned {
                 resource: CoinType::Coin(Coin {
                     amount: 10000000,
-                    owner: wallet.address().clone(),
+                    owner: signer.address().clone(),
                     ..Default::default()
                 }),
             };
@@ -413,7 +397,7 @@ mod tests {
                 1,
                 Default::default(),
             );
-            let change = Output::change(wallet.address().into(), 0, Default::default());
+            let change = Output::change(signer.address().into(), 0, Default::default());
 
             ScriptTransactionBuilder::prepare_transfer(
                 vec![input_coin],
@@ -423,7 +407,7 @@ mod tests {
         };
 
         // Add `Signer` to the transaction builder
-        tb.add_signer(wallet.clone())?;
+        tb.add_signer(signer.clone())?;
         // ANCHOR_END: sign_tb
 
         let tx = tb.build(MockDryRunner::default()).await?; // Resolve signatures and add corresponding witness indexes
@@ -434,18 +418,23 @@ mod tests {
 
         // Sign the transaction manually
         let message = Message::from_bytes(*tx.id(0.into()));
-        let signature = wallet.sign(message).await?;
+        let signature = signer.sign(message).await?;
 
         // Check if the signatures are the same
         assert_eq!(signature, tx_signature);
 
         // Check if the signature is what we expect it to be
-        assert_eq!(signature, Signature::from_str("faa616776a1c336ef6257f7cb0cb5cd932180e2d15faba5f17481dae1cbcaf314d94617bd900216a6680bccb1ea62438e4ca93b0d5733d33788ef9d79cc24e9f")?);
+        assert_eq!(
+            signature,
+            Signature::from_str(
+                "faa616776a1c336ef6257f7cb0cb5cd932180e2d15faba5f17481dae1cbcaf314d94617bd900216a6680bccb1ea62438e4ca93b0d5733d33788ef9d79cc24e9f"
+            )?
+        );
 
         // Recover the address that signed the transaction
         let recovered_address = signature.recover(&message)?;
 
-        assert_eq!(wallet.address().hash(), recovered_address.hash());
+        assert_eq!(signer.address().hash(), recovered_address.hash());
 
         // Verify signature
         signature.verify(&recovered_address, &message)?;

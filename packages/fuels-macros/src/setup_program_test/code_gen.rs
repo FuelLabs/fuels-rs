@@ -3,7 +3,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use fuels_code_gen::{utils::ident, Abi, Abigen, AbigenTarget, ProgramType};
+use fuels_code_gen::{Abi, Abigen, AbigenTarget, ProgramType, utils::ident};
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
 use syn::LitStr;
@@ -154,14 +154,14 @@ fn contract_deploying_code(
                     )
                     .expect("Failed to load the contract");
 
-                    let contract_id = loaded_contract.deploy_if_not_exists(
+                    let response = loaded_contract.deploy_if_not_exists(
                         &#wallet_name,
                         ::fuels::types::transaction::TxPolicies::default()
                     )
                     .await
                     .expect("Failed to deploy the contract");
 
-                    #contract_struct_name::new(contract_id, #wallet_name.clone())
+                    #contract_struct_name::new(response.contract_id, #wallet_name.clone())
                 };
             }
         })

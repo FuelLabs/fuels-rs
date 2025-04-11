@@ -8,7 +8,6 @@ mod retryable_client;
 mod supported_fuel_core_version;
 mod supported_versions;
 
-use crate::provider::cache::CacheableRpcs;
 pub use cache::TtlConfig;
 use cache::{CachedClient, SystemClock};
 use chrono::{DateTime, Utc};
@@ -30,6 +29,7 @@ use fuels_core::types::coin_type_id::CoinTypeId;
 use fuels_core::{
     constants::{DEFAULT_GAS_ESTIMATION_BLOCK_HORIZON, DEFAULT_GAS_ESTIMATION_TOLERANCE},
     types::{
+        DryRun, DryRunner,
         bech32::{Bech32Address, Bech32ContractId},
         block::{Block, Header},
         chain_info::ChainInfo,
@@ -43,7 +43,6 @@ use fuels_core::{
         transaction_builders::{Blob, BlobId},
         transaction_response::TransactionResponse,
         tx_status::TxStatus,
-        DryRun, DryRunner,
     },
 };
 pub use retry_util::{Backoff, RetryConfig};
@@ -54,7 +53,7 @@ use tokio::sync::Mutex;
 
 #[cfg(feature = "coin-cache")]
 use crate::coin_cache::CoinsCache;
-use crate::provider::retryable_client::RetryableClient;
+use crate::provider::{cache::CacheableRpcs, retryable_client::RetryableClient};
 
 const NUM_RESULTS_PER_REQUEST: i32 = 100;
 
@@ -62,9 +61,10 @@ const NUM_RESULTS_PER_REQUEST: i32 = 100;
 // ANCHOR: transaction_cost
 pub struct TransactionCost {
     pub gas_price: u64,
-    pub gas_used: u64,
     pub metered_bytes_size: u64,
     pub total_fee: u64,
+    pub script_gas: u64,
+    pub total_gas: u64,
 }
 // ANCHOR_END: transaction_cost
 
@@ -72,7 +72,7 @@ pub(crate) struct ResourceQueries {
     utxos: Vec<UtxoId>,
     messages: Vec<Nonce>,
     asset_id: Option<AssetId>,
-    amount: u64,
+    amount: u128,
 }
 
 impl ResourceQueries {
@@ -84,7 +84,7 @@ impl ResourceQueries {
         Some((self.utxos.clone(), self.messages.clone()))
     }
 
-    pub fn spend_query(&self, base_asset_id: AssetId) -> Vec<(AssetId, u64, Option<u32>)> {
+    pub fn spend_query(&self, base_asset_id: AssetId) -> Vec<(AssetId, u128, Option<u16>)> {
         vec![(self.asset_id.unwrap_or(base_asset_id), self.amount, None)]
     }
 }
@@ -94,7 +94,7 @@ impl ResourceQueries {
 pub struct ResourceFilter {
     pub from: Bech32Address,
     pub asset_id: Option<AssetId>,
-    pub amount: u64,
+    pub amount: u128,
     pub excluded_utxos: Vec<UtxoId>,
     pub excluded_message_nonces: Vec<Nonce>,
 }
@@ -196,7 +196,7 @@ impl Provider {
         #[cfg(feature = "coin-cache")]
         if matches!(
             tx_status,
-            TxStatus::SqueezedOut { .. } | TxStatus::Revert { .. }
+            TxStatus::SqueezedOut { .. } | TxStatus::Failure { .. }
         ) {
             self.coins_cache
                 .lock()
@@ -225,8 +225,6 @@ impl Provider {
                 .validate_predicates(&consensus_parameters, latest_block_height)?;
         }
 
-        self.validate_transaction(tx.clone()).await?;
-
         Ok(tx)
     }
 
@@ -241,17 +239,6 @@ impl Provider {
             .await_transaction_commit(&id)
             .await?
             .into())
-    }
-
-    async fn validate_transaction<T: Transaction>(&self, tx: T) -> Result<()> {
-        let tolerance = 0.0;
-        let TransactionCost { gas_used, .. } = self
-            .estimate_transaction_cost(tx.clone(), Some(tolerance), None)
-            .await?;
-
-        tx.validate_gas(gas_used)?;
-
-        Ok(())
     }
 
     #[cfg(not(feature = "coin-cache"))]
@@ -288,7 +275,7 @@ impl Provider {
         &self,
         coin_ids: impl IntoIterator<Item = (&'a (Bech32Address, AssetId), &'a Vec<CoinTypeId>)>,
     ) -> Result<()> {
-        use fuels_core::types::errors::{transaction, Error};
+        use fuels_core::types::errors::{Error, transaction};
 
         if let Some(((addr, asset_id), coin_type_id)) = self.find_in_cache(coin_ids).await {
             let msg = match coin_type_id {
@@ -296,7 +283,9 @@ impl Provider {
                 CoinTypeId::Nonce(nonce) => format!("message with nonce: `{nonce}`"),
             };
             Err(Error::Transaction(transaction::Reason::Validation(
-                format!("{msg} was submitted recently in a transaction - attempting to spend it again will result in an error. Wallet address: `{addr}`, asset id: `{asset_id}`"),
+                format!(
+                    "{msg} was submitted recently in a transaction - attempting to spend it again will result in an error. Wallet address: `{addr}`, asset id: `{asset_id}`"
+                ),
             )))
         } else {
             Ok(())
@@ -334,7 +323,7 @@ impl Provider {
     }
 
     pub async fn node_info(&self) -> Result<NodeInfo> {
-        Ok(self.uncached_client().node_info().await?.into())
+        Ok(self.cached_client.node_info().await?.into())
     }
 
     pub async fn latest_gas_price(&self) -> Result<LatestGasPrice> {
@@ -380,6 +369,7 @@ impl Provider {
         tx: impl Transaction,
         utxo_validation: bool,
         gas_price: Option<u64>,
+        at_height: Option<BlockHeight>,
     ) -> Result<TxStatus> {
         let [tx_status] = self
             .uncached_client()
@@ -387,6 +377,7 @@ impl Provider {
                 Transactions::new().insert(tx).as_slice(),
                 Some(utxo_validation),
                 gas_price,
+                at_height,
             )
             .await?
             .into_iter()
@@ -403,10 +394,16 @@ impl Provider {
         transactions: Transactions,
         utxo_validation: bool,
         gas_price: Option<u64>,
+        at_height: Option<BlockHeight>,
     ) -> Result<Vec<(TxId, TxStatus)>> {
         Ok(self
             .uncached_client()
-            .dry_run_opt(transactions.as_slice(), Some(utxo_validation), gas_price)
+            .dry_run_opt(
+                transactions.as_slice(),
+                Some(utxo_validation),
+                gas_price,
+                at_height,
+            )
             .await?
             .into_iter()
             .map(|execution_status| (execution_status.id, execution_status.into()))
@@ -553,33 +550,51 @@ impl Provider {
     /// for each asset id) and not the UTXOs coins themselves
     pub async fn get_balances(&self, address: &Bech32Address) -> Result<HashMap<String, u128>> {
         let mut balances = HashMap::new();
-        let mut cursor = None;
 
-        loop {
-            let response = self
-                .uncached_client()
-                .balances(
-                    &address.into(),
-                    PaginationRequest {
-                        cursor: cursor.clone(),
-                        results: NUM_RESULTS_PER_REQUEST,
-                        direction: PageDirection::Forward,
-                    },
-                )
-                .await?;
-
-            if response.results.is_empty() {
-                break;
-            }
-
-            balances.extend(response.results.into_iter().map(
+        let mut register_balances = |results: Vec<_>| {
+            let pairs = results.into_iter().map(
                 |Balance {
                      owner: _,
                      amount,
                      asset_id,
                  }| (asset_id.to_string(), amount),
-            ));
-            cursor = response.cursor;
+            );
+            balances.extend(pairs);
+        };
+
+        let indexation_flags = self.cached_client.node_info().await?.indexation;
+        if indexation_flags.balances {
+            let mut cursor = None;
+            loop {
+                let pagination = PaginationRequest {
+                    cursor: cursor.clone(),
+                    results: NUM_RESULTS_PER_REQUEST,
+                    direction: PageDirection::Forward,
+                };
+                let response = self
+                    .uncached_client()
+                    .balances(&address.into(), pagination)
+                    .await?;
+
+                if response.results.is_empty() {
+                    break;
+                }
+
+                register_balances(response.results);
+                cursor = response.cursor;
+            }
+        } else {
+            let pagination = PaginationRequest {
+                cursor: None,
+                results: 9999,
+                direction: PageDirection::Forward,
+            };
+            let response = self
+                .uncached_client()
+                .balances(&address.into(), pagination)
+                .await?;
+
+            register_balances(response.results)
         }
 
         Ok(balances)
@@ -719,7 +734,7 @@ impl Provider {
 
     pub async fn estimate_transaction_cost<T: Transaction>(
         &self,
-        mut tx: T,
+        tx: T,
         tolerance: Option<f64>,
         block_horizon: Option<u32>,
     ) -> Result<TransactionCost> {
@@ -727,41 +742,27 @@ impl Provider {
         let tolerance = tolerance.unwrap_or(DEFAULT_GAS_ESTIMATION_TOLERANCE);
 
         let EstimateGasPrice { gas_price, .. } = self.estimate_gas_price(block_horizon).await?;
+        let tx_status = self.dry_run_opt(tx.clone(), false, None, None).await?;
 
-        let gas_used = self
-            .get_gas_used_with_tolerance(tx.clone(), tolerance)
-            .await?;
+        let total_gas = Self::apply_tolerance(tx_status.total_gas(), tolerance);
+        let total_fee = Self::apply_tolerance(tx_status.total_fee(), tolerance);
 
-        if tx.is_using_predicates() {
-            tx.estimate_predicates(self, None).await?;
-        }
-
-        let transaction_fee = tx
-            .clone()
-            .fee_checked_from_tx(&self.consensus_parameters().await?, gas_price)
-            .expect("Error calculating TransactionFee");
+        let receipts = tx_status.take_receipts();
 
         Ok(TransactionCost {
             gas_price,
-            gas_used,
             metered_bytes_size: tx.metered_bytes_size() as u64,
-            total_fee: transaction_fee.max_fee(),
+            total_fee,
+            total_gas,
+            script_gas: Self::get_script_gas_used(&receipts),
         })
     }
 
-    // Increase estimated gas by the provided tolerance
-    async fn get_gas_used_with_tolerance<T: Transaction>(
-        &self,
-        tx: T,
-        tolerance: f64,
-    ) -> Result<u64> {
-        let receipts = self.dry_run_opt(tx, false, None).await?.take_receipts();
-        let gas_used = self.get_script_gas_used(&receipts);
-
-        Ok((gas_used as f64 * (1.0 + tolerance)).ceil() as u64)
+    fn apply_tolerance(value: u64, tolerance: f64) -> u64 {
+        (value as f64 * (1.0 + tolerance)).ceil() as u64
     }
 
-    fn get_script_gas_used(&self, receipts: &[Receipt]) -> u64 {
+    fn get_script_gas_used(receipts: &[Receipt]) -> u64 {
         receipts
             .iter()
             .rfind(|r| matches!(r, Receipt::ScriptResult { .. }))
@@ -853,13 +854,13 @@ impl DryRunner for Provider {
     async fn dry_run(&self, tx: FuelTransaction) -> Result<DryRun> {
         let [tx_execution_status] = self
             .uncached_client()
-            .dry_run_opt(&vec![tx], Some(false), Some(0))
+            .dry_run_opt(&vec![tx], Some(false), Some(0), None)
             .await?
             .try_into()
             .expect("should have only one element");
 
         let receipts = tx_execution_status.result.receipts();
-        let script_gas = self.get_script_gas_used(receipts);
+        let script_gas = Self::get_script_gas_used(receipts);
 
         let variable_outputs = receipts
             .iter()
@@ -886,15 +887,15 @@ impl DryRunner for Provider {
         Ok(self.estimate_gas_price(block_horizon).await?.gas_price)
     }
 
+    async fn consensus_parameters(&self) -> Result<ConsensusParameters> {
+        Provider::consensus_parameters(self).await
+    }
+
     async fn estimate_predicates(
         &self,
         tx: &FuelTransaction,
         _latest_chain_executor_version: Option<u32>,
     ) -> Result<FuelTransaction> {
         Ok(self.uncached_client().estimate_predicates(tx).await?)
-    }
-
-    async fn consensus_parameters(&self) -> Result<ConsensusParameters> {
-        Provider::consensus_parameters(self).await
     }
 }

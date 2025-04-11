@@ -3,6 +3,9 @@ use std::{collections::HashMap, fmt::Debug};
 use async_trait::async_trait;
 use fuel_crypto::{Message, Signature};
 use fuel_tx::{
+    Blob, Bytes32, Cacheable, Chargeable, ConsensusParameters, Create, FormatValidityChecks, Input,
+    Mint, Output, Salt as FuelSalt, Script, StorageSlot, Transaction as FuelTransaction,
+    TransactionFee, UniqueIdentifier, Upgrade, Upload, Witness,
     field::{
         Inputs, MintAmount, MintAssetId, Outputs, Policies as PoliciesField, Script as ScriptField,
         ScriptData, ScriptGasLimit, WitnessLimit, Witnesses,
@@ -14,19 +17,16 @@ use fuel_tx::{
         },
     },
     policies::PolicyType,
-    Blob, Bytes32, Cacheable, Chargeable, ConsensusParameters, Create, FormatValidityChecks, Input,
-    Mint, Output, Salt as FuelSalt, Script, StorageSlot, Transaction as FuelTransaction,
-    TransactionFee, UniqueIdentifier, Upgrade, Upload, Witness,
 };
-use fuel_types::{bytes::padded_len_usize, AssetId, ChainId};
+use fuel_types::{AssetId, ChainId, bytes::padded_len_usize};
 use itertools::Itertools;
 
 use crate::{
     traits::Signer,
     types::{
-        bech32::Bech32Address,
-        errors::{error, error_transaction, Error, Result},
         DryRunner,
+        bech32::Bech32Address,
+        errors::{Error, Result, error, error_transaction},
     },
     utils::{calculate_witnesses_size, sealed},
 };
@@ -215,10 +215,6 @@ pub trait EstimablePredicates: sealed::Sealed {
     ) -> Result<()>;
 }
 
-pub trait GasValidation: sealed::Sealed {
-    fn validate_gas(&self, _gas_used: u64) -> Result<()>;
-}
-
 pub trait ValidatablePredicates: sealed::Sealed {
     /// If a transaction contains predicates, we can verify that these predicates validate, ie
     /// that they return `true`
@@ -236,7 +232,6 @@ pub trait Transaction:
     + Into<FuelTransaction>
     + EstimablePredicates
     + ValidatablePredicates
-    + GasValidation
     + Clone
     + Debug
     + sealed::Sealed
@@ -655,45 +650,6 @@ impl EstimablePredicates for BlobTransaction {
             .await?;
 
         tx.as_blob().expect("is blob").clone_into(&mut self.tx);
-
-        Ok(())
-    }
-}
-
-impl GasValidation for CreateTransaction {
-    fn validate_gas(&self, _gas_used: u64) -> Result<()> {
-        Ok(())
-    }
-}
-
-impl GasValidation for UploadTransaction {
-    fn validate_gas(&self, _gas_used: u64) -> Result<()> {
-        Ok(())
-    }
-}
-
-impl GasValidation for UpgradeTransaction {
-    fn validate_gas(&self, _gas_used: u64) -> Result<()> {
-        Ok(())
-    }
-}
-
-impl GasValidation for BlobTransaction {
-    fn validate_gas(&self, _gas_used: u64) -> Result<()> {
-        Ok(())
-    }
-}
-
-impl GasValidation for ScriptTransaction {
-    fn validate_gas(&self, gas_used: u64) -> Result<()> {
-        if gas_used > *self.tx.script_gas_limit() {
-            return Err(error_transaction!(
-                Validation,
-                "script_gas_limit({}) is lower than the estimated gas_used({})",
-                self.tx.script_gas_limit(),
-                gas_used
-            ));
-        }
 
         Ok(())
     }

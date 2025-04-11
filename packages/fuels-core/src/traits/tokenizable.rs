@@ -3,9 +3,9 @@ use fuel_types::{Address, AssetId, ContractId};
 use crate::{
     traits::Parameterize,
     types::{
-        errors::{error, Result},
-        param_types::ParamType,
         AsciiString, Bits256, Bytes, RawSlice, SizedAsciiString, StaticStringToken, Token,
+        errors::{Result, error},
+        param_types::ParamType,
     },
 };
 
@@ -162,7 +162,8 @@ impl Tokenizable for RawSlice {
     {
         match token {
             Token::RawSlice(contents) => Ok(Self(contents)),
-            _ => Err(error!(Other,
+            _ => Err(error!(
+                Other,
                 "`RawSlice::from_token` expected a token of the variant `Token::RawSlice`, got: `{token}`"
             )),
         }
@@ -473,15 +474,20 @@ impl<const LEN: usize> Tokenizable for SizedAsciiString<LEN> {
     {
         match token {
             Token::StringArray(contents) => {
-                let expected_len = contents.get_encodable_str()?.len() ;
-                if expected_len!= LEN {
-                    return Err(error!(Other,"`SizedAsciiString<{LEN}>::from_token` got a `Token::StringArray` whose expected length({}) is != {LEN}", expected_len))
+                let expected_len = contents.get_encodable_str()?.len();
+                if expected_len != LEN {
+                    return Err(error!(
+                        Other,
+                        "`SizedAsciiString<{LEN}>::from_token` got a `Token::StringArray` whose expected length({}) is != {LEN}",
+                        expected_len
+                    ));
                 }
                 Self::new(contents.try_into()?)
-            },
-            _ => {
-                Err(error!(Other,"`SizedAsciiString<{LEN}>::from_token` expected a token of the variant `Token::StringArray`, got: `{token}`"))
             }
+            _ => Err(error!(
+                Other,
+                "`SizedAsciiString<{LEN}>::from_token` expected a token of the variant `Token::StringArray`, got: `{token}`"
+            )),
         }
     }
 
@@ -496,12 +502,11 @@ impl Tokenizable for AsciiString {
         Self: Sized,
     {
         match token {
-            Token::StringSlice(contents) => {
-                Self::new(contents.try_into()?)
-            },
-            _ => {
-                Err(error!(Other,"`AsciiString::from_token` expected a token of the variant `Token::StringSlice`, got: `{token}`"))
-            }
+            Token::StringSlice(contents) => Self::new(contents.try_into()?),
+            _ => Err(error!(
+                Other,
+                "`AsciiString::from_token` expected a token of the variant `Token::StringSlice`, got: `{token}`"
+            )),
         }
     }
 

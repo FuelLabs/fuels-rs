@@ -2,15 +2,15 @@ use std::iter::repeat;
 
 use fuel_crypto::Signature;
 use fuel_tx::{
+    AssetId, Chargeable, ConsensusParameters, Input as FuelInput, TxPointer, Witness,
     field::{Inputs, Outputs, ScriptGasLimit, WitnessLimit, Witnesses},
     input::coin::{CoinPredicate, CoinSigned},
-    AssetId, Chargeable, ConsensusParameters, Input as FuelInput, TxPointer, Witness,
 };
 use itertools::Itertools;
 
 use crate::{
     constants::WITNESS_STATIC_SIZE,
-    types::{errors::Result, DryRun, DryRunner},
+    types::{DryRun, DryRunner, errors::Result},
 };
 
 pub(crate) struct ScriptTxEstimator<R> {

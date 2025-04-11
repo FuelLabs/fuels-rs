@@ -1,9 +1,18 @@
 predicate;
 
-use std::{b512::B512, constants::ZERO_B256, ecr::ec_recover_address, inputs::input_predicate_data};
+use std::{
+    b512::B512,
+    crypto::{
+        message::Message,
+        secp256k1::Secp256k1,
+    },
+    inputs::input_predicate_data,
+};
 
 fn extract_public_key_and_match(signature: B512, expected_public_key: b256) -> u64 {
-    if let Result::Ok(pub_key_sig) = ec_recover_address(signature, ZERO_B256)
+    let signature = Secp256k1::from(signature);
+
+    if let Result::Ok(pub_key_sig) = signature.address(Message::from(b256::zero()))
     {
         if pub_key_sig == Address::from(expected_public_key) {
             return 1;

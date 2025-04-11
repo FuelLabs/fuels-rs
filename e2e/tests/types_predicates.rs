@@ -1,9 +1,9 @@
 use std::{default::Default, path::Path};
 
 use fuels::{
-    accounts::{predicate::Predicate, Account},
+    accounts::{Account, predicate::Predicate, signers::private_key::PrivateKeySigner},
     prelude::*,
-    types::{coin::Coin, message::Message, AssetId, Bits256, U256},
+    types::{AssetId, Bits256, U256, coin::Coin, message::Message},
 };
 
 async fn assert_predicate_spendable(data: Vec<u8>, project_path: impl AsRef<Path>) -> Result<()> {
@@ -13,20 +13,31 @@ async fn assert_predicate_spendable(data: Vec<u8>, project_path: impl AsRef<Path
     let num_coins = 4;
     let num_messages = 8;
     let amount = 16;
-    let (provider, _predicate_balance, receiver, receiver_balance, asset_id) =
+    let (provider, predicate_balance, receiver, receiver_balance, asset_id) =
         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
     predicate.set_provider(provider.clone());
 
-    let amount_to_send = 42;
-    predicate
-        .transfer(receiver.address(), 42, asset_id, TxPolicies::default())
-        .await?;
+    let amount_to_send = 136;
+    let fee = predicate
+        .transfer(
+            receiver.address(),
+            amount_to_send,
+            asset_id,
+            TxPolicies::default(),
+        )
+        .await?
+        .tx_status
+        .total_fee;
 
     // The predicate has spent the funds
-    //TODO:https://github.com/FuelLabs/fuels-rs/issues/1394
-    // assert that the amount_to_send + fee was deducted from the predicate
-    // assert_address_balance(predicate.address(), &provider, asset_id, 0).await;
+    assert_address_balance(
+        predicate.address(),
+        &provider,
+        asset_id,
+        predicate_balance - amount_to_send - fee,
+    )
+    .await;
 
     // Funds were transferred
     assert_address_balance(
@@ -90,19 +101,19 @@ async fn setup_predicate_test(
     num_coins: u64,
     num_messages: u64,
     amount: u64,
-) -> Result<(Provider, u64, WalletUnlocked, u64, AssetId)> {
+) -> Result<(Provider, u64, Wallet, u64, AssetId)> {
     let receiver_num_coins = 1;
     let receiver_amount = 1;
     let receiver_balance = receiver_num_coins * receiver_amount;
 
     let predicate_balance = (num_coins + num_messages) * amount;
-    let mut receiver = WalletUnlocked::new_random(None);
+    let receiver_signer = PrivateKeySigner::random(&mut rand::thread_rng());
 
     let (mut coins, messages, asset_id) =
         get_test_coins_and_messages(predicate_address, num_coins, num_messages, amount);
 
     coins.extend(setup_single_asset_coins(
-        receiver.address(),
+        receiver_signer.address(),
         asset_id,
         receiver_num_coins,
         receiver_amount,
@@ -113,7 +124,7 @@ async fn setup_predicate_test(
         ..Default::default()
     };
     let provider = setup_test_provider(coins, messages, Some(node_config), None).await?;
-    receiver.set_provider(provider.clone());
+    let receiver = Wallet::new(receiver_signer, provider.clone());
 
     Ok((
         provider,
@@ -290,7 +301,6 @@ async fn spend_predicate_coins_messages_bytes_hash() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
         abi = "e2e/sway/types/predicates/predicate_bytes_hash/out/release/predicate_bytes_hash-abi.json"
-
     ));
 
     let bytes = Bytes::from_hex_str(

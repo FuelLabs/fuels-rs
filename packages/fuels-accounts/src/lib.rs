@@ -2,8 +2,8 @@
 mod account;
 #[cfg(feature = "std")]
 mod accounts_utils;
-#[cfg(feature = "std")]
-pub mod impersonated_account;
+#[cfg(all(feature = "std", feature = "keystore"))]
+pub mod keystore;
 #[cfg(feature = "std")]
 pub mod provider;
 #[cfg(feature = "std")]
@@ -16,7 +16,7 @@ pub use account::*;
 mod coin_cache;
 
 pub mod predicate;
-
+pub mod signers;
 #[cfg(test)]
 mod test {
     #[test]

@@ -8,7 +8,7 @@ Lets quickly go over the setup:
 {{#include ../../../examples/cookbook/src/lib.rs:transfer_multiple_setup}}
 ```
 
-We prepare two wallets with randomized addresses. Next, we want one of our wallets to have some random assets, so we set them up with `setup_multiple_assets_coins()`. Having created the coins, we can start a provider and assign it to the previously created wallets.
+We prepare two wallets with randomized addresses. Next, we want one of our wallets to have some random assets, so we set them up with `setup_multiple_assets_coins()`.
 
 Transactions require us to define input and output coins. Let's assume we do not know the assets owned by `wallet_1`. We retrieve its balances, i.e. tuples consisting of a string representing the asset ID and the respective amount. This lets us use the helpers `get_asset_inputs_for_amount()`, `get_asset_outputs_for_amount()` to create the appropriate inputs and outputs.
 
@@ -18,7 +18,7 @@ We transfer only a part of the base asset balance so that the rest can cover tra
 {{#include ../../../examples/cookbook/src/lib.rs:transfer_multiple_input}}
 ```
 
-All that is left is to build the transaction via `ScriptTransactionBuilder`, have `wallet_1` sign it, and we can send it. We confirm this by checking the number of balances present in the receiving wallet and their amount:
+All that is left is to build the transaction via `ScriptTransactionBuilder`, have `wallet_1` add a witness to it and we can send it. We confirm this by checking the number of balances present in the receiving wallet and their amount:
 
 ```rust,ignore
 {{#include ../../../examples/cookbook/src/lib.rs:transfer_multiple_transaction}}

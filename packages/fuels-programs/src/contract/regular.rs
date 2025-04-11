@@ -1,25 +1,32 @@
 use std::{default::Default, fmt::Debug, path::Path};
 
-use fuel_tx::{Bytes32, ContractId, Salt, StorageSlot};
+use fuel_tx::{Bytes32, ContractId, Salt, StorageSlot, TxId};
 use fuels_accounts::Account;
 use fuels_core::{
+    Configurables,
     constants::WORD_SIZE,
     error,
     types::{
         bech32::Bech32ContractId,
         errors::{Context, Result},
-        transaction::TxPolicies,
+        transaction::{Transaction, TxPolicies},
         transaction_builders::{Blob, CreateTransactionBuilder},
+        tx_status::Success,
     },
-    Configurables,
 };
-
-use crate::DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE;
 
 use super::{
-    compute_contract_id_and_state_root, validate_path_and_extension, BlobsNotUploaded, Contract,
-    Loader, StorageConfiguration,
+    BlobsNotUploaded, Contract, Loader, StorageConfiguration, compute_contract_id_and_state_root,
+    validate_path_and_extension,
 };
+use crate::DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE;
+
+#[derive(Clone, Debug)]
+pub struct DeployResponse {
+    pub tx_status: Option<Success>,
+    pub tx_id: Option<TxId>,
+    pub contract_id: Bech32ContractId,
+}
 
 // In a mod so that we eliminate the footgun of getting the private `code` field without applying
 // configurables
@@ -140,7 +147,7 @@ impl Contract<Regular> {
         self,
         account: &impl Account,
         tx_policies: TxPolicies,
-    ) -> Result<Bech32ContractId> {
+    ) -> Result<DeployResponse> {
         let contract_id = self.contract_id();
         let state_root = self.state_root();
         let salt = self.salt;
@@ -160,18 +167,21 @@ impl Contract<Regular> {
         account
             .adjust_for_fee(&mut tb, 0)
             .await
-            .context("failed to adjust for fee")?;
+            .context("failed to adjust inputs to cover for missing base asset")?;
 
         let provider = account.try_provider()?;
+        let consensus_parameters = provider.consensus_parameters().await?;
 
         let tx = tb.build(provider).await?;
+        let tx_id = Some(tx.id(consensus_parameters.chain_id()));
 
-        provider
-            .send_transaction_and_await_commit(tx)
-            .await?
-            .check(None)?;
+        let tx_status = provider.send_transaction_and_await_commit(tx).await?;
 
-        Ok(contract_id.into())
+        Ok(DeployResponse {
+            tx_status: Some(tx_status.take_success_checked(None)?),
+            tx_id,
+            contract_id: contract_id.into(),
+        })
     }
 
     /// Deploys a compiled contract to a running node if a contract with
@@ -180,11 +190,15 @@ impl Contract<Regular> {
         self,
         account: &impl Account,
         tx_policies: TxPolicies,
-    ) -> Result<Bech32ContractId> {
+    ) -> Result<DeployResponse> {
         let contract_id = Bech32ContractId::from(self.contract_id());
         let provider = account.try_provider()?;
         if provider.contract_exists(&contract_id).await? {
-            Ok(contract_id)
+            Ok(DeployResponse {
+                tx_status: None,
+                tx_id: None,
+                contract_id,
+            })
         } else {
             self.deploy(account, tx_policies).await
         }
@@ -213,7 +227,7 @@ impl Contract<Regular> {
         account: &impl Account,
         tx_policies: TxPolicies,
         max_words_per_blob: usize,
-    ) -> Result<Bech32ContractId> {
+    ) -> Result<DeployResponse> {
         let provider = account.try_provider()?;
         let max_contract_size = provider
             .consensus_parameters()

@@ -6,7 +6,7 @@ mod tests {
     use fuels::{
         core::codec::ABIDecoder,
         macros::abigen,
-        types::{errors::Result, param_types::ParamType, SizedAsciiString},
+        types::{SizedAsciiString, errors::Result, param_types::ParamType},
     };
 
     #[test]
@@ -21,7 +21,9 @@ mod tests {
 
         assert_eq!(
             selector,
-            [0, 0, 0, 0, 0, 0, 0, 12, 115, 111, 109, 101, 95, 102, 110, 95, 110, 97, 109, 101]
+            [
+                0, 0, 0, 0, 0, 0, 0, 12, 115, 111, 109, 101, 95, 102, 110, 95, 110, 97, 109, 101
+            ]
         );
         // ANCHOR_END: example_fn_selector
     }

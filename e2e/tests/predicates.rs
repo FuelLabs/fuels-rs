@@ -1,6 +1,7 @@
 use std::default::Default;
 
 use fuels::{
+    accounts::signers::private_key::PrivateKeySigner,
     core::{
         codec::{ABIEncoder, EncoderConfig},
         traits::Tokenizable,
@@ -9,6 +10,7 @@ use fuels::{
     programs::executable::Executable,
     types::{coin::Coin, coin_type::CoinType, input::Input, message::Message, output::Output},
 };
+use rand::thread_rng;
 
 async fn assert_address_balance(
     address: &Bech32Address,
@@ -64,26 +66,27 @@ async fn setup_predicate_test(
     num_coins: u64,
     num_messages: u64,
     amount: u64,
-) -> Result<(Provider, u64, WalletUnlocked, u64, AssetId, WalletUnlocked)> {
+) -> Result<(Provider, u64, Wallet, u64, AssetId, Wallet)> {
     let receiver_num_coins = 1;
     let receiver_amount = 1;
     let receiver_balance = receiver_num_coins * receiver_amount;
 
     let predicate_balance = (num_coins + num_messages) * amount;
-    let mut receiver = WalletUnlocked::new_random(None);
-    let mut extra_wallet = WalletUnlocked::new_random(None);
+    let mut rng = thread_rng();
+    let receiver_signer = PrivateKeySigner::random(&mut rng);
+    let extra_wallet_signer = PrivateKeySigner::random(&mut rng);
 
     let (mut coins, messages, asset_id) =
         get_test_coins_and_messages(predicate_address, num_coins, num_messages, amount, 0);
 
     coins.extend(setup_single_asset_coins(
-        receiver.address(),
+        receiver_signer.address(),
         asset_id,
         receiver_num_coins,
         receiver_amount,
     ));
     coins.extend(setup_single_asset_coins(
-        extra_wallet.address(),
+        extra_wallet_signer.address(),
         AssetId::zeroed(),
         10_000,
         10_000,
@@ -97,13 +100,13 @@ async fn setup_predicate_test(
     ));
 
     let provider = setup_test_provider(coins, messages, None, None).await?;
-    receiver.set_provider(provider.clone());
-    extra_wallet.set_provider(provider.clone());
+    let receiver_wallet = Wallet::new(receiver_signer.clone(), provider.clone());
+    let extra_wallet = Wallet::new(extra_wallet_signer.clone(), provider.clone());
 
     Ok((
         provider,
         predicate_balance,
-        receiver,
+        receiver_wallet,
         receiver_balance,
         asset_id,
         extra_wallet,
@@ -115,40 +118,33 @@ async fn transfer_coins_and_messages_to_predicate() -> Result<()> {
     let num_coins = 16;
     let num_messages = 32;
     let amount = 64;
-    let total_balance = (num_coins + num_messages) * amount;
+    let balance_to_send = 42;
 
-    let mut wallet = WalletUnlocked::new_random(None);
+    let signer = PrivateKeySigner::random(&mut thread_rng());
 
     let (coins, messages, asset_id) =
-        get_test_coins_and_messages(wallet.address(), num_coins, num_messages, amount, 0);
+        get_test_coins_and_messages(signer.address(), num_coins, num_messages, amount, 0);
 
     let provider = setup_test_provider(coins, messages, None, None).await?;
 
-    wallet.set_provider(provider.clone());
+    let wallet = Wallet::new(signer, provider.clone());
 
     let predicate =
         Predicate::load_from("sway/predicates/basic_predicate/out/release/basic_predicate.bin")?
             .with_provider(provider.clone());
 
-    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
-    let expected_fee = 1;
     wallet
         .transfer(
             predicate.address(),
-            total_balance - expected_fee,
+            balance_to_send,
             asset_id,
             TxPolicies::default(),
         )
         .await?;
 
     // The predicate has received the funds
-    assert_address_balance(
-        predicate.address(),
-        &provider,
-        asset_id,
-        total_balance - expected_fee,
-    )
-    .await;
+    assert_address_balance(predicate.address(), &provider, asset_id, balance_to_send).await;
+
     Ok(())
 }
 
@@ -173,26 +169,34 @@ async fn spend_predicate_coins_messages_basic() -> Result<()> {
 
     predicate.set_provider(provider.clone());
 
-    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
-    let expected_fee = 1;
-    predicate
+    let amount_to_send = 128;
+    let fee = predicate
         .transfer(
             receiver.address(),
-            predicate_balance - expected_fee,
+            amount_to_send,
             asset_id,
             TxPolicies::default(),
         )
-        .await?;
+        .await?
+        .tx_status
+        .total_fee;
 
     // The predicate has spent the funds
-    assert_address_balance(predicate.address(), &provider, asset_id, 0).await;
+    let predicate_current_balance = predicate_balance - amount_to_send - fee;
+    assert_address_balance(
+        predicate.address(),
+        &provider,
+        asset_id,
+        predicate_current_balance,
+    )
+    .await;
 
     // Funds were transferred
     assert_address_balance(
         receiver.address(),
         &provider,
         asset_id,
-        receiver_balance + predicate_balance - expected_fee,
+        receiver_balance + amount_to_send,
     )
     .await;
 
@@ -221,47 +225,41 @@ async fn pay_with_predicate() -> Result<()> {
     let num_coins = 4;
     let num_messages = 8;
     let amount = 16;
-    let (provider, _predicate_balance, _receiver, _receiver_balance, _asset_id, _) =
+    let (provider, predicate_balance, _receiver, _receiver_balance, _asset_id, _) =
         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
     predicate.set_provider(provider.clone());
 
-    let contract_id = Contract::load_from(
+    let deploy_response = Contract::load_from(
         "sway/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
     .deploy_if_not_exists(&predicate, TxPolicies::default())
     .await?;
 
-    let contract_methods = MyContract::new(contract_id.clone(), predicate.clone()).methods();
-    let tx_policies = TxPolicies::default()
-        .with_tip(1)
-        .with_script_gas_limit(1_000_000);
+    let contract_methods =
+        MyContract::new(deploy_response.contract_id.clone(), predicate.clone()).methods();
 
-    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
-    let expected_fee = 1;
     let consensus_parameters = provider.consensus_parameters().await?;
+    let deploy_fee = deploy_response.tx_status.unwrap().total_fee;
     assert_eq!(
         predicate
             .get_asset_balance(consensus_parameters.base_asset_id())
             .await?,
-        192 - expected_fee
+        predicate_balance - deploy_fee
     );
 
     let response = contract_methods
         .initialize_counter(42) // Build the ABI call
-        .with_tx_policies(tx_policies)
         .call()
         .await?;
 
     assert_eq!(42, response.value);
-    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
-    let expected_fee = 2;
     assert_eq!(
         predicate
             .get_asset_balance(consensus_parameters.base_asset_id())
             .await?,
-        191 - expected_fee
+        predicate_balance - deploy_fee - response.tx_status.total_fee
     );
 
     Ok(())
@@ -291,47 +289,38 @@ async fn pay_with_predicate_vector_data() -> Result<()> {
     let num_coins = 4;
     let num_messages = 8;
     let amount = 16;
-    let (provider, _predicate_balance, _receiver, _receiver_balance, _asset_id, _) =
+    let (provider, predicate_balance, _receiver, _receiver_balance, _asset_id, _) =
         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
     predicate.set_provider(provider.clone());
 
-    let contract_id = Contract::load_from(
+    let deploy_response = Contract::load_from(
         "sway/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
     .deploy_if_not_exists(&predicate, TxPolicies::default())
     .await?;
 
-    let contract_methods = MyContract::new(contract_id.clone(), predicate.clone()).methods();
-    let tx_policies = TxPolicies::default()
-        .with_tip(1)
-        .with_script_gas_limit(1_000_000);
+    let contract_methods =
+        MyContract::new(deploy_response.contract_id.clone(), predicate.clone()).methods();
 
-    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
-    let expected_fee = 1;
     let consensus_parameters = provider.consensus_parameters().await?;
+    let deploy_fee = deploy_response.tx_status.unwrap().total_fee;
     assert_eq!(
         predicate
             .get_asset_balance(consensus_parameters.base_asset_id())
             .await?,
-        192 - expected_fee
+        predicate_balance - deploy_fee
     );
 
-    let response = contract_methods
-        .initialize_counter(42)
-        .with_tx_policies(tx_policies)
-        .call()
-        .await?;
+    let response = contract_methods.initialize_counter(42).call().await?;
 
-    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
-    let expected_fee = 2;
     assert_eq!(42, response.value);
     assert_eq!(
         predicate
             .get_asset_balance(consensus_parameters.base_asset_id())
             .await?,
-        191 - expected_fee
+        predicate_balance - deploy_fee - response.tx_status.total_fee
     );
 
     Ok(())
@@ -364,7 +353,8 @@ async fn predicate_contract_transfer() -> Result<()> {
         LoadConfiguration::default(),
     )?
     .deploy_if_not_exists(&predicate, TxPolicies::default())
-    .await?;
+    .await?
+    .contract_id;
 
     let contract_balances = provider.get_contract_balances(&contract_id).await?;
     assert!(contract_balances.is_empty());
@@ -420,7 +410,7 @@ async fn predicate_transfer_to_base_layer() -> Result<()> {
         Address::from_str("0x4710162c2e3a95a6faff05139150017c9e38e5e280432d546fae345d6ce6d8fe")?;
     let base_layer_address = Bech32Address::from(base_layer_address);
 
-    let (tx_id, msg_nonce, _receipts) = predicate
+    let withdraw_response = predicate
         .withdraw_to_base_layer(&base_layer_address, amount, TxPolicies::default())
         .await?;
 
@@ -429,7 +419,12 @@ async fn predicate_transfer_to_base_layer() -> Result<()> {
 
     let proof = predicate
         .try_provider()?
-        .get_message_proof(&tx_id, &msg_nonce, None, Some(2))
+        .get_message_proof(
+            &withdraw_response.tx_id,
+            &withdraw_response.nonce,
+            None,
+            Some(2),
+        )
         .await?;
 
     assert_eq!(proof.amount, amount);
@@ -457,7 +452,7 @@ async fn predicate_transfer_with_signed_resources() -> Result<()> {
     let predicate_amount = 1000;
     let predicate_balance = (predicate_num_coins + predicate_num_messages) * predicate_amount;
 
-    let mut wallet = WalletUnlocked::new_random(None);
+    let signer = PrivateKeySigner::random(&mut thread_rng());
     let wallet_num_coins = 4;
     let wallet_num_messages = 3;
     let wallet_amount = 1000;
@@ -471,7 +466,7 @@ async fn predicate_transfer_with_signed_resources() -> Result<()> {
         0,
     );
     let (wallet_coins, wallet_messages, _) = get_test_coins_and_messages(
-        wallet.address(),
+        signer.address(),
         wallet_num_coins,
         wallet_num_messages,
         wallet_amount,
@@ -482,33 +477,31 @@ async fn predicate_transfer_with_signed_resources() -> Result<()> {
     messages.extend(wallet_messages);
 
     let provider = setup_test_provider(coins, messages, None, None).await?;
-    wallet.set_provider(provider.clone());
+    let wallet = Wallet::new(signer.clone(), provider.clone());
     predicate.set_provider(provider.clone());
 
     let mut inputs = wallet
-        .get_asset_inputs_for_amount(asset_id, wallet_balance, None)
+        .get_asset_inputs_for_amount(asset_id, wallet_balance.into(), None)
         .await?;
     let predicate_inputs = predicate
-        .get_asset_inputs_for_amount(asset_id, predicate_balance, None)
+        .get_asset_inputs_for_amount(asset_id, predicate_balance.into(), None)
         .await?;
     inputs.extend(predicate_inputs);
 
     let outputs = vec![Output::change(predicate.address().into(), 0, asset_id)];
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, Default::default());
-    tb.add_signer(wallet.clone())?;
+    tb.add_signer(signer)?;
 
     let tx = tb.build(&provider).await?;
 
-    provider.send_transaction_and_await_commit(tx).await?;
+    let tx_status = provider.send_transaction_and_await_commit(tx).await?;
 
-    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
-    let expected_fee = 1;
     assert_address_balance(
         predicate.address(),
         &provider,
         asset_id,
-        predicate_balance + wallet_balance - expected_fee,
+        predicate_balance + wallet_balance - tx_status.total_fee(),
     )
     .await;
 
@@ -542,20 +535,20 @@ async fn contract_tx_and_call_params_with_predicate() -> Result<()> {
     let num_coins = 1;
     let num_messages = 1;
     let amount = 1000;
-    let (provider, _predicate_balance, _receiver, _receiver_balance, _asset_id, _) =
+    let (provider, predicate_balance, _receiver, _receiver_balance, _asset_id, _) =
         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
     predicate.set_provider(provider.clone());
 
-    let contract_id = Contract::load_from(
+    let deploy_response = Contract::load_from(
         "./sway/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
     .deploy_if_not_exists(&predicate, TxPolicies::default())
     .await?;
-    println!("Contract deployed @ {contract_id}");
 
-    let contract_methods = MyContract::new(contract_id.clone(), predicate.clone()).methods();
+    let contract_methods =
+        MyContract::new(deploy_response.contract_id.clone(), predicate.clone()).methods();
 
     let tx_policies = TxPolicies::default().with_tip(100);
 
@@ -565,18 +558,18 @@ async fn contract_tx_and_call_params_with_predicate() -> Result<()> {
         .with_asset_id(AssetId::zeroed());
 
     {
-        let response = contract_methods
+        let call_response = contract_methods
             .get_msg_amount()
             .with_tx_policies(tx_policies)
             .call_params(call_params.clone())?
             .call()
             .await?;
 
-        // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
-        let expected_fee = 2;
+        let deploy_fee = deploy_response.tx_status.unwrap().total_fee;
+        let call_fee = call_response.tx_status.total_fee;
         assert_eq!(
             predicate.get_asset_balance(&AssetId::zeroed()).await?,
-            1800 - expected_fee
+            predicate_balance - deploy_fee - call_params_amount - call_fee
         );
     }
     {
@@ -632,7 +625,8 @@ async fn diff_asset_predicate_payment() -> Result<()> {
         LoadConfiguration::default(),
     )?
     .deploy_if_not_exists(&predicate, TxPolicies::default())
-    .await?;
+    .await?
+    .contract_id;
 
     let contract_methods = MyContract::new(contract_id.clone(), predicate.clone()).methods();
 
@@ -684,12 +678,11 @@ async fn predicate_default_configurables() -> Result<()> {
 
     predicate.set_provider(provider.clone());
 
-    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
-    let expected_fee = 1;
+    let amount_to_send = predicate_balance - 1;
     predicate
         .transfer(
             receiver.address(),
-            predicate_balance - expected_fee,
+            amount_to_send,
             asset_id,
             TxPolicies::default(),
         )
@@ -703,7 +696,7 @@ async fn predicate_default_configurables() -> Result<()> {
         receiver.address(),
         &provider,
         asset_id,
-        receiver_balance + predicate_balance - expected_fee,
+        receiver_balance + amount_to_send,
     )
     .await;
 
@@ -751,16 +744,17 @@ async fn predicate_configurables() -> Result<()> {
 
     predicate.set_provider(provider.clone());
 
-    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
-    let expected_fee = 1;
-    predicate
+    let amount_to_send = predicate_balance - 1;
+    let fee = predicate
         .transfer(
             receiver.address(),
-            predicate_balance - expected_fee,
+            amount_to_send,
             asset_id,
             TxPolicies::default(),
         )
-        .await?;
+        .await?
+        .tx_status
+        .total_fee;
 
     // The predicate has spent the funds
     assert_address_balance(predicate.address(), &provider, asset_id, 0).await;
@@ -770,7 +764,7 @@ async fn predicate_configurables() -> Result<()> {
         receiver.address(),
         &provider,
         asset_id,
-        receiver_balance + predicate_balance - expected_fee,
+        receiver_balance + predicate_balance - fee,
     )
     .await;
 
@@ -830,13 +824,13 @@ async fn predicate_transfer_non_base_asset() -> Result<()> {
         Predicate::load_from("sway/predicates/basic_predicate/out/release/basic_predicate.bin")?
             .with_data(predicate_data);
 
-    let mut wallet = WalletUnlocked::new_random(None);
+    let signer = PrivateKeySigner::random(&mut thread_rng());
 
     let amount = 5;
     let non_base_asset_id = AssetId::new([1; 32]);
 
     // wallet has base and predicate non base asset
-    let mut coins = setup_single_asset_coins(wallet.address(), AssetId::zeroed(), 1, amount);
+    let mut coins = setup_single_asset_coins(signer.address(), AssetId::zeroed(), 1, amount);
     coins.extend(setup_single_asset_coins(
         predicate.address(),
         non_base_asset_id,
@@ -846,10 +840,10 @@ async fn predicate_transfer_non_base_asset() -> Result<()> {
 
     let provider = setup_test_provider(coins, vec![], None, None).await?;
     predicate.set_provider(provider.clone());
-    wallet.set_provider(provider.clone());
+    let wallet = Wallet::new(signer.clone(), provider.clone());
 
     let inputs = predicate
-        .get_asset_inputs_for_amount(non_base_asset_id, amount, None)
+        .get_asset_inputs_for_amount(non_base_asset_id, amount.into(), None)
         .await?;
     let consensus_parameters = provider.consensus_parameters().await?;
     let outputs = vec![
@@ -867,7 +861,7 @@ async fn predicate_transfer_non_base_asset() -> Result<()> {
         TxPolicies::default().with_tip(1),
     );
 
-    tb.add_signer(wallet.clone())?;
+    tb.add_signer(signer)?;
     wallet.adjust_for_fee(&mut tb, 0).await?;
 
     let tx = tb.build(&provider).await?;
@@ -906,9 +900,9 @@ async fn predicate_can_access_manually_added_witnesses() -> Result<()> {
 
     predicate.set_provider(provider.clone());
 
-    let amount_to_send = 12;
+    let amount_to_send = 12u64;
     let inputs = predicate
-        .get_asset_inputs_for_amount(asset_id, amount_to_send, None)
+        .get_asset_inputs_for_amount(asset_id, amount_to_send.into(), None)
         .await?;
     let outputs =
         predicate.get_asset_outputs_for_amount(receiver.address(), asset_id, amount_to_send);
@@ -927,16 +921,15 @@ async fn predicate_can_access_manually_added_witnesses() -> Result<()> {
     tx.append_witness(witness.into())?;
     tx.append_witness(witness2.into())?;
 
-    provider.send_transaction_and_await_commit(tx).await?;
+    let tx_status = provider.send_transaction_and_await_commit(tx).await?;
 
-    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
-    let expected_fee = 1;
+    let fee = tx_status.total_fee();
     // The predicate has spent the funds
     assert_address_balance(
         predicate.address(),
         &provider,
         asset_id,
-        predicate_balance - amount_to_send - expected_fee,
+        predicate_balance - amount_to_send - fee,
     )
     .await;
 
@@ -974,9 +967,9 @@ async fn tx_id_not_changed_after_adding_witnesses() -> Result<()> {
 
     predicate.set_provider(provider.clone());
 
-    let amount_to_send = 12;
+    let amount_to_send = 12u64;
     let inputs = predicate
-        .get_asset_inputs_for_amount(asset_id, amount_to_send, None)
+        .get_asset_inputs_for_amount(asset_id, amount_to_send.into(), None)
         .await?;
     let outputs =
         predicate.get_asset_outputs_for_amount(receiver.address(), asset_id, amount_to_send);
@@ -1028,9 +1021,11 @@ async fn predicate_encoder_config_is_applied() -> Result<()> {
             .encode_data(4097, 4097)
             .expect_err("should fail");
 
-        assert!(encoding_error
-            .to_string()
-            .contains("token limit `1` reached while encoding"));
+        assert!(
+            encoding_error
+                .to_string()
+                .contains("token limit `1` reached while encoding")
+        );
     }
 
     Ok(())
@@ -1218,14 +1213,16 @@ async fn predicate_configurables_in_blobs() -> Result<()> {
 
     predicate.set_provider(provider.clone());
 
-    loader.upload_blob(extra_wallet).await?;
+    loader
+        .upload_blob(extra_wallet)
+        .await?
+        .expect("has tx_status");
 
-    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
-    let expected_fee = 1;
+    let amount_to_send = predicate_balance - 1;
     predicate
         .transfer(
             receiver.address(),
-            predicate_balance - expected_fee,
+            amount_to_send,
             asset_id,
             TxPolicies::default(),
         )
@@ -1239,7 +1236,7 @@ async fn predicate_configurables_in_blobs() -> Result<()> {
         receiver.address(),
         &provider,
         asset_id,
-        receiver_balance + predicate_balance - expected_fee,
+        receiver_balance + amount_to_send,
     )
     .await;
 
@@ -1319,6 +1316,123 @@ async fn predicate_transfer_respects_maturity_and_expiration() -> Result<()> {
         receiver_balance + amount_to_send,
     )
     .await;
+
+    Ok(())
+}
+
+async fn transfer_to_predicate(
+    from: &impl Account,
+    address: &Bech32Address,
+    amount: u64,
+    asset_id: AssetId,
+) {
+    from.transfer(address, amount, asset_id, TxPolicies::default())
+        .await
+        .unwrap();
+
+    assert_address_balance(address, from.try_provider().unwrap(), asset_id, amount).await;
+}
+
+#[tokio::test]
+async fn predicate_tx_input_output() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet_1", "wallet_2"),
+        Abigen(
+            Contract(
+                name = "TestContract",
+                project = "e2e/sway/contracts/contract_test"
+            ),
+            Predicate(
+                name = "MyPredicate",
+                project = "e2e/sway/predicates/predicate_tx_input_output"
+            ),
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "TestContract",
+            wallet = "wallet_1",
+            random_salt = false,
+        ),
+    );
+
+    let provider = wallet_1.try_provider()?;
+
+    // Predicate expects `wallet_2` as owner
+    let configurables =
+        MyPredicateConfigurables::default().with_OWNER(wallet_2.address().into())?;
+
+    // Predicate will check first input and first output
+    let predicate_data = MyPredicateEncoder::default().encode_data(0, 0)?;
+
+    let mut predicate: Predicate = Predicate::load_from(
+        "sway/predicates/predicate_tx_input_output/out/release/predicate_tx_input_output.bin",
+    )?
+    .with_data(predicate_data)
+    .with_configurables(configurables);
+    predicate.set_provider(provider.clone());
+
+    let asset_id = AssetId::zeroed();
+    {
+        transfer_to_predicate(&wallet_2, predicate.address(), 42, asset_id).await;
+
+        // Call contract method with custom `wallet_2` input at first place, predicate at second
+        // and custom change to `wallet_2`
+        let wallet_input = wallet_2
+            .get_asset_inputs_for_amount(asset_id, 10, None)
+            .await?
+            .pop()
+            .unwrap();
+
+        let predicate_input = predicate
+            .get_asset_inputs_for_amount(asset_id, 10, None)
+            .await?
+            .pop()
+            .unwrap();
+
+        let custom_inputs = vec![wallet_input, predicate_input];
+
+        let custom_output = vec![Output::change(wallet_2.address().into(), 0, asset_id)];
+
+        let value = contract_instance
+            .methods()
+            .initialize_counter(36)
+            .with_inputs(custom_inputs)
+            .add_signer(wallet_2.signer().clone())
+            .with_outputs(custom_output)
+            .call()
+            .await?
+            .value;
+
+        assert_eq!(value, 36);
+    }
+    {
+        transfer_to_predicate(&wallet_2, predicate.address(), 42, asset_id).await;
+
+        // Add coin with wrong owner (`wallet_1`)
+        let wallet_input = wallet_1
+            .get_asset_inputs_for_amount(asset_id, 10, None)
+            .await?
+            .pop()
+            .unwrap();
+
+        let predicate_input = predicate
+            .get_asset_inputs_for_amount(asset_id, 10, None)
+            .await?
+            .pop()
+            .unwrap();
+
+        let custom_inputs = vec![wallet_input, predicate_input];
+
+        let err = contract_instance
+            .methods()
+            .initialize_counter(36)
+            .with_inputs(custom_inputs)
+            .call()
+            .await
+            .unwrap_err();
+
+        assert!(err.to_string().contains("PredicateVerificationFailed"));
+    }
 
     Ok(())
 }

@@ -1,7 +1,7 @@
 use fuels::{
     core::codec::DecoderConfig,
     prelude::*,
-    types::{errors::transaction::Reason, AsciiString, Bits256, SizedAsciiString},
+    types::{AsciiString, Bits256, SizedAsciiString, errors::transaction::Reason},
 };
 
 #[tokio::test]
@@ -387,7 +387,8 @@ async fn test_multi_call_contract_with_contract_logs() -> Result<()> {
         LoadConfiguration::default(),
     )?
     .deploy_if_not_exists(&wallet, TxPolicies::default())
-    .await?;
+    .await?
+    .contract_id;
 
     let contract_instance = MyContract::new(contract_id.clone(), wallet.clone());
 
@@ -424,8 +425,8 @@ async fn test_multi_call_contract_with_contract_logs() -> Result<()> {
 }
 
 fn assert_revert_containing_msg(msg: &str, error: Error) {
-    assert!(matches!(error, Error::Transaction(Reason::Reverted { .. })));
-    if let Error::Transaction(Reason::Reverted { reason, .. }) = error {
+    assert!(matches!(error, Error::Transaction(Reason::Failure { .. })));
+    if let Error::Transaction(Reason::Failure { reason, .. }) = error {
         assert!(
             reason.contains(msg),
             "message: \"{msg}\" not contained in reason: \"{reason}\""
@@ -464,7 +465,7 @@ async fn test_revert_logs() -> Result<()> {
             let error = contract_instance
                 .methods()
                 .$method()
-                .simulate(Execution::Realistic)
+                .simulate(Execution::realistic())
                 .await
                 .expect_err("should return a revert error");
 
@@ -536,7 +537,7 @@ async fn test_multi_call_revert_logs_single_contract() -> Result<()> {
             .add_call(call_handler_2);
 
         let error = multi_call_handler
-            .simulate::<((), ())>(Execution::Realistic)
+            .simulate::<((), ())>(Execution::realistic())
             .await
             .expect_err("should return a revert error");
 
@@ -558,7 +559,7 @@ async fn test_multi_call_revert_logs_single_contract() -> Result<()> {
             .add_call(call_handler_2);
 
         let error = multi_call_handler
-            .simulate::<((), ())>(Execution::Realistic)
+            .simulate::<((), ())>(Execution::realistic())
             .await
             .expect_err("should return a revert error");
 
@@ -611,7 +612,7 @@ async fn test_multi_call_revert_logs_multi_contract() -> Result<()> {
             .add_call(call_handler_2);
 
         let error = multi_call_handler
-            .simulate::<((), ())>(Execution::Realistic)
+            .simulate::<((), ())>(Execution::realistic())
             .await
             .expect_err("should return a revert error");
 
@@ -633,7 +634,7 @@ async fn test_multi_call_revert_logs_multi_contract() -> Result<()> {
             .add_call(call_handler_2);
 
         let error = multi_call_handler
-            .simulate::<((), ())>(Execution::Realistic)
+            .simulate::<((), ())>(Execution::realistic())
             .await
             .expect_err("should return a revert error");
 
@@ -742,7 +743,8 @@ async fn test_contract_with_contract_logs() -> Result<()> {
         LoadConfiguration::default(),
     )?
     .deploy_if_not_exists(&wallet, TxPolicies::default())
-    .await?;
+    .await?
+    .contract_id;
 
     let contract_instance = MyContract::new(contract_id.clone(), wallet.clone());
 
@@ -828,6 +830,7 @@ async fn test_script_logs_with_contract_logs() -> Result<()> {
 
     {
         let num_contract_logs = response
+            .tx_status
             .receipts
             .iter()
             .filter(|receipt| matches!(receipt, Receipt::LogData { id, .. } | Receipt::Log { id, .. } if *id == contract_id))
@@ -948,7 +951,7 @@ async fn test_script_require_log() -> Result<()> {
         ($arg:expr, simulate, $msg:expr) => {
             let error = script_instance
                 .main($arg)
-                .simulate(Execution::Realistic)
+                .simulate(Execution::realistic())
                 .await
                 .expect_err("should return a revert error");
             assert_revert_containing_msg($msg, error);
@@ -1025,7 +1028,8 @@ async fn test_contract_require_from_contract() -> Result<()> {
         LoadConfiguration::default(),
     )?
     .deploy_if_not_exists(&wallet, TxPolicies::default())
-    .await?;
+    .await?
+    .contract_id;
 
     let contract_instance = MyContract::new(contract_id.clone(), wallet.clone());
 
@@ -1079,7 +1083,8 @@ async fn test_multi_call_contract_require_from_contract() -> Result<()> {
         LoadConfiguration::default(),
     )?
     .deploy_if_not_exists(&wallet, TxPolicies::default())
-    .await?;
+    .await?
+    .contract_id;
 
     let lib_contract_instance = MyContract::new(contract_id.clone(), wallet.clone());
 
@@ -1169,7 +1174,8 @@ async fn test_loader_script_require_from_loader_contract() -> Result<()> {
     let contract_id = contract
         .convert_to_loader(100_000)?
         .deploy_if_not_exists(&wallet, TxPolicies::default())
-        .await?;
+        .await?
+        .contract_id;
     let contract_instance = MyContract::new(contract_id, wallet);
 
     let mut script_instance = script_instance;
@@ -1231,7 +1237,7 @@ async fn test_contract_asserts_log() -> Result<()> {
             let error = contract_instance
                 .methods()
                 .$method($($arg,)*)
-                .simulate(Execution::Realistic)
+                .simulate(Execution::realistic())
                 .await
                 .expect_err("should return a revert error");
             assert_revert_containing_msg($msg, error);
@@ -1383,7 +1389,7 @@ async fn test_script_asserts_log() -> Result<()> {
         ($arg:expr, simulate, $msg:expr) => {
             let error = script_instance
                 .main($arg)
-                .simulate(Execution::Realistic)
+                .simulate(Execution::realistic())
                 .await
                 .expect_err("should return a revert error");
             assert_revert_containing_msg($msg, error);
@@ -1402,7 +1408,7 @@ async fn test_script_asserts_log() -> Result<()> {
         ($arg:expr, simulate, $msg:expr) => {
             let error = script_instance
                 .main($arg)
-                .simulate(Execution::Realistic)
+                .simulate(Execution::realistic())
                 .await
                 .expect_err("should return a revert error");
             assert_revert_containing_msg($msg, error);
@@ -1539,7 +1545,7 @@ async fn contract_token_ops_error_messages() -> Result<()> {
 
         let error = contract_methods
             .transfer(1_000_000, asset_id, address.into())
-            .simulate(Execution::Realistic)
+            .simulate(Execution::realistic())
             .await
             .expect_err("should return a revert error");
         assert_revert_containing_msg("failed transfer to address", error);
@@ -1628,7 +1634,10 @@ async fn can_configure_decoder_for_contract_log_decoding() -> Result<()> {
         );
 
         let logs = response.decode_logs();
-        assert!(!logs.filter_failed().is_empty(), "Should have had failed to decode logs since there are more tokens than what is supported by default");
+        assert!(
+            !logs.filter_failed().is_empty(),
+            "Should have had failed to decode logs since there are more tokens than what is supported by default"
+        );
     }
     {
         // Single call: increasing limits makes the test pass
@@ -1663,7 +1672,10 @@ async fn can_configure_decoder_for_contract_log_decoding() -> Result<()> {
         );
 
         let logs = response.decode_logs();
-        assert!(!logs.filter_failed().is_empty(), "should have had failed to decode logs since there are more tokens than what is supported by default");
+        assert!(
+            !logs.filter_failed().is_empty(),
+            "should have had failed to decode logs since there are more tokens than what is supported by default"
+        );
     }
     {
         // Multi call: increasing limits makes the test pass
@@ -1692,7 +1704,7 @@ async fn can_configure_decoder_for_script_log_decoding() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "LogScript",
-            project = "e2e/sway/logs/script_needs_custom_decoder_logging"
+            project = "e2e/sway/scripts/script_needs_custom_decoder"
         )),
         LoadScript(
             name = "script_instance",
@@ -1704,7 +1716,7 @@ async fn can_configure_decoder_for_script_log_decoding() -> Result<()> {
     {
         // Cannot decode the produced log with too low max_tokens
         let response = script_instance
-            .main()
+            .main(true)
             .with_decoder_config(DecoderConfig {
                 max_tokens: 100,
                 ..Default::default()
@@ -1722,7 +1734,7 @@ async fn can_configure_decoder_for_script_log_decoding() -> Result<()> {
     {
         // When the token limit is bumped log decoding succeeds
         let response = script_instance
-            .main()
+            .main(true)
             .with_decoder_config(DecoderConfig {
                 max_tokens: 1001,
                 ..Default::default()

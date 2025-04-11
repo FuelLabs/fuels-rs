@@ -1,6 +1,6 @@
 use fuel_abi_types::abi::full_program::FullABIFunction;
 
-use crate::error::{error, Result};
+use crate::error::{Result, error};
 
 pub(crate) fn extract_main_fn(abi: &[FullABIFunction]) -> Result<&FullABIFunction> {
     let candidates = abi

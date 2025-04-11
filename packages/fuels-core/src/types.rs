@@ -1,6 +1,6 @@
 use fuel_types::bytes::padded_len;
 pub use fuel_types::{
-    Address, AssetId, BlockHeight, Bytes32, Bytes4, Bytes64, Bytes8, ChainId, ContractId,
+    Address, AssetId, BlockHeight, Bytes4, Bytes8, Bytes32, Bytes64, ChainId, ContractId,
     MessageId, Nonce, Salt, Word,
 };
 
@@ -14,6 +14,7 @@ pub mod errors;
 pub mod param_types;
 mod token;
 pub mod transaction_builders;
+pub mod tx_response;
 pub mod tx_status;
 mod wrappers;
 pub use dry_runner::*;

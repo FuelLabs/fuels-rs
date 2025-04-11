@@ -1,7 +1,7 @@
 use fuels_code_gen::{Abi, AbigenTarget, ProgramType};
 use syn::{
-    parse::{Parse, ParseStream},
     LitStr, Result,
+    parse::{Parse, ParseStream},
 };
 
 use crate::parse_utils::{Command, UniqueNameValues};
