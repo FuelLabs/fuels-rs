@@ -9,7 +9,7 @@ use fuels_core::types::{
     coin::Coin,
     coin_type::CoinType,
     coin_type_id::CoinTypeId,
-    errors::Result,
+    errors::{Result, error},
     input::Input,
     message::Message,
     transaction::{Transaction, TxPolicies},
@@ -108,7 +108,7 @@ pub trait ViewOnlyAccount: Send + Sync {
         to: &Bech32Address,
         asset_id: AssetId,
         amount: u128,
-    ) -> Vec<Output> {
+    ) -> Result<Vec<Output>> {
         let mut remaining_amount = amount;
         let mut outputs = Vec::new();
         let to: Address = to.into();
@@ -118,10 +118,16 @@ pub trait ViewOnlyAccount: Send + Sync {
             let output_amount = remaining_amount.min(u64::MAX as u128) as u64;
             outputs.push(Output::coin(to, output_amount, asset_id));
             remaining_amount -= output_amount as u128;
+            if outputs.len() >= 254 {
+                return Err(error!(
+                    Other,
+                    "`amount` of transfer is too large to fit in a single transaction or 254 outputs"
+                ));
+            }
         }
 
         outputs.push(Output::change(self.address().into(), 0, asset_id));
-        outputs
+        Ok(outputs)
     }
 
     /// Returns a vector consisting of `Input::Coin`s and `Input::Message`s for the given
@@ -191,7 +197,7 @@ pub trait Account: ViewOnlyAccount {
         let inputs = self
             .get_asset_inputs_for_amount(asset_id, amount, None)
             .await?;
-        let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
+        let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount)?;
 
         let mut tx_builder =
             ScriptTransactionBuilder::prepare_transfer(inputs, outputs, tx_policies);
