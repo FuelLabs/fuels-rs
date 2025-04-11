@@ -795,7 +795,7 @@ async fn create_transfer(
     let inputs = wallet
         .get_asset_inputs_for_amount(asset_id, amount, None)
         .await?;
-    let outputs = wallet.get_asset_outputs_for_amount(to, asset_id, amount);
+    let outputs = wallet.get_asset_outputs_for_amount(to, asset_id, amount)?;
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
 
@@ -888,7 +888,7 @@ async fn create_revert_tx(wallet: &Wallet) -> Result<ScriptTransaction> {
         .get_asset_inputs_for_amount(asset_id, amount.into(), None)
         .await?;
     let outputs =
-        wallet.get_asset_outputs_for_amount(&Bech32Address::default(), asset_id, amount.into());
+        wallet.get_asset_outputs_for_amount(&Bech32Address::default(), asset_id, amount.into())?;
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default())
         .with_script(script);
@@ -994,7 +994,7 @@ async fn test_build_with_provider() -> Result<()> {
         receiver.address(),
         *consensus_parameters.base_asset_id(),
         100,
-    );
+    )?;
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
     wallet.add_witnesses(&mut tb)?;
@@ -1032,7 +1032,7 @@ async fn can_produce_blocks_with_trig_never() -> Result<()> {
         &Bech32Address::default(),
         *consensus_parameters.base_asset_id(),
         100,
-    );
+    )?;
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
     wallet.add_witnesses(&mut tb)?;
@@ -1196,7 +1196,7 @@ async fn tx_with_witness_data() -> Result<()> {
         receiver.address(),
         *consensus_parameters.base_asset_id(),
         1,
-    );
+    )?;
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
     wallet.add_witnesses(&mut tb)?;

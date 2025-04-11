@@ -145,7 +145,7 @@ async fn adjust_for_fee_with_message_data_input() -> Result<()> {
     let message = wallet.get_messages().await?.pop().unwrap();
     let input = Input::resource_signed(CoinType::Message(message));
     let outputs =
-        wallet.get_asset_outputs_for_amount(receiver.address(), asset_id, amount_to_send.into());
+        wallet.get_asset_outputs_for_amount(receiver.address(), asset_id, amount_to_send.into())?;
 
     {
         // message with data as only input - without adjust for fee
@@ -203,7 +203,7 @@ async fn adjust_fee_resources_to_transfer_with_base_asset() -> Result<()> {
         &Address::zeroed().into(),
         base_asset_id,
         base_amount.into(),
-    );
+    )?;
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
 
@@ -486,7 +486,7 @@ async fn test_transfer_with_multiple_signatures() -> Result<()> {
         receiver.address(),
         *consensus_parameters.base_asset_id(),
         amount_to_receive.into(),
-    );
+    )?;
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
 

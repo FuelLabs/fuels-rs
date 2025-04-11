@@ -180,9 +180,9 @@ mod tests {
 
             // we don't transfer the full base asset so we can cover fees
             let output = if id == *consensus_parameters.base_asset_id() {
-                wallet_1.get_asset_outputs_for_amount(wallet_2.address(), id, amount / 2)
+                wallet_1.get_asset_outputs_for_amount(wallet_2.address(), id, amount / 2)?
             } else {
-                wallet_1.get_asset_outputs_for_amount(wallet_2.address(), id, amount)
+                wallet_1.get_asset_outputs_for_amount(wallet_2.address(), id, amount)?
             };
 
             outputs.extend(output);
@@ -287,7 +287,7 @@ mod tests {
             &receiver,
             *consensus_parameters.base_asset_id(),
             ask_amount,
-        );
+        )?;
         // ANCHOR_END: custom_tx_io_base
 
         // ANCHOR: custom_tx_io_other
@@ -295,7 +295,7 @@ mod tests {
             .get_asset_inputs_for_amount(bridged_asset_id, locked_amount, None)
             .await?;
         let other_asset_outputs =
-            predicate.get_asset_outputs_for_amount(cold_wallet.address(), bridged_asset_id, 500);
+            predicate.get_asset_outputs_for_amount(cold_wallet.address(), bridged_asset_id, 500)?;
         // ANCHOR_END: custom_tx_io_other
 
         // ANCHOR: custom_tx_io

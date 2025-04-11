@@ -904,8 +904,11 @@ async fn predicate_can_access_manually_added_witnesses() -> Result<()> {
     let inputs = predicate
         .get_asset_inputs_for_amount(asset_id, amount_to_send.into(), None)
         .await?;
-    let outputs =
-        predicate.get_asset_outputs_for_amount(receiver.address(), asset_id, amount_to_send.into());
+    let outputs = predicate.get_asset_outputs_for_amount(
+        receiver.address(),
+        asset_id,
+        amount_to_send.into(),
+    )?;
 
     let mut tx = ScriptTransactionBuilder::prepare_transfer(
         inputs,
@@ -971,8 +974,11 @@ async fn tx_id_not_changed_after_adding_witnesses() -> Result<()> {
     let inputs = predicate
         .get_asset_inputs_for_amount(asset_id, amount_to_send.into(), None)
         .await?;
-    let outputs =
-        predicate.get_asset_outputs_for_amount(receiver.address(), asset_id, amount_to_send.into());
+    let outputs = predicate.get_asset_outputs_for_amount(
+        receiver.address(),
+        asset_id,
+        amount_to_send.into(),
+    )?;
 
     let mut tx = ScriptTransactionBuilder::prepare_transfer(
         inputs,
