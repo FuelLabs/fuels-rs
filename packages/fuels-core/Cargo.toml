@@ -42,3 +42,4 @@ pretty_assertions = { workspace = true, features = ["alloc"] }
 [features]
 default = ["std"]
 std = ["dep:fuel-core-client", "fuel-core-types/std"]
+fault-proving = ["fuel-core-chain-config/fault-proving", "fuel-core-types/fault-proving", "fuel-core-client?/fault-proving"]
