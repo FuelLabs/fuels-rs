@@ -7,7 +7,10 @@ use fuels_core::{
     types::{
         errors::{Result, error},
         transaction::TxPolicies,
-        transaction_builders::{Blob, BlobId, BlobTransactionBuilder, TransactionBuilder},
+        transaction_builders::{
+            Blob, BlobId, BlobTransactionBuilder, BuildableTransaction, Strategy,
+            TransactionBuilder,
+        },
     },
 };
 
@@ -117,6 +120,8 @@ impl Contract<Loader<BlobsNotUploaded>> {
         tx_policies: TxPolicies,
     ) -> Result<Contract<Loader<BlobsUploaded>>> {
         let provider = account.try_provider()?;
+        let consensus_parameters = provider.consensus_parameters().await?;
+        let base_asset_id = *consensus_parameters.base_asset_id();
 
         let all_blob_ids = self.blob_ids();
         let mut already_uploaded = HashSet::new();
@@ -133,12 +138,18 @@ impl Contract<Loader<BlobsNotUploaded>> {
                 continue;
             }
 
+            let fee_index = 0u16;
+            let required_balances = vec![account.required_balance(0, base_asset_id, None)];
+
             let mut tb = BlobTransactionBuilder::default()
                 .with_blob(blob)
                 .with_tx_policies(tx_policies)
-                .with_max_fee_estimation_tolerance(DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE);
+                .with_max_fee_estimation_tolerance(DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE)
+                .with_build_strategy(Strategy::AssembleTx {
+                    required_balances,
+                    fee_index,
+                });
 
-            account.adjust_for_fee(&mut tb, 0).await?;
             account.add_witnesses(&mut tb)?;
 
             let tx = tb.build(provider).await?;

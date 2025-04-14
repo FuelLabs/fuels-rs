@@ -3,7 +3,7 @@ use fuels_core::{
     types::{
         errors::Result,
         transaction::Transaction,
-        transaction_builders::{Blob, BlobTransactionBuilder},
+        transaction_builders::{Blob, BlobTransactionBuilder, BuildableTransaction, Strategy},
         tx_response::TxResponse,
     },
 };
@@ -171,16 +171,23 @@ impl Executable<Loader> {
         let blob = self.blob();
         let provider = account.try_provider()?;
         let consensus_parameters = provider.consensus_parameters().await?;
+        let base_asset_id = *consensus_parameters.base_asset_id();
 
         if provider.blob_exists(blob.id()).await? {
             return Ok(None);
         }
 
+        let fee_index = 0u16;
+        let required_balances = vec![account.required_balance(0, base_asset_id, None)];
+
         let mut tb = BlobTransactionBuilder::default()
             .with_blob(self.blob())
-            .with_max_fee_estimation_tolerance(DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE);
+            .with_max_fee_estimation_tolerance(DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE)
+            .with_build_strategy(Strategy::AssembleTx {
+                required_balances,
+                fee_index,
+            });
 
-        account.adjust_for_fee(&mut tb, 0).await?;
         account.add_witnesses(&mut tb)?;
 
         let tx = tb.build(provider).await?;

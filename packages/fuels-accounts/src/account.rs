@@ -12,7 +12,7 @@ use fuels_core::types::{
     coin::Coin,
     coin_type::CoinType,
     coin_type_id::CoinTypeId,
-    errors::Result,
+    errors::{Context, Result},
     input::Input,
     message::Message,
     transaction::{Transaction, TxPolicies},
@@ -142,8 +142,8 @@ pub trait ViewOnlyAccount: Send + Sync {
     ) -> Result<()> {
         let provider = self.try_provider()?;
         let consensus_parameters = provider.consensus_parameters().await?;
-        let (base_assets, base_amount) =
-            available_base_assets_and_amount(tb, consensus_parameters.base_asset_id());
+        let base_asset_id = consensus_parameters.base_asset_id();
+        let (base_assets, base_amount) = available_base_assets_and_amount(tb, base_asset_id);
         let missing_base_amount =
             calculate_missing_base_amount(tb, base_amount, used_base_amount, provider).await?;
 
@@ -155,8 +155,9 @@ pub trait ViewOnlyAccount: Send + Sync {
                     Some(base_assets),
                 )
                 .await
-                // if there query fails do nothing
-                .unwrap_or_default();
+                .with_context(|| {
+                    format!("failed to get base asset ({base_asset_id}) inputs with amount: `{missing_base_amount}`")
+                })?;
 
             tb.inputs_mut().extend(new_base_inputs);
         };

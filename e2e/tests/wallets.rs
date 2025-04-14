@@ -124,6 +124,27 @@ async fn adjust_fee_empty_transaction() -> Result<()> {
 }
 
 #[tokio::test]
+async fn adjust_for_fee_error() -> Result<()> {
+    let wallet = launch_provider_and_get_wallet().await?;
+    let tx_policies = TxPolicies::default().with_tip(10_000_000_000_000);
+
+    let mut tb = ScriptTransactionBuilder::prepare_transfer(vec![], vec![], tx_policies);
+
+    wallet.add_witnesses(&mut tb)?;
+    let err = wallet
+        .adjust_for_fee(&mut tb, 0)
+        .await
+        .expect_err("should return error");
+
+    assert!(
+        matches!(err, Error::Provider(s) if s.contains("failed to get base asset \
+                (0000000000000000000000000000000000000000000000000000000000000000) inputs with amount:"))
+    );
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn adjust_for_fee_with_message_data_input() -> Result<()> {
     let wallet_signer = PrivateKeySigner::random(&mut rand::thread_rng());
     let receiver_signer = PrivateKeySigner::random(&mut rand::thread_rng());
