@@ -332,7 +332,7 @@ impl Provider {
         block_horizon: u32,
         required_balances: Vec<RequiredBalance>,
         fee_address_index: u16,
-        exclude: Option<(Vec<UtxoId>, Vec<Nonce>)>, //TODO: exclude coins when assembling
+        exclude: Option<(Vec<UtxoId>, Vec<Nonce>)>,
         estimate_predicates: bool,
         reserve_gas: Option<u64>,
     ) -> Result<AssembleTransactionResult> {
@@ -900,7 +900,7 @@ impl DryRunner for Provider {
         block_horizon: u32,
         required_balances: Vec<RequiredBalance>,
         fee_address_index: u16,
-        exclude: Option<(Vec<UtxoId>, Vec<Nonce>)>, //TODO: exclude coins when assembling
+        exclude: Option<(Vec<UtxoId>, Vec<Nonce>)>,
         estimate_predicates: bool,
         reserve_gas: Option<u64>,
     ) -> Result<AssembleTransactionResult> {

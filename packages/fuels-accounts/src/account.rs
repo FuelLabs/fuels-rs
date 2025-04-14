@@ -402,7 +402,7 @@ mod tests {
             _: u32,
             _: Vec<RequiredBalance>,
             _: u16,
-            _: Option<(Vec<UtxoId>, Vec<Nonce>)>, //TODO: exclude coins when assembling
+            _: Option<(Vec<UtxoId>, Vec<Nonce>)>,
             _: bool,
             _: Option<u64>,
         ) -> Result<AssembleTransactionResult> {

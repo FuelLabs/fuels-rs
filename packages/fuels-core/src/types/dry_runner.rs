@@ -36,7 +36,7 @@ pub trait DryRunner: Send + Sync {
         block_horizon: u32,
         required_balances: Vec<RequiredBalance>,
         fee_address_index: u16,
-        exclude: Option<(Vec<UtxoId>, Vec<Nonce>)>, //TODO: exclude coins when assembling
+        exclude: Option<(Vec<UtxoId>, Vec<Nonce>)>,
         estimate_predicates: bool,
         reserve_gas: Option<u64>,
     ) -> Result<AssembleTransactionResult>;
@@ -68,7 +68,7 @@ impl<T: DryRunner> DryRunner for &T {
         block_horizon: u32,
         required_balances: Vec<RequiredBalance>,
         fee_address_index: u16,
-        exclude: Option<(Vec<UtxoId>, Vec<Nonce>)>, //TODO: exclude coins when assembling
+        exclude: Option<(Vec<UtxoId>, Vec<Nonce>)>,
         estimate_predicates: bool,
         reserve_gas: Option<u64>,
     ) -> Result<AssembleTransactionResult> {

@@ -2,15 +2,11 @@ use std::{fmt::Debug, iter::repeat, sync::Arc};
 
 use async_trait::async_trait;
 use fuel_core_client::client::types::assemble_tx::RequiredBalance;
-use fuel_crypto::{Message as CryptoMessage, Signature};
+use fuel_crypto::Signature;
 use fuel_tx::{
-    BlobIdExt, Chargeable, ConsensusParameters, Input as FuelInput, Output,
-    Transaction as FuelTransaction, UniqueIdentifier, Witness,
-    field::{Inputs, Policies as PoliciesField, Witnesses},
-    input::{
-        coin::CoinSigned,
-        message::{MessageCoinSigned, MessageDataSigned},
-    },
+    BlobIdExt, Chargeable, ConsensusParameters, Output, Transaction as FuelTransaction,
+    UniqueIdentifier, Witness,
+    field::{MaxFeeLimit, Policies as PoliciesField, Witnesses},
     policies::{Policies, PolicyType},
 };
 use fuel_types::bytes::padded_len_usize;
@@ -18,8 +14,8 @@ use itertools::Itertools;
 
 use super::{
     BuildableTransaction, GAS_ESTIMATION_BLOCK_HORIZON, Strategy, TransactionBuilder,
-    UnresolvedWitnessIndexes, generate_missing_witnesses, impl_tx_builder_trait,
-    resolve_fuel_inputs,
+    UnresolvedWitnessIndexes, add_tolerance_to_max_fee, generate_missing_witnesses,
+    impl_tx_builder_trait, resolve_fuel_inputs, update_witnesses,
 };
 use crate::{
     constants::SIGNATURE_WITNESS_SIZE,
@@ -236,7 +232,17 @@ impl BlobTransactionBuilder {
             }
         };
 
-        Self::update_witnesses(
+        add_tolerance_to_max_fee(&mut tx, self.max_fee_estimation_tolerance);
+
+        //if user set `max_fee` we will use it's value only
+        //if it is higher then the one estimated by assemble_tx + tolerance
+        if let Some(max_fee) = self.tx_policies.max_fee() {
+            if max_fee > tx.max_fee_limit() {
+                tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
+            }
+        }
+
+        update_witnesses(
             &mut tx,
             &self.unresolved_signers,
             &consensus_parameters.chain_id(),

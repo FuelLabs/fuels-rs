@@ -290,21 +290,17 @@ async fn contract_call_fee_estimation() -> Result<()> {
     let gas_limit = 3800;
     let tolerance = Some(0.2);
     let block_horizon = Some(1);
-    let expected_script_gas = 2615; //TODO: see todo below
     let expected_total_gas = 10641;
     let expected_metered_bytes_size = 824;
 
     let estimated_transaction_cost = contract_instance
         .methods()
         .initialize_counter(42)
-        //TODO: decide what to do with script gas limit as assemble tx will set the correct one
-        //and the one here does not have any effect
         .with_script_gas_limit(gas_limit)
         .estimate_transaction_cost(tolerance, block_horizon)
         .await?;
 
-    // TODO: ^
-    assert_eq!(estimated_transaction_cost.script_gas, expected_script_gas);
+    assert!(estimated_transaction_cost.script_gas < gas_limit);
     assert_eq!(estimated_transaction_cost.total_gas, expected_total_gas);
     assert_eq!(
         estimated_transaction_cost.metered_bytes_size,

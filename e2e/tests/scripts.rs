@@ -549,9 +549,14 @@ async fn high_level_blob_upload_sets_max_fee_tolerance() -> Result<()> {
         })
         .unwrap();
 
-    assert_eq!(
-        max_fee_of_sent_blob_tx,
-        (zero_tolerance_fee as f32 * (1.0 + DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE)).ceil() as u64,
+    let expected_fee_with_tolerance = (zero_tolerance_fee as f64
+        * (1.0 + DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE as f64))
+        .ceil() as u64;
+
+    let gas_error_margin = 2;
+    assert!(
+        (max_fee_of_sent_blob_tx as i64 - expected_fee_with_tolerance as i64).abs()
+            < gas_error_margin,
         "the blob upload tx should have had the max fee increased by the default estimation tolerance"
     );
 

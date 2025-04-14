@@ -15,7 +15,7 @@ use fuel_tx::{
     Cacheable, Chargeable, ConsensusParameters, Create, Input as FuelInput, Output, Script,
     StorageSlot, Transaction as FuelTransaction, TransactionFee, TxPointer, UniqueIdentifier,
     Upgrade, Upload, UploadBody, Witness,
-    field::{Inputs, Outputs, Policies as PoliciesField, ScriptGasLimit, Witnesses},
+    field::{Inputs, MaxFeeLimit, Outputs, Policies as PoliciesField, ScriptGasLimit, Witnesses},
     input::{
         coin::CoinSigned,
         message::{MessageCoinSigned, MessageDataSigned},
@@ -23,7 +23,7 @@ use fuel_tx::{
     policies::{Policies, PolicyType},
 };
 pub use fuel_tx::{UpgradePurpose, UploadSubsection};
-use fuel_types::{Bytes32, Salt, bytes::padded_len_usize};
+use fuel_types::{Bytes32, ChainId, Salt, bytes::padded_len_usize};
 use itertools::Itertools;
 use script_tx_estimator::ScriptTxEstimator;
 
@@ -480,54 +480,65 @@ macro_rules! impl_tx_builder_trait {
                 Ok(())
             }
 
-            async fn update_witnesses<T: UniqueIdentifier + Witnesses + Inputs>(
-                tx: &mut T,
-                unresolved_signers: &[Arc<dyn $crate::traits::Signer + Send + Sync>],
-                chain_id: &$crate::types::ChainId,
-            ) -> Result<()> {
-                let id = tx.id(chain_id);
+        }
 
-                for signer in unresolved_signers {
-                    let message = CryptoMessage::from_bytes(*id);
-                    let signature = signer.sign(message).await?;
-                    let address = signer.address().into();
+    };
+}
 
-                    let witness_indexes = tx
-                        .inputs()
-                        .iter()
-                        .filter_map(|input| match input {
-                            FuelInput::CoinSigned(CoinSigned {
-                                owner,
-                                witness_index,
-                                ..
-                            })
-                            | FuelInput::MessageCoinSigned(MessageCoinSigned {
-                                recipient: owner,
-                                witness_index,
-                                ..
-                            })
-                            | FuelInput::MessageDataSigned(MessageDataSigned {
-                                recipient: owner,
-                                witness_index,
-                                ..
-                            }) if owner == &address => Some(*witness_index as usize),
-                            _ => None,
-                        })
-                        .sorted()
-                        .dedup()
-                        .collect_vec();
+fn add_tolerance_to_max_fee<T: PoliciesField + MaxFeeLimit>(tx: &mut T, tolerance: f32) {
+    let max_fee = tx.max_fee_limit();
+    dbg!(&max_fee);
+    let max_fee_w_tolerance = max_fee as f64 * (1.0 + f64::from(tolerance));
 
-                    for w in witness_indexes {
-                        if let Some(w) = tx.witnesses_mut().get_mut(w) {
-                            *w = signature.as_ref().into();
-                        }
-                    }
-                }
+    tx.policies_mut()
+        .set(PolicyType::MaxFee, Some(max_fee_w_tolerance.ceil() as u64));
+}
 
-                Ok(())
+async fn update_witnesses<T: UniqueIdentifier + Witnesses + Inputs>(
+    tx: &mut T,
+    unresolved_signers: &[Arc<dyn Signer + Send + Sync>],
+    chain_id: &ChainId,
+) -> Result<()> {
+    let id = tx.id(chain_id);
+
+    for signer in unresolved_signers {
+        let message = CryptoMessage::from_bytes(*id);
+        let signature = signer.sign(message).await?;
+        let address = signer.address().into();
+
+        let witness_indexes = tx
+            .inputs()
+            .iter()
+            .filter_map(|input| match input {
+                FuelInput::CoinSigned(CoinSigned {
+                    owner,
+                    witness_index,
+                    ..
+                })
+                | FuelInput::MessageCoinSigned(MessageCoinSigned {
+                    recipient: owner,
+                    witness_index,
+                    ..
+                })
+                | FuelInput::MessageDataSigned(MessageDataSigned {
+                    recipient: owner,
+                    witness_index,
+                    ..
+                }) if owner == &address => Some(*witness_index as usize),
+                _ => None,
+            })
+            .sorted()
+            .dedup()
+            .collect_vec();
+
+        for w in witness_indexes {
+            if let Some(w) = tx.witnesses_mut().get_mut(w) {
+                *w = signature.as_ref().into();
             }
         }
-    };
+    }
+
+    Ok(())
 }
 
 pub(crate) use impl_tx_builder_trait;
@@ -539,7 +550,6 @@ pub(crate) fn estimate_max_fee_w_tolerance<T: Chargeable>(
     consensus_parameters: &ConsensusParameters,
 ) -> Result<u64> {
     let gas_costs = &consensus_parameters.gas_costs();
-
     let fee_params = consensus_parameters.fee_params();
 
     let tx_fee = TransactionFee::checked_from_tx(gas_costs, fee_params, tx, gas_price).ok_or(
@@ -843,15 +853,33 @@ impl ScriptTransactionBuilder {
             }
         };
 
-        //if user set `script_gas_limit` then we will use it's value only
+        //if user set `script_gas_limit` we will use it's value only
         //if it is higher then the one estimated by assemble_tx
         if let Some(script_gas_limit) = self.script_gas_limit {
             if script_gas_limit > *tx.script_gas_limit() {
                 *tx.script_gas_limit_mut() = script_gas_limit;
+
+                Self::set_max_fee_policy(
+                    &mut tx,
+                    &dry_runner,
+                    self.gas_price_estimation_block_horizon,
+                    self.max_fee_estimation_tolerance,
+                )
+                .await?;
+            }
+        } else {
+            add_tolerance_to_max_fee(&mut tx, self.max_fee_estimation_tolerance);
+        }
+
+        //if user set `max_fee` we will use it's value only
+        //if it is higher then the one estimated by assemble_tx + tolerance
+        if let Some(max_fee) = self.tx_policies.max_fee() {
+            if max_fee > tx.max_fee_limit() {
+                tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
             }
         }
 
-        Self::update_witnesses(
+        update_witnesses(
             &mut tx,
             &self.unresolved_signers,
             &consensus_parameters.chain_id(),
@@ -1250,7 +1278,17 @@ impl CreateTransactionBuilder {
             }
         };
 
-        Self::update_witnesses(
+        add_tolerance_to_max_fee(&mut tx, self.max_fee_estimation_tolerance);
+
+        //if user set `max_fee` we will use it's value only
+        //if it is higher then the one estimated by assemble_tx + tolerance
+        if let Some(max_fee) = self.tx_policies.max_fee() {
+            if max_fee > tx.max_fee_limit() {
+                tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
+            }
+        }
+
+        update_witnesses(
             &mut tx,
             &self.unresolved_signers,
             &consensus_parameters.chain_id(),
@@ -1439,7 +1477,17 @@ impl UploadTransactionBuilder {
             }
         };
 
-        Self::update_witnesses(
+        add_tolerance_to_max_fee(&mut tx, self.max_fee_estimation_tolerance);
+
+        //if user set `max_fee` we will use it's value only
+        //if it is higher then the one estimated by assemble_tx + tolerance
+        if let Some(max_fee) = self.tx_policies.max_fee() {
+            if max_fee > tx.max_fee_limit() {
+                tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
+            }
+        }
+
+        update_witnesses(
             &mut tx,
             &self.unresolved_signers,
             &consensus_parameters.chain_id(),
@@ -1631,7 +1679,17 @@ impl UpgradeTransactionBuilder {
             }
         };
 
-        Self::update_witnesses(
+        add_tolerance_to_max_fee(&mut tx, self.max_fee_estimation_tolerance);
+
+        //if user set `max_fee` we will use it's value only
+        //if it is higher then the one estimated by assemble_tx + tolerance
+        if let Some(max_fee) = self.tx_policies.max_fee() {
+            if max_fee > tx.max_fee_limit() {
+                tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
+            }
+        }
+
+        update_witnesses(
             &mut tx,
             &self.unresolved_signers,
             &consensus_parameters.chain_id(),

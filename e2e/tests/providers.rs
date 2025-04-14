@@ -373,9 +373,8 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<()> {
         .gas()
         .unwrap();
 
-    //TODO: decide what to do here and what to report to user as gas limit is set automatically
-    // assert_eq!(gas_limit, gas_forwarded + gas_used_by_script);
-    assert_eq!(2615, gas_forwarded + gas_used_by_script);
+    assert_eq!(gas_limit, gas_forwarded + gas_used_by_script);
+    assert_eq!(225_883, gas_forwarded + gas_used_by_script);
 
     Ok(())
 }
@@ -1116,6 +1115,7 @@ async fn tx_respects_policies() -> Result<()> {
     let maturity = 4;
     let expiration = 128;
     let max_fee = 10_000;
+    let script_gas_limit = 3000;
     let tx_policies = TxPolicies::new(
         Some(tip),
         Some(witness_limit),
@@ -1134,6 +1134,7 @@ async fn tx_respects_policies() -> Result<()> {
         .methods()
         .initialize_counter(42)
         .with_tx_policies(tx_policies)
+        .with_script_gas_limit(script_gas_limit)
         .call()
         .await?;
 
@@ -1151,6 +1152,7 @@ async fn tx_respects_policies() -> Result<()> {
     assert_eq!(script.tip().unwrap(), tip);
     assert_eq!(script.witness_limit().unwrap(), witness_limit);
     assert_eq!(script.max_fee().unwrap(), max_fee);
+    assert_eq!(script.gas_limit(), 3000);
 
     Ok(())
 }
@@ -1173,7 +1175,6 @@ async fn can_setup_static_gas_price() -> Result<()> {
     Ok(())
 }
 
-//TODO: check this test. The code here should not have changed
 #[tokio::test]
 async fn tx_with_witness_data() -> Result<()> {
     use fuel_asm::{GTFArgs, op};
