@@ -1073,6 +1073,7 @@ async fn send_transaction_and_subscribe_status() -> Result<()> {
 
     // When
     let mut status = provider.subscribe_transaction_status(&tx_id, true).await?;
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
     let _ = provider.send_transaction(tx).await?;
 
     // Then
