@@ -264,13 +264,9 @@ async fn send_transfer_transactions() -> Result<()> {
 
     // Configure transaction policies
     let tip = 2;
-    let script_gas_limit = 500_000;
     let maturity = 0;
 
-    let tx_policies = TxPolicies::default()
-        .with_tip(tip)
-        .with_maturity(maturity)
-        .with_script_gas_limit(script_gas_limit);
+    let tx_policies = TxPolicies::default().with_tip(tip).with_maturity(maturity);
 
     // Transfer 1 from wallet 1 to wallet 2.
     let amount_to_send = 1;
@@ -296,9 +292,6 @@ async fn send_transfer_transactions() -> Result<()> {
         TransactionType::Script(tx) => tx,
         _ => panic!("Received unexpected tx type!"),
     };
-    // Transfer scripts uses set `script_gas_limit` despite not having script code
-    // assert_eq!(script.gas_limit(), script_gas_limit); //TODO: remove this as assemble will set
-    // sglimit to 0
     assert_eq!(script.maturity().unwrap(), maturity);
 
     let wallet_1_spendable_resources = wallet_1

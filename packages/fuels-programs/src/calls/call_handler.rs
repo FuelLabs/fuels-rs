@@ -146,7 +146,7 @@ where
         let tx = self.build_tx().await?;
         let provider = self.account.try_provider()?;
 
-        let tx_id = provider.send_transaction(tx.clone()).await?;
+        let tx_id = provider.submit(tx).await?;
         self.cached_tx_id = Some(tx_id);
 
         Ok(SubmitResponse::<A, C, T>::new(tx_id, self))
@@ -396,7 +396,7 @@ where
         let tx = self.build_tx().await?;
         let provider = self.account.try_provider()?;
 
-        let tx_id = provider.send_transaction(tx).await?;
+        let tx_id = provider.submit(tx).await?;
         self.cached_tx_id = Some(tx_id);
 
         Ok(SubmitResponse::<A, Vec<ContractCall>, ()>::new(tx_id, self))

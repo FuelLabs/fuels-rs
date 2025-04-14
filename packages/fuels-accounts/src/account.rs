@@ -390,11 +390,7 @@ mod tests {
             Ok(0)
         }
 
-        async fn estimate_predicates(
-            &self,
-            _: &FuelTransaction,
-            _: Option<u32>,
-        ) -> Result<FuelTransaction> {
+        async fn estimate_predicates(&self, _: &FuelTransaction) -> Result<FuelTransaction> {
             unimplemented!()
         }
 

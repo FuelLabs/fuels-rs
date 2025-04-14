@@ -28,11 +28,7 @@ pub trait DryRunner: Send + Sync {
     async fn dry_run(&self, tx: FuelTransaction) -> Result<DryRun>;
     async fn estimate_gas_price(&self, block_horizon: u32) -> Result<u64>;
     async fn consensus_parameters(&self) -> Result<ConsensusParameters>;
-    async fn estimate_predicates(
-        &self,
-        tx: &FuelTransaction,
-        latest_chain_executor_version: Option<u32>,
-    ) -> Result<FuelTransaction>;
+    async fn estimate_predicates(&self, tx: &FuelTransaction) -> Result<FuelTransaction>;
     #[allow(clippy::too_many_arguments)]
     async fn assemble_tx(
         &self,
@@ -61,14 +57,8 @@ impl<T: DryRunner> DryRunner for &T {
         (*self).consensus_parameters().await
     }
 
-    async fn estimate_predicates(
-        &self,
-        tx: &FuelTransaction,
-        latest_chain_executor_version: Option<u32>,
-    ) -> Result<FuelTransaction> {
-        (*self)
-            .estimate_predicates(tx, latest_chain_executor_version)
-            .await
+    async fn estimate_predicates(&self, tx: &FuelTransaction) -> Result<FuelTransaction> {
+        (*self).estimate_predicates(tx).await
     }
 
     #[allow(clippy::too_many_arguments)]

@@ -214,10 +214,9 @@ impl BlobTransactionBuilder {
             tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
         };
 
-        let fuel_tx = FuelTransaction::Blob(tx);
-        let mut tx = dry_runner
+        let mut tx = match dry_runner
             .assemble_tx(
-                &fuel_tx,
+                &tx.into(),
                 self.gas_price_estimation_block_horizon,
                 required_balances,
                 fee_index,
@@ -227,48 +226,22 @@ impl BlobTransactionBuilder {
             )
             .await?
             .transaction
-            .as_blob()
-            .expect("is upgrade")
-            .clone(); //TODO: do not clone
-
-        let id = tx.id(&consensus_parameters.chain_id());
-
-        for signer in &self.unresolved_signers {
-            let message = CryptoMessage::from_bytes(*id);
-            let signature = signer.sign(message).await?;
-            let address = signer.address().into();
-
-            let witness_indexes = tx
-                .inputs()
-                .iter()
-                .filter_map(|input| match input {
-                    FuelInput::CoinSigned(CoinSigned {
-                        owner,
-                        witness_index,
-                        ..
-                    })
-                    | FuelInput::MessageCoinSigned(MessageCoinSigned {
-                        recipient: owner,
-                        witness_index,
-                        ..
-                    })
-                    | FuelInput::MessageDataSigned(MessageDataSigned {
-                        recipient: owner,
-                        witness_index,
-                        ..
-                    }) if owner == &address => Some(*witness_index as usize),
-                    _ => None,
-                })
-                .sorted()
-                .dedup()
-                .collect_vec();
-
-            for w in witness_indexes {
-                if let Some(w) = tx.witnesses_mut().get_mut(w) {
-                    *w = signature.as_ref().into();
-                }
+        {
+            FuelTransaction::Blob(blob) => blob,
+            _ => {
+                return Err(error_transaction!(
+                    Builder,
+                    "`asseble_tx` did not return the right transactio type. Expected `blob`"
+                ));
             }
-        }
+        };
+
+        Self::update_witnesses(
+            &mut tx,
+            &self.unresolved_signers,
+            &consensus_parameters.chain_id(),
+        )
+        .await?;
 
         Ok(tx)
     }
@@ -294,6 +267,15 @@ impl BlobTransactionBuilder {
             self.witnesses,
         );
 
+        if is_using_predicates {
+            let tx_new = provider.estimate_predicates(&tx.into()).await?;
+
+            tx = match tx_new {
+                FuelTransaction::Blob(blob) => blob,
+                _ => panic!("should be `blob`"),
+            };
+        }
+
         if let Some(max_fee) = self.tx_policies.max_fee() {
             tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
         } else {
@@ -301,7 +283,6 @@ impl BlobTransactionBuilder {
                 &mut tx,
                 &provider,
                 self.gas_price_estimation_block_horizon,
-                is_using_predicates,
                 self.max_fee_estimation_tolerance,
             )
             .await?;

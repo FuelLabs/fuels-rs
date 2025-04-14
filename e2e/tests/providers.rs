@@ -360,7 +360,7 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<()> {
     let response = contract_instance
         .methods()
         .initialize_counter(42)
-        .with_tx_policies(TxPolicies::default().with_script_gas_limit(gas_limit))
+        .with_script_gas_limit(gas_limit)
         .call()
         .await?;
 
@@ -413,14 +413,13 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
         .await?;
     assert_eq!(balance_response.value, 5_000_000);
 
-    let tx_policies = TxPolicies::default().with_script_gas_limit(1_000_000);
     // Forward 1_000_000 coin amount of base asset_id
     // this is a big number for checking that amount can be a u64
     let call_params = CallParameters::default().with_amount(1_000_000);
 
     let response = contract_methods
         .get_msg_amount()
-        .with_tx_policies(tx_policies)
+        .with_script_gas_limit(1_000_000)
         .call_params(call_params)?
         .call()
         .await?;
@@ -453,11 +452,10 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
     let call_params = CallParameters::default()
         .with_amount(0)
         .with_asset_id(asset_id);
-    let tx_policies = TxPolicies::default().with_script_gas_limit(1_000_000);
 
     let response = contract_methods
         .get_msg_amount()
-        .with_tx_policies(tx_policies)
+        .with_script_gas_limit(1_000_000)
         .call_params(call_params)?
         .call()
         .await?;
@@ -514,7 +512,7 @@ async fn test_gas_errors() -> Result<()> {
     let contract_instance_call = contract_instance
         .methods()
         .initialize_counter(42) // Build the ABI call
-        .with_tx_policies(TxPolicies::default().with_script_gas_limit(gas_limit));
+        .with_script_gas_limit(gas_limit);
 
     //  Test that the call will use more gas than the gas limit
     let total_gas = contract_instance_call
@@ -565,7 +563,7 @@ async fn test_call_param_gas_errors() -> Result<()> {
     let contract_methods = contract_instance.methods();
     let response = contract_methods
         .initialize_counter(42)
-        .with_tx_policies(TxPolicies::default().with_script_gas_limit(446000))
+        .with_script_gas_limit(446000)
         .call_params(CallParameters::default().with_gas_forwarded(1))?
         .call()
         .await
@@ -577,7 +575,7 @@ async fn test_call_param_gas_errors() -> Result<()> {
     // Call params gas_forwarded exceeds transaction limit
     let response = contract_methods
         .initialize_counter(42)
-        .with_tx_policies(TxPolicies::default().with_script_gas_limit(1))
+        .with_script_gas_limit(1)
         .call_params(CallParameters::default().with_gas_forwarded(1_000))?
         .call()
         .await
@@ -623,7 +621,7 @@ async fn test_parse_block_time() -> Result<()> {
     let coins = setup_single_asset_coins(signer.address(), asset_id, 1, DEFAULT_COIN_AMOUNT);
     let provider = setup_test_provider(coins.clone(), vec![], None, None).await?;
     let wallet = Wallet::new(signer, provider.clone());
-    let tx_policies = TxPolicies::default().with_script_gas_limit(2000);
+    let tx_policies = TxPolicies::default();
 
     let wallet_2 = wallet.lock();
     let tx_response = wallet
@@ -817,8 +815,8 @@ async fn transactions_with_the_same_utxo() -> Result<()> {
     let tx_1 = create_transfer(&wallet_1, 100, wallet_2.address()).await?;
     let tx_2 = create_transfer(&wallet_1, 101, wallet_2.address()).await?;
 
-    let _tx_id = provider.send_transaction(tx_1).await?;
-    let res = provider.send_transaction(tx_2).await;
+    let _tx_id = provider.submit(tx_1).await?;
+    let res = provider.submit(tx_2).await;
 
     let err = res.expect_err("is error");
 
@@ -857,7 +855,7 @@ async fn coin_caching() -> Result<()> {
     let mut tx_ids = vec![];
     for _ in 0..num_iterations {
         let tx = create_transfer(&wallet_1, amount_to_send, wallet_2.address()).await?;
-        let tx_id = provider.send_transaction(tx).await?;
+        let tx_id = provider.submit(tx).await?;
         tx_ids.push(tx_id);
     }
 
@@ -1038,7 +1036,7 @@ async fn can_produce_blocks_with_trig_never() -> Result<()> {
     let tx = tb.build(provider).await?;
     let tx_id = tx.id(consensus_parameters.chain_id());
 
-    provider.send_transaction(tx).await?;
+    provider.submit(tx).await?;
     provider.produce_blocks(1, None).await?;
 
     tokio::time::sleep(std::time::Duration::from_millis(500)).await;
@@ -1092,7 +1090,7 @@ async fn can_upload_executor_and_trigger_upgrade() -> Result<()> {
     wallet.adjust_for_fee(&mut builder, 0).await?;
     let tx = builder.build(provider.clone()).await?;
 
-    provider.send_transaction(tx).await?;
+    provider.submit(tx).await?;
 
     Ok(())
 }
@@ -1118,14 +1116,12 @@ async fn tx_respects_policies() -> Result<()> {
     let maturity = 4;
     let expiration = 128;
     let max_fee = 10_000;
-    let script_gas_limit = 3000;
     let tx_policies = TxPolicies::new(
         Some(tip),
         Some(witness_limit),
         Some(maturity),
         Some(expiration),
         Some(max_fee),
-        Some(script_gas_limit),
     );
 
     // advance the block height to ensure the maturity is respected
@@ -1155,8 +1151,6 @@ async fn tx_respects_policies() -> Result<()> {
     assert_eq!(script.tip().unwrap(), tip);
     assert_eq!(script.witness_limit().unwrap(), witness_limit);
     assert_eq!(script.max_fee().unwrap(), max_fee);
-    //TODO: decide what to do here and what to report to user as gas limit is set automatically
-    assert_eq!(script.gas_limit(), 2615);
 
     Ok(())
 }

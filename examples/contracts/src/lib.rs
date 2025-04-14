@@ -159,7 +159,6 @@ mod tests {
         // Optional: Configure deployment parameters
         let tx_policies = TxPolicies::default()
             .with_tip(1)
-            .with_script_gas_limit(1_000_000)
             .with_maturity(0)
             .with_expiration(10_000);
 
@@ -298,7 +297,6 @@ mod tests {
 
         let tx_policies = TxPolicies::default()
             .with_tip(1)
-            .with_script_gas_limit(1_000_000)
             .with_maturity(0)
             .with_expiration(10_000);
 
@@ -555,12 +553,11 @@ mod tests {
         // Set the transaction `gas_limit` to 1_000_000 and `gas_forwarded` to 4300 to specify that
         // the contract call transaction may consume up to 1_000_000 gas, while the actual call may
         // only use 4300 gas
-        let tx_policies = TxPolicies::default().with_script_gas_limit(1_000_000);
         let call_params = CallParameters::default().with_gas_forwarded(4300);
 
         let response = contract_methods
             .get_msg_amount() // Our contract method.
-            .with_tx_policies(tx_policies) // Chain the tx policies.
+            .with_script_gas_limit(1_000_000)
             .call_params(call_params)? // Chain the call parameters.
             .call() // Perform the contract call.
             .await?;
@@ -930,7 +927,7 @@ mod tests {
 
         let tx = tb.build(provider).await?;
 
-        let tx_id = provider.send_transaction(tx).await?;
+        let tx_id = provider.submit(tx).await?;
         tokio::time::sleep(Duration::from_millis(500)).await;
 
         let tx_status = provider.tx_status(&tx_id).await?;

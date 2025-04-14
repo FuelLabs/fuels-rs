@@ -95,7 +95,7 @@ async fn test_basic_script_with_tx_policies() -> Result<()> {
     assert_eq!(result.value, "hello");
 
     // ANCHOR: script_with_tx_policies
-    let tx_policies = TxPolicies::default().with_script_gas_limit(1_000_000);
+    let tx_policies = TxPolicies::default().with_expiration(1_000);
     let result = script_instance
         .main(a, b)
         .with_tx_policies(tx_policies)
@@ -324,7 +324,7 @@ async fn test_script_transaction_builder() -> Result<()> {
 
     let tx = tb.build(provider).await?;
 
-    let tx_id = provider.send_transaction(tx).await?;
+    let tx_id = provider.submit(tx).await?;
     tokio::time::sleep(Duration::from_millis(500)).await;
     let tx_status = provider.tx_status(&tx_id).await?;
 

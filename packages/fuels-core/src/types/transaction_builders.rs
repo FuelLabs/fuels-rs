@@ -12,9 +12,9 @@ use fuel_asm::{GTFArgs, RegId, op};
 use fuel_core_client::client::types::assemble_tx::RequiredBalance;
 use fuel_crypto::{Hasher, Message as CryptoMessage, Signature};
 use fuel_tx::{
-    Chargeable, ConsensusParameters, Create, Input as FuelInput, Output, Script, StorageSlot,
-    Transaction as FuelTransaction, TransactionFee, TxPointer, UniqueIdentifier, Upgrade, Upload,
-    UploadBody, Witness,
+    Cacheable, Chargeable, ConsensusParameters, Create, Input as FuelInput, Output, Script,
+    StorageSlot, Transaction as FuelTransaction, TransactionFee, TxPointer, UniqueIdentifier,
+    Upgrade, Upload, UploadBody, Witness,
     field::{Inputs, Outputs, Policies as PoliciesField, ScriptGasLimit, Witnesses},
     input::{
         coin::CoinSigned,
@@ -83,6 +83,7 @@ pub enum ScriptBuildStrategy {
     /// are present. Meant only for transactions that are to be dry-run with validations off.
     /// Useful for reading state with unfunded accounts.
     StateReadOnly,
+    /// Transaction is estimated using `assemble_tx` and signatures are automatically added.
     AssembleTx {
         required_balances: Vec<RequiredBalance>,
         fee_index: u16,
@@ -251,7 +252,7 @@ macro_rules! impl_tx_builder_trait {
                 .await?;
 
                 if tx.is_using_predicates() {
-                    tx.estimate_predicates(&provider, None).await?;
+                    tx.estimate_predicates(&provider).await?;
                 }
 
                 let consensus_parameters = provider.consensus_parameters().await?;
@@ -261,7 +262,7 @@ macro_rules! impl_tx_builder_trait {
                     .await?;
 
                 $crate::types::transaction_builders::estimate_max_fee_w_tolerance(
-                    tx.tx,
+                    &tx.tx,
                     self.max_fee_estimation_tolerance,
                     gas_price,
                     &consensus_parameters,
@@ -456,30 +457,72 @@ macro_rules! impl_tx_builder_trait {
                 Ok(padded_len as u64)
             }
 
-            async fn set_max_fee_policy<T: Clone + PoliciesField + Chargeable + Into<$tx_ty>>(
+            async fn set_max_fee_policy<T: PoliciesField + Chargeable>(
                 tx: &mut T,
                 provider: impl DryRunner,
                 block_horizon: u32,
-                is_using_predicates: bool,
                 max_fee_estimation_tolerance: f32,
             ) -> Result<()> {
-                let mut wrapper_tx: $tx_ty = tx.clone().into();
-
-                if is_using_predicates {
-                    wrapper_tx.estimate_predicates(&provider, None).await?;
-                }
-
                 let gas_price = provider.estimate_gas_price(block_horizon).await?;
                 let consensus_parameters = provider.consensus_parameters().await?;
 
                 let max_fee = $crate::types::transaction_builders::estimate_max_fee_w_tolerance(
-                    wrapper_tx.tx,
+                    tx,
                     max_fee_estimation_tolerance,
                     gas_price,
                     &consensus_parameters,
                 )?;
 
                 tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
+
+
+
+                Ok(())
+            }
+
+            async fn update_witnesses<T: UniqueIdentifier + Witnesses + Inputs>(
+                tx: &mut T,
+                unresolved_signers: &[Arc<dyn $crate::traits::Signer + Send + Sync>],
+                chain_id: &$crate::types::ChainId,
+            ) -> Result<()> {
+                let id = tx.id(chain_id);
+
+                for signer in unresolved_signers {
+                    let message = CryptoMessage::from_bytes(*id);
+                    let signature = signer.sign(message).await?;
+                    let address = signer.address().into();
+
+                    let witness_indexes = tx
+                        .inputs()
+                        .iter()
+                        .filter_map(|input| match input {
+                            FuelInput::CoinSigned(CoinSigned {
+                                owner,
+                                witness_index,
+                                ..
+                            })
+                            | FuelInput::MessageCoinSigned(MessageCoinSigned {
+                                recipient: owner,
+                                witness_index,
+                                ..
+                            })
+                            | FuelInput::MessageDataSigned(MessageDataSigned {
+                                recipient: owner,
+                                witness_index,
+                                ..
+                            }) if owner == &address => Some(*witness_index as usize),
+                            _ => None,
+                        })
+                        .sorted()
+                        .dedup()
+                        .collect_vec();
+
+                    for w in witness_indexes {
+                        if let Some(w) = tx.witnesses_mut().get_mut(w) {
+                            *w = signature.as_ref().into();
+                        }
+                    }
+                }
 
                 Ok(())
             }
@@ -490,7 +533,7 @@ macro_rules! impl_tx_builder_trait {
 pub(crate) use impl_tx_builder_trait;
 
 pub(crate) fn estimate_max_fee_w_tolerance<T: Chargeable>(
-    tx: T,
+    tx: &T,
     tolerance: f32,
     gas_price: u64,
     consensus_parameters: &ConsensusParameters,
@@ -499,7 +542,7 @@ pub(crate) fn estimate_max_fee_w_tolerance<T: Chargeable>(
 
     let fee_params = consensus_parameters.fee_params();
 
-    let tx_fee = TransactionFee::checked_from_tx(gas_costs, fee_params, &tx, gas_price).ok_or(
+    let tx_fee = TransactionFee::checked_from_tx(gas_costs, fee_params, tx, gas_price).ok_or(
         error_transaction!(
             Builder,
             "error calculating `TransactionFee` in `TransactionBuilder`"
@@ -777,10 +820,10 @@ impl ScriptTransactionBuilder {
         if let Some(max_fee) = self.tx_policies.max_fee() {
             tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
         };
-        let fuel_tx = FuelTransaction::Script(tx);
-        let mut tx = dry_runner
+
+        let mut tx = match dry_runner
             .assemble_tx(
-                &fuel_tx,
+                &tx.into(),
                 self.gas_price_estimation_block_horizon,
                 required_balances,
                 fee_index,
@@ -790,10 +833,15 @@ impl ScriptTransactionBuilder {
             )
             .await?
             .transaction
-            .as_script()
-            .expect("is script")
-            .clone(); //TODO: do not clone
-        //
+        {
+            FuelTransaction::Script(script) => script,
+            _ => {
+                return Err(error_transaction!(
+                    Builder,
+                    "`asseble_tx` did not return the right transactio type. Expected `script`"
+                ));
+            }
+        };
 
         //if user set `script_gas_limit` then we will use it's value only
         //if it is higher then the one estimated by assemble_tx
@@ -803,44 +851,12 @@ impl ScriptTransactionBuilder {
             }
         }
 
-        let id = tx.id(&consensus_parameters.chain_id());
-
-        for signer in &self.unresolved_signers {
-            let message = CryptoMessage::from_bytes(*id);
-            let signature = signer.sign(message).await?;
-            let address = signer.address().into();
-
-            let witness_indexes = tx
-                .inputs()
-                .iter()
-                .filter_map(|input| match input {
-                    FuelInput::CoinSigned(CoinSigned {
-                        owner,
-                        witness_index,
-                        ..
-                    })
-                    | FuelInput::MessageCoinSigned(MessageCoinSigned {
-                        recipient: owner,
-                        witness_index,
-                        ..
-                    })
-                    | FuelInput::MessageDataSigned(MessageDataSigned {
-                        recipient: owner,
-                        witness_index,
-                        ..
-                    }) if owner == &address => Some(*witness_index as usize),
-                    _ => None,
-                })
-                .sorted()
-                .dedup()
-                .collect_vec();
-
-            for w in witness_indexes {
-                if let Some(w) = tx.witnesses_mut().get_mut(w) {
-                    *w = signature.as_ref().into();
-                }
-            }
-        }
+        Self::update_witnesses(
+            &mut tx,
+            &self.unresolved_signers,
+            &consensus_parameters.chain_id(),
+        )
+        .await?;
 
         Ok(tx)
     }
@@ -870,6 +886,16 @@ impl ScriptTransactionBuilder {
         self.set_script_gas_limit(&mut script_tx_estimator, &mut tx)
             .await?;
 
+        if self.is_using_predicates() {
+            tx.precompute(&dry_runner.consensus_parameters().await?.chain_id())?;
+            let tx_new = dry_runner.estimate_predicates(&tx.into()).await?;
+
+            tx = match tx_new {
+                FuelTransaction::Script(script) => script,
+                _ => panic!("should be `script`"),
+            };
+        }
+
         if let Some(max_fee) = self.tx_policies.max_fee() {
             tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
         } else {
@@ -877,13 +903,12 @@ impl ScriptTransactionBuilder {
                 &mut tx,
                 &dry_runner,
                 self.gas_price_estimation_block_horizon,
-                self.is_using_predicates(),
                 self.max_fee_estimation_tolerance,
             )
             .await?;
         }
 
-        self.set_witnesses(&mut tx, dry_runner).await?;
+        self.set_witnesses(&mut tx, &dry_runner).await?;
 
         Ok(tx)
     }
@@ -914,6 +939,15 @@ impl ScriptTransactionBuilder {
                 true
             };
 
+        if self.is_using_predicates() {
+            let tx_new = dry_runner.estimate_predicates(&tx.into()).await?;
+
+            tx = match tx_new {
+                FuelTransaction::Script(script) => script,
+                _ => panic!("should be `script`"),
+            };
+        }
+
         if let Some(max_fee) = self.tx_policies.max_fee() {
             tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
         } else {
@@ -921,7 +955,6 @@ impl ScriptTransactionBuilder {
                 &mut tx,
                 &dry_runner,
                 self.gas_price_estimation_block_horizon,
-                self.is_using_predicates(),
                 self.max_fee_estimation_tolerance,
             )
             .await?;
@@ -934,7 +967,11 @@ impl ScriptTransactionBuilder {
         Ok(tx)
     }
 
-    async fn set_witnesses(self, tx: &mut fuel_tx::Script, provider: impl DryRunner) -> Result<()> {
+    async fn set_witnesses(
+        self,
+        tx: &mut fuel_tx::Script,
+        provider: &impl DryRunner,
+    ) -> Result<()> {
         let missing_witnesses = generate_missing_witnesses(
             tx.id(&provider.consensus_parameters().await?.chain_id()),
             &self.unresolved_signers,
@@ -1191,10 +1228,9 @@ impl CreateTransactionBuilder {
             tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
         };
 
-        let fuel_tx = FuelTransaction::Create(tx);
-        let mut tx = dry_runner
+        let mut tx = match dry_runner
             .assemble_tx(
-                &fuel_tx,
+                &tx.into(),
                 self.gas_price_estimation_block_horizon,
                 required_balances,
                 fee_index,
@@ -1204,48 +1240,22 @@ impl CreateTransactionBuilder {
             )
             .await?
             .transaction
-            .as_create()
-            .expect("is create")
-            .clone(); //TODO: do not clone
-
-        let id = tx.id(&consensus_parameters.chain_id());
-
-        for signer in &self.unresolved_signers {
-            let message = CryptoMessage::from_bytes(*id);
-            let signature = signer.sign(message).await?;
-            let address = signer.address().into();
-
-            let witness_indexes = tx
-                .inputs()
-                .iter()
-                .filter_map(|input| match input {
-                    FuelInput::CoinSigned(CoinSigned {
-                        owner,
-                        witness_index,
-                        ..
-                    })
-                    | FuelInput::MessageCoinSigned(MessageCoinSigned {
-                        recipient: owner,
-                        witness_index,
-                        ..
-                    })
-                    | FuelInput::MessageDataSigned(MessageDataSigned {
-                        recipient: owner,
-                        witness_index,
-                        ..
-                    }) if owner == &address => Some(*witness_index as usize),
-                    _ => None,
-                })
-                .sorted()
-                .dedup()
-                .collect_vec();
-
-            for w in witness_indexes {
-                if let Some(w) = tx.witnesses_mut().get_mut(w) {
-                    *w = signature.as_ref().into();
-                }
+        {
+            FuelTransaction::Create(create) => create,
+            _ => {
+                return Err(error_transaction!(
+                    Builder,
+                    "`asseble_tx` did not return the right transactio type. Expected `create`"
+                ));
             }
-        }
+        };
+
+        Self::update_witnesses(
+            &mut tx,
+            &self.unresolved_signers,
+            &consensus_parameters.chain_id(),
+        )
+        .await?;
 
         Ok(tx)
     }
@@ -1266,6 +1276,15 @@ impl CreateTransactionBuilder {
             self.witnesses,
         );
 
+        if is_using_predicates {
+            let tx_new = provider.estimate_predicates(&tx.into()).await?;
+
+            tx = match tx_new {
+                FuelTransaction::Create(create) => create,
+                _ => panic!("should be `create`"),
+            };
+        }
+
         if let Some(max_fee) = self.tx_policies.max_fee() {
             tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
         } else {
@@ -1273,7 +1292,6 @@ impl CreateTransactionBuilder {
                 &mut tx,
                 &provider,
                 self.gas_price_estimation_block_horizon,
-                is_using_predicates,
                 self.max_fee_estimation_tolerance,
             )
             .await?;
@@ -1399,10 +1417,9 @@ impl UploadTransactionBuilder {
             tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
         };
 
-        let fuel_tx = FuelTransaction::Upload(tx);
-        let mut tx = dry_runner
+        let mut tx = match dry_runner
             .assemble_tx(
-                &fuel_tx,
+                &tx.into(),
                 self.gas_price_estimation_block_horizon,
                 required_balances,
                 fee_index,
@@ -1412,48 +1429,22 @@ impl UploadTransactionBuilder {
             )
             .await?
             .transaction
-            .as_upload()
-            .expect("is upload")
-            .clone(); //TODO: do not clone
-
-        let id = tx.id(&consensus_parameters.chain_id());
-
-        for signer in &self.unresolved_signers {
-            let message = CryptoMessage::from_bytes(*id);
-            let signature = signer.sign(message).await?;
-            let address = signer.address().into();
-
-            let witness_indexes = tx
-                .inputs()
-                .iter()
-                .filter_map(|input| match input {
-                    FuelInput::CoinSigned(CoinSigned {
-                        owner,
-                        witness_index,
-                        ..
-                    })
-                    | FuelInput::MessageCoinSigned(MessageCoinSigned {
-                        recipient: owner,
-                        witness_index,
-                        ..
-                    })
-                    | FuelInput::MessageDataSigned(MessageDataSigned {
-                        recipient: owner,
-                        witness_index,
-                        ..
-                    }) if owner == &address => Some(*witness_index as usize),
-                    _ => None,
-                })
-                .sorted()
-                .dedup()
-                .collect_vec();
-
-            for w in witness_indexes {
-                if let Some(w) = tx.witnesses_mut().get_mut(w) {
-                    *w = signature.as_ref().into();
-                }
+        {
+            FuelTransaction::Upload(upload) => upload,
+            _ => {
+                return Err(error_transaction!(
+                    Builder,
+                    "`asseble_tx` did not return the right transactio type. Expected `upload`"
+                ));
             }
-        }
+        };
+
+        Self::update_witnesses(
+            &mut tx,
+            &self.unresolved_signers,
+            &consensus_parameters.chain_id(),
+        )
+        .await?;
 
         Ok(tx)
     }
@@ -1478,6 +1469,15 @@ impl UploadTransactionBuilder {
             self.witnesses,
         );
 
+        if is_using_predicates {
+            let tx_new = provider.estimate_predicates(&tx.into()).await?;
+
+            tx = match tx_new {
+                FuelTransaction::Upload(upload) => upload,
+                _ => panic!("should be `upload`"),
+            };
+        }
+
         if let Some(max_fee) = self.tx_policies.max_fee() {
             tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
         } else {
@@ -1485,7 +1485,6 @@ impl UploadTransactionBuilder {
                 &mut tx,
                 &provider,
                 self.gas_price_estimation_block_horizon,
-                is_using_predicates,
                 self.max_fee_estimation_tolerance,
             )
             .await?;
@@ -1610,10 +1609,9 @@ impl UpgradeTransactionBuilder {
             tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
         };
 
-        let fuel_tx = FuelTransaction::Upgrade(tx);
-        let mut tx = dry_runner
+        let mut tx = match dry_runner
             .assemble_tx(
-                &fuel_tx,
+                &tx.into(),
                 self.gas_price_estimation_block_horizon,
                 required_balances,
                 fee_index,
@@ -1623,48 +1621,22 @@ impl UpgradeTransactionBuilder {
             )
             .await?
             .transaction
-            .as_upgrade()
-            .expect("is upgrade")
-            .clone(); //TODO: do not clone
-
-        let id = tx.id(&consensus_parameters.chain_id());
-
-        for signer in &self.unresolved_signers {
-            let message = CryptoMessage::from_bytes(*id);
-            let signature = signer.sign(message).await?;
-            let address = signer.address().into();
-
-            let witness_indexes = tx
-                .inputs()
-                .iter()
-                .filter_map(|input| match input {
-                    FuelInput::CoinSigned(CoinSigned {
-                        owner,
-                        witness_index,
-                        ..
-                    })
-                    | FuelInput::MessageCoinSigned(MessageCoinSigned {
-                        recipient: owner,
-                        witness_index,
-                        ..
-                    })
-                    | FuelInput::MessageDataSigned(MessageDataSigned {
-                        recipient: owner,
-                        witness_index,
-                        ..
-                    }) if owner == &address => Some(*witness_index as usize),
-                    _ => None,
-                })
-                .sorted()
-                .dedup()
-                .collect_vec();
-
-            for w in witness_indexes {
-                if let Some(w) = tx.witnesses_mut().get_mut(w) {
-                    *w = signature.as_ref().into();
-                }
+        {
+            FuelTransaction::Upgrade(upgrade) => upgrade,
+            _ => {
+                return Err(error_transaction!(
+                    Builder,
+                    "`asseble_tx` did not return the right transactio type. Expected `upgrade`"
+                ));
             }
-        }
+        };
+
+        Self::update_witnesses(
+            &mut tx,
+            &self.unresolved_signers,
+            &consensus_parameters.chain_id(),
+        )
+        .await?;
 
         Ok(tx)
     }
@@ -1683,6 +1655,15 @@ impl UpgradeTransactionBuilder {
             self.witnesses,
         );
 
+        if is_using_predicates {
+            let tx_new = provider.estimate_predicates(&tx.into()).await?;
+
+            tx = match tx_new {
+                FuelTransaction::Upgrade(upgrade) => upgrade,
+                _ => panic!("should be `upgrade`"),
+            };
+        }
+
         if let Some(max_fee) = self.tx_policies.max_fee() {
             tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
         } else {
@@ -1690,7 +1671,6 @@ impl UpgradeTransactionBuilder {
                 &mut tx,
                 &provider,
                 self.gas_price_estimation_block_horizon,
-                is_using_predicates,
                 self.max_fee_estimation_tolerance,
             )
             .await?;
@@ -2053,11 +2033,7 @@ mod tests {
             Ok(0)
         }
 
-        async fn estimate_predicates(
-            &self,
-            tx: &FuelTransaction,
-            _: Option<u32>,
-        ) -> Result<FuelTransaction> {
+        async fn estimate_predicates(&self, tx: &FuelTransaction) -> Result<FuelTransaction> {
             Ok(tx.clone())
         }
 

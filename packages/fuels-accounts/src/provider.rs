@@ -32,7 +32,7 @@ use fuels_core::{
     types::{
         DryRun, DryRunner,
         bech32::{Bech32Address, Bech32ContractId},
-        block::{Block, Header},
+        block::Block,
         chain_info::ChainInfo,
         coin::Coin,
         coin_type::CoinType,
@@ -187,7 +187,6 @@ impl Provider {
         self.check_inputs_already_in_cache(&tx.used_coins(&base_asset_id))
             .await?;
 
-        // let tx = self.prepare_transaction_for_sending(tx).await?; //TODO: what to do with this
         let tx_status = self
             .uncached_client()
             .submit_and_await_commit(&tx.clone().into())
@@ -208,33 +207,6 @@ impl Provider {
         Ok(tx_status)
     }
 
-    // TODO: should be have this public or we do it inside the builder
-    pub async fn prepare_transaction_for_sending<T: Transaction>(&self, mut tx: T) -> Result<T> {
-        let consensus_parameters = self.consensus_parameters().await?;
-        tx.precompute(&consensus_parameters.chain_id())?;
-
-        let chain_info = self.chain_info().await?;
-        let Header {
-            height: latest_block_height,
-            state_transition_bytecode_version: latest_chain_executor_version,
-            ..
-        } = chain_info.latest_block.header;
-
-        if tx.is_using_predicates() {
-            tx.estimate_predicates(self, Some(latest_chain_executor_version))
-                .await?;
-            tx.clone()
-                .validate_predicates(&consensus_parameters, latest_block_height)?;
-        }
-
-        Ok(tx)
-    }
-
-    pub async fn send_transaction<T: Transaction>(&self, tx: T) -> Result<TxId> {
-        let tx = self.prepare_transaction_for_sending(tx).await?;
-        self.submit(tx).await
-    }
-
     pub async fn await_transaction_commit<T: Transaction>(&self, id: TxId) -> Result<TxStatus> {
         Ok(self
             .uncached_client()
@@ -244,7 +216,7 @@ impl Provider {
     }
 
     #[cfg(not(feature = "coin-cache"))]
-    async fn submit<T: Transaction>(&self, tx: T) -> Result<TxId> {
+    pub async fn submit<T: Transaction>(&self, tx: T) -> Result<TxId> {
         Ok(self.uncached_client().submit(&tx.into()).await?)
     }
 
@@ -295,7 +267,7 @@ impl Provider {
     }
 
     #[cfg(feature = "coin-cache")]
-    async fn submit<T: Transaction>(&self, tx: T) -> Result<TxId> {
+    pub async fn submit<T: Transaction>(&self, tx: T) -> Result<TxId> {
         let consensus_parameters = self.consensus_parameters().await?;
         let base_asset_id = consensus_parameters.base_asset_id();
 
@@ -918,11 +890,7 @@ impl DryRunner for Provider {
         Provider::consensus_parameters(self).await
     }
 
-    async fn estimate_predicates(
-        &self,
-        tx: &FuelTransaction,
-        _latest_chain_executor_version: Option<u32>,
-    ) -> Result<FuelTransaction> {
+    async fn estimate_predicates(&self, tx: &FuelTransaction) -> Result<FuelTransaction> {
         Ok(self.uncached_client().estimate_predicates(tx).await?)
     }
 

@@ -290,7 +290,7 @@ async fn contract_call_fee_estimation() -> Result<()> {
     let gas_limit = 3800;
     let tolerance = Some(0.2);
     let block_horizon = Some(1);
-    let expected_script_gas = 3800; //TODO: see todo below
+    let expected_script_gas = 2615; //TODO: see todo below
     let expected_total_gas = 10641;
     let expected_metered_bytes_size = 824;
 
@@ -669,7 +669,6 @@ async fn test_connect_wallet() -> Result<()> {
         .methods()
         .initialize_counter(42)
         .with_tx_policies(tx_policies)
-        .with_script_gas_limit(1_000_000)
         .call()
         .await?;
 
@@ -1696,11 +1695,7 @@ async fn contract_custom_call_no_signatures_strategy() -> Result<()> {
     // ANCHOR_END: tx_sign_with
     // ANCHOR_END: tb_no_signatures_strategy
 
-    let tx_id = provider.send_transaction(tx).await?;
-    tokio::time::sleep(Duration::from_millis(500)).await;
-
-    let tx_status = provider.tx_status(&tx_id).await?;
-
+    let tx_status = provider.send_transaction_and_await_commit(tx).await?;
     let response = call_handler.get_response(tx_status)?;
 
     assert_eq!(counter, response.value);

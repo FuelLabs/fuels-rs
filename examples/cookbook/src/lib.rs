@@ -324,7 +324,7 @@ mod tests {
 
         // ANCHOR: custom_tx_build
         let tx = tb.build(&provider).await?;
-        let tx_id = provider.send_transaction(tx).await?;
+        let tx_id = provider.submit(tx).await?;
         // ANCHOR_END: custom_tx_build
 
         tokio::time::sleep(Duration::from_millis(500)).await;

@@ -494,9 +494,6 @@ async fn predicate_transfer_with_signed_resources() -> Result<()> {
 
     let tx = tb.build(&provider).await?;
 
-    //TODO: If added to builder remove this
-    let tx = provider.prepare_transaction_for_sending(tx).await?;
-
     let tx_status = provider.send_transaction_and_await_commit(tx).await?;
 
     assert_address_balance(
@@ -868,9 +865,6 @@ async fn predicate_transfer_non_base_asset() -> Result<()> {
 
     let tx = tb.build(&provider).await?;
 
-    //TODO: If added to builder remove this
-    let tx = provider.prepare_transaction_for_sending(tx).await?;
-
     provider
         .send_transaction_and_await_commit(tx)
         .await?
@@ -926,9 +920,9 @@ async fn predicate_can_access_manually_added_witnesses() -> Result<()> {
     tx.append_witness(witness.into())?;
     tx.append_witness(witness2.into())?;
 
-    //TODO: If added to builder remove this
-    let tx = provider.prepare_transaction_for_sending(tx).await?;
-
+    // As we have changed the witnesses and the predicate code depends on them we need
+    // to estimate the predicates again before sending the tx.
+    tx.estimate_predicates(&provider).await?;
     let tx_status = provider.send_transaction_and_await_commit(tx).await?;
 
     let fee = tx_status.total_fee();
@@ -1001,7 +995,10 @@ async fn tx_id_not_changed_after_adding_witnesses() -> Result<()> {
     tx.append_witness(witness2.into())?;
     let tx_id_after_witnesses = tx.id(chain_id);
 
-    let tx_id_from_provider = provider.send_transaction(tx).await?;
+    // As we have changed the witnesses and the predicate code depends on them we need
+    // to estimate the predicates again before sending the tx.
+    tx.estimate_predicates(&provider).await?;
+    let tx_id_from_provider = provider.submit(tx).await?;
 
     assert_eq!(tx_id, tx_id_after_witnesses);
     assert_eq!(tx_id, tx_id_from_provider);
