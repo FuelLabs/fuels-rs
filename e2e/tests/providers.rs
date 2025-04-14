@@ -19,6 +19,7 @@ use fuels::{
         tx_status::{Success, TxStatus},
     },
 };
+use futures::StreamExt;
 use rand::thread_rng;
 
 #[tokio::test]
@@ -1007,6 +1008,86 @@ async fn test_build_with_provider() -> Result<()> {
         .await?;
 
     assert_eq!(receiver_balance, 100);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn send_transaction_and_await_status() -> Result<()> {
+    let wallet = launch_provider_and_get_wallet().await?;
+    let provider = wallet.provider();
+
+    let consensus_parameters = provider.consensus_parameters().await?;
+    let inputs = wallet
+        .get_asset_inputs_for_amount(*consensus_parameters.base_asset_id(), 100, None)
+        .await?;
+    let outputs = wallet.get_asset_outputs_for_amount(
+        &Bech32Address::default(),
+        *consensus_parameters.base_asset_id(),
+        100,
+    );
+
+    // Given
+    let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
+    wallet.add_witnesses(&mut tb)?;
+
+    let tx = tb.build(provider).await?;
+
+    // When
+    let status = provider.send_transaction_and_await_status(tx, true).await?;
+
+    // Then
+    assert_eq!(status.len(), 3);
+    assert!(status.iter().enumerate().all(|(i, tx_status)| {
+        matches!(
+            (i, tx_status.clone().unwrap()),
+            (0, TxStatus::Submitted { .. })
+                | (1, TxStatus::PreconfirmationSuccess { .. })
+                | (2, TxStatus::Success { .. })
+        )
+    }));
+    Ok(())
+}
+
+#[tokio::test]
+async fn send_transaction_and_subscribe_status() -> Result<()> {
+    let wallet = launch_provider_and_get_wallet().await?;
+    let provider = wallet.provider();
+
+    let consensus_parameters = provider.consensus_parameters().await?;
+    let inputs = wallet
+        .get_asset_inputs_for_amount(*consensus_parameters.base_asset_id(), 100, None)
+        .await?;
+    let outputs = wallet.get_asset_outputs_for_amount(
+        &Bech32Address::default(),
+        *consensus_parameters.base_asset_id(),
+        100,
+    );
+
+    // Given
+    let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
+    wallet.add_witnesses(&mut tb)?;
+
+    let tx = tb.build(provider).await?;
+    let tx_id = tx.id(consensus_parameters.chain_id());
+
+    // When
+    let mut status = provider.subscribe_transaction_status(&tx_id, true).await?;
+    let _ = provider.send_transaction(tx).await?;
+
+    // Then
+    assert!(matches!(
+        status.next().await.unwrap().unwrap(),
+        TxStatus::Submitted { .. }
+    ));
+    assert!(matches!(
+        status.next().await.unwrap().unwrap(),
+        TxStatus::PreconfirmationSuccess { .. }
+    ));
+    assert!(matches!(
+        status.next().await.unwrap().unwrap(),
+        TxStatus::Success { .. }
+    ));
 
     Ok(())
 }
