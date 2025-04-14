@@ -122,3 +122,18 @@ fuels-macros = { version = "0.71.0", path = "./packages/fuels-macros", default-f
 fuels-programs = { version = "0.71.0", path = "./packages/fuels-programs", default-features = false }
 fuels-test-helpers = { version = "0.71.0", path = "./packages/fuels-test-helpers", default-features = false }
 versions-replacer = { version = "0.71.0", path = "./scripts/versions-replacer", default-features = false }
+
+[patch.crates-io]
+fuel-core-client = { path = "../fuel-core/crates/client"}
+fuel-core-types = { path = "../fuel-core/crates/types"}
+fuel-core-chain-config = { path = "../fuel-core/crates/chain-config"}
+fuel-core-poa = { path = "../fuel-core/crates/services/consensus_module/poa"}
+fuel-core-services = { path = "../fuel-core/crates/services"}
+
+fuel-asm = { path = "../fuel-vm/fuel-asm" }
+fuel-crypto = { path = "../fuel-vm/fuel-crypto" }
+fuel-merkle = { path = "../fuel-vm/fuel-merkle" }
+fuel-storage = { path = "../fuel-vm/fuel-storage" }
+fuel-tx = { path = "../fuel-vm/fuel-tx" }
+fuel-types = { path = "../fuel-vm/fuel-types" }
+fuel-vm = { path = "../fuel-vm/fuel-vm" }

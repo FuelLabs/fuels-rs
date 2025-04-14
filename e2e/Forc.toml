@@ -38,6 +38,7 @@ members = [
   'sway/logs/script_logs',
   'sway/logs/script_with_contract_logs',
   'sway/predicates/basic_predicate',
+  'sway/predicates/data_coins',
   'sway/predicates/predicate_blobs',
   'sway/predicates/predicate_configurables',
   'sway/predicates/predicate_witnesses',
@@ -118,3 +119,4 @@ members = [
   'sway/types/scripts/script_u256',
   'sway/types/scripts/script_vectors',
 ]
+

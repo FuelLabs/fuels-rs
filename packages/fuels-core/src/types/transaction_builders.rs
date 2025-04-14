@@ -464,6 +464,8 @@ macro_rules! impl_tx_builder_trait {
 
 pub(crate) use impl_tx_builder_trait;
 
+use super::coin::DataCoin;
+
 pub(crate) fn estimate_max_fee_w_tolerance<T: Chargeable>(
     tx: T,
     tolerance: f32,
@@ -1374,6 +1376,20 @@ fn resolve_signed_resource(
                     create_coin_input(coin, num_witnesses + *witness_idx_offset as u16)
                 })
         }
+        CoinType::DataCoin(coin) => {
+            let owner = &coin.owner;
+
+            unresolved_witness_indexes
+                .owner_to_idx_offset
+                .get(owner)
+                .ok_or(error_transaction!(
+                    Builder,
+                    "signature missing for coin with owner: `{owner:?}`"
+                ))
+                .map(|witness_idx_offset| {
+                    create_data_coin_input(coin, num_witnesses + *witness_idx_offset as u16)
+                })
+        }
         CoinType::Message(message) => {
             let recipient = &message.recipient;
 
@@ -1401,7 +1417,8 @@ fn resolve_predicate_resource(
     data: Vec<u8>,
 ) -> Result<FuelInput> {
     match resource {
-        CoinType::Coin(coin) => Ok(create_coin_predicate(coin.asset_id, coin, code, data)),
+        CoinType::Coin(coin) => Ok(create_coin_predicate(coin, code, data)),
+        CoinType::DataCoin(coin) => Ok(create_data_coin_predicate(coin, code, data)),
         CoinType::Message(message) => Ok(create_coin_message_predicate(message, code, data)),
         CoinType::Unknown => Err(error_transaction!(
             Builder,
@@ -1418,6 +1435,18 @@ pub fn create_coin_input(coin: Coin, witness_index: u16) -> FuelInput {
         coin.asset_id,
         TxPointer::default(),
         witness_index,
+    )
+}
+
+pub fn create_data_coin_input(coin: DataCoin, witness_index: u16) -> FuelInput {
+    FuelInput::data_coin_signed(
+        coin.utxo_id,
+        coin.owner.into(),
+        coin.amount,
+        coin.asset_id,
+        TxPointer::default(),
+        witness_index,
+        coin.data,
     )
 }
 
@@ -1442,21 +1471,34 @@ pub fn create_coin_message_input(message: Message, witness_index: u16) -> FuelIn
     }
 }
 
-pub fn create_coin_predicate(
-    asset_id: AssetId,
-    coin: Coin,
-    code: Vec<u8>,
-    predicate_data: Vec<u8>,
-) -> FuelInput {
+pub fn create_coin_predicate(coin: Coin, code: Vec<u8>, predicate_data: Vec<u8>) -> FuelInput {
     FuelInput::coin_predicate(
         coin.utxo_id,
         coin.owner.into(),
         coin.amount,
-        asset_id,
+        coin.asset_id,
         TxPointer::default(),
         0u64,
         code,
         predicate_data,
+    )
+}
+
+pub fn create_data_coin_predicate(
+    coin: DataCoin,
+    code: Vec<u8>,
+    predicate_data: Vec<u8>,
+) -> FuelInput {
+    FuelInput::data_coin_predicate(
+        coin.utxo_id,
+        coin.owner.into(),
+        coin.amount,
+        coin.asset_id,
+        TxPointer::default(),
+        0u64,
+        code,
+        predicate_data,
+        coin.data,
     )
 }
 

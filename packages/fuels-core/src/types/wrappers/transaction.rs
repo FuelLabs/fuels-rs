@@ -11,7 +11,7 @@ use fuel_tx::{
         ScriptData, ScriptGasLimit, WitnessLimit, Witnesses,
     },
     input::{
-        coin::{CoinPredicate, CoinSigned},
+        coin::{CoinPredicate, CoinSigned, DataCoinPredicate, DataCoinSigned},
         message::{
             MessageCoinPredicate, MessageCoinSigned, MessageDataPredicate, MessageDataSigned,
         },
@@ -320,7 +320,9 @@ fn extract_coin_type_id(input: &Input) -> Option<CoinTypeId> {
 pub fn extract_owner_or_recipient(input: &Input) -> Option<Bech32Address> {
     let addr = match input {
         Input::CoinSigned(CoinSigned { owner, .. })
-        | Input::CoinPredicate(CoinPredicate { owner, .. }) => Some(owner),
+        | Input::CoinPredicate(CoinPredicate { owner, .. })
+        | Input::DataCoinSigned(DataCoinSigned { owner, .. })
+        | Input::DataCoinPredicate(DataCoinPredicate { owner, .. }) => Some(owner),
         Input::MessageCoinSigned(MessageCoinSigned { recipient, .. })
         | Input::MessageCoinPredicate(MessageCoinPredicate { recipient, .. })
         | Input::MessageDataSigned(MessageDataSigned { recipient, .. })
