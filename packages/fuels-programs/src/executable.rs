@@ -1,7 +1,7 @@
 use fuels_core::{
     Configurables,
     types::{
-        errors::Result,
+        errors::{Context, Result},
         transaction::Transaction,
         transaction_builders::{Blob, BlobTransactionBuilder},
         tx_response::TxResponse,
@@ -180,7 +180,10 @@ impl Executable<Loader> {
             .with_blob(self.blob())
             .with_max_fee_estimation_tolerance(DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE);
 
-        account.adjust_for_fee(&mut tb, 0).await?;
+        account
+            .adjust_for_fee(&mut tb, 0)
+            .await
+            .context("failed to adjust inputs to cover for missing base asset")?;
         account.add_witnesses(&mut tb)?;
 
         let tx = tb.build(provider).await?;

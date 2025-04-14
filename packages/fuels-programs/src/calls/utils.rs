@@ -8,7 +8,7 @@ use fuels_core::{
     offsets::call_script_data_offset,
     types::{
         bech32::{Bech32Address, Bech32ContractId},
-        errors::Result,
+        errors::{Context, Result},
         input::Input,
         transaction::{ScriptTransaction, TxPolicies},
         transaction_builders::{
@@ -96,7 +96,10 @@ pub(crate) async fn build_with_tb(
         .unwrap_or_default();
 
     account.add_witnesses(&mut tb)?;
-    account.adjust_for_fee(&mut tb, used_base_amount).await?;
+    account
+        .adjust_for_fee(&mut tb, used_base_amount)
+        .await
+        .context("failed to adjust inputs to cover for missing base asset")?;
 
     tb.build(account.try_provider()?).await
 }
