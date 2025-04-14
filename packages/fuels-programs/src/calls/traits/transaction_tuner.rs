@@ -1,6 +1,6 @@
 use fuels_accounts::Account;
 use fuels_core::types::{
-    errors::{Result, error},
+    errors::{Context, Result, error},
     transaction::{ScriptTransaction, TxPolicies},
     transaction_builders::{
         BuildableTransaction, ScriptTransactionBuilder, TransactionBuilder, VariableOutputPolicy,
@@ -84,7 +84,10 @@ impl TransactionTuner for ScriptCall {
         account: &T,
     ) -> Result<ScriptTransaction> {
         account.add_witnesses(&mut tb)?;
-        account.adjust_for_fee(&mut tb, 0).await?;
+        account
+            .adjust_for_fee(&mut tb, 0)
+            .await
+            .context("failed to adjust inputs to cover for missing base asset")?;
 
         tb.build(account.try_provider()?).await
     }
