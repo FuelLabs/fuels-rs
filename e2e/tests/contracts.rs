@@ -2604,6 +2604,32 @@ async fn loader_storage_works_via_proxy() -> Result<()> {
 }
 
 #[tokio::test]
+async fn adjust_for_fee_errors() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Contract(
+            name = "MyContract",
+            project = "e2e/sway/contracts/contract_test"
+        )),
+    );
+
+    let contract_binary = "sway/contracts/contract_test/out/release/contract_test.bin";
+
+    let err = Contract::load_from(contract_binary, LoadConfiguration::default())?
+        .deploy(&wallet, TxPolicies::default().with_tip(10_000_000_000_000))
+        .await
+        .expect_err("should return error");
+
+    assert!(
+        matches!(err, Error::Provider(s) if s.contains("failed to adjust inputs to cover for missing \
+                base asset: failed to get base asset \
+                (0000000000000000000000000000000000000000000000000000000000000000) inputs with amount:"))
+    );
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn tx_input_output() -> Result<()> {
     let [wallet_1, wallet_2] = launch_custom_provider_and_get_wallets(
         WalletsConfig::new(Some(2), Some(10), Some(1000)),
