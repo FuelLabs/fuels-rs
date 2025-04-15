@@ -1072,23 +1072,26 @@ async fn send_transaction_and_subscribe_status() -> Result<()> {
     let tx_id = tx.id(consensus_parameters.chain_id());
 
     // When
-    let mut status = provider.subscribe_transaction_status(&tx_id, true).await?;
-    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+    let mut statuses = provider.subscribe_transaction_status(&tx_id, true).await?;
     let _ = provider.send_transaction(tx).await?;
 
     // Then
-    assert!(matches!(
-        status.next().await.unwrap().unwrap(),
-        TxStatus::Submitted { .. }
-    ));
-    assert!(matches!(
-        status.next().await.unwrap().unwrap(),
-        TxStatus::PreconfirmationSuccess { .. }
-    ));
-    assert!(matches!(
-        status.next().await.unwrap().unwrap(),
-        TxStatus::Success { .. }
-    ));
+    // Because the execution is very fast in the test because of instant block production it's possible that
+    // we directly get the final status without the intermediate ones.
+    let status = statuses.next().await.unwrap()?;
+    if let TxStatus::Submitted { .. } = status {
+        assert!(matches!(
+            statuses.next().await.unwrap()?,
+            TxStatus::PreconfirmationSuccess { .. }
+        ));
+        assert!(matches!(
+            statuses.next().await.unwrap()?,
+            TxStatus::Success { .. }
+        ));
+    } else if let TxStatus::Success { .. } = status {
+    } else {
+        panic!("Unexpected status: {:?}", status);
+    }
 
     Ok(())
 }
