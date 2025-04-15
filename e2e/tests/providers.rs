@@ -506,27 +506,6 @@ async fn test_gas_errors() -> Result<()> {
         ),
     );
 
-    // Test running out of gas. Gas price as `None` will be 0.
-    let gas_limit = 42;
-    let contract_instance_call = contract_instance
-        .methods()
-        .initialize_counter(42) // Build the ABI call
-        .with_script_gas_limit(gas_limit);
-
-    //  Test that the call will use more gas than the gas limit
-    let total_gas = contract_instance_call
-        .estimate_transaction_cost(None, None)
-        .await?
-        .total_gas;
-    assert!(total_gas > gas_limit);
-
-    //TODO: decide what to do here and what to report to user as this will not fail anymore
-    let _response = contract_instance_call.call().await?;
-    // .expect_err("should error");
-
-    // let expected = "transaction reverted: OutOfGas";
-    // assert!(response.to_string().starts_with(expected));
-
     // Test for insufficient base asset amount to pay for the transaction fee
     let response = contract_instance
         .methods()
