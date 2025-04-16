@@ -18,6 +18,7 @@ use fuel_core_types::services::executor::TransactionExecutionStatus;
 use fuel_tx::{BlobId, ConsensusParameters, Transaction, TxId, UtxoId};
 use fuel_types::{Address, AssetId, BlockHeight, ContractId, Nonce};
 use fuels_core::types::errors::{Error, Result, error};
+use futures::Stream;
 
 use super::{
     cache::CacheableRpcs,
@@ -144,6 +145,30 @@ impl RetryableClient {
         tx: &Transaction,
     ) -> RequestResult<TransactionStatus> {
         self.wrap(|| self.client.submit_and_await_commit(tx)).await
+    }
+
+    pub async fn submit_and_await_status<'a>(
+        &'a self,
+        tx: &'a Transaction,
+        include_preconfirmation: bool,
+    ) -> RequestResult<impl Stream<Item = io::Result<TransactionStatus>> + 'a> {
+        self.wrap(|| {
+            self.client
+                .submit_and_await_status_opt(tx, None, Some(include_preconfirmation))
+        })
+        .await
+    }
+
+    pub async fn subscribe_transaction_status<'a>(
+        &'a self,
+        id: &'a TxId,
+        include_preconfirmation: bool,
+    ) -> RequestResult<impl Stream<Item = io::Result<TransactionStatus>> + 'a> {
+        self.wrap(|| {
+            self.client
+                .subscribe_transaction_status_opt(id, Some(include_preconfirmation))
+        })
+        .await
     }
 
     pub async fn submit(&self, tx: &Transaction) -> RequestResult<TransactionId> {
