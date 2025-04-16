@@ -26,8 +26,6 @@ use fuel_tx::{
 use fuel_types::{Address, BlockHeight, Bytes32, Nonce};
 #[cfg(feature = "coin-cache")]
 use fuels_core::types::coin_type_id::CoinTypeId;
-#[cfg(feature = "coin-cache")]
-use fuels_core::types::errors::Error;
 use fuels_core::{
     constants::{DEFAULT_GAS_ESTIMATION_BLOCK_HORIZON, DEFAULT_GAS_ESTIMATION_TOLERANCE},
     types::{
@@ -49,10 +47,10 @@ use fuels_core::{
 };
 use futures::StreamExt;
 pub use retry_util::{Backoff, RetryConfig};
-#[cfg(feature = "coin-cache")]
-use std::sync::Mutex;
 pub use supported_fuel_core_version::SUPPORTED_FUEL_CORE_VERSION;
 use tai64::Tai64;
+#[cfg(feature = "coin-cache")]
+use tokio::sync::Mutex;
 
 #[cfg(feature = "coin-cache")]
 use crate::coin_cache::CoinsCache;
@@ -203,7 +201,7 @@ impl Provider {
         ) {
             self.coins_cache
                 .lock()
-                .map_err(|_| Error::Other("Failed to acquire lock on coins cache".to_string()))?
+                .await
                 .remove_items(tx.used_coins(&base_asset_id))
         }
 
@@ -219,55 +217,45 @@ impl Provider {
     ) -> Result<Vec<Result<TxStatus>>> {
         #[cfg(feature = "coin-cache")]
         let base_asset_id = *self.consensus_parameters().await?.base_asset_id();
+        #[cfg(feature = "coin-cache")]
+        let used_base_coins = tx.used_coins(&base_asset_id);
 
         #[cfg(feature = "coin-cache")]
-        self.check_inputs_already_in_cache(&tx.used_coins(&base_asset_id))
+        self.check_inputs_already_in_cache(&used_base_coins).await?;
+
+        let tx = self.prepare_transaction_for_sending(tx).await?.into();
+        let mut stream = self
+            .uncached_client()
+            .submit_and_await_status(&tx, include_preconfirmation)
             .await?;
 
-        let tx = self.prepare_transaction_for_sending(tx).await?;
-        // For future devs: can't return the stream because it reference a transaction that will not
-        // be able to live as long as the stream (which is required because of 'a constraint).
+        let mut statuses = Vec::new();
 
-        // This is a little hack to make a inclusive version of take_while and allow to return
-        // the final status too.
-        let (close, closed) = tokio::sync::oneshot::channel();
-        let mut close = Some(close);
+        // Process stream items until we get a final status
+        while let Some(status) = stream.next().await {
+            let tx_status = status.map(TxStatus::from).map_err(Into::into);
 
-        let tx_status = self
-            .uncached_client()
-            .submit_and_await_status(&tx.clone().into(), include_preconfirmation)
-            .await?
-            .take_until(closed)
-            .map(move |status| {
-                let status: std::io::Result<TxStatus> = status.map(Into::into);
-                if let Ok(s) = &status {
-                    if s.is_final() {
-                        if let Some(close) = close.take() {
-                            let _ = close.send(());
-                        }
-                    }
-                }
-                #[cfg(feature = "coin-cache")]
-                match status {
-                    Ok(TxStatus::SqueezedOut { .. }) | Ok(TxStatus::Failure { .. }) => {
-                        self.coins_cache
-                            .lock()
-                            .map_err(|_| {
-                                std::io::Error::new(
-                                    std::io::ErrorKind::Other,
-                                    "Failed to acquire lock on coins cache",
-                                )
-                            })?
-                            .remove_items(tx.used_coins(&base_asset_id));
-                    }
-                    _ => {}
-                };
-                status.map_err(Into::into)
-            })
-            .collect::<Vec<Result<TxStatus>>>()
-            .await;
+            let is_final = tx_status.as_ref().ok().is_some_and(|s| s.is_final());
 
-        Ok(tx_status)
+            statuses.push(tx_status);
+
+            if is_final {
+                break;
+            }
+        }
+
+        // Handle cache updates for failures
+        #[cfg(feature = "coin-cache")]
+        if statuses.iter().any(|status| {
+            matches!(
+                &status,
+                Ok(TxStatus::SqueezedOut { .. }) | Ok(TxStatus::Failure { .. }),
+            )
+        }) {
+            self.coins_cache.lock().await.remove_items(used_base_coins);
+        }
+
+        Ok(statuses)
     }
 
     async fn prepare_transaction_for_sending<T: Transaction>(&self, mut tx: T) -> Result<T> {
@@ -314,9 +302,7 @@ impl Provider {
         &self,
         coin_ids: impl IntoIterator<Item = (&'a (Bech32Address, AssetId), &'a Vec<CoinTypeId>)>,
     ) -> Option<((Bech32Address, AssetId), CoinTypeId)> {
-        let Ok(mut locked_cache) = self.coins_cache.lock() else {
-            return None;
-        };
+        let mut locked_cache = self.coins_cache.lock().await;
 
         for (key, ids) in coin_ids {
             let items = locked_cache.get_active(key);
@@ -366,10 +352,7 @@ impl Provider {
         self.check_inputs_already_in_cache(&used_utxos).await?;
 
         let tx_id = self.uncached_client().submit(&tx.into()).await?;
-        self.coins_cache
-            .lock()
-            .map_err(|_| Error::Other("Failed to acquire lock on coins cache".to_string()))?
-            .insert_multiple(used_utxos);
+        self.coins_cache.lock().await.insert_multiple(used_utxos);
 
         Ok(tx_id)
     }
@@ -568,10 +551,7 @@ impl Provider {
     #[cfg(feature = "coin-cache")]
     async fn extend_filter_with_cached(&self, filter: &mut ResourceFilter) -> Result<()> {
         let consensus_parameters = self.consensus_parameters().await?;
-        let mut cache = self
-            .coins_cache
-            .lock()
-            .map_err(|_| Error::Other("Failed to acquire lock on coins cache".to_string()))?;
+        let mut cache = self.coins_cache.lock().await;
         let asset_id = filter
             .asset_id
             .unwrap_or(*consensus_parameters.base_asset_id());

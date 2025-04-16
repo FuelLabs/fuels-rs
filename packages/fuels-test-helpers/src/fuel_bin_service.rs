@@ -72,6 +72,9 @@ impl ExtendedConfig {
                     block_time.as_millis()
                 ));
             }
+            Trigger::Open { period } => {
+                args.push(format!("--poa-open-period={}ms", period.as_millis()));
+            }
         };
 
         let body_limit = self.node_config.graphql_request_body_bytes_limit;

@@ -1051,7 +1051,14 @@ async fn send_transaction_and_await_status() -> Result<()> {
 
 #[tokio::test]
 async fn send_transaction_and_subscribe_status() -> Result<()> {
-    let wallet = launch_provider_and_get_wallet().await?;
+    let config = NodeConfig {
+        block_production: Trigger::Never,
+        ..NodeConfig::default()
+    };
+    let wallet =
+        launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config), None)
+            .await?[0]
+            .clone();
     let provider = wallet.provider();
 
     let consensus_parameters = provider.consensus_parameters().await?;
@@ -1076,22 +1083,19 @@ async fn send_transaction_and_subscribe_status() -> Result<()> {
     let _ = provider.send_transaction(tx).await?;
 
     // Then
-    // Because the execution is very fast in the test because of instant block production it's possible that
-    // we directly get the final status without the intermediate ones.
-    let status = statuses.next().await.unwrap()?;
-    if let TxStatus::Submitted { .. } = status {
-        assert!(matches!(
-            statuses.next().await.unwrap()?,
-            TxStatus::PreconfirmationSuccess { .. }
-        ));
-        assert!(matches!(
-            statuses.next().await.unwrap()?,
-            TxStatus::Success { .. }
-        ));
-    } else if let TxStatus::Success { .. } = status {
-    } else {
-        panic!("Unexpected status: {:?}", status);
-    }
+    assert!(matches!(
+        statuses.next().await.unwrap()?,
+        TxStatus::Submitted { .. }
+    ));
+    provider.produce_blocks(1, None).await?;
+    assert!(matches!(
+        statuses.next().await.unwrap()?,
+        TxStatus::PreconfirmationSuccess { .. }
+    ));
+    assert!(matches!(
+        statuses.next().await.unwrap()?,
+        TxStatus::Success { .. }
+    ));
 
     Ok(())
 }
