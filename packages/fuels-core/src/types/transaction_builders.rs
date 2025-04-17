@@ -487,6 +487,7 @@ macro_rules! impl_tx_builder_trait {
 
 fn add_tolerance_to_max_fee<T: PoliciesField + MaxFeeLimit>(tx: &mut T, tolerance: f32) {
     let max_fee = tx.max_fee_limit();
+    dbg!(&max_fee);
     let max_fee_w_tolerance = max_fee as f64 * (1.0 + f64::from(tolerance));
 
     tx.policies_mut()

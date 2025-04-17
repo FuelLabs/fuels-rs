@@ -162,10 +162,10 @@ impl BlobTransactionBuilder {
                 self.resolve_fuel_tx(&provider).await?
             }
             Strategy::AssembleTx {
-                ref required_balances,
+                ref mut required_balances,
                 fee_index,
             } => {
-                let required_balances = required_balances.clone(); //TODO: Fix this
+                let required_balances = std::mem::take(required_balances);
                 self.assemble_tx(
                     required_balances,
                     fee_index,
