@@ -11,6 +11,7 @@ pub enum Trigger {
     Instant,
     Never,
     Interval { block_time: Duration },
+    Open { period: Duration },
 }
 
 #[cfg(feature = "fuel-core-lib")]
@@ -20,6 +21,7 @@ impl From<Trigger> for fuel_core_poa::Trigger {
             Trigger::Instant => fuel_core_poa::Trigger::Instant,
             Trigger::Never => fuel_core_poa::Trigger::Never,
             Trigger::Interval { block_time } => fuel_core_poa::Trigger::Interval { block_time },
+            Trigger::Open { period } => fuel_core_poa::Trigger::Open { period },
         }
     }
 }

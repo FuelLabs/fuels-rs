@@ -46,6 +46,7 @@ use fuels_core::{
         tx_status::TxStatus,
     },
 };
+use futures::StreamExt;
 pub use retry_util::{Backoff, RetryConfig};
 pub use supported_fuel_core_version::SUPPORTED_FUEL_CORE_VERSION;
 use tai64::Tai64;
@@ -207,6 +208,55 @@ impl Provider {
         Ok(tx_status)
     }
 
+    /// Similar to `send_transaction_and_await_commit`,
+    /// but collect all the status received until a final one and return them.
+    pub async fn send_transaction_and_await_status<T: Transaction>(
+        &self,
+        tx: T,
+        include_preconfirmation: bool,
+    ) -> Result<Vec<Result<TxStatus>>> {
+        #[cfg(feature = "coin-cache")]
+        let base_asset_id = *self.consensus_parameters().await?.base_asset_id();
+        #[cfg(feature = "coin-cache")]
+        let used_base_coins = tx.used_coins(&base_asset_id);
+
+        #[cfg(feature = "coin-cache")]
+        self.check_inputs_already_in_cache(&used_base_coins).await?;
+
+        let fuel_tx = tx.into();
+        let mut stream = self
+            .uncached_client()
+            .submit_and_await_status(&fuel_tx, include_preconfirmation)
+            .await?;
+
+        let mut statuses = Vec::new();
+
+        // Process stream items until we get a final status
+        while let Some(status) = stream.next().await {
+            let tx_status = status.map(TxStatus::from).map_err(Into::into);
+
+            let is_final = tx_status.as_ref().ok().is_some_and(|s| s.is_final());
+
+            statuses.push(tx_status);
+
+            if is_final {
+                break;
+            }
+        }
+
+        // Handle cache updates for failures
+        #[cfg(feature = "coin-cache")]
+        if statuses.iter().any(|status| {
+            matches!(
+                &status,
+                Ok(TxStatus::SqueezedOut { .. }) | Ok(TxStatus::Failure { .. }),
+            )
+        }) {
+            self.coins_cache.lock().await.remove_items(used_base_coins);
+        }
+
+        Ok(statuses)
+    }
     pub async fn await_transaction_commit<T: Transaction>(&self, id: TxId) -> Result<TxStatus> {
         Ok(self
             .uncached_client()
@@ -286,6 +336,19 @@ impl Provider {
             .transaction_status(tx_id)
             .await?
             .into())
+    }
+
+    pub async fn subscribe_transaction_status<'a>(
+        &'a self,
+        tx_id: &'a TxId,
+        include_preconfirmation: bool,
+    ) -> Result<impl futures::Stream<Item = Result<TxStatus>> + 'a> {
+        let stream = self
+            .uncached_client()
+            .subscribe_transaction_status(tx_id, include_preconfirmation)
+            .await?;
+
+        Ok(stream.map(|status| status.map(Into::into).map_err(Into::into)))
     }
 
     pub async fn chain_info(&self) -> Result<ChainInfo> {

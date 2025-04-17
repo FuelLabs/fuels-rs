@@ -170,6 +170,13 @@ impl TxStatus {
             _ => vec![],
         }
     }
+
+    pub fn is_final(&self) -> bool {
+        matches!(
+            self,
+            TxStatus::Success(_) | TxStatus::Failure(_) | TxStatus::SqueezedOut(_)
+        )
+    }
 }
 
 #[cfg(feature = "std")]
