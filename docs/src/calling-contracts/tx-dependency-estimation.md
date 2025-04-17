@@ -4,9 +4,7 @@ Previously, we mentioned that a contract call might require you to manually spec
 
 The following example uses a contract call that calls an external contract and later mints assets to a specified address. Calling it without including the dependencies will result in a revert:
 
-```rust,ignore
-{{#include ../../../examples/contracts/src/lib.rs:dependency_estimation_fail}}
-```
+TODO: removed code block fix in docs.
 
 As mentioned in previous chapters, you can specify the external contract and add an output variable to resolve this:
 

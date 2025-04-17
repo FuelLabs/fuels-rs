@@ -9,16 +9,21 @@ use std::{
 
 use async_trait::async_trait;
 use fuel_asm::{GTFArgs, RegId, op};
+use fuel_core_client::client::types::assemble_tx::RequiredBalance;
 use fuel_crypto::{Hasher, Message as CryptoMessage, Signature};
 use fuel_tx::{
-    Chargeable, ConsensusParameters, Create, Input as FuelInput, Output, Script, StorageSlot,
-    Transaction as FuelTransaction, TransactionFee, TxPointer, UniqueIdentifier, Upgrade, Upload,
-    UploadBody, Witness,
-    field::{Outputs, Policies as PoliciesField, ScriptGasLimit, Witnesses},
+    Cacheable, Chargeable, ConsensusParameters, Create, Input as FuelInput, Output, Script,
+    StorageSlot, Transaction as FuelTransaction, TransactionFee, TxPointer, UniqueIdentifier,
+    Upgrade, Upload, UploadBody, Witness,
+    field::{Inputs, MaxFeeLimit, Outputs, Policies as PoliciesField, ScriptGasLimit, Witnesses},
+    input::{
+        coin::CoinSigned,
+        message::{MessageCoinSigned, MessageDataSigned},
+    },
     policies::{Policies, PolicyType},
 };
 pub use fuel_tx::{UpgradePurpose, UploadSubsection};
-use fuel_types::{Bytes32, Salt, bytes::padded_len_usize};
+use fuel_types::{Bytes32, ChainId, Salt, bytes::padded_len_usize};
 use itertools::Itertools;
 use script_tx_estimator::ScriptTxEstimator;
 
@@ -78,6 +83,11 @@ pub enum ScriptBuildStrategy {
     /// are present. Meant only for transactions that are to be dry-run with validations off.
     /// Useful for reading state with unfunded accounts.
     StateReadOnly,
+    /// Transaction is estimated using `assemble_tx` and signatures are automatically added.
+    AssembleTx {
+        required_balances: Vec<RequiredBalance>,
+        fee_index: u16,
+    },
 }
 
 #[derive(Debug, Clone, Default)]
@@ -90,6 +100,10 @@ pub enum Strategy {
     /// order as they appear in the inputs. Multiple coins with the same owner will have
     /// the same witness index. Make sure you sign the built transaction in the expected order.
     NoSignatures,
+    AssembleTx {
+        required_balances: Vec<RequiredBalance>,
+        fee_index: u16,
+    },
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
@@ -238,7 +252,7 @@ macro_rules! impl_tx_builder_trait {
                 .await?;
 
                 if tx.is_using_predicates() {
-                    tx.estimate_predicates(&provider, None).await?;
+                    tx.estimate_predicates(&provider).await?;
                 }
 
                 let consensus_parameters = provider.consensus_parameters().await?;
@@ -248,7 +262,7 @@ macro_rules! impl_tx_builder_trait {
                     .await?;
 
                 $crate::types::transaction_builders::estimate_max_fee_w_tolerance(
-                    tx.tx,
+                    &tx.tx,
                     self.max_fee_estimation_tolerance,
                     gas_price,
                     &consensus_parameters,
@@ -360,6 +374,18 @@ macro_rules! impl_tx_builder_trait {
                 Ok(policies)
             }
 
+            fn generate_fuel_policies_assemble(&self) -> Policies {
+                let mut policies = Policies::default();
+
+                policies.set(PolicyType::WitnessLimit, self.tx_policies.witness_limit());
+                policies.set(PolicyType::MaxFee, self.tx_policies.tip());
+                policies.set(PolicyType::Maturity, self.tx_policies.maturity());
+                policies.set(PolicyType::Tip, self.tx_policies.tip());
+                policies.set(PolicyType::Expiration, self.tx_policies.expiration());
+
+                policies
+            }
+
             fn is_using_predicates(&self) -> bool {
                 use $crate::types::transaction_builders::TransactionBuilder;
                 self.inputs()
@@ -431,24 +457,17 @@ macro_rules! impl_tx_builder_trait {
                 Ok(padded_len as u64)
             }
 
-            async fn set_max_fee_policy<T: Clone + PoliciesField + Chargeable + Into<$tx_ty>>(
+            async fn set_max_fee_policy<T: PoliciesField + Chargeable>(
                 tx: &mut T,
                 provider: impl DryRunner,
                 block_horizon: u32,
-                is_using_predicates: bool,
                 max_fee_estimation_tolerance: f32,
             ) -> Result<()> {
-                let mut wrapper_tx: $tx_ty = tx.clone().into();
-
-                if is_using_predicates {
-                    wrapper_tx.estimate_predicates(&provider, None).await?;
-                }
-
                 let gas_price = provider.estimate_gas_price(block_horizon).await?;
                 let consensus_parameters = provider.consensus_parameters().await?;
 
                 let max_fee = $crate::types::transaction_builders::estimate_max_fee_w_tolerance(
-                    wrapper_tx.tx,
+                    tx,
                     max_fee_estimation_tolerance,
                     gas_price,
                     &consensus_parameters,
@@ -456,25 +475,83 @@ macro_rules! impl_tx_builder_trait {
 
                 tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
 
+
+
                 Ok(())
             }
+
         }
+
     };
+}
+
+fn add_tolerance_to_max_fee<T: PoliciesField + MaxFeeLimit>(tx: &mut T, tolerance: f32) {
+    let max_fee = tx.max_fee_limit();
+    let max_fee_w_tolerance = max_fee as f64 * (1.0 + f64::from(tolerance));
+
+    tx.policies_mut()
+        .set(PolicyType::MaxFee, Some(max_fee_w_tolerance.ceil() as u64));
+}
+
+async fn update_witnesses<T: UniqueIdentifier + Witnesses + Inputs>(
+    tx: &mut T,
+    unresolved_signers: &[Arc<dyn Signer + Send + Sync>],
+    chain_id: &ChainId,
+) -> Result<()> {
+    let id = tx.id(chain_id);
+
+    for signer in unresolved_signers {
+        let message = CryptoMessage::from_bytes(*id);
+        let signature = signer.sign(message).await?;
+        let address = signer.address().into();
+
+        let witness_indexes = tx
+            .inputs()
+            .iter()
+            .filter_map(|input| match input {
+                FuelInput::CoinSigned(CoinSigned {
+                    owner,
+                    witness_index,
+                    ..
+                })
+                | FuelInput::MessageCoinSigned(MessageCoinSigned {
+                    recipient: owner,
+                    witness_index,
+                    ..
+                })
+                | FuelInput::MessageDataSigned(MessageDataSigned {
+                    recipient: owner,
+                    witness_index,
+                    ..
+                }) if owner == &address => Some(*witness_index as usize),
+                _ => None,
+            })
+            .sorted()
+            .dedup()
+            .collect_vec();
+
+        for w in witness_indexes {
+            if let Some(w) = tx.witnesses_mut().get_mut(w) {
+                *w = signature.as_ref().into();
+            }
+        }
+    }
+
+    Ok(())
 }
 
 pub(crate) use impl_tx_builder_trait;
 
 pub(crate) fn estimate_max_fee_w_tolerance<T: Chargeable>(
-    tx: T,
+    tx: &T,
     tolerance: f32,
     gas_price: u64,
     consensus_parameters: &ConsensusParameters,
 ) -> Result<u64> {
     let gas_costs = &consensus_parameters.gas_costs();
-
     let fee_params = consensus_parameters.fee_params();
 
-    let tx_fee = TransactionFee::checked_from_tx(gas_costs, fee_params, &tx, gas_price).ok_or(
+    let tx_fee = TransactionFee::checked_from_tx(gas_costs, fee_params, tx, gas_price).ok_or(
         error_transaction!(
             Builder,
             "error calculating `TransactionFee` in `TransactionBuilder`"
@@ -535,6 +612,7 @@ pub struct ScriptTransactionBuilder {
     pub gas_price_estimation_block_horizon: u32,
     pub variable_output_policy: VariableOutputPolicy,
     pub build_strategy: ScriptBuildStrategy,
+    pub script_gas_limit: Option<u64>,
     unresolved_witness_indexes: UnresolvedWitnessIndexes,
     unresolved_signers: Vec<Arc<dyn Signer + Send + Sync>>,
     enable_burn: bool,
@@ -554,6 +632,7 @@ impl Default for ScriptTransactionBuilder {
             gas_price_estimation_block_horizon: GAS_ESTIMATION_BLOCK_HORIZON,
             variable_output_policy: Default::default(),
             build_strategy: Default::default(),
+            script_gas_limit: Default::default(),
             unresolved_witness_indexes: Default::default(),
             unresolved_signers: Default::default(),
             enable_burn: false,
@@ -705,12 +784,108 @@ impl ScriptTransactionBuilder {
             ScriptBuildStrategy::StateReadOnly => {
                 self.resolve_fuel_tx_for_state_reading(provider).await?
             }
+            ScriptBuildStrategy::AssembleTx {
+                ref mut required_balances,
+                fee_index,
+            } => {
+                let required_balances = std::mem::take(required_balances);
+                self.assemble_tx(
+                    required_balances,
+                    fee_index,
+                    &consensus_parameters,
+                    provider,
+                )
+                .await?
+            }
         };
 
         Ok(ScriptTransaction {
             is_using_predicates,
             tx,
         })
+    }
+
+    async fn assemble_tx(
+        self,
+        required_balances: Vec<RequiredBalance>,
+        fee_index: u16,
+        consensus_parameters: &ConsensusParameters,
+        dry_runner: impl DryRunner,
+    ) -> Result<Script> {
+        let mut tx = FuelTransaction::script(
+            0, // default value - will be overwritten
+            self.script.clone(),
+            self.script_data.clone(),
+            self.generate_fuel_policies_assemble(),
+            resolve_fuel_inputs(
+                self.inputs.clone(),
+                self.num_witnesses()?,
+                &self.unresolved_witness_indexes,
+            )?,
+            self.outputs.clone(),
+            self.witnesses.clone(),
+        );
+
+        if let Some(max_fee) = self.tx_policies.max_fee() {
+            tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
+        };
+
+        let mut tx = match dry_runner
+            .assemble_tx(
+                &tx.into(),
+                self.gas_price_estimation_block_horizon,
+                required_balances,
+                fee_index,
+                None,
+                true,
+                None,
+            )
+            .await?
+            .transaction
+        {
+            FuelTransaction::Script(script) => script,
+            _ => {
+                return Err(error_transaction!(
+                    Builder,
+                    "`asseble_tx` did not return the right transactio type. Expected `script`"
+                ));
+            }
+        };
+
+        //if user set `script_gas_limit` we will use it's value only
+        //if it is higher then the one estimated by assemble_tx
+        if let Some(script_gas_limit) = self.script_gas_limit {
+            if script_gas_limit > *tx.script_gas_limit() {
+                *tx.script_gas_limit_mut() = script_gas_limit;
+
+                Self::set_max_fee_policy(
+                    &mut tx,
+                    &dry_runner,
+                    self.gas_price_estimation_block_horizon,
+                    self.max_fee_estimation_tolerance,
+                )
+                .await?;
+            }
+        } else {
+            add_tolerance_to_max_fee(&mut tx, self.max_fee_estimation_tolerance);
+        }
+
+        //if user set `max_fee` we will use it's value only
+        //if it is higher then the one estimated by assemble_tx + tolerance
+        if let Some(max_fee) = self.tx_policies.max_fee() {
+            if max_fee > tx.max_fee_limit() {
+                tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
+            }
+        }
+
+        update_witnesses(
+            &mut tx,
+            &self.unresolved_signers,
+            &consensus_parameters.chain_id(),
+        )
+        .await?;
+
+        Ok(tx)
     }
 
     async fn resolve_fuel_tx(self, dry_runner: impl DryRunner) -> Result<Script> {
@@ -738,6 +913,16 @@ impl ScriptTransactionBuilder {
         self.set_script_gas_limit(&mut script_tx_estimator, &mut tx)
             .await?;
 
+        if self.is_using_predicates() {
+            tx.precompute(&dry_runner.consensus_parameters().await?.chain_id())?;
+            let tx_new = dry_runner.estimate_predicates(&tx.into()).await?;
+
+            tx = match tx_new {
+                FuelTransaction::Script(script) => script,
+                _ => panic!("should be `script`"),
+            };
+        }
+
         if let Some(max_fee) = self.tx_policies.max_fee() {
             tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
         } else {
@@ -745,13 +930,12 @@ impl ScriptTransactionBuilder {
                 &mut tx,
                 &dry_runner,
                 self.gas_price_estimation_block_horizon,
-                self.is_using_predicates(),
                 self.max_fee_estimation_tolerance,
             )
             .await?;
         }
 
-        self.set_witnesses(&mut tx, dry_runner).await?;
+        self.set_witnesses(&mut tx, &dry_runner).await?;
 
         Ok(tx)
     }
@@ -782,6 +966,15 @@ impl ScriptTransactionBuilder {
                 true
             };
 
+        if self.is_using_predicates() {
+            let tx_new = dry_runner.estimate_predicates(&tx.into()).await?;
+
+            tx = match tx_new {
+                FuelTransaction::Script(script) => script,
+                _ => panic!("should be `script`"),
+            };
+        }
+
         if let Some(max_fee) = self.tx_policies.max_fee() {
             tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
         } else {
@@ -789,7 +982,6 @@ impl ScriptTransactionBuilder {
                 &mut tx,
                 &dry_runner,
                 self.gas_price_estimation_block_horizon,
-                self.is_using_predicates(),
                 self.max_fee_estimation_tolerance,
             )
             .await?;
@@ -802,7 +994,11 @@ impl ScriptTransactionBuilder {
         Ok(tx)
     }
 
-    async fn set_witnesses(self, tx: &mut fuel_tx::Script, provider: impl DryRunner) -> Result<()> {
+    async fn set_witnesses(
+        self,
+        tx: &mut fuel_tx::Script,
+        provider: &impl DryRunner,
+    ) -> Result<()> {
         let missing_witnesses = generate_missing_witnesses(
             tx.id(&provider.consensus_parameters().await?.chain_id()),
             &self.unresolved_signers,
@@ -818,7 +1014,7 @@ impl ScriptTransactionBuilder {
         tx: &mut fuel_tx::Script,
     ) -> Result<()> {
         let has_no_code = self.script.is_empty();
-        let script_gas_limit = if let Some(gas_limit) = self.tx_policies.script_gas_limit() {
+        let script_gas_limit = if let Some(gas_limit) = self.script_gas_limit {
             // Use the user defined value even if it makes the transaction revert.
             gas_limit
         } else if has_no_code {
@@ -896,6 +1092,11 @@ impl ScriptTransactionBuilder {
         self
     }
 
+    pub fn with_script_gas_limit(mut self, gas_limit: u64) -> Self {
+        self.script_gas_limit = Some(gas_limit);
+        self
+    }
+
     pub fn prepare_transfer(
         inputs: Vec<Input>,
         outputs: Vec<Output>,
@@ -956,7 +1157,6 @@ impl ScriptTransactionBuilder {
         amount: u64,
         inputs: Vec<Input>,
         tx_policies: TxPolicies,
-        base_asset_id: AssetId,
     ) -> Self {
         let script_data: Vec<u8> = [to.to_vec(), amount.to_be_bytes().to_vec()]
             .into_iter()
@@ -978,14 +1178,11 @@ impl ScriptTransactionBuilder {
         .into_iter()
         .collect();
 
-        let outputs = vec![Output::change(to, 0, base_asset_id)];
-
         ScriptTransactionBuilder::default()
             .with_tx_policies(tx_policies)
             .with_script(script)
             .with_script_data(script_data)
             .with_inputs(inputs)
-            .with_outputs(outputs)
     }
 }
 
@@ -1014,12 +1211,90 @@ impl CreateTransactionBuilder {
                 self.unresolved_signers = Default::default();
                 self.resolve_fuel_tx(&provider).await?
             }
+            Strategy::AssembleTx {
+                ref mut required_balances,
+                fee_index,
+            } => {
+                let required_balances = std::mem::take(required_balances);
+                self.assemble_tx(
+                    required_balances,
+                    fee_index,
+                    &consensus_parameters,
+                    provider,
+                )
+                .await?
+            }
         };
 
         Ok(CreateTransaction {
             is_using_predicates,
             tx,
         })
+    }
+
+    async fn assemble_tx(
+        self,
+        required_balances: Vec<RequiredBalance>,
+        fee_index: u16,
+        consensus_parameters: &ConsensusParameters,
+        dry_runner: impl DryRunner,
+    ) -> Result<Create> {
+        let num_witnesses = self.num_witnesses()?;
+
+        let mut tx = FuelTransaction::create(
+            self.bytecode_witness_index,
+            self.generate_fuel_policies_assemble(),
+            self.salt,
+            self.storage_slots,
+            resolve_fuel_inputs(self.inputs, num_witnesses, &self.unresolved_witness_indexes)?,
+            self.outputs,
+            self.witnesses,
+        );
+
+        if let Some(max_fee) = self.tx_policies.max_fee() {
+            tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
+        };
+
+        let mut tx = match dry_runner
+            .assemble_tx(
+                &tx.into(),
+                self.gas_price_estimation_block_horizon,
+                required_balances,
+                fee_index,
+                None,
+                true,
+                None,
+            )
+            .await?
+            .transaction
+        {
+            FuelTransaction::Create(create) => create,
+            _ => {
+                return Err(error_transaction!(
+                    Builder,
+                    "`asseble_tx` did not return the right transactio type. Expected `create`"
+                ));
+            }
+        };
+
+        add_tolerance_to_max_fee(&mut tx, self.max_fee_estimation_tolerance);
+
+        //if user set `max_fee` we will use it's value only
+        //if it is higher then the one estimated by assemble_tx + tolerance
+        if let Some(max_fee) = self.tx_policies.max_fee() {
+            if max_fee > tx.max_fee_limit() {
+                tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
+            }
+        }
+
+        update_witnesses(
+            &mut tx,
+            &self.unresolved_signers,
+            &consensus_parameters.chain_id(),
+        )
+        .await?;
+
+        Ok(tx)
     }
 
     async fn resolve_fuel_tx(self, provider: impl DryRunner) -> Result<Create> {
@@ -1038,6 +1313,15 @@ impl CreateTransactionBuilder {
             self.witnesses,
         );
 
+        if is_using_predicates {
+            let tx_new = provider.estimate_predicates(&tx.into()).await?;
+
+            tx = match tx_new {
+                FuelTransaction::Create(create) => create,
+                _ => panic!("should be `create`"),
+            };
+        }
+
         if let Some(max_fee) = self.tx_policies.max_fee() {
             tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
         } else {
@@ -1045,7 +1329,6 @@ impl CreateTransactionBuilder {
                 &mut tx,
                 &provider,
                 self.gas_price_estimation_block_horizon,
-                is_using_predicates,
                 self.max_fee_estimation_tolerance,
             )
             .await?;
@@ -1122,12 +1405,95 @@ impl UploadTransactionBuilder {
                 self.unresolved_signers = Default::default();
                 self.resolve_fuel_tx(&provider).await?
             }
+            Strategy::AssembleTx {
+                ref mut required_balances,
+                fee_index,
+            } => {
+                let required_balances = std::mem::take(required_balances);
+                self.assemble_tx(
+                    required_balances,
+                    fee_index,
+                    &consensus_parameters,
+                    provider,
+                )
+                .await?
+            }
         };
 
         Ok(UploadTransaction {
             is_using_predicates,
             tx,
         })
+    }
+
+    async fn assemble_tx(
+        self,
+        required_balances: Vec<RequiredBalance>,
+        fee_index: u16,
+        consensus_parameters: &ConsensusParameters,
+        dry_runner: impl DryRunner,
+    ) -> Result<Upload> {
+        let num_witnesses = self.num_witnesses()?;
+        let policies = self.generate_fuel_policies_assemble();
+
+        let mut tx = FuelTransaction::upload(
+            UploadBody {
+                root: self.root,
+                witness_index: self.witness_index,
+                subsection_index: self.subsection_index,
+                subsections_number: self.subsections_number,
+                proof_set: self.proof_set,
+            },
+            policies,
+            resolve_fuel_inputs(self.inputs, num_witnesses, &self.unresolved_witness_indexes)?,
+            self.outputs,
+            self.witnesses,
+        );
+
+        if let Some(max_fee) = self.tx_policies.max_fee() {
+            tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
+        };
+
+        let mut tx = match dry_runner
+            .assemble_tx(
+                &tx.into(),
+                self.gas_price_estimation_block_horizon,
+                required_balances,
+                fee_index,
+                None,
+                true,
+                None,
+            )
+            .await?
+            .transaction
+        {
+            FuelTransaction::Upload(upload) => upload,
+            _ => {
+                return Err(error_transaction!(
+                    Builder,
+                    "`asseble_tx` did not return the right transactio type. Expected `upload`"
+                ));
+            }
+        };
+
+        add_tolerance_to_max_fee(&mut tx, self.max_fee_estimation_tolerance);
+
+        //if user set `max_fee` we will use it's value only
+        //if it is higher then the one estimated by assemble_tx + tolerance
+        if let Some(max_fee) = self.tx_policies.max_fee() {
+            if max_fee > tx.max_fee_limit() {
+                tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
+            }
+        }
+
+        update_witnesses(
+            &mut tx,
+            &self.unresolved_signers,
+            &consensus_parameters.chain_id(),
+        )
+        .await?;
+
+        Ok(tx)
     }
 
     async fn resolve_fuel_tx(self, provider: impl DryRunner) -> Result<Upload> {
@@ -1150,6 +1516,15 @@ impl UploadTransactionBuilder {
             self.witnesses,
         );
 
+        if is_using_predicates {
+            let tx_new = provider.estimate_predicates(&tx.into()).await?;
+
+            tx = match tx_new {
+                FuelTransaction::Upload(upload) => upload,
+                _ => panic!("should be `upload`"),
+            };
+        }
+
         if let Some(max_fee) = self.tx_policies.max_fee() {
             tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
         } else {
@@ -1157,7 +1532,6 @@ impl UploadTransactionBuilder {
                 &mut tx,
                 &provider,
                 self.gas_price_estimation_block_horizon,
-                is_using_predicates,
                 self.max_fee_estimation_tolerance,
             )
             .await?;
@@ -1240,11 +1614,88 @@ impl UpgradeTransactionBuilder {
                 self.unresolved_signers = Default::default();
                 self.resolve_fuel_tx(&provider).await?
             }
+            Strategy::AssembleTx {
+                ref mut required_balances,
+                fee_index,
+            } => {
+                let required_balances = std::mem::take(required_balances);
+                self.assemble_tx(
+                    required_balances,
+                    fee_index,
+                    &consensus_parameters,
+                    provider,
+                )
+                .await?
+            }
         };
         Ok(UpgradeTransaction {
             is_using_predicates,
             tx,
         })
+    }
+
+    async fn assemble_tx(
+        self,
+        required_balances: Vec<RequiredBalance>,
+        fee_index: u16,
+        consensus_parameters: &ConsensusParameters,
+        dry_runner: impl DryRunner,
+    ) -> Result<Upgrade> {
+        let num_witnesses = self.num_witnesses()?;
+        let policies = self.generate_fuel_policies_assemble();
+
+        let mut tx = FuelTransaction::upgrade(
+            self.purpose,
+            policies,
+            resolve_fuel_inputs(self.inputs, num_witnesses, &self.unresolved_witness_indexes)?,
+            self.outputs,
+            self.witnesses,
+        );
+
+        if let Some(max_fee) = self.tx_policies.max_fee() {
+            tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
+        };
+
+        let mut tx = match dry_runner
+            .assemble_tx(
+                &tx.into(),
+                self.gas_price_estimation_block_horizon,
+                required_balances,
+                fee_index,
+                None,
+                true,
+                None,
+            )
+            .await?
+            .transaction
+        {
+            FuelTransaction::Upgrade(upgrade) => upgrade,
+            _ => {
+                return Err(error_transaction!(
+                    Builder,
+                    "`asseble_tx` did not return the right transactio type. Expected `upgrade`"
+                ));
+            }
+        };
+
+        add_tolerance_to_max_fee(&mut tx, self.max_fee_estimation_tolerance);
+
+        //if user set `max_fee` we will use it's value only
+        //if it is higher then the one estimated by assemble_tx + tolerance
+        if let Some(max_fee) = self.tx_policies.max_fee() {
+            if max_fee > tx.max_fee_limit() {
+                tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
+            }
+        }
+
+        update_witnesses(
+            &mut tx,
+            &self.unresolved_signers,
+            &consensus_parameters.chain_id(),
+        )
+        .await?;
+
+        Ok(tx)
     }
 
     async fn resolve_fuel_tx(self, provider: impl DryRunner) -> Result<Upgrade> {
@@ -1261,6 +1712,15 @@ impl UpgradeTransactionBuilder {
             self.witnesses,
         );
 
+        if is_using_predicates {
+            let tx_new = provider.estimate_predicates(&tx.into()).await?;
+
+            tx = match tx_new {
+                FuelTransaction::Upgrade(upgrade) => upgrade,
+                _ => panic!("should be `upgrade`"),
+            };
+        }
+
         if let Some(max_fee) = self.tx_policies.max_fee() {
             tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
         } else {
@@ -1268,7 +1728,6 @@ impl UpgradeTransactionBuilder {
                 &mut tx,
                 &provider,
                 self.gas_price_estimation_block_horizon,
-                is_using_predicates,
                 self.max_fee_estimation_tolerance,
             )
             .await?;
@@ -1508,8 +1967,10 @@ async fn generate_missing_witnesses(
 mod tests {
     use std::iter::repeat_with;
 
+    use fuel_core_client::client::types::assemble_tx::AssembleTransactionResult;
     use fuel_crypto::Signature;
     use fuel_tx::{ConsensusParameters, UtxoId, input::coin::CoinSigned};
+    use fuel_types::Nonce;
 
     use super::*;
     use crate::types::{DryRun, bech32::Bech32Address, message::MessageStatus};
@@ -1629,12 +2090,22 @@ mod tests {
             Ok(0)
         }
 
-        async fn estimate_predicates(
-            &self,
-            tx: &FuelTransaction,
-            _: Option<u32>,
-        ) -> Result<FuelTransaction> {
+        async fn estimate_predicates(&self, tx: &FuelTransaction) -> Result<FuelTransaction> {
             Ok(tx.clone())
+        }
+
+        #[allow(clippy::too_many_arguments)]
+        async fn assemble_tx(
+            &self,
+            _transaction: &FuelTransaction,
+            _block_horizon: u32,
+            _required_balances: Vec<RequiredBalance>,
+            _fee_address_index: u16,
+            _exclude: Option<(Vec<UtxoId>, Vec<Nonce>)>,
+            _estimate_predicates: bool,
+            _reserve_gas: Option<u64>,
+        ) -> Result<AssembleTransactionResult> {
+            unimplemented!()
         }
     }
 

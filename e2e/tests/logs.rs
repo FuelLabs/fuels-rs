@@ -358,7 +358,7 @@ async fn test_multi_call_log_multiple_contracts() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_multi_call_contract_with_contract_logs() -> Result<()> {
+async fn multi_call_contract_with_contract_logs() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(
@@ -395,12 +395,12 @@ async fn test_multi_call_contract_with_contract_logs() -> Result<()> {
     let call_handler_1 = contract_caller_instance
         .methods()
         .logs_from_external_contract(contract_id.clone())
-        .with_contracts(&[&contract_instance]);
+        .add_log_decoder(contract_instance.log_decoder());
 
     let call_handler_2 = contract_caller_instance2
         .methods()
         .logs_from_external_contract(contract_id)
-        .with_contracts(&[&contract_instance]);
+        .add_log_decoder(contract_instance.log_decoder());
 
     let multi_call_handler = CallHandler::new_multi_call(wallet.clone())
         .add_call(call_handler_1)
@@ -758,7 +758,7 @@ async fn test_contract_with_contract_logs() -> Result<()> {
     let logs = contract_caller_instance
         .methods()
         .logs_from_external_contract(contract_id)
-        .with_contracts(&[&contract_instance])
+        .add_log_decoder(contract_instance.log_decoder())
         .call()
         .await?
         .decode_logs();
@@ -809,21 +809,17 @@ async fn test_script_logs_with_contract_logs() -> Result<()> {
     ];
 
     // ANCHOR: instance_to_contract_id
-    let contract_id: ContractId = contract_instance.id().into();
+    let contract_id: ContractId = contract_instance.contract_id().into();
     // ANCHOR_END: instance_to_contract_id
 
     // ANCHOR: external_contract_ids
-    let response = script_instance
-        .main(contract_id)
-        .with_contract_ids(&[contract_id.into()])
-        .call()
-        .await?;
+    let response = script_instance.main(contract_id).call().await?;
     // ANCHOR_END: external_contract_ids
 
     // ANCHOR: external_contract
     let response = script_instance
         .main(contract_id)
-        .with_contracts(&[&contract_instance])
+        .add_log_decoder(contract_instance.log_decoder())
         .call()
         .await?;
     // ANCHOR_END: external_contract
@@ -1036,7 +1032,7 @@ async fn test_contract_require_from_contract() -> Result<()> {
     let error = contract_caller_instance
         .methods()
         .require_from_contract(contract_id)
-        .with_contracts(&[&contract_instance])
+        .add_log_decoder(contract_instance.log_decoder())
         .call()
         .await
         .expect_err("should return a revert error");
@@ -1093,7 +1089,7 @@ async fn test_multi_call_contract_require_from_contract() -> Result<()> {
     let call_handler_2 = contract_caller_instance
         .methods()
         .require_from_contract(contract_id)
-        .with_contracts(&[&lib_contract_instance]);
+        .add_log_decoder(lib_contract_instance.log_decoder());
 
     let multi_call_handler = CallHandler::new_multi_call(wallet.clone())
         .add_call(call_handler_1)
@@ -1137,8 +1133,8 @@ async fn test_script_require_from_contract() -> Result<()> {
     );
 
     let error = script_instance
-        .main(contract_instance.id())
-        .with_contracts(&[&contract_instance])
+        .main(contract_instance.contract_id())
+        .add_log_decoder(contract_instance.log_decoder())
         .call()
         .await
         .expect_err("should return a revert error");
@@ -1182,8 +1178,8 @@ async fn test_loader_script_require_from_loader_contract() -> Result<()> {
     script_instance.convert_into_loader().await?;
 
     let error = script_instance
-        .main(contract_instance.id())
-        .with_contracts(&[&contract_instance])
+        .main(contract_instance.contract_id())
+        .add_log_decoder(contract_instance.log_decoder())
         .call()
         .await
         .expect_err("should return a revert error");
@@ -1589,7 +1585,7 @@ async fn test_log_results() -> Result<()> {
     let expected_err = format!(
         "codec: missing log formatter for log_id: `LogId({:?}, \"128\")`, data: `{:?}`. \
          Consider adding external contracts using `with_contracts()`",
-        contract_instance.id().hash,
+        contract_instance.contract_id().hash,
         [0u8; 8]
     );
 
