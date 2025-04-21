@@ -8,7 +8,13 @@ use fuels::{
     },
     prelude::*,
     programs::executable::Executable,
-    types::{coin::Coin, coin_type::CoinType, input::Input, message::Message, output::Output},
+    types::{
+        coin::{Coin, DataCoin},
+        coin_type::CoinType,
+        input::Input,
+        message::Message,
+        output::Output,
+    },
 };
 use rand::thread_rng;
 
@@ -111,6 +117,174 @@ async fn setup_predicate_test(
         asset_id,
         extra_wallet,
     ))
+}
+
+#[tokio::test]
+async fn data_coins() -> Result<()> {
+    abigen!(Predicate(
+        name = "MyPredicate",
+        abi = "e2e/sway/predicates/data_coins/out/release/data_coins-abi.json"
+    ));
+
+    let predicate = Predicate::load_from("sway/predicates/data_coins/out/release/data_coins.bin")?;
+
+    let num_coins = 2;
+    let num_messages = 0;
+    let amount = 164;
+
+    let signer = PrivateKeySigner::random(&mut thread_rng());
+
+    let (coins, messages, asset_id) =
+        get_test_coins_and_messages(signer.address(), num_coins, num_messages, amount, 0);
+
+    let encoded_data = ABIEncoder::default().encode(&[DataCoinConfig {
+        num_participants: 5,
+    }
+    .into_token()])?;
+
+    let amount_data_coin = 16;
+    let mut data_coins = vec![setup_single_data_coin(
+        predicate.address(),
+        asset_id,
+        amount_data_coin,
+        encoded_data,
+    )];
+
+    let amount_predicate_coin = 32;
+    let predicate_coins =
+        setup_single_asset_coins(predicate.address(), asset_id, 2, amount_predicate_coin);
+    let [predicate_coin_1, predicate_coin_2] = predicate_coins.clone().try_into().unwrap();
+
+    let provider = setup_test_provider2(
+        [coins, predicate_coins].concat(),
+        data_coins.clone(),
+        messages,
+        None,
+        None,
+    )
+    .await?;
+    let chain_id = provider.consensus_parameters().await?.chain_id();
+
+    let wallet = Wallet::new(signer, provider.clone());
+
+    let predicate = predicate.with_provider(provider.clone());
+
+    {
+        let predicate_input_coin = Input::resource_predicate(
+            CoinType::Coin(predicate_coin_1),
+            predicate.code().to_vec(),
+            predicate.data().to_vec(),
+        );
+
+        let data_coin_data = DataCoinConfig {
+            num_participants: 1,
+        };
+        let encoded_data = ABIEncoder::default().encode(&[data_coin_data.into_token()])?;
+
+        let outputs = vec![
+            Output::data_coin(
+                predicate.address().into(),
+                amount_data_coin,
+                asset_id,
+                encoded_data,
+            ),
+            Output::change(predicate.address().into(), 0, asset_id),
+        ];
+
+        let mut tb = ScriptTransactionBuilder::prepare_transfer(
+            vec![predicate_input_coin],
+            outputs,
+            TxPolicies::default(),
+        );
+        tb.add_signer(wallet.signer().clone())?;
+
+        let tx = tb.build(&provider).await?;
+
+        let tx_id = tx.id(chain_id);
+
+        dbg!(&tx.inputs());
+
+        let tx_status = provider.send_transaction_and_await_commit(tx).await?;
+
+        dbg!(&tx_status);
+
+        let tx_from_client = match provider
+            .get_transaction_by_id(&tx_id)
+            .await?
+            .unwrap()
+            .transaction
+        {
+            TransactionType::Script(script) => script,
+            _ => panic!("nani"),
+        };
+
+        dbg!(&tx_from_client.outputs());
+    }
+    // data coin input data coin output
+    {
+        dbg!("2");
+        let data_coin = data_coins.pop().unwrap();
+        let data_coin_input = Input::resource_predicate(
+            CoinType::DataCoin(data_coin),
+            predicate.code().to_vec(),
+            predicate.data().to_vec(),
+        );
+        let predicate_input_coin = Input::resource_predicate(
+            CoinType::Coin(predicate_coin_2),
+            predicate.code().to_vec(),
+            predicate.data().to_vec(),
+        );
+
+        let output_data_coin_data = DataCoinConfig {
+            num_participants: 6,
+        };
+        let output_encoded_data =
+            ABIEncoder::default().encode(&[output_data_coin_data.into_token()])?;
+
+        let outputs = vec![
+            Output::data_coin(
+                predicate.address().into(),
+                amount_data_coin * 2,
+                asset_id,
+                output_encoded_data,
+            ),
+            Output::change(predicate.address().into(), 0, asset_id),
+        ];
+
+        let mut tb = ScriptTransactionBuilder::prepare_transfer(
+            vec![data_coin_input, predicate_input_coin],
+            outputs,
+            TxPolicies::default(),
+        );
+        tb.add_signer(wallet.signer().clone())?;
+
+        let tx = tb.build(&provider).await.unwrap();
+
+        let tx_id = tx.id(chain_id);
+
+        dbg!(&tx.inputs());
+
+        let tx_status = provider
+            .send_transaction_and_await_commit(tx)
+            .await
+            .unwrap();
+
+        dbg!(&tx_status);
+
+        let tx_from_client = match provider
+            .get_transaction_by_id(&tx_id)
+            .await?
+            .unwrap()
+            .transaction
+        {
+            TransactionType::Script(script) => script,
+            _ => panic!("nani"),
+        };
+
+        dbg!(&tx_from_client.outputs());
+    }
+
+    Ok(())
 }
 
 #[tokio::test]

@@ -6,9 +6,12 @@ use crate::types::{
     AssetId, bech32::Bech32Address, coin::Coin, coin_type_id::CoinTypeId, message::Message,
 };
 
+use super::coin::DataCoin;
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum CoinType {
     Coin(Coin),
+    DataCoin(DataCoin),
     Message(Message),
     Unknown,
 }
@@ -27,6 +30,7 @@ impl CoinType {
     pub fn id(&self) -> Option<CoinTypeId> {
         match self {
             CoinType::Coin(coin) => Some(CoinTypeId::UtxoId(coin.utxo_id)),
+            CoinType::DataCoin(coin) => Some(CoinTypeId::UtxoId(coin.utxo_id)),
             CoinType::Message(message) => Some(CoinTypeId::Nonce(message.nonce)),
             CoinType::Unknown => None,
         }
@@ -35,6 +39,7 @@ impl CoinType {
     pub fn amount(&self) -> u64 {
         match self {
             CoinType::Coin(coin) => coin.amount,
+            CoinType::DataCoin(coin) => coin.amount,
             CoinType::Message(message) => message.amount,
             CoinType::Unknown => 0,
         }
@@ -43,6 +48,7 @@ impl CoinType {
     pub fn coin_asset_id(&self) -> Option<AssetId> {
         match self {
             CoinType::Coin(coin) => Some(coin.asset_id),
+            CoinType::DataCoin(coin) => Some(coin.asset_id),
             CoinType::Message(_) => None,
             CoinType::Unknown => None,
         }
@@ -51,6 +57,7 @@ impl CoinType {
     pub fn asset_id(&self, base_asset_id: AssetId) -> Option<AssetId> {
         match self {
             CoinType::Coin(coin) => Some(coin.asset_id),
+            CoinType::DataCoin(coin) => Some(coin.asset_id),
             CoinType::Message(_) => Some(base_asset_id),
             CoinType::Unknown => None,
         }
@@ -59,6 +66,7 @@ impl CoinType {
     pub fn owner(&self) -> Option<&Bech32Address> {
         match self {
             CoinType::Coin(coin) => Some(&coin.owner),
+            CoinType::DataCoin(coin) => Some(&coin.owner),
             CoinType::Message(message) => Some(&message.recipient),
             CoinType::Unknown => None,
         }
