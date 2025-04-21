@@ -70,7 +70,7 @@ You also need `wasm-pack`, if you don't already:
 cargo install wasm-pack
 ```
 
-Navigate to `packages/wasm-tests` and run `wasm-pack test`.
+Navigate to `wasm-tests/` and run `wasm-pack test`.
 
 ### What to do if my tests are failing on `master`
 
