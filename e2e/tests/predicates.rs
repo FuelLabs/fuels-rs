@@ -288,6 +288,11 @@ async fn data_coins() -> Result<()> {
 }
 
 #[tokio::test]
+async fn read_only_coin() -> Result<()> {
+    todo!()
+}
+
+#[tokio::test]
 async fn transfer_coins_and_messages_to_predicate() -> Result<()> {
     let num_coins = 16;
     let num_messages = 32;
