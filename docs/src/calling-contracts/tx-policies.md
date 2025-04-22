@@ -15,9 +15,6 @@ Where:
 3. **Maturity** - Block until which the transaction cannot be included.
 4. **Expiration** - Block after which the transaction cannot be included.
 5. **Max Fee** - The maximum fee payable by this transaction.
-6. **Script Gas Limit** - The maximum amount of gas the transaction may consume for executing its script code.
-
-When the **Script Gas Limit** is not set, the Rust SDK will estimate the consumed gas in the background and set it as the limit.
 
 If the **Witness Limit** is not set, the SDK will set it to the size of all witnesses and signatures defined in the transaction builder.
 
@@ -40,3 +37,8 @@ This way:
 ```
 
 As you might have noticed, `TxPolicies` can also be specified when deploying contracts or transferring assets by passing it to the respective methods.
+
+> **Note:** The `Script Gas Limit` is set directly on the call handler:
+
+```rust,ignore
+{{#include ../../../examples/contracts/src/lib.rs:tx_script_gas_limit}}

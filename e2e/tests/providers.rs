@@ -413,7 +413,6 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
     assert_eq!(balance_response.value, 5_000_000);
 
     // Forward 1_000_000 coin amount of base asset_id
-    // this is a big number for checking that amount can be a u64
     let call_params = CallParameters::default().with_amount(1_000_000);
 
     let response = contract_methods

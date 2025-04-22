@@ -315,13 +315,20 @@ mod tests {
             .await?;
         // ANCHOR_END: tx_policies_default
 
+        // ANCHOR: tx_script_gas_limit
+        let response = contract_methods
+            .initialize_counter(42)
+            .with_script_gas_limit(42_000)
+            .call()
+            .await?;
+        // ANCHOR_END: tx_script_gas_limit
+
         // ANCHOR: call_parameters
         let contract_methods = MyContract::new(contract_id, wallet.clone()).methods();
 
         let tx_policies = TxPolicies::default();
 
         // Forward 1_000_000 coin amount of base asset_id
-        // this is a big number for checking that amount can be a u64
         let call_params = CallParameters::default().with_amount(1_000_000);
 
         let response = contract_methods
