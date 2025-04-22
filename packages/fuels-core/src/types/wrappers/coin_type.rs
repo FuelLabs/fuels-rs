@@ -20,6 +20,7 @@ impl From<ClientCoinType> for CoinType {
     fn from(client_resource: ClientCoinType) -> Self {
         match client_resource {
             ClientCoinType::Coin(coin) => CoinType::Coin(coin.into()),
+            ClientCoinType::DataCoin(data_coin) => CoinType::DataCoin(data_coin.into()),
             ClientCoinType::MessageCoin(message) => CoinType::Message(message.into()),
             ClientCoinType::Unknown => CoinType::Unknown,
         }
