@@ -9,7 +9,6 @@ use std::{
 
 use async_trait::async_trait;
 use fuel_asm::{GTFArgs, RegId, op};
-use fuel_core_client::client::types::assemble_tx::RequiredBalance;
 use fuel_crypto::{Hasher, Message as CryptoMessage, Signature};
 use fuel_tx::{
     Cacheable, Chargeable, ConsensusParameters, Create, Input as FuelInput, Output, Script,
@@ -32,6 +31,7 @@ use crate::{
     traits::Signer,
     types::{
         Address, AssetId, ContractId, DryRunner,
+        assemble_tx::RequiredBalance,
         bech32::Bech32Address,
         coin::Coin,
         coin_type::CoinType,
@@ -543,6 +543,8 @@ async fn update_witnesses<T: UniqueIdentifier + Witnesses + Inputs>(
 
 pub(crate) use impl_tx_builder_trait;
 
+use super::transaction::TransactionType;
+
 pub(crate) fn estimate_max_fee_w_tolerance<T: Chargeable>(
     tx: &T,
     tolerance: f32,
@@ -844,7 +846,7 @@ impl ScriptTransactionBuilder {
             .await?
             .transaction
         {
-            FuelTransaction::Script(script) => script,
+            TransactionType::Script(script) => script.tx,
             _ => {
                 return Err(error_transaction!(
                     Builder,
@@ -1269,7 +1271,7 @@ impl CreateTransactionBuilder {
             .await?
             .transaction
         {
-            FuelTransaction::Create(create) => create,
+            TransactionType::Create(create) => create.tx,
             _ => {
                 return Err(error_transaction!(
                     Builder,
@@ -1468,7 +1470,7 @@ impl UploadTransactionBuilder {
             .await?
             .transaction
         {
-            FuelTransaction::Upload(upload) => upload,
+            TransactionType::Upload(upload) => upload.tx,
             _ => {
                 return Err(error_transaction!(
                     Builder,
@@ -1670,7 +1672,7 @@ impl UpgradeTransactionBuilder {
             .await?
             .transaction
         {
-            FuelTransaction::Upgrade(upgrade) => upgrade,
+            TransactionType::Upgrade(upgrade) => upgrade.tx,
             _ => {
                 return Err(error_transaction!(
                     Builder,
@@ -1968,13 +1970,15 @@ async fn generate_missing_witnesses(
 mod tests {
     use std::iter::repeat_with;
 
-    use fuel_core_client::client::types::assemble_tx::AssembleTransactionResult;
     use fuel_crypto::Signature;
     use fuel_tx::{ConsensusParameters, UtxoId, input::coin::CoinSigned};
     use fuel_types::Nonce;
 
     use super::*;
-    use crate::types::{DryRun, bech32::Bech32Address, message::MessageStatus};
+    use crate::types::{
+        DryRun, assemble_tx::AssembleTransactionResult, bech32::Bech32Address,
+        message::MessageStatus,
+    };
 
     #[test]
     fn storage_slots_are_sorted_when_set() {

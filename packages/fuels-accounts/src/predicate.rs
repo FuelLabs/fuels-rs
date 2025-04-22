@@ -1,10 +1,10 @@
 use std::{fmt::Debug, fs};
 
 use async_trait::async_trait;
-use fuel_core_client::client::types::assemble_tx::{
+use fuel_tx::Address;
+use fuels_core::types::assemble_tx::{
     Account as ClientAccount, ChangePolicy, Predicate as ClientPredicate, RequiredBalance,
 };
-use fuel_tx::Address;
 #[cfg(feature = "std")]
 use fuels_core::types::{AssetId, coin_type_id::CoinTypeId, input::Input};
 use fuels_core::{

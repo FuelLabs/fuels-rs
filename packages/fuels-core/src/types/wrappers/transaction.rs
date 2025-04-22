@@ -291,6 +291,19 @@ impl TryFrom<TransactionType> for FuelTransaction {
     }
 }
 
+impl From<FuelTransaction> for TransactionType {
+    fn from(value: FuelTransaction) -> Self {
+        match value {
+            FuelTransaction::Script(tx) => TransactionType::Script(tx.into()),
+            FuelTransaction::Create(tx) => TransactionType::Create(tx.into()),
+            FuelTransaction::Mint(tx) => TransactionType::Mint(tx.into()),
+            FuelTransaction::Upgrade(tx) => TransactionType::Upgrade(tx.into()),
+            FuelTransaction::Upload(tx) => TransactionType::Upload(tx.into()),
+            FuelTransaction::Blob(tx) => TransactionType::Blob(tx.into()),
+        }
+    }
+}
+
 fn extract_coin_type_id(input: &Input) -> Option<CoinTypeId> {
     if let Some(utxo_id) = input.utxo_id() {
         return Some(CoinTypeId::UtxoId(*utxo_id));

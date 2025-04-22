@@ -1,11 +1,13 @@
 use std::fmt::Debug;
 
 use async_trait::async_trait;
-use fuel_core_client::client::types::assemble_tx::{AssembleTransactionResult, RequiredBalance};
 use fuel_tx::{ConsensusParameters, Transaction as FuelTransaction, UtxoId};
 use fuel_types::Nonce;
 
-use crate::types::errors::Result;
+use crate::types::{
+    assemble_tx::{AssembleTransactionResult, RequiredBalance},
+    errors::Result,
+};
 
 #[derive(Debug, Clone, Copy)]
 pub struct DryRun {

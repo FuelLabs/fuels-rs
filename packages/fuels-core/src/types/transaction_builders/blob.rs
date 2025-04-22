@@ -1,7 +1,6 @@
 use std::{fmt::Debug, iter::repeat, sync::Arc};
 
 use async_trait::async_trait;
-use fuel_core_client::client::types::assemble_tx::RequiredBalance;
 use fuel_crypto::Signature;
 use fuel_tx::{
     BlobIdExt, Chargeable, ConsensusParameters, Output, Transaction as FuelTransaction,
@@ -22,9 +21,12 @@ use crate::{
     traits::Signer,
     types::{
         DryRunner,
+        assemble_tx::RequiredBalance,
         errors::{Result, error, error_transaction},
         input::Input,
-        transaction::{BlobTransaction, EstimablePredicates, Transaction, TxPolicies},
+        transaction::{
+            BlobTransaction, EstimablePredicates, Transaction, TransactionType, TxPolicies,
+        },
     },
     utils::{calculate_witnesses_size, sealed},
 };
@@ -223,7 +225,7 @@ impl BlobTransactionBuilder {
             .await?
             .transaction
         {
-            FuelTransaction::Blob(blob) => blob,
+            TransactionType::Blob(blob) => blob.tx,
             _ => {
                 return Err(error_transaction!(
                     Builder,

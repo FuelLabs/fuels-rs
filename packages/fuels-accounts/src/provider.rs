@@ -14,7 +14,6 @@ use chrono::{DateTime, Utc};
 use fuel_core_client::client::{
     pagination::{PageDirection, PaginatedResult, PaginationRequest},
     types::{
-        assemble_tx::{AssembleTransactionResult, RequiredBalance},
         balance::Balance,
         contract::ContractBalance,
         gas_price::{EstimateGasPrice, LatestGasPrice},
@@ -31,6 +30,7 @@ use fuels_core::{
     constants::{DEFAULT_GAS_ESTIMATION_BLOCK_HORIZON, DEFAULT_GAS_ESTIMATION_TOLERANCE},
     types::{
         DryRun, DryRunner,
+        assemble_tx::{AssembleTransactionResult, RequiredBalance},
         bech32::{Bech32Address, Bech32ContractId},
         block::Block,
         chain_info::ChainInfo,
@@ -410,7 +410,8 @@ impl Provider {
                 estimate_predicates,
                 reserve_gas,
             )
-            .await?)
+            .await?
+            .into())
     }
 
     pub async fn dry_run_multiple(
@@ -978,6 +979,7 @@ impl DryRunner for Provider {
                 estimate_predicates,
                 reserve_gas,
             )
-            .await?)
+            .await?
+            .into())
     }
 }

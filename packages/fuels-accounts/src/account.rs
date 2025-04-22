@@ -1,13 +1,11 @@
 use std::collections::HashMap;
 
 use async_trait::async_trait;
-use fuel_core_client::client::{
-    pagination::{PaginatedResult, PaginationRequest},
-    types::assemble_tx::{Account as ClientAccount, ChangePolicy, RequiredBalance},
-};
+use fuel_core_client::client::pagination::{PaginatedResult, PaginationRequest};
 use fuel_tx::{Address, Output, TxId, TxPointer, UtxoId};
 use fuel_types::{AssetId, Bytes32, ContractId, Nonce};
 use fuels_core::types::{
+    assemble_tx::{Account as ClientAccount, ChangePolicy, RequiredBalance},
     bech32::{Bech32Address, Bech32ContractId},
     coin::Coin,
     coin_type::CoinType,
@@ -357,12 +355,13 @@ pub trait Account: ViewOnlyAccount {
 mod tests {
     use std::str::FromStr;
 
-    use fuel_core_client::client::types::assemble_tx::AssembleTransactionResult;
     use fuel_crypto::{Message, SecretKey, Signature};
     use fuel_tx::{Address, ConsensusParameters, Output, Transaction as FuelTransaction};
     use fuels_core::{
         traits::Signer,
-        types::{DryRun, DryRunner, transaction::Transaction},
+        types::{
+            DryRun, DryRunner, assemble_tx::AssembleTransactionResult, transaction::Transaction,
+        },
     };
 
     use super::*;
