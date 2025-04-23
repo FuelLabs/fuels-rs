@@ -26,7 +26,7 @@ We can now build the transaction using the assemble strategy.
 {{#include ../../../e2e/tests/providers.rs:assemble_tb}}
 ```
 
-> **Note** The assemble strategy will make sure that we have enough base asset coins in the inputs to cover the transfer and the fee. Also a change output is added to the tx.
+> **Note** The assemble strategy will make sure that we have enough base asset coins in the inputs to cover the transfer and the fee. Also a change output is added to the transaction.
 
 At the end, we send the transaction and make sure that the receiver the receiver balance matches the sent amount.
 
