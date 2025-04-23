@@ -478,17 +478,6 @@ mod tests {
         let address = wallet.address();
         let amount = 100;
 
-        // ANCHOR: dependency_estimation_manual
-        let response = contract_methods
-            .mint_then_increment_from_contract(called_contract_id, amount, address.into())
-            .call()
-            .await?;
-        // ANCHOR_END: dependency_estimation_manual
-
-        let asset_id = caller_contract_id.asset_id(&Bits256::zeroed());
-        let balance = wallet.get_asset_balance(&asset_id).await?;
-        assert_eq!(balance, amount);
-
         // ANCHOR: dependency_estimation
         let response = contract_methods
             .mint_then_increment_from_contract(called_contract_id, amount, address.into())
@@ -496,8 +485,9 @@ mod tests {
             .await?;
         // ANCHOR_END: dependency_estimation
 
+        let asset_id = caller_contract_id.asset_id(&Bits256::zeroed());
         let balance = wallet.get_asset_balance(&asset_id).await?;
-        assert_eq!(balance, 2 * amount);
+        assert_eq!(balance, amount);
 
         Ok(())
     }

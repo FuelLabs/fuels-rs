@@ -812,10 +812,6 @@ async fn test_script_logs_with_contract_logs() -> Result<()> {
     let contract_id: ContractId = contract_instance.contract_id().into();
     // ANCHOR_END: instance_to_contract_id
 
-    // ANCHOR: external_contract_ids
-    let response = script_instance.main(contract_id).call().await?;
-    // ANCHOR_END: external_contract_ids
-
     // ANCHOR: external_contract
     let response = script_instance
         .main(contract_id)

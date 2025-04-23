@@ -106,13 +106,14 @@ async fn test_contract_calling_contract() -> Result<()> {
 
     assert_eq!(43, response.value);
 
-    // ANCHOR: external_contract_ids
+    // ANCHOR: external_contract_logs
     let response = contract_caller_instance
         .methods()
-        .increment_from_contract(lib_contract_id, 42)
+        .increment_from_contract(lib_contract_instance.contract_id(), 42)
+        .add_log_decoder(lib_contract_instance.log_decoder())
         .call()
         .await?;
-    // ANCHOR_END: external_contract_ids
+    // ANCHOR_END: external_contract_logs
 
     assert_eq!(43, response.value);
     Ok(())
