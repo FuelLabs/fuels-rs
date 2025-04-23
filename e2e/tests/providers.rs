@@ -1460,7 +1460,6 @@ async fn assemble_tx_transfer() -> Result<()> {
             required_balances,
             fee_index,
         });
-
     tb.add_signer(wallet.signer().clone())?;
 
     let tx = tb.build(&provider).await?;
