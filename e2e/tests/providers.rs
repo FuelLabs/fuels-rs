@@ -15,6 +15,7 @@ use fuels::{
         Bits256,
         coin_type::CoinType,
         message::Message,
+        output::Output,
         transaction_builders::{BuildableTransaction, ScriptTransactionBuilder},
         tx_status::{Success, TxStatus},
     },
@@ -1424,6 +1425,55 @@ async fn is_account_query_test() -> Result<()> {
         let is_account = provider.is_user_account(tx_id).await?;
         assert!(!is_account);
     }
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn assemble_tx_transfer() -> Result<()> {
+    // ANCHOR: assemble_wallets
+    let wallet = launch_provider_and_get_wallet().await?;
+    let provider = wallet.provider().clone();
+    let receiver = Wallet::random(&mut thread_rng(), provider.clone());
+    // ANCHOR_END: assemble_wallets
+
+    // ANCHOR: assemble_output
+    let consensus_parameters = provider.consensus_parameters().await?;
+    let base_asset_id = *consensus_parameters.base_asset_id();
+
+    let amount_to_send = 78;
+    let outputs = vec![Output::Coin {
+        to: receiver.address().into(),
+        asset_id: base_asset_id,
+        amount: amount_to_send,
+    }];
+    // ANCHOR_END: assemble_output
+
+    // ANCHOR: assemble_req_balance
+    let fee_index = 0u16;
+    let required_balances = vec![wallet.required_balance(amount_to_send, base_asset_id, None)];
+    // ANCHOR_END: assemble_req_balance
+
+    // ANCHOR: assemble_tb
+    let mut tb = ScriptTransactionBuilder::prepare_transfer(vec![], outputs, TxPolicies::default())
+        .with_build_strategy(ScriptBuildStrategy::AssembleTx {
+            required_balances,
+            fee_index,
+        });
+
+    tb.add_signer(wallet.signer().clone())?;
+
+    let tx = tb.build(&provider).await?;
+    // ANCHOR_END: assemble_tb
+
+    // ANCHOR: assemble_response
+    let _tx_status = provider.send_transaction_and_await_commit(tx).await?;
+
+    assert_eq!(
+        amount_to_send,
+        receiver.get_asset_balance(&base_asset_id).await?
+    );
+    // ANCHOR_END: assemble_response
 
     Ok(())
 }
