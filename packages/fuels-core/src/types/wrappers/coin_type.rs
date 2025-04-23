@@ -12,8 +12,14 @@ use super::coin::DataCoin;
 pub enum CoinType {
     Coin(Coin),
     DataCoin(DataCoin),
+    ReadOnly(ReadOnly),
     Message(Message),
     Unknown,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum ReadOnly {
+    DataCoinPredicate(DataCoin)
 }
 
 impl From<ClientCoinType> for CoinType {
