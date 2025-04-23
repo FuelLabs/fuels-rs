@@ -36,7 +36,7 @@ impl MyContract for Contract {
         expected.push(vec_from([0, 1, 2]));
         expected.push(vec_from([0, 1, 2]));
 
-        assert(expected == arg);
+        assert_eq(expected, arg);
     }
 
     fn struct_in_vec(arg: Vec<SomeStruct<u32>>) {
