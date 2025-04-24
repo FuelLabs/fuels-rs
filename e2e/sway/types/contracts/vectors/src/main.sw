@@ -18,9 +18,7 @@ abi MyContract {
     fn vec_in_enum(arg: SomeEnum<Vec<u32>>);
     fn tuple_in_vec(arg: Vec<(u32, u32)>);
     fn vec_in_tuple(arg: (Vec<u32>, Vec<u32>));
-
     fn vec_in_vec(arg: Vec<Vec<u32>>);
-
     fn vec_in_a_vec_in_a_struct_in_a_vec(arg: Vec<SomeStruct<Vec<Vec<u32>>>>);
 }
 
@@ -36,7 +34,7 @@ impl MyContract for Contract {
         expected.push(vec_from([0, 1, 2]));
         expected.push(vec_from([0, 1, 2]));
 
-        assert(expected == arg);
+        assert_eq(arg, expected);
     }
 
     fn struct_in_vec(arg: Vec<SomeStruct<u32>>) {
@@ -44,41 +42,43 @@ impl MyContract for Contract {
         expected.push(SomeStruct { a: 0u32 });
         expected.push(SomeStruct { a: 1u32 });
 
-        assert(arg == expected);
+        assert_eq(arg, expected);
     }
+
     fn vec_in_struct(arg: SomeStruct<Vec<u32>>) {
         let expected = SomeStruct {
             a: vec_from([0, 1, 2]),
         };
 
-        assert(arg.a == expected.a);
+        assert_eq(arg, expected);
     }
+
     fn array_in_vec(arg: Vec<[u64; 2]>) {
         let mut expected = Vec::new();
         expected.push([0, 1]);
         expected.push([0, 1]);
 
-        assert(arg == expected);
+        assert_eq(arg, expected);
     }
 
     fn vec_in_array(arg: [Vec<u32>; 2]) {
         let expected = [vec_from([0, 1, 2]), vec_from([0, 1, 2])];
 
-        assert(expected == arg);
+        assert_eq(arg, expected);
     }
 
     fn vec_in_enum(arg: SomeEnum<Vec<u32>>) {
         let vec = vec_from([0, 1, 2]);
         let expected = SomeEnum::a(vec);
 
-        assert(expected == arg);
+        assert_eq(arg, expected);
     }
     fn enum_in_vec(arg: Vec<SomeEnum<u32>>) {
         let mut expected = Vec::new();
         expected.push(SomeEnum::a(0u32));
         expected.push(SomeEnum::a(1u32));
 
-        assert(arg == expected);
+        assert_eq(arg, expected);
     }
 
     fn tuple_in_vec(arg: Vec<(u32, u32)>) {
@@ -86,14 +86,15 @@ impl MyContract for Contract {
         expected.push((0u32, 0u32));
         expected.push((1u32, 1u32));
 
-        assert(arg == expected);
+        assert_eq(arg, expected);
     }
 
     fn vec_in_tuple(arg: (Vec<u32>, Vec<u32>)) {
         let expected = (vec_from([0, 1, 2]), vec_from([0, 1, 2]));
 
-        assert(arg == expected);
+        assert_eq(arg, expected);
     }
+
     fn vec_in_a_vec_in_a_struct_in_a_vec(arg: Vec<SomeStruct<Vec<Vec<u32>>>>) {
         let mut expected = Vec::new();
 
@@ -117,6 +118,6 @@ impl MyContract for Contract {
 
         expected.push(SomeStruct { a: inner_vec_2 });
 
-        assert(arg == expected);
+        assert_eq(arg, expected);
     }
 }
