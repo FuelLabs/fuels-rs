@@ -39,6 +39,11 @@ impl CoinType {
             CoinType::Coin(coin) => Some(CoinTypeId::UtxoId(coin.utxo_id)),
             CoinType::DataCoin(coin) => Some(CoinTypeId::UtxoId(coin.utxo_id)),
             CoinType::Message(message) => Some(CoinTypeId::Nonce(message.nonce)),
+            CoinType::ReadOnly(read_only) => {
+                match read_only {
+                    ReadOnly::DataCoinPredicate(data_coin) => Some(CoinTypeId::UtxoId(data_coin.utxo_id)),
+                }
+            }
             CoinType::Unknown => None,
         }
     }
@@ -47,6 +52,11 @@ impl CoinType {
         match self {
             CoinType::Coin(coin) => coin.amount,
             CoinType::DataCoin(coin) => coin.amount,
+            CoinType::ReadOnly(read_only) => {
+                match read_only {
+                    ReadOnly::DataCoinPredicate(data_coin) => data_coin.amount,
+                }
+            }
             CoinType::Message(message) => message.amount,
             CoinType::Unknown => 0,
         }
@@ -56,6 +66,11 @@ impl CoinType {
         match self {
             CoinType::Coin(coin) => Some(coin.asset_id),
             CoinType::DataCoin(coin) => Some(coin.asset_id),
+            CoinType::ReadOnly(read_only) => {
+                match read_only {
+                    ReadOnly::DataCoinPredicate(data_coin) => Some(data_coin.asset_id),
+                }
+            }
             CoinType::Message(_) => None,
             CoinType::Unknown => None,
         }
@@ -65,6 +80,11 @@ impl CoinType {
         match self {
             CoinType::Coin(coin) => Some(coin.asset_id),
             CoinType::DataCoin(coin) => Some(coin.asset_id),
+            CoinType::ReadOnly(read_only) => {
+                match read_only {
+                    ReadOnly::DataCoinPredicate(data_coin) => Some(data_coin.asset_id),
+                }
+            }
             CoinType::Message(_) => Some(base_asset_id),
             CoinType::Unknown => None,
         }
@@ -74,6 +94,11 @@ impl CoinType {
         match self {
             CoinType::Coin(coin) => Some(&coin.owner),
             CoinType::DataCoin(coin) => Some(&coin.owner),
+            CoinType::ReadOnly(read_only) => {
+                match read_only {
+                    ReadOnly::DataCoinPredicate(data_coin) => Some(&data_coin.owner),
+                }
+            }
             CoinType::Message(message) => Some(&message.recipient),
             CoinType::Unknown => None,
         }
