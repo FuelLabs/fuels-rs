@@ -9,7 +9,7 @@ use fuels_core::types::{
     coin::Coin,
     coin_type::CoinType,
     coin_type_id::CoinTypeId,
-    errors::Result,
+    errors::{Context, Result},
     input::Input,
     message::Message,
     transaction::{Transaction, TxPolicies},
@@ -137,8 +137,8 @@ pub trait ViewOnlyAccount: Send + Sync {
     ) -> Result<()> {
         let provider = self.try_provider()?;
         let consensus_parameters = provider.consensus_parameters().await?;
-        let (base_assets, base_amount) =
-            available_base_assets_and_amount(tb, consensus_parameters.base_asset_id());
+        let base_asset_id = consensus_parameters.base_asset_id();
+        let (base_assets, base_amount) = available_base_assets_and_amount(tb, base_asset_id);
         let missing_base_amount =
             calculate_missing_base_amount(tb, base_amount, used_base_amount, provider).await?;
 
@@ -150,8 +150,9 @@ pub trait ViewOnlyAccount: Send + Sync {
                     Some(base_assets),
                 )
                 .await
-                // if there query fails do nothing
-                .unwrap_or_default();
+                .with_context(|| {
+                    format!("failed to get base asset ({base_asset_id}) inputs with amount: `{missing_base_amount}`")
+                })?;
 
             tb.inputs_mut().extend(new_base_inputs);
         };
@@ -198,7 +199,8 @@ pub trait Account: ViewOnlyAccount {
             0
         };
         self.adjust_for_fee(&mut tx_builder, used_base_amount)
-            .await?;
+            .await
+            .context("failed to adjust inputs to cover for missing base asset")?;
 
         let tx = tx_builder.build(provider).await?;
         let tx_id = tx.id(consensus_parameters.chain_id());
@@ -261,7 +263,9 @@ pub trait Account: ViewOnlyAccount {
         );
 
         self.add_witnesses(&mut tb)?;
-        self.adjust_for_fee(&mut tb, balance.into()).await?;
+        self.adjust_for_fee(&mut tb, balance.into())
+            .await
+            .context("failed to adjust inputs to cover for missing base asset")?;
 
         let tx = tb.build(provider).await?;
 
@@ -301,7 +305,9 @@ pub trait Account: ViewOnlyAccount {
         );
 
         self.add_witnesses(&mut tb)?;
-        self.adjust_for_fee(&mut tb, amount.into()).await?;
+        self.adjust_for_fee(&mut tb, amount.into())
+            .await
+            .context("failed to adjust inputs to cover for missing base asset")?;
 
         let tx = tb.build(provider).await?;
         let tx_id = tx.id(consensus_parameters.chain_id());

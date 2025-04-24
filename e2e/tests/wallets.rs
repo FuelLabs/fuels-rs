@@ -519,9 +519,6 @@ async fn wallet_transfer_respects_maturity_and_expiration() -> Result<()> {
         .with_expiration(expiration);
     let amount_to_send = 10;
 
-    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
-    let expected_fee = 1;
-
     {
         let err = wallet
             .transfer(&receiver, amount_to_send, asset_id, tx_policies)
@@ -530,13 +527,15 @@ async fn wallet_transfer_respects_maturity_and_expiration() -> Result<()> {
 
         assert!(err.to_string().contains("TransactionMaturity"));
     }
-    {
+    let transaction_fee = {
         provider.produce_blocks(15, None).await?;
         wallet
             .transfer(&receiver, amount_to_send, asset_id, tx_policies)
             .await
-            .expect("should succeed. Block height between `maturity` and `expiration`");
-    }
+            .expect("should succeed. Block height between `maturity` and `expiration`")
+            .tx_status
+            .total_fee
+    };
     {
         provider.produce_blocks(15, None).await?;
         let err = wallet
@@ -552,7 +551,7 @@ async fn wallet_transfer_respects_maturity_and_expiration() -> Result<()> {
         wallet.address(),
         provider,
         asset_id,
-        wallet_balance - amount_to_send - expected_fee,
+        wallet_balance - amount_to_send - transaction_fee,
     )
     .await;
 
