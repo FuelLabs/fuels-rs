@@ -299,8 +299,6 @@ async fn read_only_coin__if_predicate_data_matches_read_only_data__succeed() -> 
     ));
     let predicate = Predicate::load_from("sway/predicates/read_only_verified/out/release/read_only_verified.bin")?;
 
-    // let true_predicate = Predicate::load_from("sway/predicates/always_true/out/release/always_true.bin")?;
-
     let true_predicate_code: Vec<u8> = vec![op::ret(RegId::ONE)].into_iter().collect();
     let true_predicate = Predicate::from_code(true_predicate_code);
 
@@ -328,9 +326,7 @@ async fn read_only_coin__if_predicate_data_matches_read_only_data__succeed() -> 
 
     let provider = setup_test_provider2(
         predicate_coins.clone(),
-        // vec![],
         true_predicate_coins.clone(),
-        // vec![],
         messages,
         None,
         None,
