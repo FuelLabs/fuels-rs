@@ -369,11 +369,12 @@ async fn read_only_coin__if_predicate_data_matches_read_only_data__succeed() -> 
             .send_transaction_and_await_commit(tx)
             .await
             .unwrap();
+    let fee = tx_status.total_fee();
 
     dbg!(&tx_status);
 
     // then
-    let _tx_from_client = match provider
+    let tx_from_client = match provider
         .get_transaction_by_id(&tx_id)
         .await?
         .unwrap()
@@ -382,6 +383,13 @@ async fn read_only_coin__if_predicate_data_matches_read_only_data__succeed() -> 
         TransactionType::Script(script) => script,
         _ => panic!("nandarou"),
     };
+
+    let outputs = tx_from_client.outputs();
+    let change_output = outputs
+        .iter()
+        .find(|output| output.is_change())
+        .expect("Expected a change output");
+    assert_eq!(change_output.amount().unwrap(), amount_predicate_coin - fee);
     Ok(())
 }
 
