@@ -42,6 +42,7 @@ members = [
   'sway/predicates/predicate_blobs',
   'sway/predicates/predicate_configurables',
   'sway/predicates/predicate_witnesses',
+  'sway/predicates/read_only_verified',
   'sway/predicates/signatures',
   'sway/predicates/swap',
   'sway/predicates/predicate_tx_input_output',

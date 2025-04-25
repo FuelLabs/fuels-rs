@@ -1,5 +1,7 @@
-use std::default::Default;
+#![allow(non_snake_case)]
 
+use std::default::Default;
+use fuel_asm::{op, RegId};
 use fuels::{
     accounts::signers::private_key::PrivateKeySigner,
     core::{
@@ -9,7 +11,7 @@ use fuels::{
     prelude::*,
     programs::executable::Executable,
     types::{
-        coin::{Coin, DataCoin},
+        coin::Coin,
         coin_type::CoinType,
         input::Input,
         message::Message,
@@ -17,6 +19,7 @@ use fuels::{
     },
 };
 use rand::thread_rng;
+use fuels::types::coin_type::ReadOnly;
 
 async fn assert_address_balance(
     address: &Bech32Address,
@@ -284,6 +287,109 @@ async fn data_coins() -> Result<()> {
         dbg!(&tx_from_client.outputs());
     }
 
+    Ok(())
+}
+
+#[tokio::test]
+async fn read_only_coin__if_predicate_data_matches_read_only_data__succeed() -> Result<()> {
+    let signer = PrivateKeySigner::random(&mut thread_rng());
+    abigen!(Predicate(
+        name = "MyPredicate",
+        abi = "e2e/sway/predicates/read_only_verified/out/release/read_only_verified-abi.json"
+    ));
+    let predicate = Predicate::load_from("sway/predicates/read_only_verified/out/release/read_only_verified.bin")?;
+
+    let true_predicate_code: Vec<u8> = vec![op::ret(RegId::ONE)].into_iter().collect();
+    let true_predicate = Predicate::from_code(true_predicate_code);
+
+    let asset_id = AssetId::zeroed();
+
+    let value = 1;
+    let data = SomeData {
+        value,
+    };
+    let encoded_data = ABIEncoder::default()
+        .encode(&[data.into_token()])?;
+
+    let amount_predicate_coin = 32;
+    let amount_true_predicate_coin = 1000;
+    let mut predicate_coins =
+        setup_single_asset_coins(predicate.address(), asset_id, 1, amount_predicate_coin);
+    let mut true_predicate_coins = setup_single_asset_data_coins(
+        true_predicate.address(),
+        asset_id,
+        1,
+        amount_true_predicate_coin,
+        encoded_data.clone()
+    );
+    let messages = vec![];
+
+    let provider = setup_test_provider2(
+        predicate_coins.clone(),
+        true_predicate_coins.clone(),
+        messages,
+        None,
+        None,
+    )
+        .await?;
+    let wallet = Wallet::new(signer, provider.clone());
+
+    // given
+    let coin_input = Input::resource_predicate(
+        CoinType::Coin(predicate_coins.pop().unwrap()),
+        predicate.code().to_vec(),
+        encoded_data,
+    );
+    let read_only_input = Input::resource_predicate(
+        CoinType::ReadOnly(ReadOnly::DataCoinPredicate(true_predicate_coins.pop().unwrap())),
+        true_predicate.code().to_vec(),
+        vec![],
+    );
+
+    let outputs = vec![
+        Output::change(predicate.address().into(), 0, asset_id),
+    ];
+
+    let mut tb = ScriptTransactionBuilder::prepare_transfer(
+        vec![read_only_input, coin_input],
+        outputs,
+        TxPolicies::default(),
+    );
+    tb.add_signer(wallet.signer().clone())?;
+
+    let tx = tb.build(&provider).await.unwrap();
+    let chain_id = provider.consensus_parameters().await?.chain_id();
+
+    let tx_id = tx.id(chain_id);
+
+    dbg!(&tx.inputs());
+
+    // when
+    let tx_status = provider
+            .send_transaction_and_await_commit(tx)
+            .await
+            .unwrap();
+    let fee = tx_status.total_fee();
+
+    dbg!(&tx_status);
+
+    // then
+    let tx_from_client = match provider
+        .get_transaction_by_id(&tx_id)
+        .await?
+        .unwrap()
+        .transaction
+    {
+        TransactionType::Script(script) => script,
+        _ => panic!("nandarou"),
+    };
+
+    let outputs = tx_from_client.outputs();
+    let change_output = outputs
+        .iter()
+        .find(|output| output.is_change())
+        .expect("Expected a change output");
+    assert_eq!(change_output.amount().unwrap(), amount_predicate_coin - fee);
     Ok(())
 }
 

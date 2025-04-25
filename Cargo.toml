@@ -79,7 +79,7 @@ tar = { version = "0.4", default-features = false }
 tempfile = { version = "3.8.1", default-features = false }
 thiserror = { version = "1.0.50", default-features = false }
 tokio = { version = "1.34.0", default-features = false }
-tracing = "0.1.40"
+tracing = "0.1"
 trybuild = "1.0.85"
 uint = { version = "0.9.5", default-features = false }
 which = { version = "6.0.0", default-features = false }
@@ -105,13 +105,13 @@ fuel-core-services = { version = "0.43.0", default-features = false }
 fuel-core-types = { version = "0.43.0", default-features = false }
 
 # Dependencies from the `fuel-vm` repository:
-fuel-asm = { version = "0.60.0" }
-fuel-crypto = { version = "0.60.0" }
-fuel-merkle = { version = "0.60.0" }
-fuel-storage = { version = "0.60.0" }
-fuel-tx = { version = "0.60.0" }
-fuel-types = { version = "0.60.0" }
-fuel-vm = { version = "0.60.0" }
+fuel-asm = { version = "=0.60.0" }
+fuel-crypto = { version = "=0.60.0" }
+fuel-merkle = { version = "=0.60.0" }
+fuel-storage = { version = "=0.60.0" }
+fuel-tx = { version = "=0.60.0" }
+fuel-types = { version = "=0.60.0" }
+fuel-vm = { version = "=0.60.0" }
 
 # Workspace projects
 fuels = { version = "0.71.0", path = "./packages/fuels", default-features = false }

@@ -3,6 +3,7 @@
 use fuel_core_chain_config::{CoinConfig, ConfigCoin, ConfigDataCoin};
 use fuel_core_client::client::types::{
     coins::Coin as ClientCoin,
+    coins::DataCoin as ClientDataCoin,
     primitives::{AssetId, UtxoId},
 };
 
@@ -88,5 +89,19 @@ impl From<DataCoin> for CoinConfig {
             asset_id: coin.asset_id,
             data: coin.data,
         })
+    }
+}
+
+impl From<ClientDataCoin> for DataCoin {
+    fn from(coin: ClientDataCoin) -> Self {
+        Self {
+            amount: coin.amount,
+            block_created: coin.block_created,
+            asset_id: coin.asset_id,
+            utxo_id: coin.utxo_id,
+            owner: Bech32Address::from(coin.owner),
+            status: CoinStatus::Unspent,
+            data: coin.data,
+        }
     }
 }

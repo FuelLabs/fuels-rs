@@ -188,7 +188,8 @@ impl TxPolicies {
 }
 
 use fuel_tx::field::{BytecodeWitnessIndex, Salt, StorageSlots};
-
+use fuel_tx::input::coin::{UnverifiedCoin, UnverifiedDataCoin};
+use fuel_tx::input::ReadOnly;
 use crate::types::coin_type_id::CoinTypeId;
 
 #[derive(Debug, Clone)]
@@ -322,7 +323,14 @@ pub fn extract_owner_or_recipient(input: &Input) -> Option<Bech32Address> {
         Input::CoinSigned(CoinSigned { owner, .. })
         | Input::CoinPredicate(CoinPredicate { owner, .. })
         | Input::DataCoinSigned(DataCoinSigned { owner, .. })
-        | Input::DataCoinPredicate(DataCoinPredicate { owner, .. }) => Some(owner),
+        | Input::DataCoinPredicate(DataCoinPredicate { owner, .. })
+        | Input::ReadOnly(ReadOnly::Coin(UnverifiedCoin { owner, .. }))
+        | Input::ReadOnly(ReadOnly::DataCoin(UnverifiedDataCoin { owner, .. })) => {
+            Some(owner)
+        }
+        | Input::ReadOnly(ReadOnly::CoinPredicate(CoinPredicate { owner, .. }))
+        | Input::ReadOnly(ReadOnly::DataCoinPredicate(DataCoinPredicate { owner, .. }))
+        => Some(owner),
         Input::MessageCoinSigned(MessageCoinSigned { recipient, .. })
         | Input::MessageCoinPredicate(MessageCoinPredicate { recipient, .. })
         | Input::MessageDataSigned(MessageDataSigned { recipient, .. })

@@ -463,7 +463,7 @@ macro_rules! impl_tx_builder_trait {
 }
 
 pub(crate) use impl_tx_builder_trait;
-
+use crate::types::coin_type::ReadOnly as ClientReadOnly;
 use super::coin::DataCoin;
 
 pub(crate) fn estimate_max_fee_w_tolerance<T: Chargeable>(
@@ -1404,6 +1404,22 @@ fn resolve_signed_resource(
                     create_coin_message_input(message, num_witnesses + *witness_idx_offset as u16)
                 })
         }
+        CoinType::ReadOnly(inner) => match inner {
+            ClientReadOnly::DataCoinPredicate(data_coin) => {
+                let owner = &data_coin.owner;
+
+                unresolved_witness_indexes
+                    .owner_to_idx_offset
+                    .get(owner)
+                    .ok_or(error_transaction!(
+                    Builder,
+                    "signature missing for coin with owner: `{owner:?}`"
+                ))
+                    .map(|witness_idx_offset| {
+                        create_data_coin_input(data_coin, num_witnesses + *witness_idx_offset as u16)
+                    })
+            }
+        }
         CoinType::Unknown => Err(error_transaction!(
             Builder,
             "can not resolve `CoinType::Unknown`"
@@ -1419,6 +1435,13 @@ fn resolve_predicate_resource(
     match resource {
         CoinType::Coin(coin) => Ok(create_coin_predicate(coin, code, data)),
         CoinType::DataCoin(coin) => Ok(create_data_coin_predicate(coin, code, data)),
+        CoinType::ReadOnly(read_only) => {
+            match read_only {
+                ClientReadOnly::DataCoinPredicate(data_coin) => {
+                    Ok(create_read_only_data_coin_predicate(data_coin, code, data))
+                }
+            }
+        }
         CoinType::Message(message) => Ok(create_coin_message_predicate(message, code, data)),
         CoinType::Unknown => Err(error_transaction!(
             Builder,
@@ -1499,6 +1522,46 @@ pub fn create_data_coin_predicate(
         code,
         predicate_data,
         coin.data,
+    )
+}
+
+pub fn create_read_only_data_coin_predicate(
+    coin: DataCoin,
+    code: Vec<u8>,
+    predicate_data: Vec<u8>,
+) -> FuelInput {
+    // let inner = FuelInput::data_coin_predicate(
+    //     coin.utxo_id,
+    //     coin.owner.into(),
+    //     coin.amount,
+    //     coin.asset_id,
+    //     TxPointer::default(),
+    //     0u64,
+    //     code,
+    //     predicate_data,
+    //     coin.data,
+    // );
+    // let inner = DataCoinPredicate {
+    //     utxo_id: coin.utxo_id,
+    //     owner: coin.owner.into(),
+    //     amount: coin.amount,
+    //     asset_id: coin.asset_id,
+    //     tx_pointer: TxPointer::default(),
+    //     witness_index: Empty::new(),
+    //     predicate_gas_used: 0,
+    //     predicate: PredicateCode {bytes: code},
+    //     predicate_data,
+    //     data: coin.data,
+    // };
+    // FuelInput::ReadOnly(ClientReadOnly::DataCoinPredicate(inner))
+    FuelInput::read_only_data_coin_predicate(coin.utxo_id, coin.owner.into()
+        , coin.amount
+        , coin.asset_id
+        , TxPointer::default()
+        , 0u64
+        , code
+        , predicate_data
+        , coin.data
     )
 }
 

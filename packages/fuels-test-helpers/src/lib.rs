@@ -227,7 +227,7 @@ pub async fn setup_test_provider2(
         ..StateConfig::local_testnet()
     };
 
-    let srv = FuelService::start(node_config, chain_config, state_config).await?;
+    let srv = FuelService::start(node_config, chain_config, state_config).await.unwrap();
 
     let address = srv.bound_address();
 
