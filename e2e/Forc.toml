@@ -22,6 +22,7 @@ members = [
   'sway/contracts/msg_methods',
   'sway/contracts/multiple_read_calls',
   'sway/contracts/needs_custom_decoder',
+  'sway/contracts/panic',
   'sway/contracts/payable_annotation',
   'sway/contracts/proxy',
   'sway/contracts/revert_logs',
@@ -118,3 +119,6 @@ members = [
   'sway/types/scripts/script_u256',
   'sway/types/scripts/script_vectors',
 ]
+
+[patch.'https://github.com/fuellabs/sway']
+std = { git = "https://github.com/fuellabs/sway", branch = "ironcev/error-codes-in-abi-json" }

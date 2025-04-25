@@ -5,6 +5,36 @@ use std::{
     iter::FilterMap,
 };
 
+#[derive(Debug, Clone)]
+pub struct ErrorDetails {
+    pub(crate) pkg: String,
+    pub(crate) file: String,
+    pub(crate) line: u64,
+    pub(crate) column: u64,
+    pub(crate) log_id: Option<String>,
+    pub(crate) msg: Option<String>,
+}
+
+impl ErrorDetails {
+    pub fn new(
+        pkg: String,
+        file: String,
+        line: u64,
+        column: u64,
+        log_id: Option<String>,
+        msg: Option<String>,
+    ) -> Self {
+        Self {
+            pkg,
+            file,
+            line,
+            column,
+            log_id,
+            msg,
+        }
+    }
+}
+
 use fuel_tx::{ContractId, Receipt};
 
 use crate::{
@@ -62,6 +92,7 @@ pub struct LogId(ContractId, String);
 pub struct LogDecoder {
     /// A mapping of LogId and param-type
     log_formatters: HashMap<LogId, LogFormatter>,
+    error_codes: HashMap<u64, ErrorDetails>,
     decoder_config: DecoderConfig,
 }
 
@@ -87,11 +118,19 @@ impl LogResult {
 }
 
 impl LogDecoder {
-    pub fn new(log_formatters: HashMap<LogId, LogFormatter>) -> Self {
+    pub fn new(
+        log_formatters: HashMap<LogId, LogFormatter>,
+        error_codes: HashMap<u64, ErrorDetails>,
+    ) -> Self {
         Self {
             log_formatters,
+            error_codes,
             decoder_config: Default::default(),
         }
+    }
+
+    pub fn get_error_codes(&self, id: &u64) -> Option<&ErrorDetails> {
+        self.error_codes.get(id)
     }
 
     pub fn set_decoder_config(&mut self, decoder_config: DecoderConfig) -> &mut Self {
