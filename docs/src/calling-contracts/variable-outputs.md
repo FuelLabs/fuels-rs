@@ -11,7 +11,7 @@ Let's say you deployed a contract with the following method:
 {{#include ../../../e2e/sway/contracts/token_ops/src/main.sw:variable_outputs}}
 ```
 
-When calling `transfer_coins_to_output` with the SDK, the correct number of variable outputs will be estimated and you will not have to change your code:
+When calling `transfer_coins_to_output` with the SDK, the correct number of variable outputs will be estimated and you will not have to change your code.
 
 ```rust,ignore
 {{#include ../../../examples/contracts/src/lib.rs:variable_outputs}}
