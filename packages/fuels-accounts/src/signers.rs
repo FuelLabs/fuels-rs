@@ -9,3 +9,5 @@ pub mod kms;
 
 pub mod fake;
 pub mod private_key;
+
+pub use fuel_crypto::SecretKey;

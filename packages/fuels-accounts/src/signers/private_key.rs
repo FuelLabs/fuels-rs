@@ -16,7 +16,7 @@ pub fn generate_mnemonic_phrase<R: Rng>(rng: &mut R, count: usize) -> Result<Str
     Ok(fuel_crypto::generate_mnemonic_phrase(rng, count)?)
 }
 
-#[derive(Clone, Zeroize, ZeroizeOnDrop)]
+#[derive(Clone, Zeroize, ZeroizeOnDrop, PartialEq, Eq, Hash)]
 pub struct PrivateKeySigner {
     private_key: SecretKey,
     #[zeroize(skip)]
