@@ -1336,7 +1336,8 @@ fn resolve_fuel_inputs(
                 resource,
                 code,
                 data,
-            } => resolve_predicate_resource(resource, code, data),
+                gas_used,
+            } => resolve_predicate_resource(resource, code, data, gas_used),
             Input::Contract {
                 utxo_id,
                 balance_root,
@@ -1399,10 +1400,19 @@ fn resolve_predicate_resource(
     resource: CoinType,
     code: Vec<u8>,
     data: Vec<u8>,
+    gas_used: u64,
 ) -> Result<FuelInput> {
     match resource {
-        CoinType::Coin(coin) => Ok(create_coin_predicate(coin.asset_id, coin, code, data)),
-        CoinType::Message(message) => Ok(create_coin_message_predicate(message, code, data)),
+        CoinType::Coin(coin) => Ok(create_coin_predicate(
+            coin.asset_id,
+            coin,
+            code,
+            data,
+            gas_used,
+        )),
+        CoinType::Message(message) => {
+            Ok(create_coin_message_predicate(message, code, data, gas_used))
+        }
         CoinType::Unknown => Err(error_transaction!(
             Builder,
             "can not resolve `CoinType::Unknown`"
@@ -1447,6 +1457,7 @@ pub fn create_coin_predicate(
     coin: Coin,
     code: Vec<u8>,
     predicate_data: Vec<u8>,
+    gas_used: u64,
 ) -> FuelInput {
     FuelInput::coin_predicate(
         coin.utxo_id,
@@ -1454,7 +1465,7 @@ pub fn create_coin_predicate(
         coin.amount,
         asset_id,
         TxPointer::default(),
-        0u64,
+        gas_used,
         code,
         predicate_data,
     )
@@ -1464,6 +1475,7 @@ pub fn create_coin_message_predicate(
     message: Message,
     code: Vec<u8>,
     predicate_data: Vec<u8>,
+    gas_used: u64,
 ) -> FuelInput {
     if message.data.is_empty() {
         FuelInput::message_coin_predicate(
@@ -1471,7 +1483,7 @@ pub fn create_coin_message_predicate(
             message.recipient.into(),
             message.amount,
             message.nonce,
-            0u64,
+            gas_used,
             code,
             predicate_data,
         )
@@ -1481,7 +1493,7 @@ pub fn create_coin_message_predicate(
             message.recipient.into(),
             message.amount,
             message.nonce,
-            0u64,
+            gas_used,
             message.data,
             code,
             predicate_data,
@@ -1551,7 +1563,7 @@ mod tests {
     #[test]
     fn create_message_coin_predicate_if_data_is_empty() {
         assert!(matches!(
-            create_coin_message_predicate(given_a_message(vec![]), vec![], vec![]),
+            create_coin_message_predicate(given_a_message(vec![]), vec![], vec![], 0),
             FuelInput::MessageCoinPredicate(_)
         ));
     }
@@ -1559,7 +1571,7 @@ mod tests {
     #[test]
     fn create_message_data_predicate_if_data_is_not_empty() {
         assert!(matches!(
-            create_coin_message_predicate(given_a_message(vec![42]), vec![], vec![]),
+            create_coin_message_predicate(given_a_message(vec![42]), vec![], vec![], 0),
             FuelInput::MessageDataPredicate(_)
         ));
     }
