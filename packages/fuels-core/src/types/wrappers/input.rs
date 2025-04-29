@@ -12,6 +12,7 @@ pub enum Input {
     ResourceSigned {
         resource: CoinType,
     },
+    #[non_exhaustive]
     ResourcePredicate {
         resource: CoinType,
         code: Vec<u8>,
