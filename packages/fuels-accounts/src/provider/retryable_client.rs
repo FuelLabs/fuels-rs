@@ -76,6 +76,10 @@ impl RetryableClient {
         })
     }
 
+    pub fn inner(&self) -> &FuelClient {
+        &self.client
+    }
+
     fn version_compatibility_warning(node_info: &NodeInfo) -> Result<Option<String>> {
         let node_version = node_info
             .node_version

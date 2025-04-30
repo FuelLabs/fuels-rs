@@ -23,6 +23,14 @@ pub struct PrivateKeySigner {
     address: Bech32Address,
 }
 
+impl PartialEq for PrivateKeySigner {
+    fn eq(&self, other: &Self) -> bool {
+        self.private_key == other.private_key
+    }
+}
+
+impl Eq for PrivateKeySigner {}
+
 impl std::fmt::Debug for PrivateKeySigner {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("PrivateKeySigner")

@@ -12,6 +12,7 @@ pub use cache::TtlConfig;
 use cache::{CachedClient, SystemClock};
 use chrono::{DateTime, Utc};
 use fuel_core_client::client::{
+    FuelClient,
     pagination::{PageDirection, PaginatedResult, PaginationRequest},
     types::{
         balance::Balance,
@@ -901,6 +902,10 @@ impl Provider {
             .uncached_client()
             .contract_exists(&contract_id.into())
             .await?)
+    }
+
+    pub fn client(&self) -> &FuelClient {
+        self.cached_client.inner().inner()
     }
 
     fn uncached_client(&self) -> &RetryableClient {
