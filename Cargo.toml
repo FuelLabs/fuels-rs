@@ -95,14 +95,14 @@ testcontainers = { version = "0.23", default-features = false }
 k256 = { version = "0.13", default-features = false }
 
 # Dependencies from the `fuel-core` repository:
-fuel-core = { version = "0.43.1", default-features = false, features = [
+fuel-core = { version = "0.43.2", default-features = false, features = [
   "wasm-executor",
 ] }
-fuel-core-chain-config = { version = "0.43.1", default-features = false }
-fuel-core-client = { version = "0.43.1", default-features = false }
-fuel-core-poa = { version = "0.43.1", default-features = false }
-fuel-core-services = { version = "0.43.1", default-features = false }
-fuel-core-types = { version = "0.43.1", default-features = false }
+fuel-core-chain-config = { version = "0.43.2", default-features = false }
+fuel-core-client = { version = "0.43.2", default-features = false }
+fuel-core-poa = { version = "0.43.2", default-features = false }
+fuel-core-services = { version = "0.43.2", default-features = false }
+fuel-core-types = { version = "0.43.2", default-features = false }
 
 # Dependencies from the `fuel-vm` repository:
 fuel-asm = { version = "0.60.2" }
