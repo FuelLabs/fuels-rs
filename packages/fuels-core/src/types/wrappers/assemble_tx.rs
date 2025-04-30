@@ -1,3 +1,5 @@
+#![cfg(feature = "std")]
+
 use fuel_core_client::client::types::assemble_tx::AssembleTransactionResult as FuelAssembleTxResult;
 
 pub use fuel_core_client::client::types::assemble_tx::{

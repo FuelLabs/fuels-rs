@@ -23,6 +23,13 @@ pub struct PrivateKeySigner {
     address: Bech32Address,
 }
 
+// TODO: segfault remove this
+impl std::hash::Hash for PrivateKeySigner {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        state.write(&*self.address().hash());
+    }
+}
+
 impl PartialEq for PrivateKeySigner {
     fn eq(&self, other: &Self) -> bool {
         self.private_key == other.private_key

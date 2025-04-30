@@ -1,7 +1,6 @@
 use std::{fmt::Debug, fs};
 
-use async_trait::async_trait;
-use fuel_tx::Address;
+#[cfg(feature = "std")]
 use fuels_core::types::assemble_tx::{
     Account as ClientAccount, ChangePolicy, Predicate as ClientPredicate, RequiredBalance,
 };
@@ -132,13 +131,14 @@ impl ViewOnlyAccount for Predicate {
     }
 }
 
-#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg(feature = "std")]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 impl Account for Predicate {
     fn required_balance(
         &self,
         amount: u64,
         asset_id: AssetId,
-        change_address: Option<Address>,
+        change_address: Option<fuel_tx::Address>,
     ) -> RequiredBalance {
         let address = self.address().into();
         let client_predicate = ClientPredicate {

@@ -22,7 +22,7 @@ fuel-core-types = { workspace = true }
 fuel-crypto = { workspace = true }
 fuel-tx = { workspace = true }
 fuel-types = { workspace = true, features = ["random"] }
-fuels-accounts = { workspace = true, optional = true }
+fuels-accounts = { workspace = true }
 fuels-core = { workspace = true }
 futures = { workspace = true }
 portpicker = { workspace = true }
@@ -32,8 +32,15 @@ tokio = { workspace = true, default-features = false }
 which = { workspace = true, default-features = false }
 
 [features]
-default = ["fuels-accounts", "std"]
-std = ["fuels-accounts?/std", "fuels-core/std", "fuel-core-chain-config/std"]
+default = ["std"]
+std = ["fuels-accounts/std", "fuels-core/std", "fuel-core-chain-config/std"]
 fuel-core-lib = ["dep:fuel-core"]
 rocksdb = ["fuel-core?/rocksdb"]
-fault-proving = ["fuel-core?/fault-proving", "fuel-core-chain-config/fault-proving", "fuel-core-client/fault-proving", "fuel-core-poa/fault-proving", "fuels-accounts?/fault-proving", "fuels-core/fault-proving"]
+fault-proving = [
+  "fuel-core?/fault-proving",
+  "fuel-core-chain-config/fault-proving",
+  "fuel-core-client/fault-proving",
+  "fuel-core-poa/fault-proving",
+  "fuels-accounts/fault-proving",
+  "fuels-core/fault-proving",
+]

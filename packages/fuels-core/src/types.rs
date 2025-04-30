@@ -8,7 +8,9 @@ pub use crate::types::{core::*, token::*, wrappers::*};
 use crate::{error, types::errors::Result};
 
 pub mod bech32;
+pub mod checksum_address;
 mod core;
+#[cfg(feature = "std")]
 mod dry_runner;
 pub mod errors;
 pub mod param_types;
@@ -17,8 +19,9 @@ pub mod transaction_builders;
 pub mod tx_response;
 pub mod tx_status;
 mod wrappers;
+
+#[cfg(feature = "std")]
 pub use dry_runner::*;
-pub mod checksum_address;
 
 pub type ByteArray = [u8; 8];
 pub type Selector = Vec<u8>;
