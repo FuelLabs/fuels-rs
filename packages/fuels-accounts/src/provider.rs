@@ -1,6 +1,10 @@
 #[cfg(feature = "coin-cache")]
 use std::sync::Arc;
-use std::{collections::HashMap, fmt::Debug, net::SocketAddr};
+use std::{
+    collections::{HashMap, HashSet},
+    fmt::Debug,
+    net::SocketAddr,
+};
 
 mod cache;
 mod retry_util;
@@ -48,6 +52,7 @@ use fuels_core::{
     },
 };
 use futures::StreamExt;
+use itertools::Itertools;
 pub use retry_util::{Backoff, RetryConfig};
 pub use supported_fuel_core_version::SUPPORTED_FUEL_CORE_VERSION;
 use tai64::Tai64;
@@ -973,6 +978,47 @@ impl DryRunner for Provider {
         estimate_predicates: bool,
         reserve_gas: Option<u64>,
     ) -> Result<AssembleTransactionResult> {
+        let exclude = {
+            #[cfg(feature = "coin-cache")]
+            {
+                let assets_used_by_owner = required_balances
+                    .iter()
+                    .map(|rb| (rb.asset_id, Bech32Address::from(rb.account.owner())))
+                    .unique()
+                    .collect::<Vec<_>>();
+                let (excluded_coins, excluded_messages) = exclude.unwrap_or_default();
+
+                let mut excluded_coins: HashSet<_> = HashSet::from_iter(excluded_coins);
+                let mut excluded_messages: HashSet<_> = HashSet::from_iter(excluded_messages);
+                let mut cache = self.coins_cache.lock().await;
+                for (asset_id, owner) in assets_used_by_owner {
+                    for coin_id in cache.get_active(&(owner.clone(), asset_id)) {
+                        match coin_id {
+                            CoinTypeId::UtxoId(utxo_id) => {
+                                excluded_coins.insert(utxo_id);
+                            }
+                            CoinTypeId::Nonce(nonce) => {
+                                excluded_messages.insert(nonce);
+                            }
+                        }
+                    }
+                }
+
+                if excluded_coins.is_empty() && excluded_messages.is_empty() {
+                    None
+                } else {
+                    Some((
+                        excluded_coins.into_iter().collect_vec(),
+                        excluded_messages.into_iter().collect_vec(),
+                    ))
+                }
+            }
+            #[cfg(not(feature = "coin-cache"))]
+            {
+                exclude
+            }
+        };
+
         Ok(self
             .uncached_client()
             .assemble_tx(
