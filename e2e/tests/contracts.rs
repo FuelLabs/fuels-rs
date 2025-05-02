@@ -2859,7 +2859,12 @@ async fn panic_message() -> Result<()> {
     let response = contract_instance.methods().some_panic().call().await;
 
     dbg!(&response);
-    response.unwrap();
+    response.expect_err("should be error");
+
+    let response = contract_instance.methods().some_panic_error().call().await;
+
+    dbg!(&response);
+    response.expect_err("should be error");
 
     Ok(())
 }

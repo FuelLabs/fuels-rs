@@ -92,6 +92,7 @@ pub struct LogId(ContractId, String);
 pub struct LogDecoder {
     /// A mapping of LogId and param-type
     log_formatters: HashMap<LogId, LogFormatter>,
+    //TODO: add error_formatters
     error_codes: HashMap<u64, ErrorDetails>,
     decoder_config: DecoderConfig,
 }
