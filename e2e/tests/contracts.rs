@@ -2856,15 +2856,19 @@ async fn panic_message() -> Result<()> {
         ),
     );
 
-    let response = contract_instance.methods().some_panic().call().await;
+    // let _ = contract_instance
+    //     .methods()
+    //     .some_panic()
+    //     .call()
+    //     .await
+    //     .unwrap();
 
-    dbg!(&response);
-    response.expect_err("should be error");
-
-    let response = contract_instance.methods().some_panic_error().call().await;
-
-    dbg!(&response);
-    response.expect_err("should be error");
+    let _ = contract_instance
+        .methods()
+        .some_panic_error()
+        .call()
+        .await
+        .unwrap();
 
     Ok(())
 }

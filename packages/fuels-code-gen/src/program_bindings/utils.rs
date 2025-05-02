@@ -14,7 +14,7 @@ use crate::{
 
 #[derive(Debug)]
 pub(crate) struct Components {
-    components: Vec<(Ident, ResolvedType)>,
+    components: Vec<(Ident, ResolvedType, Option<String>)>,
 }
 
 impl Components {
@@ -35,15 +35,29 @@ impl Components {
 
                 let ident = safe_ident(&name);
                 let ty = type_resolver.resolve(type_application)?;
-                Result::Ok((ident, ty))
+                Result::Ok((ident, ty, type_application.error_message.clone()))
             })
             .collect::<Result<Vec<_>>>()?;
 
         Ok(Self { components })
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = (&Ident, &ResolvedType)> {
-        self.components.iter().map(|(ident, ty)| (ident, ty))
+    pub fn has_error_message(&self) -> bool {
+        self.components
+            .first()
+            .and_then(|(_, _, em)| em.clone()) //TODO: fix this and remove clone
+            .is_some()
+    }
+
+    pub fn iter2(&self) -> impl Iterator<Item = (&Ident, &ResolvedType)> {
+        //TODO: fix this
+        self.components.iter().map(|(ident, ty, _)| (ident, ty))
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = (&Ident, &ResolvedType, &Option<String>)> {
+        self.components
+            .iter()
+            .map(|(ident, ty, em)| (ident, ty, em))
     }
 
     pub fn is_empty(&self) -> bool {
@@ -51,7 +65,7 @@ impl Components {
     }
 
     pub fn as_enum_variants(&self) -> impl Iterator<Item = TokenStream> + '_ {
-        self.components.iter().map(|(ident, ty)| {
+        self.components.iter().map(|(ident, ty, _)| {
             if let ResolvedType::Unit = ty {
                 quote! {#ident}
             } else {
@@ -96,7 +110,7 @@ impl Components {
     fn named_generics(&self) -> HashSet<Ident> {
         self.components
             .iter()
-            .flat_map(|(_, ty)| ty.generics())
+            .flat_map(|(_, ty, _)| ty.generics())
             .filter_map(|generic_type| {
                 if let GenericType::Named(name) = generic_type {
                     Some(name)
@@ -219,6 +233,7 @@ mod tests {
                 type_parameters: vec![],
             },
             type_arguments: vec![],
+            error_message: None,
         }
     }
 }

@@ -61,7 +61,7 @@ impl FunctionGenerator {
     }
 
     pub fn tokenized_args(&self) -> TokenStream {
-        let arg_names = self.args.iter().map(|(name, ty)| {
+        let arg_names = self.args.iter().map(|(name, ty, _)| {
             get_equivalent_bech32_type(ty)
                 .map(|_| {
                     quote! {<#ty>::from(#name.into())}
@@ -90,7 +90,7 @@ impl FunctionGenerator {
             })
             .collect();
 
-        let arg_declarations = self.args.iter().map(|(name, ty)| {
+        let arg_declarations = self.args.iter().map(|(name, ty, _)| {
             get_equivalent_bech32_type(ty)
                 .map(|new_type| {
                     quote! { #name: impl ::core::convert::Into<#new_type> }
@@ -191,6 +191,7 @@ mod tests {
                 name: "field_a".to_string(),
                 type_decl: generic_type_t.clone(),
                 type_arguments: vec![],
+                error_message: None,
             }],
             type_parameters: vec![generic_type_t],
         };
@@ -206,7 +207,9 @@ mod tests {
                     type_parameters: vec![],
                 },
                 type_arguments: vec![],
+                error_message: None,
             }],
+            error_message: None,
         };
         let fn_inputs = vec![FullTypeApplication {
             name: "arg_0".to_string(),
@@ -219,7 +222,9 @@ mod tests {
                     type_parameters: vec![],
                 },
                 type_arguments: vec![],
+                error_message: None,
             }],
+            error_message: None,
         }];
 
         FullABIFunction::new("test_function".to_string(), fn_inputs, fn_output, vec![])

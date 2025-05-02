@@ -2,9 +2,9 @@ contract;
 
 #[error_type]
 enum MyError {
-  #[error(m="error A")]
+  #[error(m="some error A")]
   A: (),
-  #[error(m="error B")]
+  #[error(m="some complex error B")]
   B: (u64),
 }
 
@@ -19,6 +19,6 @@ impl PanicContract for Contract {
     }
 
     fn some_panic_error() {
-        panic MyError::A;
+        panic MyError::B(42);
     }
 }
