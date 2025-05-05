@@ -1,4 +1,3 @@
-use core::fmt;
 use std::collections::HashSet;
 
 use fuel_abi_types::abi::full_program::FullTypeDeclaration;
@@ -80,7 +79,7 @@ fn enum_decl(
             if let ResolvedType::Unit = ty {
                 quote! {#enum_ident::#ident =>  ::std::write!(f, "{}", #error_msg)}
             } else {
-                quote! {#enum_ident::#ident(_) => ::std::write!(f, "{}", #error_msg)}
+                quote! {#enum_ident::#ident(val) => ::std::write!(f, "{}: {:?}", #error_msg, val)}
             }
         });
 

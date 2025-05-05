@@ -120,17 +120,24 @@ impl TxStatus {
     ) -> Error {
         if let (Some(revert_id), Some(log_decoder)) = (revert_id, log_decoder) {
             if let Some(ref mut error_detail) = log_decoder.get_error_codes(&revert_id) {
-                let log_msg = if error_detail.log_id.is_some() {
+                let error_message = if error_detail.log_id.is_some() {
                     log_decoder
                         .decode_last_log(&receipts)
                         .unwrap_or_else(|err| {
                             format!("failed to decode log from require revert: {err}")
                         })
                 } else {
-                    "".to_string()
+                    error_detail.msg.clone().expect("is there")
                 };
 
-                let reason = format!("{error_detail:?}, log_msg: {log_msg}");
+                let reason = format!(
+                    "panicked at: `{}` - `{}:{}:{}` with message `{}`",
+                    error_detail.pkg,
+                    error_detail.file,
+                    error_detail.line,
+                    error_detail.column,
+                    error_message
+                );
 
                 return Error::Transaction(Reason::Failure {
                     reason,
