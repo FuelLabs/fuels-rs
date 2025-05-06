@@ -3,7 +3,10 @@ use std::{fmt::Debug, iter::repeat, sync::Arc};
 use async_trait::async_trait;
 use fuel_crypto::Signature;
 use fuel_tx::{
-    field::{MaxFeeLimit, Policies as PoliciesField, WitnessLimit, Witnesses}, policies::{Policies, PolicyType}, BlobIdExt, Chargeable, ConsensusParameters, Output, Transaction as FuelTransaction, UniqueIdentifier, Witness
+    BlobIdExt, Chargeable, ConsensusParameters, Output, Transaction as FuelTransaction,
+    UniqueIdentifier, Witness,
+    field::{MaxFeeLimit, Policies as PoliciesField, WitnessLimit, Witnesses},
+    policies::{Policies, PolicyType},
 };
 use fuel_types::bytes::padded_len_usize;
 use itertools::Itertools;
@@ -222,7 +225,7 @@ impl BlobTransactionBuilder {
             _ => {
                 return Err(error_transaction!(
                     Builder,
-                    "`asseble_tx` did not return the right transactio type. Expected `blob`"
+                    "`asseble_tx` did not return the right transaction type. Expected `blob`"
                 ));
             }
         };

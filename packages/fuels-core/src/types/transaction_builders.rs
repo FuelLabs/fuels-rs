@@ -846,7 +846,7 @@ impl ScriptTransactionBuilder {
             _ => {
                 return Err(error_transaction!(
                     Builder,
-                    "`asseble_tx` did not return the right transactio type. Expected `script`"
+                    "`asseble_tx` did not return the right transaction type. Expected `script`"
                 ));
             }
         };
@@ -1276,7 +1276,7 @@ impl CreateTransactionBuilder {
             _ => {
                 return Err(error_transaction!(
                     Builder,
-                    "`asseble_tx` did not return the right transactio type. Expected `create`"
+                    "`asseble_tx` did not return the right transaction type. Expected `create`"
                 ));
             }
         };
@@ -1480,7 +1480,7 @@ impl UploadTransactionBuilder {
             _ => {
                 return Err(error_transaction!(
                     Builder,
-                    "`asseble_tx` did not return the right transactio type. Expected `upload`"
+                    "`asseble_tx` did not return the right transaction type. Expected `upload`"
                 ));
             }
         };
@@ -1687,7 +1687,7 @@ impl UpgradeTransactionBuilder {
             _ => {
                 return Err(error_transaction!(
                     Builder,
-                    "`asseble_tx` did not return the right transactio type. Expected `upgrade`"
+                    "`asseble_tx` did not return the right transaction type. Expected `upgrade`"
                 ));
             }
         };
