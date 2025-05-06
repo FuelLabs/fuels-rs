@@ -3,10 +3,7 @@ use std::{fmt::Debug, iter::repeat, sync::Arc};
 use async_trait::async_trait;
 use fuel_crypto::Signature;
 use fuel_tx::{
-    BlobIdExt, Chargeable, ConsensusParameters, Output, Transaction as FuelTransaction,
-    UniqueIdentifier, Witness,
-    field::{MaxFeeLimit, Policies as PoliciesField, Witnesses},
-    policies::{Policies, PolicyType},
+    field::{MaxFeeLimit, Policies as PoliciesField, WitnessLimit, Witnesses}, policies::{Policies, PolicyType}, BlobIdExt, Chargeable, ConsensusParameters, Output, Transaction as FuelTransaction, UniqueIdentifier, Witness
 };
 use fuel_types::bytes::padded_len_usize;
 use itertools::Itertools;
@@ -200,17 +197,13 @@ impl BlobTransactionBuilder {
         let num_witnesses = self.num_witnesses()?;
         let policies = self.generate_fuel_policies_assemble();
 
-        let mut tx = FuelTransaction::blob(
+        let tx = FuelTransaction::blob(
             body,
             policies,
             resolve_fuel_inputs(self.inputs, num_witnesses, &self.unresolved_witness_indexes)?,
             self.outputs,
             self.witnesses,
         );
-
-        if let Some(max_fee) = self.tx_policies.max_fee() {
-            tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
-        };
 
         let mut tx = match dry_runner
             .assemble_tx(
@@ -241,6 +234,15 @@ impl BlobTransactionBuilder {
         if let Some(max_fee) = self.tx_policies.max_fee() {
             if max_fee > tx.max_fee_limit() {
                 tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
+            }
+        }
+
+        //if user set `witness_limit` we will use it's value only
+        //if it is higher then the one estimated by assemble_tx
+        if let Some(witness_limit) = self.tx_policies.witness_limit() {
+            if witness_limit > tx.witness_limit() {
+                tx.policies_mut()
+                    .set(PolicyType::WitnessLimit, Some(witness_limit));
             }
         }
 

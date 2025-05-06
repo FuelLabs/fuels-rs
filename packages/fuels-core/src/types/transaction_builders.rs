@@ -14,7 +14,10 @@ use fuel_tx::{
     Cacheable, Chargeable, ConsensusParameters, Create, Input as FuelInput, Output, Script,
     StorageSlot, Transaction as FuelTransaction, TransactionFee, TxPointer, UniqueIdentifier,
     Upgrade, Upload, UploadBody, Witness,
-    field::{Inputs, MaxFeeLimit, Outputs, Policies as PoliciesField, ScriptGasLimit, Witnesses},
+    field::{
+        Inputs, MaxFeeLimit, Outputs, Policies as PoliciesField, ScriptGasLimit, WitnessLimit,
+        Witnesses,
+    },
     input::{
         coin::CoinSigned,
         message::{MessageCoinSigned, MessageDataSigned},
@@ -377,8 +380,6 @@ macro_rules! impl_tx_builder_trait {
             fn generate_fuel_policies_assemble(&self) -> Policies {
                 let mut policies = Policies::default();
 
-                policies.set(PolicyType::WitnessLimit, self.tx_policies.witness_limit());
-                policies.set(PolicyType::MaxFee, self.tx_policies.tip());
                 policies.set(PolicyType::Maturity, self.tx_policies.maturity());
                 policies.set(PolicyType::Tip, self.tx_policies.tip());
                 policies.set(PolicyType::Expiration, self.tx_policies.expiration());
@@ -814,7 +815,7 @@ impl ScriptTransactionBuilder {
         consensus_parameters: &ConsensusParameters,
         dry_runner: impl DryRunner,
     ) -> Result<Script> {
-        let mut tx = FuelTransaction::script(
+        let tx = FuelTransaction::script(
             0, // default value - will be overwritten
             self.script.clone(),
             self.script_data.clone(),
@@ -827,10 +828,6 @@ impl ScriptTransactionBuilder {
             self.outputs.clone(),
             self.witnesses.clone(),
         );
-
-        if let Some(max_fee) = self.tx_policies.max_fee() {
-            tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
-        };
 
         let mut tx = match dry_runner
             .assemble_tx(
@@ -877,6 +874,15 @@ impl ScriptTransactionBuilder {
         if let Some(max_fee) = self.tx_policies.max_fee() {
             if max_fee > tx.max_fee_limit() {
                 tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
+            }
+        }
+
+        //if user set `witness_limit` we will use it's value only
+        //if it is higher then the one estimated by assemble_tx
+        if let Some(witness_limit) = self.tx_policies.witness_limit() {
+            if witness_limit > tx.witness_limit() {
+                tx.policies_mut()
+                    .set(PolicyType::WitnessLimit, Some(witness_limit));
             }
         }
 
@@ -1243,7 +1249,7 @@ impl CreateTransactionBuilder {
     ) -> Result<Create> {
         let num_witnesses = self.num_witnesses()?;
 
-        let mut tx = FuelTransaction::create(
+        let tx = FuelTransaction::create(
             self.bytecode_witness_index,
             self.generate_fuel_policies_assemble(),
             self.salt,
@@ -1252,10 +1258,6 @@ impl CreateTransactionBuilder {
             self.outputs,
             self.witnesses,
         );
-
-        if let Some(max_fee) = self.tx_policies.max_fee() {
-            tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
-        };
 
         let mut tx = match dry_runner
             .assemble_tx(
@@ -1286,6 +1288,15 @@ impl CreateTransactionBuilder {
         if let Some(max_fee) = self.tx_policies.max_fee() {
             if max_fee > tx.max_fee_limit() {
                 tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
+            }
+        }
+
+        //if user set `witness_limit` we will use it's value only
+        //if it is higher then the one estimated by assemble_tx
+        if let Some(witness_limit) = self.tx_policies.witness_limit() {
+            if witness_limit > tx.witness_limit() {
+                tx.policies_mut()
+                    .set(PolicyType::WitnessLimit, Some(witness_limit));
             }
         }
 
@@ -1438,7 +1449,7 @@ impl UploadTransactionBuilder {
         let num_witnesses = self.num_witnesses()?;
         let policies = self.generate_fuel_policies_assemble();
 
-        let mut tx = FuelTransaction::upload(
+        let tx = FuelTransaction::upload(
             UploadBody {
                 root: self.root,
                 witness_index: self.witness_index,
@@ -1451,10 +1462,6 @@ impl UploadTransactionBuilder {
             self.outputs,
             self.witnesses,
         );
-
-        if let Some(max_fee) = self.tx_policies.max_fee() {
-            tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
-        };
 
         let mut tx = match dry_runner
             .assemble_tx(
@@ -1485,6 +1492,15 @@ impl UploadTransactionBuilder {
         if let Some(max_fee) = self.tx_policies.max_fee() {
             if max_fee > tx.max_fee_limit() {
                 tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
+            }
+        }
+
+        //if user set `witness_limit` we will use it's value only
+        //if it is higher then the one estimated by assemble_tx
+        if let Some(witness_limit) = self.tx_policies.witness_limit() {
+            if witness_limit > tx.witness_limit() {
+                tx.policies_mut()
+                    .set(PolicyType::WitnessLimit, Some(witness_limit));
             }
         }
 
@@ -1646,17 +1662,13 @@ impl UpgradeTransactionBuilder {
         let num_witnesses = self.num_witnesses()?;
         let policies = self.generate_fuel_policies_assemble();
 
-        let mut tx = FuelTransaction::upgrade(
+        let tx = FuelTransaction::upgrade(
             self.purpose,
             policies,
             resolve_fuel_inputs(self.inputs, num_witnesses, &self.unresolved_witness_indexes)?,
             self.outputs,
             self.witnesses,
         );
-
-        if let Some(max_fee) = self.tx_policies.max_fee() {
-            tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
-        };
 
         let mut tx = match dry_runner
             .assemble_tx(
@@ -1687,6 +1699,15 @@ impl UpgradeTransactionBuilder {
         if let Some(max_fee) = self.tx_policies.max_fee() {
             if max_fee > tx.max_fee_limit() {
                 tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
+            }
+        }
+
+        //if user set `witness_limit` we will use it's value only
+        //if it is higher then the one estimated by assemble_tx
+        if let Some(witness_limit) = self.tx_policies.witness_limit() {
+            if witness_limit > tx.witness_limit() {
+                tx.policies_mut()
+                    .set(PolicyType::WitnessLimit, Some(witness_limit));
             }
         }
 
