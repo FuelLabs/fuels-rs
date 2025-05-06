@@ -391,7 +391,7 @@ impl Provider {
     #[allow(clippy::too_many_arguments)]
     pub async fn assemble_tx(
         &self,
-        transaction: impl Transaction,
+        transaction: impl Into<FuelTransaction>,
         block_horizon: u32,
         required_balances: Vec<RequiredBalance>,
         fee_address_index: u16,
