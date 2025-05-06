@@ -122,6 +122,8 @@ where
     C: TransactionTuner + ResponseParser,
     T: Tokenizable + Parameterize + Debug,
 {
+    /// When calling external contracts we need the external contract's `LogDecoder`
+    /// to decode any logs coming form it.
     pub fn add_log_decoder(mut self, log_decoder: LogDecoder) -> Self {
         self.log_decoder.merge(log_decoder);
 
