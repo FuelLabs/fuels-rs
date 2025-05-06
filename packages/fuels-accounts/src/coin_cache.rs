@@ -41,6 +41,15 @@ impl CoinsCache {
         }
     }
 
+    pub fn get_all_active(&mut self) -> Vec<CoinTypeId> {
+        self.remove_all_expired_entries();
+
+        self.items
+            .iter()
+            .flat_map(|(_key, entry)| entry.iter().map(|cci| cci.id.clone()))
+            .collect()
+    }
+
     pub fn get_active(&mut self, key: &CoinCacheKey) -> HashSet<CoinTypeId> {
         self.remove_expired_entries(key);
 
@@ -73,6 +82,12 @@ impl CoinsCache {
 
     fn remove_expired_entries(&mut self, key: &CoinCacheKey) {
         if let Some(entry) = self.items.get_mut(key) {
+            entry.retain(|item| item.is_valid(self.ttl));
+        }
+    }
+
+    fn remove_all_expired_entries(&mut self) {
+        for (_key, entry) in self.items.iter_mut() {
             entry.retain(|item| item.is_valid(self.ttl));
         }
     }
@@ -175,8 +190,42 @@ mod tests {
         assert!(active_coins.is_empty());
     }
 
+    #[tokio::test]
+    async fn get_all_active() {
+        let mut cache = CoinsCache::new(Duration::from_secs(10));
+
+        let key = CoinCacheKey::default();
+        let (item1, _) = get_items();
+        let items = HashMap::from([(key.clone(), vec![item1.clone()])]);
+
+        cache.insert_multiple(items);
+
+        // Advance time by more than the cache's TTL
+        tokio::time::pause();
+        tokio::time::advance(Duration::from_secs(12)).await;
+
+        let (_, item2) = get_items();
+        let items = HashMap::from([(key.clone(), vec![item2.clone()])]);
+        cache.insert_multiple(items);
+
+        let active_coins = cache.get_all_active();
+
+        assert_eq!(active_coins.len(), 1);
+        assert!(!active_coins.contains(&item1));
+        assert!(active_coins.contains(&item2));
+    }
+
     #[test]
-    fn test_remove_items() {
+    fn get_all_active_no_items() {
+        let mut cache = CoinsCache::new(Duration::from_secs(60));
+
+        let active_coins = cache.get_all_active();
+
+        assert!(active_coins.is_empty());
+    }
+
+    #[test]
+    fn remove_items() {
         let mut cache = CoinsCache::new(Duration::from_secs(60));
 
         let key: CoinCacheKey = Default::default();

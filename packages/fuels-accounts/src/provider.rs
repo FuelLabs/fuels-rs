@@ -47,6 +47,8 @@ use fuels_core::{
     },
 };
 use futures::StreamExt;
+#[cfg(feature = "coin-cache")]
+use itertools::{Either, Itertools};
 pub use retry_util::{Backoff, RetryConfig};
 pub use supported_fuel_core_version::SUPPORTED_FUEL_CORE_VERSION;
 use tai64::Tai64;
@@ -399,6 +401,29 @@ impl Provider {
         estimate_predicates: bool,
         reserve_gas: Option<u64>,
     ) -> Result<AssembleTransactionResult> {
+        #[cfg(feature = "coin-cache")]
+        let (cache_utxos, cache_nonces) = self
+            .coins_cache
+            .lock()
+            .await
+            .get_all_active()
+            .into_iter()
+            .partition_map(|coin_type_id| match coin_type_id {
+                CoinTypeId::UtxoId(utxo_id) => Either::Left(utxo_id),
+                CoinTypeId::Nonce(nonce) => Either::Right(nonce),
+            });
+
+        #[cfg(feature = "coin-cache")]
+        let exclude = match exclude {
+            Some((mut utxos, mut nonces)) => {
+                utxos.extend(cache_utxos);
+                nonces.extend(cache_nonces);
+
+                Some((utxos, nonces))
+            }
+            None => Some((cache_utxos, cache_nonces)),
+        };
+
         Ok(self
             .uncached_client()
             .assemble_tx(
