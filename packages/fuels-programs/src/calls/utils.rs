@@ -312,12 +312,10 @@ pub(crate) async fn assemble_tx(
     let change_address = find_base_asset_change_address(&tb.outputs, base_asset_id);
     let required_balances = vec![account.required_balance(0, *base_asset_id, change_address)];
 
-    let mut tb = tb
-        .with_build_strategy(ScriptBuildStrategy::AssembleTx {
-            required_balances,
-            fee_index,
-        })
-        .enable_burn(true); // assemble tx will add missing change outputs
+    let mut tb = tb.with_build_strategy(ScriptBuildStrategy::AssembleTx {
+        required_balances,
+        fee_index,
+    });
 
     account.add_witnesses(&mut tb)?;
 

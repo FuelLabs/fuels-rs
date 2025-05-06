@@ -3,8 +3,7 @@ use std::{fmt::Debug, iter::repeat, sync::Arc};
 use async_trait::async_trait;
 use fuel_crypto::Signature;
 use fuel_tx::{
-    BlobIdExt, Chargeable, ConsensusParameters, Output, Transaction as FuelTransaction,
-    UniqueIdentifier, Witness,
+    BlobIdExt, Chargeable, Output, Transaction as FuelTransaction, UniqueIdentifier, Witness,
     field::{MaxFeeLimit, Policies as PoliciesField, WitnessLimit, Witnesses},
     policies::{Policies, PolicyType},
 };
@@ -151,9 +150,6 @@ impl BlobTransactionBuilder {
     }
 
     pub async fn build(mut self, provider: impl DryRunner) -> Result<BlobTransaction> {
-        let consensus_parameters = provider.consensus_parameters().await?;
-        self.intercept_burn(consensus_parameters.base_asset_id())?;
-
         let is_using_predicates = self.is_using_predicates();
 
         let tx = match self.build_strategy {
@@ -168,13 +164,8 @@ impl BlobTransactionBuilder {
                 fee_index,
             } => {
                 let required_balances = std::mem::take(required_balances);
-                self.assemble_tx(
-                    required_balances,
-                    fee_index,
-                    &consensus_parameters,
-                    provider,
-                )
-                .await?
+                self.assemble_tx(required_balances, fee_index, provider)
+                    .await?
             }
         };
 
@@ -188,9 +179,10 @@ impl BlobTransactionBuilder {
         mut self,
         required_balances: Vec<RequiredBalance>,
         fee_index: u16,
-        consensus_parameters: &ConsensusParameters,
         dry_runner: impl DryRunner,
     ) -> Result<fuel_tx::Blob> {
+        let consensus_parameters = dry_runner.consensus_parameters().await?;
+
         let free_witness_index = self.num_witnesses()?;
         let body = self.blob.as_blob_body(free_witness_index);
 
@@ -260,7 +252,10 @@ impl BlobTransactionBuilder {
     }
 
     async fn resolve_fuel_tx(mut self, provider: &impl DryRunner) -> Result<fuel_tx::Blob> {
-        let chain_id = provider.consensus_parameters().await?.chain_id();
+        let consensus_parameters = provider.consensus_parameters().await?;
+        self.intercept_burn(consensus_parameters.base_asset_id())?;
+
+        let chain_id = consensus_parameters.chain_id();
 
         let free_witness_index = self.num_witnesses()?;
         let body = self.blob.as_blob_body(free_witness_index);
