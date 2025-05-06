@@ -173,6 +173,7 @@ pub trait Account: ViewOnlyAccount {
         Ok(())
     }
 
+    /// Create a required balance for assemble tx using a specific account type
     fn required_balance(
         &self,
         amount: u64,
