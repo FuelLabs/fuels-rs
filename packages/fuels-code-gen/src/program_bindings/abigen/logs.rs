@@ -33,8 +33,7 @@ fn resolve_logs(logged_types: &[FullLoggedType]) -> Vec<ResolvedLog> {
                 .type_decl
                 .components
                 .first()
-                .and_then(|ta| ta.error_message.clone()) //TODO: fix this and remove clone
-                .is_some();
+                .is_some_and(|ta| ta.error_message.is_some());
 
             let log_formatter = if is_error_type {
                 quote! {

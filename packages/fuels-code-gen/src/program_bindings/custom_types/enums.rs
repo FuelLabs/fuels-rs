@@ -10,7 +10,7 @@ use crate::{
         custom_types::utils::extract_generic_parameters,
         generated_code::GeneratedCode,
         resolved_type::ResolvedType,
-        utils::{Components, tokenize_generics},
+        utils::{Component, Components, tokenize_generics},
     },
 };
 
@@ -38,10 +38,10 @@ pub(crate) fn expand_custom_enum(
 }
 
 fn maybe_impl_error(enum_ident: &Ident, components: &Components) -> Option<TokenStream> {
-    components.has_error_message().then(|| {
-        let display_match_branches = components.iter().map(|(ident, ty, error_message)| {
-            let error_msg = error_message.clone().expect("is there"); //TODO: fix clone
-            if let ResolvedType::Unit = ty {
+    components.has_error_messages().then(|| {
+        let display_match_branches = components.iter().map(|Component{ident, resolved_type, error_message}| {
+            let error_msg = error_message.as_deref().expect("error message is there - checked above");
+            if let ResolvedType::Unit = resolved_type {
                 quote! {#enum_ident::#ident =>  ::std::write!(f, "{}", #error_msg)}
             } else {
                 quote! {#enum_ident::#ident(val) => ::std::write!(f, "{}: {:?}", #error_msg, val)}

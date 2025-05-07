@@ -3,14 +3,17 @@ contract;
 use std::{logging::log, string::String};
 use contract_logs_abi::ContractLogs;
 
-struct B {id: u64, val: u64}
+struct B {
+    id: u64,
+    val: u64,
+}
 
 #[error_type]
 enum MyError {
-  #[error(m="some error A")]
-  A: (),
-  #[error(m="some complex error B")]
-  B: B
+    #[error(m = "some error A")]
+    A: (),
+    #[error(m = "some complex error B")]
+    B: B,
 }
 
 #[allow(dead_code)]
@@ -194,6 +197,9 @@ impl ContractLogs for Contract {
     }
 
     fn produce_panic_with_error() {
-        panic MyError::B(B{id: 42, val: 36});
+        panic MyError::B(B {
+            id: 42,
+            val: 36,
+        });
     }
 }

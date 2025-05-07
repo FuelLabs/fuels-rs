@@ -20,14 +20,17 @@ struct StructDeeplyNestedGeneric<D> {
     field_2: u64,
 }
 
-struct B {id: u64, val: u64}
+struct B {
+    id: u64,
+    val: u64,
+}
 
 #[error_type]
 enum MyError {
-  #[error(m="some error A")]
-  A: (),
-  #[error(m="some complex error B")]
-  B: B
+    #[error(m = "some error A")]
+    A: (),
+    #[error(m = "some complex error B")]
+    B: B,
 }
 
 #[allow(dead_code)]
@@ -85,6 +88,9 @@ fn main(match_enum: MatchEnum) {
             revert_with_log(test_deeply_nested_generic);
         }
         MatchEnum::Panic => panic "some panic message",
-        MatchEnum::PanicError => panic MyError::B(B{id: 42, val: 36}),
+        MatchEnum::PanicError => panic MyError::B(B {
+            id: 42,
+            val: 36,
+        }),
     }
 }
