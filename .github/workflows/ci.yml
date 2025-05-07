@@ -60,7 +60,7 @@ jobs:
           fi
 
       - name: Check format of Sway test projects
-        run: forc fmt --check --path e2e
+        run: forc fmt --check --path e2e --experimental error_type
 
       - name: Build Sway test projects
         run: forc build --release --terse --error-on-warnings --path e2e --experimental error_type
