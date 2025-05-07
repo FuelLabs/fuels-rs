@@ -32,8 +32,8 @@ fn resolve_logs(logged_types: &[FullLoggedType]) -> Vec<ResolvedLog> {
                 .application
                 .type_decl
                 .components
-                .first()
-                .is_some_and(|ta| ta.error_message.is_some());
+                .iter()
+                .any(|component| component.error_message.is_some());
 
             let log_formatter = if is_error_type {
                 quote! {
@@ -77,19 +77,22 @@ pub(crate) fn generate_id_error_codes_pairs(
             let file = ed.pos.file;
             let line = ed.pos.line;
             let column = ed.pos.column;
+
             let log_id = ed.log_id.map_or(
-                quote! {::core::option::Option::<::std::string::String>::None},
+                quote! {::core::option::Option::None},
                 |l| quote! {::core::option::Option::Some(#l.to_string())},
             );
             let msg = ed.msg.map_or(
-                quote! {::core::option::Option::<::std::string::String>::None},
+                quote! {::core::option::Option::None},
                 |m| quote! {::core::option::Option::Some(#m.to_string())},
             );
 
             quote! {
-                (#id, ::fuels::core::codec::ErrorDetails::new(
+                (#id,
+                 ::fuels::core::codec::ErrorDetails::new(
                         #pkg.to_string(), #file.to_string(), #line, #column, #log_id, #msg
-                        ))
+                    )
+                 )
             }
         })
         .collect()
