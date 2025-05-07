@@ -14,4 +14,7 @@ abi ContractLogs {
     fn produce_bytes_log();
     fn produce_raw_slice_log();
     fn produce_vec_log();
+
+    fn produce_panic();
+    fn produce_panic_with_error();
 }

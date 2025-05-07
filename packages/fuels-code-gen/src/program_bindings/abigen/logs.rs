@@ -28,11 +28,27 @@ fn resolve_logs(logged_types: &[FullLoggedType]) -> Vec<ResolvedLog> {
                 .resolve(&l.application)
                 .expect("Failed to resolve log type");
 
+            let is_error_type = l
+                .application
+                .type_decl
+                .components
+                .first()
+                .and_then(|ta| ta.error_message.clone()) //TODO: fix this and remove clone
+                .is_some();
+
+            let log_formatter = if is_error_type {
+                quote! {
+                    ::fuels::core::codec::LogFormatter::new_error::<#resolved_type>()
+                }
+            } else {
+                quote! {
+                    ::fuels::core::codec::LogFormatter::new_log::<#resolved_type>()
+                }
+            };
+
             ResolvedLog {
                 log_id: l.log_id.clone(),
-                log_formatter: quote! {
-                    ::fuels::core::codec::LogFormatter::new::<#resolved_type>()
-                },
+                log_formatter,
             }
         })
         .collect()

@@ -37,6 +37,34 @@ pub(crate) fn expand_custom_enum(
     Ok(enum_code.wrap_in_mod(enum_type_path.parent()))
 }
 
+fn maybe_impl_error(enum_ident: &Ident, components: &Components) -> Option<TokenStream> {
+    components.has_error_message().then(|| {
+        let display_match_branches = components.iter().map(|(ident, ty, error_message)| {
+            let error_msg = error_message.clone().expect("is there"); //TODO: fix clone
+            if let ResolvedType::Unit = ty {
+                quote! {#enum_ident::#ident =>  ::std::write!(f, "{}", #error_msg)}
+            } else {
+                quote! {#enum_ident::#ident(val) => ::std::write!(f, "{}: {:?}", #error_msg, val)}
+            }
+        });
+
+        let custom_display_impl = quote! {
+            impl ::std::fmt::Display for #enum_ident {
+                fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+                   match &self {
+                    #(#display_match_branches,)*
+                   }
+                }
+            }
+        };
+
+        quote! {
+            #custom_display_impl
+            impl ::std::error::Error for #enum_ident{}
+        }
+    })
+}
+
 fn enum_decl(
     enum_ident: &Ident,
     components: &Components,
@@ -48,20 +76,11 @@ fn enum_decl(
     let enum_variants = components.as_enum_variants();
     let unused_generics_variant = components.generate_variant_for_unused_generics(generics);
     let (_, generics_w_bounds) = tokenize_generics(generics);
+    let maybe_impl_error = maybe_impl_error(enum_ident, components);
 
-    let has_error_messages = components.has_error_message();
-
-    let derive = if has_error_messages {
-        quote! {#[derive(
-            Clone,
-            Eq,
-            PartialEq,
-            ::fuels::macros::Parameterize,
-            ::fuels::macros::Tokenizable,
-            ::fuels::macros::TryFrom,
-        )]}
-    } else {
-        quote! {#[derive(
+    quote! {
+        #[allow(clippy::enum_variant_names)]
+        #[derive(
             Clone,
             Debug,
             Eq,
@@ -69,43 +88,12 @@ fn enum_decl(
             ::fuels::macros::Parameterize,
             ::fuels::macros::Tokenizable,
             ::fuels::macros::TryFrom,
-        )]}
-    };
-
-    let custom_dbg_impl = if has_error_messages {
-        // custom debug impl
-        let match_branches = components.iter().map(|(ident, ty, error_message)| {
-            let error_msg = error_message.clone().expect("is there"); //TODO: fix clone
-            if let ResolvedType::Unit = ty {
-                quote! {#enum_ident::#ident =>  ::std::write!(f, "{}", #error_msg)}
-            } else {
-                quote! {#enum_ident::#ident(val) => ::std::write!(f, "{}: {:?}", #error_msg, val)}
-            }
-        });
-
-        let custom_dbg_impl = quote! {
-            impl ::std::fmt::Debug for #enum_ident {
-                fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-                   match &self {
-                    #(#match_branches,)*
-                   }
-                }
-            }
-        };
-
-        custom_dbg_impl
-    } else {
-        quote! {}
-    };
-
-    quote! {
-        #[allow(clippy::enum_variant_names)]
-        #derive
+        )]
         #maybe_disable_std
         pub enum #enum_ident #generics_w_bounds {
             #(#enum_variants,)*
             #unused_generics_variant
         }
-        #custom_dbg_impl
+        #maybe_impl_error
     }
 }

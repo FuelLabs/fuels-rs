@@ -62,7 +62,7 @@ pub(crate) fn script_bindings(
                     unconfigured_binary: binary,
                     configurables: ::core::default::Default::default(),
                     converted_into_loader: false,
-                    let log_decoder = ::fuels::core::codec::LogDecoder::new(#log_formatters, #error_codes);
+                    log_decoder: ::fuels::core::codec::LogDecoder::new(#log_formatters, #error_codes),
                     encoder_config: ::fuels::core::codec::EncoderConfig::default(),
                 }
             }

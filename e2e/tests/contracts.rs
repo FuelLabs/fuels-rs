@@ -2839,36 +2839,3 @@ async fn multicall_tx_input_output() -> Result<()> {
 
     Ok(())
 }
-
-#[tokio::test]
-async fn panic_message() -> Result<()> {
-    setup_program_test!(
-        Wallets("wallet"),
-        Abigen(Contract(
-            name = "PanicContract",
-            project = "e2e/sway/contracts/panic"
-        )),
-        Deploy(
-            name = "contract_instance",
-            contract = "PanicContract",
-            wallet = "wallet",
-            random_salt = false,
-        ),
-    );
-
-    // let _ = contract_instance
-    //     .methods()
-    //     .some_panic()
-    //     .call()
-    //     .await
-    //     .unwrap();
-
-    let _ = contract_instance
-        .methods()
-        .some_panic_error()
-        .call()
-        .await
-        .unwrap();
-
-    Ok(())
-}

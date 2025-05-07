@@ -50,9 +50,16 @@ pub struct LogFormatter {
 }
 
 impl LogFormatter {
-    pub fn new<T: Tokenizable + Parameterize + Debug + 'static>() -> Self {
+    pub fn new_log<T: Tokenizable + Parameterize + Debug + 'static>() -> Self {
         Self {
             formatter: Self::format_log::<T>,
+            type_id: TypeId::of::<T>(),
+        }
+    }
+
+    pub fn new_error<T: Tokenizable + Parameterize + std::error::Error + 'static>() -> Self {
+        Self {
+            formatter: Self::format_error::<T>,
             type_id: TypeId::of::<T>(),
         }
     }
@@ -64,6 +71,15 @@ impl LogFormatter {
         let token = ABIDecoder::new(decoder_config).decode(&T::param_type(), bytes)?;
 
         Ok(format!("{:?}", T::from_token(token)?))
+    }
+
+    fn format_error<T: Parameterize + Tokenizable + std::error::Error>(
+        decoder_config: DecoderConfig,
+        bytes: &[u8],
+    ) -> Result<String> {
+        let token = ABIDecoder::new(decoder_config).decode(&T::param_type(), bytes)?;
+
+        Ok(T::from_token(token)?.to_string())
     }
 
     pub fn can_handle_type<T: Tokenizable + Parameterize + 'static>(&self) -> bool {
@@ -80,6 +96,38 @@ impl Debug for LogFormatter {
         f.debug_struct("LogFormatter")
             .field("type_id", &self.type_id)
             .finish()
+    }
+}
+
+#[derive(Clone)]
+pub struct ErrorFormatter {
+    formatter: fn(DecoderConfig, &[u8]) -> Result<String>,
+    type_id: TypeId,
+}
+
+impl ErrorFormatter {
+    pub fn new<T: Tokenizable + Parameterize + std::error::Error + 'static>() -> Self {
+        Self {
+            formatter: Self::format_error::<T>,
+            type_id: TypeId::of::<T>(),
+        }
+    }
+
+    fn format_error<T: Parameterize + Tokenizable + std::error::Error>(
+        decoder_config: DecoderConfig,
+        bytes: &[u8],
+    ) -> Result<String> {
+        let token = ABIDecoder::new(decoder_config).decode(&T::param_type(), bytes)?;
+
+        Ok(T::from_token(token)?.to_string())
+    }
+
+    pub fn can_handle_type<T: Tokenizable + Parameterize + 'static>(&self) -> bool {
+        TypeId::of::<T>() == self.type_id
+    }
+
+    pub fn format(&self, decoder_config: DecoderConfig, bytes: &[u8]) -> Result<String> {
+        (self.formatter)(decoder_config, bytes)
     }
 }
 
@@ -224,6 +272,8 @@ impl LogDecoder {
 
     pub fn merge(&mut self, log_decoder: LogDecoder) {
         self.log_formatters.extend(log_decoder.log_formatters);
+        self.error_codes.extend(log_decoder.error_codes);
+        //TODO: extend later with error_formatters
     }
 }
 
