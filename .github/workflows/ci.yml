@@ -63,7 +63,7 @@ jobs:
         run: forc fmt --check --path e2e
 
       - name: Build Sway test projects
-        run: forc build --release --terse --error-on-warnings --path e2e
+        run: forc build --release --terse --error-on-warnings --path e2e --experimental error_type
 
       - uses: actions/upload-artifact@v4
         with:
