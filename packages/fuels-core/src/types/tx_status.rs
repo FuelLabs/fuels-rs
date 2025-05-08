@@ -118,6 +118,35 @@ impl TxStatus {
         revert_id: Option<u64>,
         log_decoder: Option<&LogDecoder>,
     ) -> Error {
+        if let (Some(revert_id), Some(log_decoder)) = (revert_id, log_decoder) {
+            if let Some(error_detail) = log_decoder.get_error_codes(&revert_id) {
+                let error_message = if error_detail.log_id.is_some() {
+                    log_decoder
+                        .decode_last_log(&receipts)
+                        .unwrap_or_else(|err| {
+                            format!("failed to decode log from require revert: {err}")
+                        })
+                } else {
+                    error_detail.msg.clone().expect("is there")
+                };
+
+                let reason = format!(
+                    "panicked at: `{}` - `{}:{}:{}` with message `{}`",
+                    error_detail.pkg,
+                    error_detail.file,
+                    error_detail.line,
+                    error_detail.column,
+                    error_message
+                );
+
+                return Error::Transaction(Reason::Failure {
+                    reason,
+                    revert_id: Some(revert_id),
+                    receipts,
+                });
+            }
+        }
+
         let reason = match (revert_id, log_decoder) {
             (Some(FAILED_REQUIRE_SIGNAL), Some(log_decoder)) => log_decoder
                 .decode_last_log(&receipts)

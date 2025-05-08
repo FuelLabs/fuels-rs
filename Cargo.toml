@@ -53,7 +53,7 @@ cynic = { version = "3.1.0", default-features = false }
 test-case = { version = "3.3", default-features = false }
 eth-keystore = "0.5.0"
 flate2 = { version = "1.0", default-features = false }
-fuel-abi-types = "0.8.0"
+fuel-abi-types = "0.12.0"
 futures = "0.3.29"
 hex = { version = "0.4.3", default-features = false }
 itertools = "0.12.0"

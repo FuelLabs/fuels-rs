@@ -28,11 +28,26 @@ fn resolve_logs(logged_types: &[FullLoggedType]) -> Vec<ResolvedLog> {
                 .resolve(&l.application)
                 .expect("Failed to resolve log type");
 
+            let is_error_type = l
+                .application
+                .type_decl
+                .components
+                .iter()
+                .any(|component| component.error_message.is_some());
+
+            let log_formatter = if is_error_type {
+                quote! {
+                    ::fuels::core::codec::LogFormatter::new_error::<#resolved_type>()
+                }
+            } else {
+                quote! {
+                    ::fuels::core::codec::LogFormatter::new_log::<#resolved_type>()
+                }
+            };
+
             ResolvedLog {
                 log_id: l.log_id.clone(),
-                log_formatter: quote! {
-                    ::fuels::core::codec::LogFormatter::new::<#resolved_type>()
-                },
+                log_formatter,
             }
         })
         .collect()
@@ -47,6 +62,37 @@ fn generate_log_id_log_formatter_pairs(resolved_logs: &[ResolvedLog]) -> Vec<Tok
 
             quote! {
                 (#id.to_string(), #log_formatter)
+            }
+        })
+        .collect()
+}
+
+pub(crate) fn generate_id_error_codes_pairs(
+    error_codes: impl IntoIterator<Item = (u64, fuel_abi_types::abi::program::ErrorDetails)>,
+) -> Vec<TokenStream> {
+    error_codes
+        .into_iter()
+        .map(|(id, ed)| {
+            let pkg = ed.pos.pkg;
+            let file = ed.pos.file;
+            let line = ed.pos.line;
+            let column = ed.pos.column;
+
+            let log_id = ed.log_id.map_or(
+                quote! {::core::option::Option::None},
+                |l| quote! {::core::option::Option::Some(#l.to_string())},
+            );
+            let msg = ed.msg.map_or(
+                quote! {::core::option::Option::None},
+                |m| quote! {::core::option::Option::Some(#m.to_string())},
+            );
+
+            quote! {
+                (#id,
+                 ::fuels::core::codec::ErrorDetails::new(
+                        #pkg.to_string(), #file.to_string(), #line, #column, #log_id, #msg
+                    )
+                 )
             }
         })
         .collect()

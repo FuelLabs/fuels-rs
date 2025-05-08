@@ -9,7 +9,8 @@ use crate::{
     program_bindings::{
         custom_types::utils::extract_generic_parameters,
         generated_code::GeneratedCode,
-        utils::{Components, tokenize_generics},
+        resolved_type::ResolvedType,
+        utils::{Component, Components, tokenize_generics},
     },
 };
 
@@ -33,6 +34,19 @@ pub(crate) fn expand_custom_struct(
     Ok(struct_code.wrap_in_mod(struct_type_path.parent()))
 }
 
+fn unzip_field_names_and_types(components: &Components) -> (Vec<&Ident>, Vec<&ResolvedType>) {
+    components
+        .iter()
+        .map(
+            |Component {
+                 ident,
+                 resolved_type,
+                 ..
+             }| (ident, resolved_type),
+        )
+        .unzip()
+}
+
 fn struct_decl(
     struct_ident: &Ident,
     components: &Components,
@@ -46,7 +60,7 @@ fn struct_decl(
     let maybe_disable_std = no_std.then(|| quote! {#[NoStd]});
 
     let (generics_wo_bounds, generics_w_bounds) = tokenize_generics(generics);
-    let (field_names, field_types): (Vec<_>, Vec<_>) = components.iter().unzip();
+    let (field_names, field_types): (Vec<_>, Vec<_>) = unzip_field_names_and_types(components);
     let (phantom_fields, phantom_types) =
         components.generate_parameters_for_unused_generics(generics);
 

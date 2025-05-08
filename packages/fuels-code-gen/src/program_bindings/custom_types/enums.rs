@@ -9,7 +9,8 @@ use crate::{
     program_bindings::{
         custom_types::utils::extract_generic_parameters,
         generated_code::GeneratedCode,
-        utils::{Components, tokenize_generics},
+        resolved_type::ResolvedType,
+        utils::{Component, Components, tokenize_generics},
     },
 };
 
@@ -36,6 +37,34 @@ pub(crate) fn expand_custom_enum(
     Ok(enum_code.wrap_in_mod(enum_type_path.parent()))
 }
 
+fn maybe_impl_error(enum_ident: &Ident, components: &Components) -> Option<TokenStream> {
+    components.has_error_messages().then(|| {
+        let display_match_branches = components.iter().map(|Component{ident, resolved_type, error_message}| {
+            let error_msg = error_message.as_deref().expect("error message is there - checked above");
+            if let ResolvedType::Unit = resolved_type {
+                quote! {#enum_ident::#ident =>  ::std::write!(f, "{}", #error_msg)}
+            } else {
+                quote! {#enum_ident::#ident(val) => ::std::write!(f, "{}: {:?}", #error_msg, val)}
+            }
+        });
+
+        let custom_display_impl = quote! {
+            impl ::std::fmt::Display for #enum_ident {
+                fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+                   match &self {
+                    #(#display_match_branches,)*
+                   }
+                }
+            }
+        };
+
+        quote! {
+            #custom_display_impl
+            impl ::std::error::Error for #enum_ident{}
+        }
+    })
+}
+
 fn enum_decl(
     enum_ident: &Ident,
     components: &Components,
@@ -47,6 +76,7 @@ fn enum_decl(
     let enum_variants = components.as_enum_variants();
     let unused_generics_variant = components.generate_variant_for_unused_generics(generics);
     let (_, generics_w_bounds) = tokenize_generics(generics);
+    let maybe_impl_error = maybe_impl_error(enum_ident, components);
 
     quote! {
         #[allow(clippy::enum_variant_names)]
@@ -64,5 +94,6 @@ fn enum_decl(
             #(#enum_variants,)*
             #unused_generics_variant
         }
+        #maybe_impl_error
     }
 }
