@@ -99,38 +99,6 @@ impl Debug for LogFormatter {
     }
 }
 
-#[derive(Clone)]
-pub struct ErrorFormatter {
-    formatter: fn(DecoderConfig, &[u8]) -> Result<String>,
-    type_id: TypeId,
-}
-
-impl ErrorFormatter {
-    pub fn new<T: Tokenizable + Parameterize + std::error::Error + 'static>() -> Self {
-        Self {
-            formatter: Self::format_error::<T>,
-            type_id: TypeId::of::<T>(),
-        }
-    }
-
-    fn format_error<T: Parameterize + Tokenizable + std::error::Error>(
-        decoder_config: DecoderConfig,
-        bytes: &[u8],
-    ) -> Result<String> {
-        let token = ABIDecoder::new(decoder_config).decode(&T::param_type(), bytes)?;
-
-        Ok(T::from_token(token)?.to_string())
-    }
-
-    pub fn can_handle_type<T: Tokenizable + Parameterize + 'static>(&self) -> bool {
-        TypeId::of::<T>() == self.type_id
-    }
-
-    pub fn format(&self, decoder_config: DecoderConfig, bytes: &[u8]) -> Result<String> {
-        (self.formatter)(decoder_config, bytes)
-    }
-}
-
 /// Holds a unique log ID
 #[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct LogId(ContractId, String);
@@ -140,7 +108,6 @@ pub struct LogId(ContractId, String);
 pub struct LogDecoder {
     /// A mapping of LogId and param-type
     log_formatters: HashMap<LogId, LogFormatter>,
-    //TODO: add error_formatters
     error_codes: HashMap<u64, ErrorDetails>,
     decoder_config: DecoderConfig,
 }
@@ -273,7 +240,6 @@ impl LogDecoder {
     pub fn merge(&mut self, log_decoder: LogDecoder) {
         self.log_formatters.extend(log_decoder.log_formatters);
         self.error_codes.extend(log_decoder.error_codes);
-        //TODO: extend later with error_formatters
     }
 }
 
