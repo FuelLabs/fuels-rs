@@ -119,7 +119,7 @@ impl TxStatus {
         log_decoder: Option<&LogDecoder>,
     ) -> Error {
         if let (Some(revert_id), Some(log_decoder)) = (revert_id, log_decoder) {
-            if let Some(ref mut error_detail) = log_decoder.get_error_codes(&revert_id) {
+            if let Some(error_detail) = log_decoder.get_error_codes(&revert_id) {
                 let error_message = if error_detail.log_id.is_some() {
                     log_decoder
                         .decode_last_log(&receipts)
