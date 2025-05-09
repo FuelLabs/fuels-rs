@@ -45,8 +45,10 @@ impl CoinsCache {
         self.remove_all_expired_entries();
 
         self.items
-            .iter()
-            .flat_map(|(_key, entry)| entry.iter().map(|cci| cci.id.clone()))
+            .values()
+            .flatten()
+            .map(|item| &item.id)
+            .cloned()
             .collect()
     }
 
