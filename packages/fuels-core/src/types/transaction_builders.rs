@@ -870,7 +870,7 @@ impl ScriptTransactionBuilder {
             }
         }
 
-        //if user set `witness_limit` we will use it's value only
+        //if user set `witness_limit` we will use its value only
         //if it is higher then the one estimated by assemble_tx
         if let Some(witness_limit) = self.tx_policies.witness_limit() {
             if witness_limit > tx.witness_limit() {
