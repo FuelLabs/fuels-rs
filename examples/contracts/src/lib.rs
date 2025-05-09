@@ -8,10 +8,7 @@ mod tests {
         prelude::{LoadConfiguration, NodeConfig, StorageConfiguration},
         programs::debug::ScriptType,
         test_helpers::{ChainConfig, StateConfig},
-        types::{
-            Bits256,
-            errors::{Result, transaction::Reason},
-        },
+        types::{Bits256, errors::Result},
     };
     use rand::{Rng, thread_rng};
 
@@ -162,7 +159,6 @@ mod tests {
         // Optional: Configure deployment parameters
         let tx_policies = TxPolicies::default()
             .with_tip(1)
-            .with_script_gas_limit(1_000_000)
             .with_maturity(0)
             .with_expiration(10_000);
 
@@ -301,7 +297,6 @@ mod tests {
 
         let tx_policies = TxPolicies::default()
             .with_tip(1)
-            .with_script_gas_limit(1_000_000)
             .with_maturity(0)
             .with_expiration(10_000);
 
@@ -320,13 +315,20 @@ mod tests {
             .await?;
         // ANCHOR_END: tx_policies_default
 
+        // ANCHOR: tx_script_gas_limit
+        let response = contract_methods
+            .initialize_counter(42)
+            .with_script_gas_limit(42_000)
+            .call()
+            .await?;
+        // ANCHOR_END: tx_script_gas_limit
+
         // ANCHOR: call_parameters
         let contract_methods = MyContract::new(contract_id, wallet.clone()).methods();
 
         let tx_policies = TxPolicies::default();
 
         // Forward 1_000_000 coin amount of base asset_id
-        // this is a big number for checking that amount can be a u64
         let call_params = CallParameters::default().with_amount(1_000_000);
 
         let response = contract_methods
@@ -437,7 +439,6 @@ mod tests {
         // withdraw some tokens to wallet
         let response = contract_methods
             .transfer(1_000_000, asset_id, address.into())
-            .with_variable_output_policy(VariableOutputPolicy::Exactly(1))
             .call()
             .await?;
         // ANCHOR_END: variable_outputs
@@ -474,46 +475,19 @@ mod tests {
         let contract_methods =
             MyContract::new(caller_contract_id.clone(), wallet.clone()).methods();
 
-        // ANCHOR: dependency_estimation_fail
         let address = wallet.address();
         let amount = 100;
-
-        let response = contract_methods
-            .mint_then_increment_from_contract(called_contract_id, amount, address.into())
-            .call()
-            .await;
-
-        assert!(matches!(
-            response,
-            Err(Error::Transaction(Reason::Failure { .. }))
-        ));
-        // ANCHOR_END: dependency_estimation_fail
-
-        // ANCHOR: dependency_estimation_manual
-        let response = contract_methods
-            .mint_then_increment_from_contract(called_contract_id, amount, address.into())
-            .with_variable_output_policy(VariableOutputPolicy::Exactly(1))
-            .with_contract_ids(&[called_contract_id.into()])
-            .call()
-            .await?;
-        // ANCHOR_END: dependency_estimation_manual
-
-        let asset_id = caller_contract_id.asset_id(&Bits256::zeroed());
-        let balance = wallet.get_asset_balance(&asset_id).await?;
-        assert_eq!(balance, amount);
 
         // ANCHOR: dependency_estimation
         let response = contract_methods
             .mint_then_increment_from_contract(called_contract_id, amount, address.into())
-            .with_variable_output_policy(VariableOutputPolicy::EstimateMinimum)
-            .determine_missing_contracts()
-            .await?
             .call()
             .await?;
         // ANCHOR_END: dependency_estimation
 
+        let asset_id = caller_contract_id.asset_id(&Bits256::zeroed());
         let balance = wallet.get_asset_balance(&asset_id).await?;
-        assert_eq!(balance, 2 * amount);
+        assert_eq!(balance, amount);
 
         Ok(())
     }
@@ -576,12 +550,11 @@ mod tests {
         // Set the transaction `gas_limit` to 1_000_000 and `gas_forwarded` to 4300 to specify that
         // the contract call transaction may consume up to 1_000_000 gas, while the actual call may
         // only use 4300 gas
-        let tx_policies = TxPolicies::default().with_script_gas_limit(1_000_000);
         let call_params = CallParameters::default().with_gas_forwarded(4300);
 
         let response = contract_methods
             .get_msg_amount() // Our contract method.
-            .with_tx_policies(tx_policies) // Chain the tx policies.
+            .with_script_gas_limit(1_000_000)
             .call_params(call_params)? // Chain the call parameters.
             .call() // Perform the contract call.
             .await?;
@@ -819,12 +792,10 @@ mod tests {
         caller_contract_instance
             .methods()
             .call_low_level_call(
-                target_contract_instance.id(),
+                target_contract_instance.contract_id(),
                 Bytes(function_selector),
                 Bytes(call_data),
             )
-            .determine_missing_contracts()
-            .await?
             .call()
             .await?;
         // ANCHOR_END: low_level_call
@@ -953,7 +924,7 @@ mod tests {
 
         let tx = tb.build(provider).await?;
 
-        let tx_id = provider.send_transaction(tx).await?;
+        let tx_id = provider.submit(tx).await?;
         tokio::time::sleep(Duration::from_millis(500)).await;
 
         let tx_status = provider.tx_status(&tx_id).await?;

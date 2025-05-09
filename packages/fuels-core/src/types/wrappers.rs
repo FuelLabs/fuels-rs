@@ -1,3 +1,4 @@
+pub mod assemble_tx;
 pub mod block;
 pub mod chain_info;
 pub mod coin;

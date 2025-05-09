@@ -40,18 +40,10 @@ Script calls provide the same logging functions, `decode_logs()` and `decode_log
 
 ## Calling contracts from scripts
 
-Scripts use the same interfaces for setting external contracts as [contract methods](./calling-contracts/other-contracts.md).
-
-Below is an example that uses `with_contracts(&[&contract_instance, ...])`.
+Similarly to [contract methods](./calling-contracts/other-contracts.md), script calls will automatically estimate all missing contracts inputs. If you need to decode logs or revert errors from the external contract you should add the `LogDecoder` with `add_log_decoder`.
 
 ```rust,ignore
 {{#include ../../e2e/tests/logs.rs:external_contract}}
-```
-
-And this is an example that uses `with_contract_ids(&[&contract_id, ...])`.
-
-```rust,ignore
-{{#include ../../e2e/tests/logs.rs:external_contract_ids}}
 ```
 
 ## Configurable constants

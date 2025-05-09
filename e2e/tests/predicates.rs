@@ -236,7 +236,6 @@ async fn pay_with_predicate() -> Result<()> {
     )?
     .deploy_if_not_exists(&predicate, TxPolicies::default())
     .await?;
-
     let contract_methods =
         MyContract::new(deploy_response.contract_id.clone(), predicate.clone()).methods();
 
@@ -921,6 +920,9 @@ async fn predicate_can_access_manually_added_witnesses() -> Result<()> {
     tx.append_witness(witness.into())?;
     tx.append_witness(witness2.into())?;
 
+    // As we have changed the witnesses and the predicate code depends on them we need
+    // to estimate the predicates again before sending the tx.
+    tx.estimate_predicates(&provider).await?;
     let tx_status = provider.send_transaction_and_await_commit(tx).await?;
 
     let fee = tx_status.total_fee();
@@ -993,7 +995,10 @@ async fn tx_id_not_changed_after_adding_witnesses() -> Result<()> {
     tx.append_witness(witness2.into())?;
     let tx_id_after_witnesses = tx.id(chain_id);
 
-    let tx_id_from_provider = provider.send_transaction(tx).await?;
+    // As we have changed the witnesses and the predicate code depends on them we need
+    // to estimate the predicates again before sending the tx.
+    tx.estimate_predicates(&provider).await?;
+    let tx_id_from_provider = provider.submit(tx).await?;
 
     assert_eq!(tx_id, tx_id_after_witnesses);
     assert_eq!(tx_id, tx_id_from_provider);
@@ -1355,7 +1360,7 @@ async fn predicate_tx_input_output() -> Result<()> {
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
-            wallet = "wallet_1",
+            wallet = "wallet_2",
             random_salt = false,
         ),
     );
@@ -1402,7 +1407,6 @@ async fn predicate_tx_input_output() -> Result<()> {
             .methods()
             .initialize_counter(36)
             .with_inputs(custom_inputs)
-            .add_signer(wallet_2.signer().clone())
             .with_outputs(custom_output)
             .call()
             .await?
@@ -1432,6 +1436,7 @@ async fn predicate_tx_input_output() -> Result<()> {
             .methods()
             .initialize_counter(36)
             .with_inputs(custom_inputs)
+            .add_signer(wallet_1.signer().clone())
             .call()
             .await
             .unwrap_err();

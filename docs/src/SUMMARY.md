@@ -49,6 +49,7 @@
 - [Pre-uploading code](./preuploading-code.md)
 - [Custom transactions](./custom-transactions/index.md)
   - [Transaction builders](./custom-transactions/transaction-builders.md)
+  - [Assemble transactions](./custom-transactions/assemble_tx.md)
   - [Custom contract and script calls](./custom-transactions/custom-calls.md)
 - [Types](./types/index.md)
   - [`Bytes32`](./types/bytes32.md)
