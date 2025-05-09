@@ -844,7 +844,7 @@ impl ScriptTransactionBuilder {
             }
         };
 
-        //if user set `script_gas_limit` we will use it's value only
+        //if user set `script_gas_limit` we will use its value only
         //if it is higher then the one estimated by assemble_tx
         if let Some(script_gas_limit) = self.script_gas_limit {
             if script_gas_limit > *tx.script_gas_limit() {
