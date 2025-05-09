@@ -1671,7 +1671,7 @@ impl UpgradeTransactionBuilder {
             _ => {
                 return Err(error_transaction!(
                     Builder,
-                    "`asseble_tx` did not return the right transactio type. Expected `upgrade`"
+                    "`assemble_tx` did not return the right transaction type. Expected `upgrade`"
                 ));
             }
         };
