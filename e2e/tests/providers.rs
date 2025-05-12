@@ -761,6 +761,7 @@ async fn test_sway_timestamp() -> Result<()> {
     Ok(())
 }
 
+#[cfg(feature = "coin-cache")]
 async fn create_transfer(
     wallet: &Wallet,
     amount: u64,
