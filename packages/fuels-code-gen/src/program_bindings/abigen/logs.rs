@@ -53,47 +53,43 @@ fn resolve_logs(logged_types: &[FullLoggedType]) -> Vec<ResolvedLog> {
         .collect()
 }
 
-fn generate_log_id_log_formatter_pairs(resolved_logs: &[ResolvedLog]) -> Vec<TokenStream> {
-    resolved_logs
-        .iter()
-        .map(|r| {
-            let id = &r.log_id;
-            let log_formatter = &r.log_formatter;
+fn generate_log_id_log_formatter_pairs(
+    resolved_logs: &[ResolvedLog],
+) -> impl Iterator<Item = TokenStream> {
+    resolved_logs.iter().map(|r| {
+        let id = &r.log_id;
+        let log_formatter = &r.log_formatter;
 
-            quote! {
-                (#id.to_string(), #log_formatter)
-            }
-        })
-        .collect()
+        quote! {
+            (#id.to_string(), #log_formatter)
+        }
+    })
 }
 
 pub(crate) fn generate_id_error_codes_pairs(
     error_codes: impl IntoIterator<Item = (u64, fuel_abi_types::abi::program::ErrorDetails)>,
-) -> Vec<TokenStream> {
-    error_codes
-        .into_iter()
-        .map(|(id, ed)| {
-            let pkg = ed.pos.pkg;
-            let file = ed.pos.file;
-            let line = ed.pos.line;
-            let column = ed.pos.column;
+) -> impl Iterator<Item = TokenStream> {
+    error_codes.into_iter().map(|(id, ed)| {
+        let pkg = ed.pos.pkg;
+        let file = ed.pos.file;
+        let line = ed.pos.line;
+        let column = ed.pos.column;
 
-            let log_id = ed.log_id.map_or(
-                quote! {::core::option::Option::None},
-                |l| quote! {::core::option::Option::Some(#l.to_string())},
-            );
-            let msg = ed.msg.map_or(
-                quote! {::core::option::Option::None},
-                |m| quote! {::core::option::Option::Some(#m.to_string())},
-            );
+        let log_id = ed.log_id.map_or(
+            quote! {::core::option::Option::None},
+            |l| quote! {::core::option::Option::Some(#l.to_string())},
+        );
+        let msg = ed.msg.map_or(
+            quote! {::core::option::Option::None},
+            |m| quote! {::core::option::Option::Some(#m.to_string())},
+        );
 
-            quote! {
-                (#id,
-                 ::fuels::core::codec::ErrorDetails::new(
-                        #pkg.to_string(), #file.to_string(), #line, #column, #log_id, #msg
-                    )
-                 )
-            }
-        })
-        .collect()
+        quote! {
+            (#id,
+             ::fuels::core::codec::ErrorDetails::new(
+                    #pkg.to_string(), #file.to_string(), #line, #column, #log_id, #msg
+                )
+             )
+        }
+    })
 }
