@@ -205,10 +205,11 @@ macro_rules! impl_tx_builder_trait {
         impl $crate::types::transaction_builders::TransactionBuilder for $ty {
             type TxType = $tx_ty;
 
-
-            fn add_signer(&mut self, signer: impl Signer + Send + Sync + 'static) -> Result<&mut Self> {
+            fn add_signer(
+                &mut self,
+                signer: impl Signer + Send + Sync + 'static,
+            ) -> Result<&mut Self> {
                 self.validate_no_signer_available(signer.address())?;
-
 
                 let index_offset = self.unresolved_signers.len() as u64;
                 self.unresolved_witness_indexes
@@ -219,7 +220,10 @@ macro_rules! impl_tx_builder_trait {
                 Ok(self)
             }
 
-            fn add_signers<'a>(&mut self, signers: impl IntoIterator<Item=&'a std::sync::Arc<dyn Signer + Send + Sync>>) -> Result<&mut Self> {
+            fn add_signers<'a>(
+                &mut self,
+                signers: impl IntoIterator<Item = &'a std::sync::Arc<dyn Signer + Send + Sync>>,
+            ) -> Result<&mut Self> {
                 for signer in signers {
                     self.validate_no_signer_available(signer.address())?;
 
@@ -330,7 +334,10 @@ macro_rules! impl_tx_builder_trait {
         }
 
         impl $ty {
-            fn validate_no_signer_available(&self, address: &$crate::types::bech32::Bech32Address) -> Result<()> {
+            fn validate_no_signer_available(
+                &self,
+                address: &$crate::types::bech32::Bech32Address,
+            ) -> Result<()> {
                 if self
                     .unresolved_witness_indexes
                     .owner_to_idx_offset
@@ -394,46 +401,6 @@ macro_rules! impl_tx_builder_trait {
                     .any(|input| matches!(input, Input::ResourcePredicate { .. }))
             }
 
-            fn intercept_burn(&self, base_asset_id: &$crate::types::AssetId) -> Result<()> {
-                use std::collections::HashSet;
-
-                if self.enable_burn {
-                    return Ok(());
-                }
-
-                let assets_w_change = self
-                    .outputs
-                    .iter()
-                    .filter_map(|output| match output {
-                        Output::Change { asset_id, .. } => Some(*asset_id),
-                        _ => None,
-                    })
-                    .collect::<HashSet<_>>();
-
-                let input_assets = self
-                    .inputs
-                    .iter()
-                    .filter_map(|input| match input {
-                        Input::ResourceSigned { resource } |
-                        Input::ResourcePredicate { resource, .. } => resource.asset_id(*base_asset_id),
-                        _ => None,
-                    })
-                    .collect::<HashSet<_>>();
-
-                let diff = input_assets.difference(&assets_w_change).collect_vec();
-                if !diff.is_empty() {
-                    return Err(error_transaction!(
-                        Builder,
-                        "the following assets have no change outputs and may be burned unintentionally: {:?}. \
-                        To resolve this, either add the necessary change outputs manually or explicitly allow asset burning \
-                        by calling `.enable_burn(true)` on the transaction builder.",
-                        diff
-                    ));
-                }
-
-                Ok(())
-            }
-
             fn num_witnesses(&self) -> Result<u16> {
                 use $crate::types::transaction_builders::TransactionBuilder;
                 let num_witnesses = self.witnesses().len();
@@ -476,13 +443,9 @@ macro_rules! impl_tx_builder_trait {
 
                 tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
 
-
-
                 Ok(())
             }
-
         }
-
     };
 }
 
@@ -772,6 +735,7 @@ impl_tx_builder_trait!(UpgradeTransactionBuilder, UpgradeTransaction);
 impl ScriptTransactionBuilder {
     async fn build(mut self, provider: impl DryRunner) -> Result<ScriptTransaction> {
         let is_using_predicates = self.is_using_predicates();
+        let mut enable_burn = self.enable_burn;
 
         let tx = match self.build_strategy {
             ScriptBuildStrategy::Complete => self.resolve_fuel_tx(&provider).await?,
@@ -782,22 +746,30 @@ impl ScriptTransactionBuilder {
                 self.resolve_fuel_tx(&provider).await?
             }
             ScriptBuildStrategy::StateReadOnly => {
-                self.resolve_fuel_tx_for_state_reading(provider).await?
+                enable_burn = true;
+                self.resolve_fuel_tx_for_state_reading(&provider).await?
             }
             ScriptBuildStrategy::AssembleTx {
                 ref mut required_balances,
                 fee_index,
             } => {
                 let required_balances = std::mem::take(required_balances);
-                self.assemble_tx(required_balances, fee_index, provider)
+                self.assemble_tx(required_balances, fee_index, &provider)
                     .await?
             }
         };
 
-        Ok(ScriptTransaction {
+        let script_transaction = ScriptTransaction {
             is_using_predicates,
             tx,
-        })
+        };
+
+        if !enable_burn {
+            script_transaction
+                .intercept_burn(provider.consensus_parameters().await?.base_asset_id())?;
+        }
+
+        Ok(script_transaction)
     }
 
     async fn assemble_tx(
@@ -890,9 +862,6 @@ impl ScriptTransactionBuilder {
     }
 
     async fn resolve_fuel_tx(self, dry_runner: impl DryRunner) -> Result<Script> {
-        let consensus_parameters = dry_runner.consensus_parameters().await?;
-        self.intercept_burn(consensus_parameters.base_asset_id())?;
-
         let predefined_witnesses = self.witnesses.clone();
         let mut script_tx_estimator = self.script_tx_estimator(predefined_witnesses, &dry_runner);
 
@@ -945,9 +914,6 @@ impl ScriptTransactionBuilder {
     }
 
     async fn resolve_fuel_tx_for_state_reading(self, dry_runner: impl DryRunner) -> Result<Script> {
-        let consensus_parameters = dry_runner.consensus_parameters().await?;
-        self.intercept_burn(consensus_parameters.base_asset_id())?;
-
         let predefined_witnesses = self.witnesses.clone();
         let mut script_tx_estimator = self.script_tx_estimator(predefined_witnesses, &dry_runner);
 
@@ -1207,6 +1173,7 @@ fn add_variable_outputs(tx: &mut fuel_tx::Script, variable_outputs: usize) {
 impl CreateTransactionBuilder {
     pub async fn build(mut self, provider: impl DryRunner) -> Result<CreateTransaction> {
         let is_using_predicates = self.is_using_predicates();
+        let enable_burn = self.enable_burn;
 
         let tx = match self.build_strategy {
             Strategy::Complete => self.resolve_fuel_tx(&provider).await?,
@@ -1220,15 +1187,22 @@ impl CreateTransactionBuilder {
                 fee_index,
             } => {
                 let required_balances = std::mem::take(required_balances);
-                self.assemble_tx(required_balances, fee_index, provider)
+                self.assemble_tx(required_balances, fee_index, &provider)
                     .await?
             }
         };
 
-        Ok(CreateTransaction {
+        let create_transaction = CreateTransaction {
             is_using_predicates,
             tx,
-        })
+        };
+
+        if !enable_burn {
+            create_transaction
+                .intercept_burn(provider.consensus_parameters().await?.base_asset_id())?;
+        }
+
+        Ok(create_transaction)
     }
 
     async fn assemble_tx(
@@ -1302,10 +1276,7 @@ impl CreateTransactionBuilder {
     }
 
     async fn resolve_fuel_tx(self, provider: impl DryRunner) -> Result<Create> {
-        let consensus_parameters = provider.consensus_parameters().await?;
-        self.intercept_burn(consensus_parameters.base_asset_id())?;
-
-        let chain_id = consensus_parameters.chain_id();
+        let chain_id = provider.consensus_parameters().await?.chain_id();
         let num_witnesses = self.num_witnesses()?;
         let policies = self.generate_fuel_policies()?;
         let is_using_predicates = self.is_using_predicates();
@@ -1401,6 +1372,7 @@ impl CreateTransactionBuilder {
 impl UploadTransactionBuilder {
     pub async fn build(mut self, provider: impl DryRunner) -> Result<UploadTransaction> {
         let is_using_predicates = self.is_using_predicates();
+        let enable_burn = self.enable_burn;
 
         let tx = match self.build_strategy {
             Strategy::Complete => self.resolve_fuel_tx(&provider).await?,
@@ -1414,15 +1386,22 @@ impl UploadTransactionBuilder {
                 fee_index,
             } => {
                 let required_balances = std::mem::take(required_balances);
-                self.assemble_tx(required_balances, fee_index, provider)
+                self.assemble_tx(required_balances, fee_index, &provider)
                     .await?
             }
         };
 
-        Ok(UploadTransaction {
+        let upload_transaction = UploadTransaction {
             is_using_predicates,
             tx,
-        })
+        };
+
+        if !enable_burn {
+            upload_transaction
+                .intercept_burn(provider.consensus_parameters().await?.base_asset_id())?;
+        }
+
+        Ok(upload_transaction)
     }
 
     async fn assemble_tx(
@@ -1502,10 +1481,7 @@ impl UploadTransactionBuilder {
     }
 
     async fn resolve_fuel_tx(self, provider: impl DryRunner) -> Result<Upload> {
-        let consensus_parameters = provider.consensus_parameters().await?;
-        self.intercept_burn(consensus_parameters.base_asset_id())?;
-
-        let chain_id = consensus_parameters.chain_id();
+        let chain_id = provider.consensus_parameters().await?.chain_id();
         let num_witnesses = self.num_witnesses()?;
         let policies = self.generate_fuel_policies()?;
         let is_using_predicates = self.is_using_predicates();
@@ -1612,6 +1588,7 @@ impl UploadTransactionBuilder {
 impl UpgradeTransactionBuilder {
     pub async fn build(mut self, provider: impl DryRunner) -> Result<UpgradeTransaction> {
         let is_using_predicates = self.is_using_predicates();
+        let enable_burn = self.enable_burn;
 
         let tx = match self.build_strategy {
             Strategy::Complete => self.resolve_fuel_tx(&provider).await?,
@@ -1625,14 +1602,22 @@ impl UpgradeTransactionBuilder {
                 fee_index,
             } => {
                 let required_balances = std::mem::take(required_balances);
-                self.assemble_tx(required_balances, fee_index, provider)
+                self.assemble_tx(required_balances, fee_index, &provider)
                     .await?
             }
         };
-        Ok(UpgradeTransaction {
+
+        let upgrade_transaction = UpgradeTransaction {
             is_using_predicates,
             tx,
-        })
+        };
+
+        if !enable_burn {
+            upgrade_transaction
+                .intercept_burn(provider.consensus_parameters().await?.base_asset_id())?;
+        }
+
+        Ok(upgrade_transaction)
     }
 
     async fn assemble_tx(
@@ -1706,10 +1691,7 @@ impl UpgradeTransactionBuilder {
     }
 
     async fn resolve_fuel_tx(self, provider: impl DryRunner) -> Result<Upgrade> {
-        let consensus_parameters = provider.consensus_parameters().await?;
-        self.intercept_burn(consensus_parameters.base_asset_id())?;
-
-        let chain_id = consensus_parameters.chain_id();
+        let chain_id = provider.consensus_parameters().await?.chain_id();
         let num_witnesses = self.num_witnesses()?;
         let policies = self.generate_fuel_policies()?;
         let is_using_predicates = self.is_using_predicates();

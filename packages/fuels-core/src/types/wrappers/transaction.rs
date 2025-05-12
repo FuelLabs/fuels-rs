@@ -274,6 +274,8 @@ pub trait Transaction:
         signer: &(impl Signer + Send + Sync),
         chain_id: ChainId,
     ) -> Result<Signature>;
+
+    fn intercept_burn(&self, base_asset_id: &AssetId) -> Result<()>;
 }
 
 impl TryFrom<TransactionType> for FuelTransaction {
@@ -521,6 +523,47 @@ macro_rules! impl_tx_wrapper {
                         }
                     })
                     .into_group_map()
+            }
+
+            fn intercept_burn(&self, base_asset_id: &$crate::types::AssetId) -> Result<()> {
+                use std::collections::HashSet;
+
+                let assets_w_change = self
+                    .tx
+                    .outputs()
+                    .iter()
+                    .filter_map(|output| match output {
+                        Output::Change { asset_id, .. } => Some(*asset_id),
+                        _ => None,
+                    })
+                    .collect::<HashSet<_>>();
+
+                let input_assets = self
+                    .inputs()
+                    .iter()
+                    .filter_map(|input| match input {
+                        Input::CoinSigned(coin) => Some(coin.asset_id),
+                        Input::CoinPredicate(coin) => Some(coin.asset_id),
+                        Input::MessageCoinSigned(_) |
+                        Input::MessageCoinPredicate(_) |
+                        Input::MessageDataSigned(_) |
+                        Input::MessageDataPredicate(_) => Some(*base_asset_id),
+                        _ => None,
+                    })
+                    .collect::<HashSet<_>>();
+
+                let diff = input_assets.difference(&assets_w_change).collect_vec();
+                if !diff.is_empty() {
+                    return Err(error_transaction!(
+                        Builder,
+                        "the following assets have no change outputs and may be burned unintentionally: {:?}. \
+                        To resolve this, either add the necessary change outputs manually or explicitly allow asset burning \
+                        by calling `.enable_burn(true)` on the transaction builder.",
+                        diff
+                    ));
+                }
+
+                Ok(())
             }
 
             async fn sign_with(

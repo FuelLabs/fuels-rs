@@ -151,6 +151,7 @@ impl BlobTransactionBuilder {
 
     pub async fn build(mut self, provider: impl DryRunner) -> Result<BlobTransaction> {
         let is_using_predicates = self.is_using_predicates();
+        let enable_burn = self.enable_burn;
 
         let tx = match self.build_strategy {
             Strategy::Complete => self.resolve_fuel_tx(&provider).await?,
@@ -164,15 +165,22 @@ impl BlobTransactionBuilder {
                 fee_index,
             } => {
                 let required_balances = std::mem::take(required_balances);
-                self.assemble_tx(required_balances, fee_index, provider)
+                self.assemble_tx(required_balances, fee_index, &provider)
                     .await?
             }
         };
 
-        Ok(BlobTransaction {
+        let blob_transaction = BlobTransaction {
             is_using_predicates,
             tx,
-        })
+        };
+
+        if !enable_burn {
+            blob_transaction
+                .intercept_burn(provider.consensus_parameters().await?.base_asset_id())?;
+        }
+
+        Ok(blob_transaction)
     }
 
     async fn assemble_tx(
@@ -252,10 +260,7 @@ impl BlobTransactionBuilder {
     }
 
     async fn resolve_fuel_tx(mut self, provider: &impl DryRunner) -> Result<fuel_tx::Blob> {
-        let consensus_parameters = provider.consensus_parameters().await?;
-        self.intercept_burn(consensus_parameters.base_asset_id())?;
-
-        let chain_id = consensus_parameters.chain_id();
+        let chain_id = provider.consensus_parameters().await?.chain_id();
 
         let free_witness_index = self.num_witnesses()?;
         let body = self.blob.as_blob_body(free_witness_index);
