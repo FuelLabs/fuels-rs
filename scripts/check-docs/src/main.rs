@@ -1,4 +1,4 @@
-use anyhow::{bail, Error};
+use anyhow::{Error, bail};
 use check_docs::{
     extract_starts_and_ends, filter_valid_anchors, find_files, parse_includes, parse_md_files,
     report_errors, search_for_pattern, validate_includes, validate_md_files,

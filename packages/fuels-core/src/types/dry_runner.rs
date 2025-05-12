@@ -16,7 +16,7 @@ impl DryRun {
     pub fn gas_with_tolerance(&self, tolerance: f32) -> u64 {
         let gas_used = self.script_gas as f64;
         let adjusted_gas = gas_used * (1.0 + f64::from(tolerance));
-        adjusted_gas as u64
+        adjusted_gas.ceil() as u64
     }
 }
 
@@ -25,12 +25,12 @@ impl DryRun {
 pub trait DryRunner: Send + Sync {
     async fn dry_run(&self, tx: FuelTransaction) -> Result<DryRun>;
     async fn estimate_gas_price(&self, block_horizon: u32) -> Result<u64>;
-    fn consensus_parameters(&self) -> &ConsensusParameters;
-    async fn maybe_estimate_predicates(
+    async fn consensus_parameters(&self) -> Result<ConsensusParameters>;
+    async fn estimate_predicates(
         &self,
         tx: &FuelTransaction,
         latest_chain_executor_version: Option<u32>,
-    ) -> Result<Option<FuelTransaction>>;
+    ) -> Result<FuelTransaction>;
 }
 
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
@@ -44,17 +44,17 @@ impl<T: DryRunner> DryRunner for &T {
         (*self).estimate_gas_price(block_horizon).await
     }
 
-    fn consensus_parameters(&self) -> &ConsensusParameters {
-        (*self).consensus_parameters()
+    async fn consensus_parameters(&self) -> Result<ConsensusParameters> {
+        (*self).consensus_parameters().await
     }
 
-    async fn maybe_estimate_predicates(
+    async fn estimate_predicates(
         &self,
         tx: &FuelTransaction,
         latest_chain_executor_version: Option<u32>,
-    ) -> Result<Option<FuelTransaction>> {
+    ) -> Result<FuelTransaction> {
         (*self)
-            .maybe_estimate_predicates(tx, latest_chain_executor_version)
+            .estimate_predicates(tx, latest_chain_executor_version)
             .await
     }
 }

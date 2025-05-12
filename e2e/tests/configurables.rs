@@ -17,8 +17,9 @@ async fn contract_default_configurables() -> Result<()> {
         "sway/contracts/configurables/out/release/configurables.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(&wallet, TxPolicies::default())
-    .await?;
+    .deploy_if_not_exists(&wallet, TxPolicies::default())
+    .await?
+    .contract_id;
 
     let contract_instance = MyContract::new(contract_id, wallet.clone());
 
@@ -129,8 +130,9 @@ async fn contract_configurables() -> Result<()> {
         "sway/contracts/configurables/out/release/configurables.bin",
         LoadConfiguration::default().with_configurables(configurables),
     )?
-    .deploy(&wallet, TxPolicies::default())
-    .await?;
+    .deploy_if_not_exists(&wallet, TxPolicies::default())
+    .await?
+    .contract_id;
 
     let contract_instance = MyContract::new(contract_id, wallet.clone());
     // ANCHOR_END: contract_configurables
@@ -197,8 +199,9 @@ async fn contract_manual_configurables() -> Result<()> {
         LoadConfiguration::default(),
     )?
     .with_configurables(configurables)
-    .deploy(&wallet, TxPolicies::default())
-    .await?;
+    .deploy_if_not_exists(&wallet, TxPolicies::default())
+    .await?
+    .contract_id;
 
     let contract_instance = MyContract::new(contract_id, wallet.clone());
 
@@ -319,8 +322,10 @@ async fn configurable_encoder_config_is_applied() {
             .with_STRUCT(new_struct)
             .expect_err("should error");
 
-        assert!(configurables_error
-            .to_string()
-            .contains("token limit `1` reached while encoding. Try increasing it"),)
+        assert!(
+            configurables_error
+                .to_string()
+                .contains("token limit `1` reached while encoding. Try increasing it"),
+        )
     }
 }

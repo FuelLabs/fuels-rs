@@ -6,13 +6,12 @@ use std::{
 
 pub use fuel_core_chain_config::{ChainConfig, StateConfig};
 
-pub(crate) const MAX_DATABASE_CACHE_SIZE: usize = 10 * 1024 * 1024;
-
 #[derive(Clone, Debug)]
 pub enum Trigger {
     Instant,
     Never,
     Interval { block_time: Duration },
+    Open { period: Duration },
 }
 
 #[cfg(feature = "fuel-core-lib")]
@@ -22,6 +21,7 @@ impl From<Trigger> for fuel_core_poa::Trigger {
             Trigger::Instant => fuel_core_poa::Trigger::Instant,
             Trigger::Never => fuel_core_poa::Trigger::Never,
             Trigger::Interval { block_time } => fuel_core_poa::Trigger::Interval { block_time },
+            Trigger::Open { period } => fuel_core_poa::Trigger::Open { period },
         }
     }
 }
@@ -48,6 +48,7 @@ pub struct NodeConfig {
     pub max_database_cache_size: Option<usize>,
     pub database_type: DbType,
     pub utxo_validation: bool,
+    pub historical_execution: bool,
     pub debug: bool,
     pub block_production: Trigger,
     pub vm_backtrace: bool,
@@ -60,9 +61,10 @@ impl Default for NodeConfig {
     fn default() -> Self {
         Self {
             addr: SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 0),
-            max_database_cache_size: Some(MAX_DATABASE_CACHE_SIZE),
+            max_database_cache_size: None,
             database_type: DbType::InMemory,
             utxo_validation: true,
+            historical_execution: false,
             debug: true,
             block_production: Trigger::Instant,
             vm_backtrace: false,

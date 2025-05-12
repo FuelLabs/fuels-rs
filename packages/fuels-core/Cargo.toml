@@ -31,6 +31,8 @@ serde_json = { workspace = true, default-features = true }
 sha2 = { workspace = true }
 thiserror = { workspace = true, default-features = false }
 uint = { workspace = true, default-features = false }
+rand = { workspace = true }
+auto_impl = { workspace = true }
 
 [dev-dependencies]
 fuel-tx = { workspace = true, features = ["test-helpers", "random"] }
@@ -39,3 +41,4 @@ tokio = { workspace = true, features = ["test-util", "macros"] }
 [features]
 default = ["std"]
 std = ["dep:fuel-core-client", "fuel-core-types/std"]
+fault-proving = ["fuel-core-chain-config/fault-proving", "fuel-core-types/fault-proving", "fuel-core-client?/fault-proving"]

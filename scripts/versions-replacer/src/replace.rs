@@ -1,6 +1,6 @@
 use std::{borrow::Cow, collections::HashMap, fs, path::Path};
 
-use color_eyre::{eyre::Context, Result};
+use color_eyre::{Result, eyre::Context};
 use once_cell::sync::Lazy;
 use regex::{Captures, Regex};
 

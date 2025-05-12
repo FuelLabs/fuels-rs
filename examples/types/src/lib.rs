@@ -100,7 +100,7 @@ mod tests {
     #[tokio::test]
     async fn bech32() -> Result<()> {
         // ANCHOR: bech32
-        use fuels::types::{bech32::Bech32Address, Address, Bytes32};
+        use fuels::types::{Address, Bytes32, bech32::Bech32Address};
 
         // New from HRP string and a hash
         // ANCHOR: array_to_bech32

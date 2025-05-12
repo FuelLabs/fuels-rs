@@ -3,9 +3,12 @@ use std::{collections::HashMap, fmt::Debug};
 use async_trait::async_trait;
 use fuel_crypto::{Message, Signature};
 use fuel_tx::{
+    Blob, Bytes32, Cacheable, Chargeable, ConsensusParameters, Create, FormatValidityChecks, Input,
+    Mint, Output, Salt as FuelSalt, Script, StorageSlot, Transaction as FuelTransaction,
+    TransactionFee, UniqueIdentifier, Upgrade, Upload, Witness,
     field::{
-        Inputs, Maturity, MintAmount, MintAssetId, Outputs, Policies as PoliciesField,
-        Script as ScriptField, ScriptData, ScriptGasLimit, WitnessLimit, Witnesses,
+        Inputs, MintAmount, MintAssetId, Outputs, Policies as PoliciesField, Script as ScriptField,
+        ScriptData, ScriptGasLimit, WitnessLimit, Witnesses,
     },
     input::{
         coin::{CoinPredicate, CoinSigned},
@@ -14,19 +17,16 @@ use fuel_tx::{
         },
     },
     policies::PolicyType,
-    Blob, Bytes32, Cacheable, Chargeable, ConsensusParameters, Create, FormatValidityChecks, Input,
-    Mint, Output, Salt as FuelSalt, Script, StorageSlot, Transaction as FuelTransaction,
-    TransactionFee, UniqueIdentifier, Upgrade, Upload, Witness,
 };
-use fuel_types::{bytes::padded_len_usize, AssetId, ChainId};
+use fuel_types::{AssetId, ChainId, bytes::padded_len_usize};
 use itertools::Itertools;
 
 use crate::{
     traits::Signer,
     types::{
-        bech32::Bech32Address,
-        errors::{error, error_transaction, Error, Result},
         DryRunner,
+        bech32::Bech32Address,
+        errors::{Error, Result, error, error_transaction},
     },
     utils::{calculate_witnesses_size, sealed},
 };
@@ -107,6 +107,7 @@ pub struct TxPolicies {
     tip: Option<u64>,
     witness_limit: Option<u64>,
     maturity: Option<u64>,
+    expiration: Option<u64>,
     max_fee: Option<u64>,
     script_gas_limit: Option<u64>,
 }
@@ -117,6 +118,7 @@ impl TxPolicies {
         tip: Option<u64>,
         witness_limit: Option<u64>,
         maturity: Option<u64>,
+        expiration: Option<u64>,
         max_fee: Option<u64>,
         script_gas_limit: Option<u64>,
     ) -> Self {
@@ -124,6 +126,7 @@ impl TxPolicies {
             tip,
             witness_limit,
             maturity,
+            expiration,
             max_fee,
             script_gas_limit,
         }
@@ -154,6 +157,15 @@ impl TxPolicies {
 
     pub fn maturity(&self) -> Option<u64> {
         self.maturity
+    }
+
+    pub fn with_expiration(mut self, expiration: u64) -> Self {
+        self.expiration = Some(expiration);
+        self
+    }
+
+    pub fn expiration(&self) -> Option<u64> {
+        self.expiration
     }
 
     pub fn with_max_fee(mut self, max_fee: u64) -> Self {
@@ -187,6 +199,7 @@ pub enum TransactionType {
     Upload(UploadTransaction),
     Upgrade(UpgradeTransaction),
     Blob(BlobTransaction),
+    Unknown,
 }
 
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
@@ -200,10 +213,6 @@ pub trait EstimablePredicates: sealed::Sealed {
         provider: impl DryRunner,
         latest_chain_executor_version: Option<u32>,
     ) -> Result<()>;
-}
-
-pub trait GasValidation: sealed::Sealed {
-    fn validate_gas(&self, _gas_used: u64) -> Result<()>;
 }
 
 pub trait ValidatablePredicates: sealed::Sealed {
@@ -223,7 +232,6 @@ pub trait Transaction:
     + Into<FuelTransaction>
     + EstimablePredicates
     + ValidatablePredicates
-    + GasValidation
     + Clone
     + Debug
     + sealed::Sealed
@@ -243,9 +251,9 @@ pub trait Transaction:
 
     fn id(&self, chain_id: ChainId) -> Bytes32;
 
-    fn maturity(&self) -> u32;
+    fn maturity(&self) -> Option<u64>;
 
-    fn with_maturity(self, maturity: u32) -> Self;
+    fn expiration(&self) -> Option<u64>;
 
     fn metered_bytes_size(&self) -> usize;
 
@@ -284,15 +292,17 @@ pub trait Transaction:
     ) -> Result<Signature>;
 }
 
-impl From<TransactionType> for FuelTransaction {
-    fn from(value: TransactionType) -> Self {
+impl TryFrom<TransactionType> for FuelTransaction {
+    type Error = Error;
+    fn try_from(value: TransactionType) -> Result<Self> {
         match value {
-            TransactionType::Script(tx) => tx.into(),
-            TransactionType::Create(tx) => tx.into(),
-            TransactionType::Mint(tx) => tx.into(),
-            TransactionType::Upload(tx) => tx.into(),
-            TransactionType::Upgrade(tx) => tx.into(),
-            TransactionType::Blob(tx) => tx.into(),
+            TransactionType::Script(tx) => Ok(tx.into()),
+            TransactionType::Create(tx) => Ok(tx.into()),
+            TransactionType::Mint(tx) => Ok(tx.into()),
+            TransactionType::Upload(tx) => Ok(tx.into()),
+            TransactionType::Upgrade(tx) => Ok(tx.into()),
+            TransactionType::Blob(tx) => Ok(tx.into()),
+            TransactionType::Unknown => Err(error_transaction!(Other, "`Unknown` transaction")),
         }
     }
 }
@@ -422,13 +432,12 @@ macro_rules! impl_tx_wrapper {
                 self.tx.id(&chain_id)
             }
 
-            fn maturity(&self) -> u32 {
-                (*self.tx.maturity()).into()
+            fn maturity(&self) -> Option<u64> {
+                self.tx.policies().get(PolicyType::Maturity)
             }
 
-            fn with_maturity(mut self, maturity: u32) -> Self {
-                self.tx.set_maturity(maturity.into());
-                self
+            fn expiration(&self) -> Option<u64> {
+                self.tx.policies().get(PolicyType::Expiration)
             }
 
             fn metered_bytes_size(&self) -> usize {
@@ -548,19 +557,11 @@ impl EstimablePredicates for UploadTransaction {
         provider: impl DryRunner,
         latest_chain_executor_version: Option<u32>,
     ) -> Result<()> {
-        if let Some(tx) = provider
-            .maybe_estimate_predicates(&self.tx.clone().into(), latest_chain_executor_version)
-            .await?
-        {
-            tx.as_upload().expect("is upload").clone_into(&mut self.tx);
-        } else {
-            // We no longer estimate locally since we don't have the blob storage.
-            // maybe_estimate_predicates should always return an estimation
-            return Err(error!(
-                Other,
-                "Should have been given an estimation from the node. This is a bug."
-            ));
-        }
+        let tx = provider
+            .estimate_predicates(&self.tx.clone().into(), latest_chain_executor_version)
+            .await?;
+
+        tx.as_upload().expect("is upload").clone_into(&mut self.tx);
 
         Ok(())
     }
@@ -574,21 +575,13 @@ impl EstimablePredicates for UpgradeTransaction {
         provider: impl DryRunner,
         latest_chain_executor_version: Option<u32>,
     ) -> Result<()> {
-        if let Some(tx) = provider
-            .maybe_estimate_predicates(&self.tx.clone().into(), latest_chain_executor_version)
-            .await?
-        {
-            tx.as_upgrade()
-                .expect("is upgrade")
-                .clone_into(&mut self.tx);
-        } else {
-            // We no longer estimate locally since we don't have the blob storage.
-            // maybe_estimate_predicates should always return an estimation
-            return Err(error!(
-                Other,
-                "Should have been given an estimation from the node. This is a bug."
-            ));
-        }
+        let tx = provider
+            .estimate_predicates(&self.tx.clone().into(), latest_chain_executor_version)
+            .await?;
+
+        tx.as_upgrade()
+            .expect("is upgrade")
+            .clone_into(&mut self.tx);
 
         Ok(())
     }
@@ -602,19 +595,11 @@ impl EstimablePredicates for CreateTransaction {
         provider: impl DryRunner,
         latest_chain_executor_version: Option<u32>,
     ) -> Result<()> {
-        if let Some(tx) = provider
-            .maybe_estimate_predicates(&self.tx.clone().into(), latest_chain_executor_version)
-            .await?
-        {
-            tx.as_create().expect("is create").clone_into(&mut self.tx);
-        } else {
-            // We no longer estimate locally since we don't have the blob storage.
-            // maybe_estimate_predicates should always return an estimation
-            return Err(error!(
-                Other,
-                "Should have been given an estimation from the node. This is a bug."
-            ));
-        }
+        let tx = provider
+            .estimate_predicates(&self.tx.clone().into(), latest_chain_executor_version)
+            .await?;
+
+        tx.as_create().expect("is create").clone_into(&mut self.tx);
 
         Ok(())
     }
@@ -642,19 +627,11 @@ impl EstimablePredicates for ScriptTransaction {
         provider: impl DryRunner,
         latest_chain_executor_version: Option<u32>,
     ) -> Result<()> {
-        if let Some(tx) = provider
-            .maybe_estimate_predicates(&self.tx.clone().into(), latest_chain_executor_version)
-            .await?
-        {
-            tx.as_script().expect("is script").clone_into(&mut self.tx);
-        } else {
-            // We no longer estimate locally since we don't have the blob storage.
-            // maybe_estimate_predicates should always return an estimation
-            return Err(error!(
-                Other,
-                "Should have been given an estimation from the node. This is a bug."
-            ));
-        }
+        let tx = provider
+            .estimate_predicates(&self.tx.clone().into(), latest_chain_executor_version)
+            .await?;
+
+        tx.as_script().expect("is script").clone_into(&mut self.tx);
 
         Ok(())
     }
@@ -668,58 +645,11 @@ impl EstimablePredicates for BlobTransaction {
         provider: impl DryRunner,
         latest_chain_executor_version: Option<u32>,
     ) -> Result<()> {
-        if let Some(tx) = provider
-            .maybe_estimate_predicates(&self.tx.clone().into(), latest_chain_executor_version)
-            .await?
-        {
-            tx.as_blob().expect("is blob").clone_into(&mut self.tx);
-        } else {
-            // We no longer estimate locally since we don't have the blob storage.
-            // maybe_estimate_predicates should always return an estimation
-            return Err(error!(
-                Other,
-                "Should have been given an estimation from the node. This is a bug."
-            ));
-        }
+        let tx = provider
+            .estimate_predicates(&self.tx.clone().into(), latest_chain_executor_version)
+            .await?;
 
-        Ok(())
-    }
-}
-
-impl GasValidation for CreateTransaction {
-    fn validate_gas(&self, _gas_used: u64) -> Result<()> {
-        Ok(())
-    }
-}
-
-impl GasValidation for UploadTransaction {
-    fn validate_gas(&self, _gas_used: u64) -> Result<()> {
-        Ok(())
-    }
-}
-
-impl GasValidation for UpgradeTransaction {
-    fn validate_gas(&self, _gas_used: u64) -> Result<()> {
-        Ok(())
-    }
-}
-
-impl GasValidation for BlobTransaction {
-    fn validate_gas(&self, _gas_used: u64) -> Result<()> {
-        Ok(())
-    }
-}
-
-impl GasValidation for ScriptTransaction {
-    fn validate_gas(&self, gas_used: u64) -> Result<()> {
-        if gas_used > *self.tx.script_gas_limit() {
-            return Err(error_transaction!(
-                Validation,
-                "script_gas_limit({}) is lower than the estimated gas_used({})",
-                self.tx.script_gas_limit(),
-                gas_used
-            ));
-        }
+        tx.as_blob().expect("is blob").clone_into(&mut self.tx);
 
         Ok(())
     }

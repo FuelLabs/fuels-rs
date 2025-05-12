@@ -10,7 +10,7 @@ use fuel_core_services::State;
 use fuel_core_types::blockchain::header::LATEST_STATE_TRANSITION_VERSION;
 use fuels_core::{error, types::errors::Result as FuelResult};
 use portpicker::{is_free, pick_unused_port};
-use tempfile::{tempdir, TempDir};
+use tempfile::{TempDir, tempdir};
 use tokio::{process::Command, spawn, task::JoinHandle, time::sleep};
 
 use crate::node_types::{DbType, NodeConfig, Trigger};
@@ -72,6 +72,9 @@ impl ExtendedConfig {
                     block_time.as_millis()
                 ));
             }
+            Trigger::Open { period } => {
+                args.push(format!("--poa-open-period={}ms", period.as_millis()));
+            }
         };
 
         let body_limit = self.node_config.graphql_request_body_bytes_limit;
@@ -91,6 +94,10 @@ impl ExtendedConfig {
             [
                 (self.node_config.vm_backtrace, "--vm-backtrace"),
                 (self.node_config.utxo_validation, "--utxo-validation"),
+                (
+                    self.node_config.historical_execution,
+                    "--historical-execution",
+                ),
                 (self.node_config.debug, "--debug"),
             ]
             .into_iter()
@@ -136,7 +143,7 @@ impl FuelService {
                 return Err(error!(
                     IO,
                     "could not find a free port to start a fuel node"
-                ))
+                ));
             }
         };
 
@@ -217,7 +224,7 @@ async fn run_node(extended_config: ExtendedConfig) -> FuelResult<JoinHandle<()>>
     }
 
     let mut command = Command::new(path);
-    let running_node = command.args(args).kill_on_drop(true).output();
+    let running_node = command.args(args).kill_on_drop(true).env_clear().output();
 
     let join_handle = spawn(async move {
         // ensure drop is not called on the tmp dir and it lives throughout the lifetime of the node
@@ -227,7 +234,9 @@ async fn run_node(extended_config: ExtendedConfig) -> FuelResult<JoinHandle<()>>
             .expect("error: could not find `fuel-core` in PATH`");
         let stdout = String::from_utf8_lossy(&result.stdout);
         let stderr = String::from_utf8_lossy(&result.stderr);
-        eprintln!("the exit status from the fuel binary was: {result:?}, stdout: {stdout}, stderr: {stderr}");
+        eprintln!(
+            "the exit status from the fuel binary was: {result:?}, stdout: {stdout}, stderr: {stderr}"
+        );
     });
 
     Ok(join_handle)

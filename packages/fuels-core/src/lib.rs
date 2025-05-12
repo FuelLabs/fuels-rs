@@ -99,9 +99,10 @@ mod tests {
         let result = configurables.with_shifted_offsets(10);
         assert!(result.is_err());
         if let Err(e) = result {
-            assert!(e
-                .to_string()
-                .contains("Overflow occurred while shifting offset"));
+            assert!(
+                e.to_string()
+                    .contains("Overflow occurred while shifting offset")
+            );
         }
     }
 
@@ -112,9 +113,10 @@ mod tests {
         let result = configurables.with_shifted_offsets(-10);
         assert!(result.is_err());
         if let Err(e) = result {
-            assert!(e
-                .to_string()
-                .contains("Overflow occurred while shifting offset"));
+            assert!(
+                e.to_string()
+                    .contains("Overflow occurred while shifting offset")
+            );
         }
     }
 }

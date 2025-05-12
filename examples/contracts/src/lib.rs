@@ -3,16 +3,17 @@ mod tests {
     use std::{collections::HashSet, time::Duration};
 
     use fuels::{
-        core::codec::{encode_fn_selector, DecoderConfig, EncoderConfig},
-        crypto::SecretKey,
+        accounts::signers::{fake::FakeSigner, private_key::PrivateKeySigner},
+        core::codec::{ABIFormatter, DecoderConfig, EncoderConfig, encode_fn_selector},
         prelude::{LoadConfiguration, NodeConfig, StorageConfiguration},
+        programs::debug::ScriptType,
         test_helpers::{ChainConfig, StateConfig},
         types::{
-            errors::{transaction::Reason, Result},
             Bits256,
+            errors::{Result, transaction::Reason},
         },
     };
-    use rand::Rng;
+    use rand::{Rng, thread_rng};
 
     #[tokio::test]
     async fn instantiate_client() -> Result<()> {
@@ -49,7 +50,8 @@ mod tests {
             LoadConfiguration::default(),
         )?
         .deploy(&wallet, TxPolicies::default())
-        .await?;
+        .await?
+        .contract_id;
 
         println!("Contract deployed @ {contract_id}");
         // ANCHOR_END: deploy_contract
@@ -103,7 +105,8 @@ mod tests {
             LoadConfiguration::default(),
         )?
         .deploy(&wallet, TxPolicies::default())
-        .await?;
+        .await?
+        .contract_id;
 
         // ANCHOR: contract_call_cost_estimation
         let contract_instance = MyContract::new(contract_id, wallet);
@@ -117,9 +120,11 @@ mod tests {
             .await?;
         // ANCHOR_END: contract_call_cost_estimation
 
-        let expected_gas = 2669;
+        let expected_script_gas = 2615;
+        let expected_total_gas = 8867;
 
-        assert_eq!(transaction_cost.gas_used, expected_gas);
+        assert_eq!(transaction_cost.script_gas, expected_script_gas);
+        assert_eq!(transaction_cost.total_gas, expected_total_gas);
 
         Ok(())
     }
@@ -136,14 +141,13 @@ mod tests {
             LoadConfiguration::default(),
         )?
         .deploy(&wallet, TxPolicies::default())
-        .await?;
-
-        println!("Contract deployed @ {contract_id_1}");
+        .await?
+        .contract_id;
 
         // ANCHOR: deploy_with_parameters
         // Optional: Add `Salt`
         let rng = &mut StdRng::seed_from_u64(2322u64);
-        let salt: [u8; 32] = rng.gen();
+        let salt: [u8; 32] = rng.r#gen();
 
         // Optional: Configure storage
         let key = Bytes32::from([1u8; 32]);
@@ -159,14 +163,16 @@ mod tests {
         let tx_policies = TxPolicies::default()
             .with_tip(1)
             .with_script_gas_limit(1_000_000)
-            .with_maturity(0);
+            .with_maturity(0)
+            .with_expiration(10_000);
 
         let contract_id_2 = Contract::load_from(
             "../../e2e/sway/contracts/contract_test/out/release/contract_test.bin",
             configuration,
         )?
         .deploy(&wallet, tx_policies)
-        .await?;
+        .await?
+        .contract_id;
 
         println!("Contract deployed @ {contract_id_2}");
         // ANCHOR_END: deploy_with_parameters
@@ -237,9 +243,9 @@ mod tests {
             LoadConfiguration::default(),
         )?
         .deploy(&wallets[0], TxPolicies::default())
-        .await?;
+        .await?
+        .contract_id;
 
-        println!("Contract deployed @ {contract_id_1}");
         let contract_instance_1 = MyContract::new(contract_id_1, wallets[0].clone());
 
         let response = contract_instance_1
@@ -255,9 +261,9 @@ mod tests {
             LoadConfiguration::default().with_salt([1; 32]),
         )?
         .deploy(&wallets[1], TxPolicies::default())
-        .await?;
+        .await?
+        .contract_id;
 
-        println!("Contract deployed @ {contract_id_2}");
         let contract_instance_2 = MyContract::new(contract_id_2, wallets[1].clone());
 
         let response = contract_instance_2
@@ -287,23 +293,24 @@ mod tests {
             LoadConfiguration::default(),
         )?
         .deploy(&wallet, TxPolicies::default())
-        .await?;
+        .await?
+        .contract_id;
 
-        println!("Contract deployed @ {contract_id}");
         // ANCHOR: tx_policies
         let contract_methods = MyContract::new(contract_id.clone(), wallet.clone()).methods();
 
         let tx_policies = TxPolicies::default()
             .with_tip(1)
             .with_script_gas_limit(1_000_000)
-            .with_maturity(0);
+            .with_maturity(0)
+            .with_expiration(10_000);
 
         let response = contract_methods
             .initialize_counter(42) // Our contract method
             .with_tx_policies(tx_policies) // Chain the tx policies
             .call() // Perform the contract call
             .await?; // This is an async call, `.await` it.
-                     // ANCHOR_END: tx_policies
+        // ANCHOR_END: tx_policies
 
         // ANCHOR: tx_policies_default
         let response = contract_methods
@@ -342,6 +349,7 @@ mod tests {
 
     #[tokio::test]
     #[allow(unused_variables)]
+    #[cfg(any(not(feature = "fuel-core-lib"), feature = "rocksdb"))]
     async fn token_ops_tests() -> Result<()> {
         use fuels::prelude::*;
         abigen!(Contract(
@@ -349,23 +357,49 @@ mod tests {
             abi = "e2e/sway/contracts/token_ops/out/release/token_ops-abi.json"
         ));
 
-        let wallet = launch_provider_and_get_wallet().await?;
+        let temp_dir = tempfile::tempdir().expect("failed to make tempdir");
+        let temp_dir_name = temp_dir
+            .path()
+            .file_name()
+            .expect("failed to get file name")
+            .to_string_lossy()
+            .to_string();
+        let temp_database_path = temp_dir.path().join("db");
+
+        let node_config = NodeConfig {
+            starting_gas_price: 1100,
+            database_type: DbType::RocksDb(Some(temp_database_path)),
+            historical_execution: true,
+            ..NodeConfig::default()
+        };
+
+        let chain_config = ChainConfig {
+            chain_name: temp_dir_name,
+            ..ChainConfig::default()
+        };
+
+        let wallets = launch_custom_provider_and_get_wallets(
+            WalletsConfig::default(),
+            Some(node_config),
+            Some(chain_config),
+        )
+        .await?;
+        let wallet = wallets.first().expect("is there");
 
         let contract_id = Contract::load_from(
-            "../../e2e/sway/contracts/token_ops/out/release/token_ops\
-        .bin",
+            "../../e2e/sway/contracts/token_ops/out/release/token_ops.bin",
             LoadConfiguration::default(),
         )?
-        .deploy(&wallet, TxPolicies::default())
-        .await?;
+        .deploy_if_not_exists(wallet, TxPolicies::default())
+        .await?
+        .contract_id;
 
-        println!("Contract deployed @ {contract_id}");
         let contract_methods = MyContract::new(contract_id.clone(), wallet.clone()).methods();
         // ANCHOR: simulate
         // you would mint 100 coins if the transaction wasn't simulated
         let counter = contract_methods
             .mint_coins(100)
-            .simulate(Execution::Realistic)
+            .simulate(Execution::realistic())
             .await?;
         // ANCHOR_END: simulate
 
@@ -375,10 +409,24 @@ mod tests {
             // you don't need any funds to read state
             let balance = contract_methods
                 .get_balance(contract_id, AssetId::zeroed())
-                .simulate(Execution::StateReadOnly)
+                .simulate(Execution::state_read_only())
                 .await?
                 .value;
             // ANCHOR_END: simulate_read_state
+        }
+        {
+            let provider = wallet.provider();
+            provider.produce_blocks(2, None).await?;
+            let block_height = provider.latest_block_height().await?;
+            let contract_id = contract_id.clone();
+
+            // ANCHOR: simulate_read_state_at_height
+            let balance = contract_methods
+                .get_balance(contract_id, AssetId::zeroed())
+                .simulate(Execution::state_read_only().at_height(block_height))
+                .await?
+                .value;
+            // ANCHOR_END: simulate_read_state_at_height
         }
 
         let response = contract_methods.mint_coins(1_000_000).call().await?;
@@ -413,13 +461,15 @@ mod tests {
         )?
         .deploy(&wallet, TxPolicies::default())
         .await?
+        .contract_id
         .into();
 
         let bin_path =
             "../../e2e/sway/contracts/lib_contract_caller/out/release/lib_contract_caller.bin";
         let caller_contract_id = Contract::load_from(bin_path, LoadConfiguration::default())?
             .deploy(&wallet, TxPolicies::default())
-            .await?;
+            .await?
+            .contract_id;
 
         let contract_methods =
             MyContract::new(caller_contract_id.clone(), wallet.clone()).methods();
@@ -435,7 +485,7 @@ mod tests {
 
         assert!(matches!(
             response,
-            Err(Error::Transaction(Reason::Reverted { .. }))
+            Err(Error::Transaction(Reason::Failure { .. }))
         ));
         // ANCHOR_END: dependency_estimation_fail
 
@@ -456,7 +506,7 @@ mod tests {
         let response = contract_methods
             .mint_then_increment_from_contract(called_contract_id, amount, address.into())
             .with_variable_output_policy(VariableOutputPolicy::EstimateMinimum)
-            .determine_missing_contracts(Some(2))
+            .determine_missing_contracts()
             .await?
             .call()
             .await?;
@@ -517,7 +567,8 @@ mod tests {
             LoadConfiguration::default(),
         )?
         .deploy(&wallet, TxPolicies::default())
-        .await?;
+        .await?
+        .contract_id;
 
         let contract_methods = MyContract::new(contract_id, wallet.clone()).methods();
 
@@ -555,7 +606,8 @@ mod tests {
             LoadConfiguration::default(),
         )?
         .deploy(&wallet, TxPolicies::default())
-        .await?;
+        .await?
+        .contract_id;
 
         // ANCHOR: multi_call_prepare
         let contract_methods = MyContract::new(contract_id, wallet.clone()).methods();
@@ -567,7 +619,8 @@ mod tests {
         // ANCHOR: multi_call_build
         let multi_call_handler = CallHandler::new_multi_call(wallet.clone())
             .add_call(call_handler_1)
-            .add_call(call_handler_2);
+            .add_call(call_handler_2)
+            .with_tx_policies(TxPolicies::default());
         // ANCHOR_END: multi_call_build
         let multi_call_handler_tmp = multi_call_handler.clone();
 
@@ -613,7 +666,8 @@ mod tests {
             LoadConfiguration::default(),
         )?
         .deploy(&wallet, TxPolicies::default())
-        .await?;
+        .await?
+        .contract_id;
 
         let contract_methods = MyContract::new(contract_id, wallet.clone()).methods();
 
@@ -632,9 +686,11 @@ mod tests {
             .await?;
         // ANCHOR_END: multi_call_cost_estimation
 
-        let expected_gas = 4168;
+        let expected_script_gas = 4217;
+        let expected_total_gas = 11046;
 
-        assert_eq!(transaction_cost.gas_used, expected_gas);
+        assert_eq!(transaction_cost.script_gas, expected_script_gas);
+        assert_eq!(transaction_cost.total_gas, expected_total_gas);
 
         Ok(())
     }
@@ -658,7 +714,8 @@ mod tests {
             LoadConfiguration::default(),
         )?
         .deploy(&wallet_1, TxPolicies::default())
-        .await?;
+        .await?
+        .contract_id;
 
         // ANCHOR: connect_wallet
         // Create contract instance with wallet_1
@@ -671,7 +728,7 @@ mod tests {
             .get_msg_amount() // Our contract method
             .call() // Perform the contract call.
             .await?; // This is an async call, `.await` for it.
-                     // ANCHOR_END: connect_wallet
+        // ANCHOR_END: connect_wallet
 
         Ok(())
     }
@@ -681,7 +738,7 @@ mod tests {
         use fuels::prelude::*;
 
         setup_program_test!(
-            Wallets("wallet"),
+            Wallets("wallet", "wallet_2"),
             Abigen(Contract(
                 name = "MyContract",
                 project = "e2e/sway/contracts/contract_test"
@@ -693,21 +750,30 @@ mod tests {
             )
         );
 
-        let other_wallet = WalletUnlocked::new_random(None);
+        let some_addr: Bech32Address = thread_rng().r#gen();
 
         // ANCHOR: add_custom_assets
         let amount = 1000;
         let _ = contract_instance
             .methods()
             .initialize_counter(42)
-            .add_custom_asset(
-                AssetId::zeroed(),
-                amount,
-                Some(other_wallet.address().clone()),
-            )
+            .add_custom_asset(AssetId::zeroed(), amount, Some(some_addr.clone()))
             .call()
             .await?;
         // ANCHOR_END: add_custom_assets
+
+        let custom_inputs = vec![];
+        let custom_outputs = vec![];
+        // ANCHOR: add_custom_inputs_outputs
+        let _ = contract_instance
+            .methods()
+            .initialize_counter(42)
+            .with_inputs(custom_inputs)
+            .with_outputs(custom_outputs)
+            .add_signer(wallet_2.signer().clone())
+            .call()
+            .await?;
+        // ANCHOR_END: add_custom_inputs_outputs
 
         Ok(())
     }
@@ -757,7 +823,7 @@ mod tests {
                 Bytes(function_selector),
                 Bytes(call_data),
             )
-            .determine_missing_contracts(None)
+            .determine_missing_contracts()
             .await?
             .call()
             .await?;
@@ -765,7 +831,7 @@ mod tests {
 
         let result_uint = target_contract_instance
             .methods()
-            .get_value()
+            .read_counter()
             .call()
             .await
             .unwrap()
@@ -871,7 +937,7 @@ mod tests {
                 wallet = "wallet"
             ),
         );
-        let provider = wallet.try_provider()?;
+        let provider = wallet.provider();
 
         let counter = 42;
 
@@ -883,7 +949,7 @@ mod tests {
         // customize the builder...
 
         wallet.adjust_for_fee(&mut tb, 0).await?;
-        tb.add_signer(wallet.clone())?;
+        wallet.add_witnesses(&mut tb)?;
 
         let tx = tb.build(provider).await?;
 
@@ -892,7 +958,7 @@ mod tests {
 
         let tx_status = provider.tx_status(&tx_id).await?;
 
-        let response = call_handler.get_response_from(tx_status)?;
+        let response = call_handler.get_response(tx_status)?;
 
         assert_eq!(counter, response.value);
         // ANCHOR_END: contract_call_tb
@@ -934,8 +1000,6 @@ mod tests {
 
     #[tokio::test]
     async fn contract_call_impersonation() -> Result<()> {
-        use std::str::FromStr;
-
         use fuels::prelude::*;
 
         abigen!(Contract(
@@ -943,39 +1007,37 @@ mod tests {
             abi = "e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
         ));
 
+        // ANCHOR: utxo_validation_off
         let node_config = NodeConfig {
             utxo_validation: false,
             ..Default::default()
         };
-        let mut wallet = WalletUnlocked::new_from_private_key(
-            SecretKey::from_str(
-                "0x4433d156e8c53bf5b50af07aa95a29436f29a94e0ccc5d58df8e57bdc8583c32",
-            )?,
-            None,
-        );
+        // ANCHOR_END: utxo_validation_off
+        let signer = PrivateKeySigner::random(&mut thread_rng());
         let coins = setup_single_asset_coins(
-            wallet.address(),
+            signer.address(),
             AssetId::zeroed(),
             DEFAULT_NUM_COINS,
             DEFAULT_COIN_AMOUNT,
         );
+        // ANCHOR: utxo_validation_off_node_start
         let provider = setup_test_provider(coins, vec![], Some(node_config), None).await?;
-        wallet.set_provider(provider.clone());
+        // ANCHOR_END: utxo_validation_off_node_start
+        let wallet = Wallet::new(signer, provider.clone());
 
         let contract_id = Contract::load_from(
             "../../e2e/sway/contracts/contract_test/out/release/contract_test.bin",
             LoadConfiguration::default(),
         )?
         .deploy(&wallet, TxPolicies::default())
-        .await?;
+        .await?
+        .contract_id;
 
+        let some_address = wallet.address().clone();
         // ANCHOR: contract_call_impersonation
         // create impersonator for an address
-        let address =
-            Address::from_str("0x17f46f562778f4bb5fe368eeae4985197db51d80c83494ea7f84c530172dedd1")
-                .unwrap();
-        let address = Bech32Address::from(address);
-        let impersonator = ImpersonatedAccount::new(address, Some(provider.clone()));
+        let fake_signer = FakeSigner::new(some_address);
+        let impersonator = Wallet::new(fake_signer, provider.clone());
 
         let contract_instance = MyContract::new(contract_id, impersonator.clone());
 
@@ -1006,9 +1068,9 @@ mod tests {
         let contract_binary =
             "../../e2e/sway/contracts/huge_contract/out/release/huge_contract.bin";
 
-        let provider: Provider = main_wallet.try_provider()?.clone();
+        let provider: Provider = main_wallet.provider().clone();
 
-        let random_salt = || Salt::new(rand::thread_rng().gen());
+        let random_salt = || Salt::new(rand::thread_rng().r#gen());
         // ANCHOR: show_contract_is_too_big
         let contract = Contract::load_from(
             contract_binary,
@@ -1016,6 +1078,7 @@ mod tests {
         )?;
         let max_allowed = provider
             .consensus_parameters()
+            .await?
             .contract_params()
             .contract_max_size();
 
@@ -1060,7 +1123,8 @@ mod tests {
 
         let contract_id = Contract::loader_from_blob_ids(all_blob_ids, random_salt(), vec![])?
             .deploy(&wallet, TxPolicies::default())
-            .await?;
+            .await?
+            .contract_id;
         // ANCHOR_END: manual_blob_upload_then_deploy
 
         // ANCHOR: deploy_via_loader
@@ -1071,7 +1135,8 @@ mod tests {
         )?
         .convert_to_loader(max_words_per_blob)?
         .deploy(&wallet, TxPolicies::default())
-        .await?;
+        .await?
+        .contract_id;
         // ANCHOR_END: deploy_via_loader
 
         // ANCHOR: auto_convert_to_loader
@@ -1081,7 +1146,8 @@ mod tests {
             LoadConfiguration::default().with_salt(random_salt()),
         )?
         .smart_deploy(&wallet, TxPolicies::default(), max_words_per_blob)
-        .await?;
+        .await?
+        .contract_id;
         // ANCHOR_END: auto_convert_to_loader
 
         // ANCHOR: upload_blobs_then_deploy
@@ -1093,7 +1159,8 @@ mod tests {
         .upload_blobs(&wallet, TxPolicies::default())
         .await?
         .deploy(&wallet, TxPolicies::default())
-        .await?;
+        .await?
+        .contract_id;
         // ANCHOR_END: upload_blobs_then_deploy
 
         let wallet = main_wallet.clone();
@@ -1104,11 +1171,19 @@ mod tests {
         // ANCHOR_END: use_loader
 
         // ANCHOR: show_max_tx_size
-        provider.consensus_parameters().tx_params().max_size();
+        provider
+            .consensus_parameters()
+            .await?
+            .tx_params()
+            .max_size();
         // ANCHOR_END: show_max_tx_size
 
         // ANCHOR: show_max_tx_gas
-        provider.consensus_parameters().tx_params().max_gas_per_tx();
+        provider
+            .consensus_parameters()
+            .await?
+            .tx_params()
+            .max_gas_per_tx();
         // ANCHOR_END: show_max_tx_gas
 
         let wallet = main_wallet;
@@ -1126,7 +1201,8 @@ mod tests {
 
         let contract_id = Contract::loader_from_blobs(blobs, random_salt(), vec![])?
             .deploy(&wallet, TxPolicies::default())
-            .await?;
+            .await?
+            .contract_id;
         // ANCHOR_END: manual_blobs_then_deploy
 
         // ANCHOR: estimate_max_blob_size
@@ -1135,6 +1211,68 @@ mod tests {
             .await?;
         // ANCHOR_END: estimate_max_blob_size
 
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[allow(unused_variables)]
+    async fn decoding_script_transactions() -> Result<()> {
+        use fuels::prelude::*;
+
+        setup_program_test!(
+            Abigen(Contract(
+                name = "MyContract",
+                project = "e2e/sway/contracts/contract_test"
+            )),
+            Wallets("wallet"),
+            Deploy(
+                name = "contract_instance",
+                contract = "MyContract",
+                wallet = "wallet"
+            )
+        );
+
+        let tx_id = contract_instance
+            .methods()
+            .initialize_counter(42)
+            .call()
+            .await?
+            .tx_id
+            .unwrap();
+
+        let provider: &Provider = wallet.provider();
+
+        // ANCHOR: decoding_script_transactions
+        let TransactionType::Script(tx) = provider
+            .get_transaction_by_id(&tx_id)
+            .await?
+            .unwrap()
+            .transaction
+        else {
+            panic!("Transaction is not a script transaction");
+        };
+
+        let ScriptType::ContractCall(calls) = ScriptType::detect(tx.script(), tx.script_data())?
+        else {
+            panic!("Script is not a contract call");
+        };
+
+        let json_abi = std::fs::read_to_string(
+            "../../e2e/sway/contracts/contract_test/out/release/contract_test-abi.json",
+        )?;
+        let abi_formatter = ABIFormatter::from_json_abi(json_abi)?;
+
+        let call = &calls[0];
+        let fn_selector = call.decode_fn_selector()?;
+        let decoded_args =
+            abi_formatter.decode_fn_args(&fn_selector, call.encoded_args.as_slice())?;
+
+        eprintln!(
+            "The script called: {fn_selector}({})",
+            decoded_args.join(", ")
+        );
+
+        // ANCHOR_END: decoding_script_transactions
         Ok(())
     }
 }

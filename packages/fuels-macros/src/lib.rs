@@ -1,6 +1,6 @@
 use fuels_code_gen::Abigen;
 use proc_macro::TokenStream;
-use syn::{parse_macro_input, DeriveInput};
+use syn::{DeriveInput, parse_macro_input};
 
 use crate::{
     abigen::MacroAbigenTargets,
@@ -8,7 +8,7 @@ use crate::{
         parameterize::generate_parameterize_impl, tokenizable::generate_tokenizable_impl,
         try_from::generate_try_from_impl,
     },
-    setup_program_test::{generate_setup_program_test_code, TestProgramCommands},
+    setup_program_test::{TestProgramCommands, generate_setup_program_test_code},
 };
 
 mod abigen;

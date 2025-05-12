@@ -9,7 +9,7 @@ use crate::{
     program_bindings::{
         custom_types::utils::extract_generic_parameters,
         generated_code::GeneratedCode,
-        utils::{tokenize_generics, Components},
+        utils::{Components, tokenize_generics},
     },
 };
 

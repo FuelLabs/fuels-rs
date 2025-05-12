@@ -3,8 +3,8 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use anyhow::{anyhow, bail, Error};
-use itertools::{chain, Itertools};
+use anyhow::{Error, anyhow, bail};
+use itertools::{Itertools, chain};
 use regex::Regex;
 
 pub fn report_errors(error_type: &str, errors: &[Error]) {
@@ -150,7 +150,9 @@ pub fn filter_unused_ends<'a>(ends: &'a [Anchor], pairs: &[(Anchor, Anchor)]) ->
 
 pub fn check_validity_of_anchor_pair(begin: &Anchor, end: &Anchor) -> Option<anyhow::Error> {
     if begin.line_no > end.line_no {
-        Some(anyhow!("The end of the anchor appears before the beginning. End anchor: {end:?}. Begin anchor: {begin:?}"))
+        Some(anyhow!(
+            "The end of the anchor appears before the beginning. End anchor: {end:?}. Begin anchor: {begin:?}"
+        ))
     } else {
         None
     }
@@ -201,10 +203,9 @@ pub fn parse_md_files(text_w_files: String, path: &str) -> HashSet<PathBuf> {
         .lines()
         .filter_map(|line| regex.captures(line))
         .map(|capture| {
-            PathBuf::from(path)
-                .join(&capture[1])
-                .canonicalize()
-                .expect("could not canonicalize md path")
+            let path = PathBuf::from(path).join(&capture[1]);
+            path.canonicalize()
+                .unwrap_or_else(|e| panic!("could not canonicalize md path: {e} {path:?}"))
         })
         .collect()
 }

@@ -4,10 +4,10 @@ use fuel_tx::{ContractId, Receipt};
 use fuels_core::{
     codec::{ABIDecoder, DecoderConfig},
     types::{
-        bech32::Bech32ContractId,
-        errors::{error, Error, Result},
-        param_types::ParamType,
         Token,
+        bech32::Bech32ContractId,
+        errors::{Error, Result, error},
+        param_types::ParamType,
     },
 };
 
@@ -41,7 +41,7 @@ impl ReceiptParser {
             .extract_contract_call_data(contract_id.into())
             .ok_or_else(|| Self::missing_receipts_error(output_param))?;
 
-        self.decoder.decode(output_param, &data)
+        self.decoder.decode(output_param, data.as_slice())
     }
 
     pub fn parse_script(self, output_param: &ParamType) -> Result<Token> {
@@ -49,7 +49,7 @@ impl ReceiptParser {
             .extract_script_data()
             .ok_or_else(|| Self::missing_receipts_error(output_param))?;
 
-        self.decoder.decode(output_param, &data)
+        self.decoder.decode(output_param, data.as_slice())
     }
 
     fn missing_receipts_error(output_param: &ParamType) -> Error {
@@ -59,7 +59,7 @@ impl ReceiptParser {
         )
     }
 
-    fn extract_contract_call_data(&mut self, target_contract: ContractId) -> Option<Vec<u8>> {
+    pub fn extract_contract_call_data(&mut self, target_contract: ContractId) -> Option<Vec<u8>> {
         // If the script contains nested calls, we need to extract the data of the top-level call
         let mut nested_calls_stack = vec![];
 

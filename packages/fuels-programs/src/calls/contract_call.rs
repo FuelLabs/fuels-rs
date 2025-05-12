@@ -3,15 +3,18 @@ use std::{collections::HashMap, fmt::Debug};
 use fuel_tx::AssetId;
 use fuels_core::{
     constants::DEFAULT_CALL_PARAMS_AMOUNT,
+    error,
     types::{
+        Selector,
         bech32::{Bech32Address, Bech32ContractId},
         errors::Result,
+        input::Input,
+        output::Output,
         param_types::ParamType,
-        Selector,
     },
 };
 
-use crate::calls::utils::sealed;
+use crate::{assembly::contract_call::ContractCallData, calls::utils::sealed};
 
 #[derive(Debug, Clone)]
 /// Contains all data relevant to a single contract call
@@ -24,9 +27,28 @@ pub struct ContractCall {
     pub output_param: ParamType,
     pub is_payable: bool,
     pub custom_assets: HashMap<(AssetId, Option<Bech32Address>), u64>,
+    pub inputs: Vec<Input>,
+    pub outputs: Vec<Output>,
 }
 
 impl ContractCall {
+    pub(crate) fn data(&self, base_asset_id: AssetId) -> Result<ContractCallData> {
+        let encoded_args = self
+            .encoded_args
+            .as_ref()
+            .map_err(|e| error!(Codec, "cannot encode contract call arguments: {e}"))?
+            .to_owned();
+
+        Ok(ContractCallData {
+            amount: self.call_parameters.amount(),
+            asset_id: self.call_parameters.asset_id().unwrap_or(base_asset_id),
+            contract_id: self.contract_id.clone().into(),
+            fn_selector_encoded: self.encoded_selector.clone(),
+            encoded_args,
+            gas_forwarded: self.call_parameters.gas_forwarded,
+        })
+    }
+
     pub fn with_contract_id(self, contract_id: Bech32ContractId) -> Self {
         ContractCall {
             contract_id,
@@ -43,6 +65,18 @@ impl ContractCall {
 
     pub fn add_custom_asset(&mut self, asset_id: AssetId, amount: u64, to: Option<Bech32Address>) {
         *self.custom_assets.entry((asset_id, to)).or_default() += amount;
+    }
+
+    /// Add custom outputs to the `ContractCall`.
+    pub fn with_outputs(mut self, outputs: Vec<Output>) -> Self {
+        self.outputs = outputs;
+        self
+    }
+
+    /// Add custom inputs to the `ContractCall`.
+    pub fn with_inputs(mut self, inputs: Vec<Input>) -> Self {
+        self.inputs = inputs;
+        self
     }
 }
 

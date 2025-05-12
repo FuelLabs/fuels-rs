@@ -1,27 +1,38 @@
-use std::iter::repeat;
-
-use fuel_tx::{input::coin::CoinSigned, Input};
 use fuels::{
+    accounts::signers::private_key::PrivateKeySigner,
     prelude::*,
-    tx::{TxPointer, UtxoId},
-    types::{output::Output, Bytes32},
+    types::{coin_type::CoinType, input::Input, output::Output},
 };
+use rand::{Rng, thread_rng};
+
+async fn assert_address_balance(
+    address: &Bech32Address,
+    provider: &Provider,
+    asset_id: AssetId,
+    amount: u64,
+) {
+    let balance = provider
+        .get_asset_balance(address, asset_id)
+        .await
+        .expect("Could not retrieve balance");
+    assert_eq!(balance, amount);
+}
 
 #[tokio::test]
 async fn test_wallet_balance_api_multi_asset() -> Result<()> {
-    let mut wallet = WalletUnlocked::new_random(None);
+    let signer = PrivateKeySigner::random(&mut rand::thread_rng());
     let number_of_assets = 7;
     let coins_per_asset = 21;
     let amount_per_coin = 11;
     let (coins, asset_ids) = setup_multiple_assets_coins(
-        wallet.address(),
+        signer.address(),
         number_of_assets,
         coins_per_asset,
         amount_per_coin,
     );
 
     let provider = setup_test_provider(coins.clone(), vec![], None, None).await?;
-    wallet.set_provider(provider);
+    let wallet = Wallet::new(signer, provider.clone());
     let balances = wallet.get_balances().await?;
     assert_eq!(balances.len() as u64, number_of_assets);
 
@@ -33,7 +44,7 @@ async fn test_wallet_balance_api_multi_asset() -> Result<()> {
         assert!(balances.contains_key(&expected_key));
         assert_eq!(
             *balances.get(&expected_key).unwrap(),
-            coins_per_asset * amount_per_coin
+            (coins_per_asset * amount_per_coin) as u128
         );
     }
     Ok(())
@@ -41,18 +52,18 @@ async fn test_wallet_balance_api_multi_asset() -> Result<()> {
 
 #[tokio::test]
 async fn test_wallet_balance_api_single_asset() -> Result<()> {
-    let mut wallet = WalletUnlocked::new_random(None);
+    let signer = PrivateKeySigner::random(&mut rand::thread_rng());
     let number_of_coins = 21;
     let amount_per_coin = 11;
     let coins = setup_single_asset_coins(
-        wallet.address(),
+        signer.address(),
         AssetId::zeroed(),
         number_of_coins,
         amount_per_coin,
     );
 
     let provider = setup_test_provider(coins.clone(), vec![], None, None).await?;
-    wallet.set_provider(provider);
+    let wallet = Wallet::new(signer, provider.clone());
 
     for coin in coins {
         let balance = wallet.get_asset_balance(&coin.asset_id).await;
@@ -65,58 +76,10 @@ async fn test_wallet_balance_api_single_asset() -> Result<()> {
     assert!(balances.contains_key(&expected_key));
     assert_eq!(
         *balances.get(&expected_key).unwrap(),
-        number_of_coins * amount_per_coin
+        (number_of_coins * amount_per_coin) as u128
     );
 
     Ok(())
-}
-
-fn compare_inputs(inputs: &[Input], expected_inputs: &mut Vec<Input>) -> bool {
-    let zero_utxo_id = UtxoId::new(Bytes32::zeroed(), 0);
-
-    // change UTXO_ids to 0s for comparison, because we can't guess the genesis coin ids
-    let inputs: Vec<Input> = inputs
-        .iter()
-        .map(|input| match input {
-            Input::CoinSigned(CoinSigned {
-                owner,
-                amount,
-                asset_id,
-                tx_pointer,
-                witness_index,
-                ..
-            }) => Input::coin_signed(
-                zero_utxo_id,
-                *owner,
-                *amount,
-                *asset_id,
-                *tx_pointer,
-                *witness_index,
-            ),
-            other => other.clone(),
-        })
-        .collect();
-
-    let comparison_results: Vec<bool> = inputs
-        .iter()
-        .map(|input| {
-            let found_index = expected_inputs
-                .iter()
-                .position(|expected| expected == input);
-            if let Some(index) = found_index {
-                expected_inputs.remove(index);
-                true
-            } else {
-                false
-            }
-        })
-        .collect();
-
-    if !expected_inputs.is_empty() {
-        return false;
-    }
-
-    return comparison_results.iter().all(|&r| r);
 }
 
 fn base_asset_wallet_config(num_wallets: u64) -> WalletsConfig {
@@ -130,80 +93,129 @@ fn base_asset_wallet_config(num_wallets: u64) -> WalletsConfig {
 
 #[tokio::test]
 async fn adjust_fee_empty_transaction() -> Result<()> {
-    let wallet_config = base_asset_wallet_config(1);
-    let wallet = launch_custom_provider_and_get_wallets(wallet_config, None, None)
-        .await?
-        .pop()
-        .unwrap();
+    let wallet = launch_provider_and_get_wallet().await?;
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(vec![], vec![], TxPolicies::default());
-    tb.add_signer(wallet.clone())?;
+    assert!(tb.inputs().is_empty());
+    assert!(tb.outputs().is_empty());
 
+    wallet.add_witnesses(&mut tb)?;
     wallet.adjust_for_fee(&mut tb, 0).await?;
+    assert!(!tb.inputs().is_empty(), "inputs should be added");
+    assert_eq!(tb.outputs().len(), 1, "output should be added");
 
-    let tx = tb.build(wallet.try_provider()?).await?;
+    let tx = tb.build(wallet.provider()).await?;
 
-    let zero_utxo_id = UtxoId::new(Bytes32::zeroed(), 0);
-    let mut expected_inputs = vec![Input::coin_signed(
-        zero_utxo_id,
-        wallet.address().into(),
-        20,
-        AssetId::zeroed(),
-        TxPointer::default(),
-        0,
-    )];
+    let total_amount_inputs: u64 = tx.inputs().iter().map(|i| i.amount().unwrap()).sum();
+    assert!(
+        total_amount_inputs > tx.max_fee().unwrap(),
+        "amount should cover tx"
+    );
+
     let expected_outputs = vec![Output::change(
         wallet.address().into(),
         0,
         AssetId::zeroed(),
     )];
 
-    assert!(compare_inputs(tx.inputs(), &mut expected_inputs));
     assert_eq!(tx.outputs(), &expected_outputs);
 
     Ok(())
 }
 
 #[tokio::test]
+async fn adjust_for_fee_with_message_data_input() -> Result<()> {
+    let wallet_signer = PrivateKeySigner::random(&mut rand::thread_rng());
+    let receiver_signer = PrivateKeySigner::random(&mut rand::thread_rng());
+
+    let messages = setup_single_message(
+        &Bech32Address::default(),
+        wallet_signer.address(),
+        100,
+        0.into(),
+        vec![1, 2, 3], // has data
+    );
+    let asset_id = AssetId::zeroed();
+    let coins = setup_single_asset_coins(wallet_signer.address(), asset_id, 1, 50);
+    let provider = setup_test_provider(coins, vec![messages], None, None).await?;
+    let wallet = Wallet::new(wallet_signer, provider.clone());
+    let receiver = Wallet::new(receiver_signer, provider.clone());
+
+    let amount_to_send = 14;
+    let message = wallet.get_messages().await?.pop().unwrap();
+    let input = Input::resource_signed(CoinType::Message(message));
+    let outputs = wallet.get_asset_outputs_for_amount(receiver.address(), asset_id, amount_to_send);
+
+    {
+        // message with data as only input - without adjust for fee
+        let mut tb = ScriptTransactionBuilder::prepare_transfer(
+            vec![input.clone()],
+            outputs.clone(),
+            TxPolicies::default(),
+        );
+        wallet.add_witnesses(&mut tb)?;
+
+        let tx = tb.build(wallet.provider()).await?;
+        let err = provider
+            .send_transaction_and_await_commit(tx)
+            .await
+            .unwrap_err();
+
+        assert!(err.to_string().contains("Validity(NoSpendableInput)"));
+    }
+    {
+        // message with data as only input - with adjust for fee
+        let mut tb = ScriptTransactionBuilder::prepare_transfer(
+            vec![input.clone()],
+            outputs.clone(),
+            TxPolicies::default(),
+        );
+
+        wallet.adjust_for_fee(&mut tb, 0).await.unwrap();
+        wallet.add_witnesses(&mut tb)?;
+
+        let tx = tb.build(wallet.provider()).await?;
+
+        assert_eq!(receiver.get_asset_balance(&asset_id).await?, 0);
+
+        provider
+            .send_transaction_and_await_commit(tx)
+            .await
+            .unwrap();
+
+        assert_eq!(receiver.get_asset_balance(&asset_id).await?, amount_to_send);
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn adjust_fee_resources_to_transfer_with_base_asset() -> Result<()> {
-    let wallet_config = base_asset_wallet_config(1);
-    let wallet = launch_custom_provider_and_get_wallets(wallet_config, None, None)
-        .await?
-        .pop()
-        .unwrap();
+    let wallet = launch_provider_and_get_wallet().await?;
 
     let base_amount = 30;
     let base_asset_id = AssetId::zeroed();
     let inputs = wallet
-        .get_asset_inputs_for_amount(base_asset_id, base_amount, None)
+        .get_asset_inputs_for_amount(base_asset_id, base_amount.into(), None)
         .await?;
     let outputs =
         wallet.get_asset_outputs_for_amount(&Address::zeroed().into(), base_asset_id, base_amount);
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
-    tb.add_signer(wallet.clone())?;
 
-    wallet.adjust_for_fee(&mut tb, base_amount).await?;
+    wallet.adjust_for_fee(&mut tb, base_amount.into()).await?;
+    wallet.add_witnesses(&mut tb)?;
 
-    let tx = tb.build(wallet.try_provider()?).await?;
+    let tx = tb.build(wallet.provider()).await?;
 
-    let zero_utxo_id = UtxoId::new(Bytes32::zeroed(), 0);
-    let mut expected_inputs = repeat(Input::coin_signed(
-        zero_utxo_id,
-        wallet.address().into(),
-        20,
-        base_asset_id,
-        TxPointer::default(),
-        0,
-    ))
-    .take(3)
-    .collect::<Vec<_>>();
+    let total_amount_inputs: u64 = tx.inputs().iter().map(|i| i.amount().unwrap()).sum();
+    assert!(total_amount_inputs > tx.max_fee().unwrap()); // can cover tx
+
     let expected_outputs = vec![
         Output::coin(Address::zeroed(), base_amount, base_asset_id),
         Output::change(wallet.address().into(), 0, base_asset_id),
     ];
 
-    assert!(compare_inputs(tx.inputs(), &mut expected_inputs));
     assert_eq!(tx.outputs(), &expected_outputs);
 
     Ok(())
@@ -211,22 +223,23 @@ async fn adjust_fee_resources_to_transfer_with_base_asset() -> Result<()> {
 
 #[tokio::test]
 async fn test_transfer() -> Result<()> {
-    let mut wallet_1 = WalletUnlocked::new_random(None);
-    let mut wallet_2 = WalletUnlocked::new_random(None).lock();
+    let wallet_1_signer = PrivateKeySigner::random(&mut rand::thread_rng());
+    let wallet_2_signer = PrivateKeySigner::random(&mut rand::thread_rng());
 
     let amount = 100;
     let num_coins = 1;
     let base_asset_id = AssetId::zeroed();
     let mut coins_1 =
-        setup_single_asset_coins(wallet_1.address(), base_asset_id, num_coins, amount);
-    let coins_2 = setup_single_asset_coins(wallet_2.address(), base_asset_id, num_coins, amount);
+        setup_single_asset_coins(wallet_1_signer.address(), base_asset_id, num_coins, amount);
+    let coins_2 =
+        setup_single_asset_coins(wallet_2_signer.address(), base_asset_id, num_coins, amount);
     coins_1.extend(coins_2);
 
     let provider = setup_test_provider(coins_1, vec![], None, None).await?;
-    wallet_1.set_provider(provider.clone());
-    wallet_2.set_provider(provider);
+    let wallet_1 = Wallet::new(wallet_1_signer, provider.clone());
+    let wallet_2 = Wallet::new(wallet_2_signer, provider.clone()).lock();
 
-    let _receipts = wallet_1
+    let _ = wallet_1
         .transfer(
             wallet_2.address(),
             amount / 2,
@@ -246,8 +259,8 @@ async fn test_transfer() -> Result<()> {
 
 #[tokio::test]
 async fn send_transfer_transactions() -> Result<()> {
-    const AMOUNT: u64 = 5;
-    let (wallet_1, wallet_2) = setup_transfer_test(AMOUNT).await?;
+    let amount = 5;
+    let (wallet_1, wallet_2) = setup_transfer_test(amount).await?;
 
     // Configure transaction policies
     let tip = 2;
@@ -260,11 +273,17 @@ async fn send_transfer_transactions() -> Result<()> {
         .with_script_gas_limit(script_gas_limit);
 
     // Transfer 1 from wallet 1 to wallet 2.
-    const SEND_AMOUNT: u64 = 1;
+    let amount_to_send = 1;
     let base_asset_id = AssetId::zeroed();
-    let (tx_id, _receipts) = wallet_1
-        .transfer(wallet_2.address(), SEND_AMOUNT, base_asset_id, tx_policies)
-        .await?;
+    let tx_id = wallet_1
+        .transfer(
+            wallet_2.address(),
+            amount_to_send,
+            base_asset_id,
+            tx_policies,
+        )
+        .await?
+        .tx_id;
 
     // Assert that the transaction was properly configured.
     let res = wallet_1
@@ -279,7 +298,7 @@ async fn send_transfer_transactions() -> Result<()> {
     };
     // Transfer scripts uses set `script_gas_limit` despite not having script code
     assert_eq!(script.gas_limit(), script_gas_limit);
-    assert_eq!(script.maturity(), maturity as u32);
+    assert_eq!(script.maturity().unwrap(), maturity);
 
     let wallet_1_spendable_resources = wallet_1
         .get_spendable_resources(base_asset_id, 1, None)
@@ -307,28 +326,25 @@ async fn transfer_coins_with_change() -> Result<()> {
 
     // Transfer 2 from wallet 1 to wallet 2.
     const SEND_AMOUNT: u64 = 2;
-    let _receipts = wallet_1
+    let fee = wallet_1
         .transfer(
             wallet_2.address(),
             SEND_AMOUNT,
             AssetId::zeroed(),
             TxPolicies::default(),
         )
-        .await?;
+        .await?
+        .tx_status
+        .total_fee;
 
     let base_asset_id = AssetId::zeroed();
     let wallet_1_final_coins = wallet_1
         .get_spendable_resources(base_asset_id, 1, None)
         .await?;
 
-    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
-    let expected_fee = 1;
     // Assert that we've sent 2 from wallet 1, resulting in an amount of 3 in wallet 1.
     let resulting_amount = wallet_1_final_coins.first().unwrap();
-    assert_eq!(
-        resulting_amount.amount(),
-        AMOUNT - SEND_AMOUNT - expected_fee
-    );
+    assert_eq!(resulting_amount.amount(), AMOUNT - SEND_AMOUNT - fee);
 
     let wallet_2_final_coins = wallet_2.get_coins(base_asset_id).await?;
     assert_eq!(wallet_2_final_coins.len(), 1);
@@ -342,13 +358,16 @@ async fn transfer_coins_with_change() -> Result<()> {
 async fn test_wallet_get_coins() -> Result<()> {
     const AMOUNT: u64 = 1000;
     const NUM_COINS: u64 = 3;
-    let mut wallet = WalletUnlocked::new_random(None);
-    let coins = setup_single_asset_coins(wallet.address(), AssetId::zeroed(), NUM_COINS, AMOUNT);
+    let addr = Bech32Address::from(Address::zeroed());
+    let coins = setup_single_asset_coins(&addr, AssetId::zeroed(), NUM_COINS, AMOUNT);
 
     let provider = setup_test_provider(coins, vec![], None, None).await?;
-    wallet.set_provider(provider.clone());
+    let wallet = Wallet::new_locked(addr, provider.clone());
 
-    let wallet_initial_coins = wallet.get_coins(*provider.base_asset_id()).await?;
+    let consensus_parameters = provider.consensus_parameters().await?;
+    let wallet_initial_coins = wallet
+        .get_coins(*consensus_parameters.base_asset_id())
+        .await?;
     let total_amount: u64 = wallet_initial_coins.iter().map(|c| c.amount).sum();
 
     assert_eq!(wallet_initial_coins.len(), NUM_COINS as usize);
@@ -357,16 +376,15 @@ async fn test_wallet_get_coins() -> Result<()> {
     Ok(())
 }
 
-async fn setup_transfer_test(amount: u64) -> Result<(WalletUnlocked, WalletUnlocked)> {
-    let mut wallet_1 = WalletUnlocked::new_random(None);
-    let mut wallet_2 = WalletUnlocked::new_random(None);
+async fn setup_transfer_test(amount: u64) -> Result<(Wallet, Wallet)> {
+    let wallet_1_signer = PrivateKeySigner::random(&mut rand::thread_rng());
 
-    let coins = setup_single_asset_coins(wallet_1.address(), AssetId::zeroed(), 1, amount);
+    let coins = setup_single_asset_coins(wallet_1_signer.address(), AssetId::zeroed(), 1, amount);
 
     let provider = setup_test_provider(coins, vec![], None, None).await?;
 
-    wallet_1.set_provider(provider.clone());
-    wallet_2.set_provider(provider);
+    let wallet_1 = Wallet::new(wallet_1_signer, provider.clone());
+    let wallet_2 = Wallet::random(&mut thread_rng(), provider.clone());
 
     Ok((wallet_1, wallet_2))
 }
@@ -397,22 +415,22 @@ async fn transfer_more_than_owned() -> Result<()> {
 #[tokio::test]
 async fn transfer_coins_of_non_base_asset() -> Result<()> {
     const AMOUNT: u64 = 10000;
-    let mut wallet_1 = WalletUnlocked::new_random(None);
-    let mut wallet_2 = WalletUnlocked::new_random(None);
+    let wallet_1_signer = PrivateKeySigner::random(&mut rand::thread_rng());
 
     let asset_id: AssetId = AssetId::from([1; 32usize]);
-    let mut coins = setup_single_asset_coins(wallet_1.address(), asset_id, 1, AMOUNT);
+    let mut coins = setup_single_asset_coins(wallet_1_signer.address(), asset_id, 1, AMOUNT);
     // setup base asset coins to pay tx fees
-    let base_coins = setup_single_asset_coins(wallet_1.address(), AssetId::zeroed(), 1, AMOUNT);
+    let base_coins =
+        setup_single_asset_coins(wallet_1_signer.address(), AssetId::zeroed(), 1, AMOUNT);
     coins.extend(base_coins);
 
     let provider = setup_test_provider(coins, vec![], None, None).await?;
 
-    wallet_1.set_provider(provider.clone());
-    wallet_2.set_provider(provider);
+    let wallet_1 = Wallet::new(wallet_1_signer, provider.clone());
+    let wallet_2 = Wallet::random(&mut thread_rng(), provider.clone());
 
     const SEND_AMOUNT: u64 = 200;
-    let _receipts = wallet_1
+    let _ = wallet_1
         .transfer(
             wallet_2.address(),
             SEND_AMOUNT,
@@ -439,16 +457,20 @@ async fn test_transfer_with_multiple_signatures() -> Result<()> {
     let wallets = launch_custom_provider_and_get_wallets(wallet_config, None, None).await?;
     let provider = wallets[0].try_provider()?;
 
-    let mut receiver = WalletUnlocked::new_random(None);
-    receiver.set_provider(provider.clone());
+    let receiver = Wallet::random(&mut thread_rng(), provider.clone());
 
-    let amount_to_transfer = 20;
+    let amount_to_transfer = 20u64;
 
     let mut inputs = vec![];
+    let consensus_parameters = provider.consensus_parameters().await?;
     for wallet in &wallets {
         inputs.extend(
             wallet
-                .get_asset_inputs_for_amount(*provider.base_asset_id(), amount_to_transfer, None)
+                .get_asset_inputs_for_amount(
+                    *consensus_parameters.base_asset_id(),
+                    amount_to_transfer.into(),
+                    None,
+                )
                 .await?,
         );
     }
@@ -458,23 +480,83 @@ async fn test_transfer_with_multiple_signatures() -> Result<()> {
     // all change goes to the first wallet
     let outputs = wallets[0].get_asset_outputs_for_amount(
         receiver.address(),
-        *provider.base_asset_id(),
+        *consensus_parameters.base_asset_id(),
         amount_to_receive,
     );
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
 
     for wallet in wallets.iter() {
-        tb.add_signer(wallet.clone())?;
+        wallet.add_witnesses(&mut tb)?
     }
 
     let tx = tb.build(provider).await?;
     provider.send_transaction_and_await_commit(tx).await?;
 
     assert_eq!(
-        receiver.get_asset_balance(provider.base_asset_id()).await?,
+        receiver
+            .get_asset_balance(consensus_parameters.base_asset_id())
+            .await?,
         amount_to_receive,
     );
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn wallet_transfer_respects_maturity_and_expiration() -> Result<()> {
+    let wallet = launch_provider_and_get_wallet().await?;
+    let asset_id = AssetId::zeroed();
+    let wallet_balance = wallet.get_asset_balance(&asset_id).await?;
+
+    let provider = wallet.provider();
+    let receiver = thread_rng().r#gen::<Bech32Address>();
+
+    let maturity = 10;
+    let expiration = 20;
+    let tx_policies = TxPolicies::default()
+        .with_maturity(maturity)
+        .with_expiration(expiration);
+    let amount_to_send = 10;
+
+    {
+        let err = wallet
+            .transfer(&receiver, amount_to_send, asset_id, tx_policies)
+            .await
+            .expect_err("maturity not reached");
+
+        assert!(err.to_string().contains("TransactionMaturity"));
+    }
+    let transaction_fee = {
+        provider.produce_blocks(15, None).await?;
+        wallet
+            .transfer(&receiver, amount_to_send, asset_id, tx_policies)
+            .await
+            .expect("should succeed. Block height between `maturity` and `expiration`")
+            .tx_status
+            .total_fee
+    };
+    {
+        provider.produce_blocks(15, None).await?;
+        let err = wallet
+            .transfer(&receiver, amount_to_send, asset_id, tx_policies)
+            .await
+            .expect_err("expiration reached");
+
+        assert!(err.to_string().contains("TransactionExpiration"));
+    }
+
+    // Wallet has spent the funds
+    assert_address_balance(
+        wallet.address(),
+        provider,
+        asset_id,
+        wallet_balance - amount_to_send - transaction_fee,
+    )
+    .await;
+
+    // Funds were transferred
+    assert_address_balance(&receiver, provider, asset_id, amount_to_send).await;
 
     Ok(())
 }

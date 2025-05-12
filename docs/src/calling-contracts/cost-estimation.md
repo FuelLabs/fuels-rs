@@ -6,6 +6,8 @@ With the function `estimate_transaction_cost(tolerance: Option<f64>, block_horiz
 {{#include ../../../packages/fuels-accounts/src/provider.rs:transaction_cost}}
 ```
 
+> **Note** `script_gas` refers to the part of the gas spent on the script execution.
+
 Below are examples that show how to get the estimated transaction cost from single and multi call transactions.
 
 ```rust,ignore

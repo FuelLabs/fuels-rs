@@ -14,18 +14,18 @@
 
 pub mod tx {
     pub use fuel_tx::{
-        field, ConsensusParameters, ContractIdExt, ContractParameters, FeeParameters, GasCosts,
+        ConsensusParameters, ContractIdExt, ContractParameters, FeeParameters, GasCosts,
         PredicateParameters, Receipt, ScriptExecutionResult, ScriptParameters, StorageSlot,
         Transaction as FuelTransaction, TxId, TxParameters, TxPointer, UpgradePurpose,
-        UploadSubsection, UtxoId, Witness,
+        UploadSubsection, UtxoId, Witness, field,
     };
 }
 
 #[cfg(feature = "std")]
 pub mod client {
     pub use fuel_core_client::client::{
-        pagination::{PageDirection, PaginationRequest},
         FuelClient,
+        pagination::{PageDirection, PaginationRequest},
     };
 }
 
@@ -33,13 +33,12 @@ pub mod macros {
     pub use fuels_macros::*;
 }
 
-#[cfg(feature = "std")]
 pub mod programs {
     pub use fuels_programs::*;
 }
 
 pub mod core {
-    pub use fuels_core::{codec, constants, offsets, traits, Configurables};
+    pub use fuels_core::{Configurables, codec, constants, offsets, traits};
 }
 
 pub mod crypto {
@@ -64,11 +63,7 @@ pub mod prelude {
     #[cfg(feature = "std")]
     pub use super::{
         accounts::{
-            impersonated_account::ImpersonatedAccount,
-            predicate::Predicate,
-            provider::*,
-            wallet::{generate_mnemonic_phrase, WalletUnlocked},
-            Account, ViewOnlyAccount,
+            Account, ViewOnlyAccount, predicate::Predicate, provider::*, signers::*, wallet::Wallet,
         },
         core::{
             codec::{LogDecoder, LogId, LogResult},
@@ -87,10 +82,10 @@ pub mod prelude {
         macros::abigen,
         tx::Receipt,
         types::{
+            Address, AssetId, Bytes, ContractId, RawSlice, Salt,
             bech32::{Bech32Address, Bech32ContractId},
             errors::{Error, Result},
             transaction::*,
-            Address, AssetId, Bytes, ContractId, RawSlice, Salt,
         },
     };
 }

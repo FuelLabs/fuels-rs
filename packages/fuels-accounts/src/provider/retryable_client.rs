@@ -1,24 +1,30 @@
 use std::{future::Future, io};
 
-use custom_queries::{IsUserAccountQuery, IsUserAccountVariables};
+use async_trait::async_trait;
+use custom_queries::{ContractExistsQuery, IsUserAccountQuery, IsUserAccountVariables};
 use cynic::QueryBuilder;
 use fuel_core_client::client::{
+    FuelClient,
     pagination::{PaginatedResult, PaginationRequest},
+    schema::contract::ContractByIdArgs,
     types::{
-        gas_price::{EstimateGasPrice, LatestGasPrice},
-        primitives::{BlockId, TransactionId},
         Balance, Blob, Block, ChainInfo, Coin, CoinType, ContractBalance, Message, MessageProof,
         NodeInfo, TransactionResponse, TransactionStatus,
+        gas_price::{EstimateGasPrice, LatestGasPrice},
+        primitives::{BlockId, TransactionId},
     },
-    FuelClient,
 };
 use fuel_core_types::services::executor::TransactionExecutionStatus;
-use fuel_tx::{BlobId, Transaction, TxId, UtxoId};
+use fuel_tx::{BlobId, ConsensusParameters, Transaction, TxId, UtxoId};
 use fuel_types::{Address, AssetId, BlockHeight, ContractId, Nonce};
-use fuels_core::types::errors::{error, Error, Result};
+use fuels_core::types::errors::{Error, Result, error};
+use futures::Stream;
 
-use super::supported_versions::{self, VersionCompatibility};
-use crate::provider::{retry_util, RetryConfig};
+use super::{
+    cache::CacheableRpcs,
+    supported_versions::{self, VersionCompatibility},
+};
+use crate::provider::{RetryConfig, retry_util};
 
 #[derive(Debug, thiserror::Error)]
 pub(crate) enum RequestError {
@@ -40,6 +46,17 @@ pub(crate) struct RetryableClient {
     url: String,
     retry_config: RetryConfig,
     prepend_warning: Option<String>,
+}
+
+#[async_trait]
+impl CacheableRpcs for RetryableClient {
+    async fn consensus_parameters(&self) -> Result<ConsensusParameters> {
+        Ok(self.chain_info().await?.consensus_parameters)
+    }
+
+    async fn node_info(&self) -> Result<NodeInfo> {
+        Ok(self.node_info().await?)
+    }
 }
 
 impl RetryableClient {
@@ -130,6 +147,30 @@ impl RetryableClient {
         self.wrap(|| self.client.submit_and_await_commit(tx)).await
     }
 
+    pub async fn submit_and_await_status<'a>(
+        &'a self,
+        tx: &'a Transaction,
+        include_preconfirmation: bool,
+    ) -> RequestResult<impl Stream<Item = io::Result<TransactionStatus>> + 'a> {
+        self.wrap(|| {
+            self.client
+                .submit_and_await_status_opt(tx, None, Some(include_preconfirmation))
+        })
+        .await
+    }
+
+    pub async fn subscribe_transaction_status<'a>(
+        &'a self,
+        id: &'a TxId,
+        include_preconfirmation: bool,
+    ) -> RequestResult<impl Stream<Item = io::Result<TransactionStatus>> + 'a> {
+        self.wrap(|| {
+            self.client
+                .subscribe_transaction_status_opt(id, Some(include_preconfirmation))
+        })
+        .await
+    }
+
     pub async fn submit(&self, tx: &Transaction) -> RequestResult<TransactionId> {
         self.wrap(|| self.client.submit(tx)).await
     }
@@ -181,9 +222,13 @@ impl RetryableClient {
         tx: &[Transaction],
         utxo_validation: Option<bool>,
         gas_price: Option<u64>,
+        at_height: Option<BlockHeight>,
     ) -> RequestResult<Vec<TransactionExecutionStatus>> {
-        self.wrap(|| self.client.dry_run_opt(tx, utxo_validation, gas_price))
-            .await
+        self.wrap(|| {
+            self.client
+                .dry_run_opt(tx, utxo_validation, gas_price, at_height)
+        })
+        .await
     }
 
     pub async fn coins(
@@ -199,7 +244,7 @@ impl RetryableClient {
     pub async fn coins_to_spend(
         &self,
         owner: &Address,
-        spend_query: Vec<(AssetId, u64, Option<u32>)>,
+        spend_query: Vec<(AssetId, u128, Option<u16>)>,
         excluded_ids: Option<(Vec<UtxoId>, Vec<Nonce>)>,
     ) -> RequestResult<Vec<Vec<CoinType>>> {
         self.wrap(move || {
@@ -299,12 +344,28 @@ impl RetryableClient {
         nonce: &Nonce,
         commit_block_id: Option<&BlockId>,
         commit_block_height: Option<BlockHeight>,
-    ) -> RequestResult<Option<MessageProof>> {
+    ) -> RequestResult<MessageProof> {
         self.wrap(|| {
             self.client
                 .message_proof(transaction_id, nonce, commit_block_id, commit_block_height)
         })
         .await
+    }
+
+    pub async fn contract_exists(&self, contract_id: &ContractId) -> RequestResult<bool> {
+        self.wrap(|| {
+            let query = ContractExistsQuery::build(ContractByIdArgs {
+                id: (*contract_id).into(),
+            });
+            self.client.query(query)
+        })
+        .await
+        .map(|query| {
+            query
+                .contract
+                .map(|contract| ContractId::from(contract.id) == *contract_id)
+                .unwrap_or(false)
+        })
     }
     // DELEGATION END
 
@@ -330,10 +391,12 @@ impl RetryableClient {
 }
 
 mod custom_queries {
-    use fuel_core_client::client::schema::blob::BlobIdFragment;
-    use fuel_core_client::client::schema::schema;
     use fuel_core_client::client::schema::{
-        contract::ContractIdFragment, tx::TransactionIdFragment, BlobId, ContractId, TransactionId,
+        BlobId, ContractId, TransactionId,
+        blob::BlobIdFragment,
+        contract::{ContractByIdArgsFields, ContractIdFragment},
+        schema,
+        tx::TransactionIdFragment,
     };
 
     #[derive(cynic::QueryVariables, Debug)]
@@ -347,7 +410,7 @@ mod custom_queries {
     #[cynic(
         graphql_type = "Query",
         variables = "IsUserAccountVariables",
-        schema_path = "./target/fuel-core-client-schema.sdl"
+        schema_path = "./src/schema/schema.sdl"
     )]
     pub struct IsUserAccountQuery {
         #[arguments(id: $blob_id)]
@@ -356,5 +419,16 @@ mod custom_queries {
         pub contract: Option<ContractIdFragment>,
         #[arguments(id: $transaction_id)]
         pub transaction: Option<TransactionIdFragment>,
+    }
+
+    #[derive(cynic::QueryFragment, Clone, Debug)]
+    #[cynic(
+        schema_path = "./src/schema/schema.sdl",
+        graphql_type = "Query",
+        variables = "ContractByIdArgs"
+    )]
+    pub struct ContractExistsQuery {
+        #[arguments(id: $id)]
+        pub contract: Option<ContractIdFragment>,
     }
 }

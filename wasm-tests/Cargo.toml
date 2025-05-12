@@ -16,4 +16,5 @@ crate-type = ['cdylib']
 fuels = { workspace = true }
 fuels-core = { workspace = true }
 getrandom = { version = "0.2.11", features = ["js"] }
+hex = { workspace = true }
 wasm-bindgen-test = "0.3.39"

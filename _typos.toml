@@ -1,0 +1,2 @@
+[files]
+extend-exclude = ["packages/fuels-accounts/src/schema/schema.sdl"]

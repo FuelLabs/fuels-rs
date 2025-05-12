@@ -6,7 +6,7 @@ mod tests {
     use fuels::{
         core::codec::ABIDecoder,
         macros::abigen,
-        types::{errors::Result, param_types::ParamType, SizedAsciiString},
+        types::{SizedAsciiString, errors::Result, param_types::ParamType},
     };
 
     #[test]
@@ -21,7 +21,9 @@ mod tests {
 
         assert_eq!(
             selector,
-            [0, 0, 0, 0, 0, 0, 0, 12, 115, 111, 109, 101, 95, 102, 110, 95, 110, 97, 109, 101]
+            [
+                0, 0, 0, 0, 0, 0, 0, 12, 115, 111, 109, 101, 95, 102, 110, 95, 110, 97, 109, 101
+            ]
         );
         // ANCHOR_END: example_fn_selector
     }
@@ -67,7 +69,7 @@ mod tests {
 
             assert_eq!(
                 format!("{expected_struct:?}"),
-                decoder.decode_as_debug_str(&param_type, &[0, 0, 0, 0, 0, 0, 0, 123])?
+                decoder.decode_as_debug_str(&param_type, [0, 0, 0, 0, 0, 0, 0, 123].as_slice())?
             );
         }
         {
@@ -83,7 +85,7 @@ mod tests {
 
             assert_eq!(
                 format!("{expected_struct:?}"),
-                decoder.decode_as_debug_str(&param_type, &[97, 98, 99])?
+                decoder.decode_as_debug_str(&param_type, [97, 98, 99].as_slice())?
             );
         }
         {
@@ -97,7 +99,7 @@ mod tests {
                 format!("{expected_enum:?}"),
                 decoder.decode_as_debug_str(
                     &param_type,
-                    &[0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 10]
+                    [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 10].as_slice()
                 )?
             );
         }
@@ -117,7 +119,7 @@ mod tests {
 
             assert_eq!(
                 format!("{expected_u8}"),
-                decoder.decode_as_debug_str(&param_type, &[1])?
+                decoder.decode_as_debug_str(&param_type, [1].as_slice())?
             );
         }
 

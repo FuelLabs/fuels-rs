@@ -1,31 +1,32 @@
-use std::{fmt::Debug, marker::PhantomData};
+use core::{fmt::Debug, marker::PhantomData};
+use std::sync::Arc;
 
-use fuel_tx::{AssetId, Bytes32, Receipt};
-use fuels_accounts::{provider::TransactionCost, Account};
+use fuel_tx::{AssetId, Bytes32};
+use fuels_accounts::{Account, provider::TransactionCost};
 use fuels_core::{
     codec::{ABIEncoder, DecoderConfig, EncoderConfig, LogDecoder},
-    traits::{Parameterize, Tokenizable},
+    traits::{Parameterize, Signer, Tokenizable},
     types::{
+        Selector, Token,
         bech32::{Bech32Address, Bech32ContractId},
-        errors::{error, transaction::Reason, Error, Result},
+        errors::{Error, Result, error, transaction::Reason},
         input::Input,
         output::Output,
         transaction::{ScriptTransaction, Transaction, TxPolicies},
         transaction_builders::{
             BuildableTransaction, ScriptBuildStrategy, ScriptTransactionBuilder,
-            VariableOutputPolicy,
+            TransactionBuilder, VariableOutputPolicy,
         },
         tx_status::TxStatus,
-        Selector, Token,
     },
 };
 
 use crate::{
     calls::{
+        CallParameters, ContractCall, Execution, ExecutionType, ScriptCall,
         receipt_parser::ReceiptParser,
         traits::{ContractDependencyConfigurator, ResponseParser, TransactionTuner},
-        utils::find_id_of_missing_contract,
-        CallParameters, ContractCall, Execution, ScriptCall,
+        utils::find_ids_of_missing_contracts,
     },
     responses::{CallResponse, SubmitResponse},
 };
@@ -50,6 +51,7 @@ pub struct CallHandler<A, C, T> {
     // Initially `None`, gets set to the right tx id after the transaction is submitted
     cached_tx_id: Option<Bytes32>,
     variable_output_policy: VariableOutputPolicy,
+    unresolved_signers: Vec<Arc<dyn Signer + Send + Sync>>,
 }
 
 impl<A, C, T> CallHandler<A, C, T> {
@@ -81,6 +83,11 @@ impl<A, C, T> CallHandler<A, C, T> {
         self.variable_output_policy = variable_outputs;
         self
     }
+
+    pub fn add_signer(mut self, signer: impl Signer + Send + Sync + 'static) -> Self {
+        self.unresolved_signers.push(Arc::new(signer));
+        self
+    }
 }
 
 impl<A, C, T> CallHandler<A, C, T>
@@ -90,16 +97,21 @@ where
     T: Tokenizable + Parameterize + Debug,
 {
     pub async fn transaction_builder(&self) -> Result<ScriptTransactionBuilder> {
-        self.call
+        let mut tb = self
+            .call
             .transaction_builder(self.tx_policies, self.variable_output_policy, &self.account)
-            .await
+            .await?;
+
+        tb.add_signers(&self.unresolved_signers)?;
+
+        Ok(tb)
     }
 
     /// Returns the script that executes the contract call
     pub async fn build_tx(&self) -> Result<ScriptTransaction> {
-        self.call
-            .build_tx(self.tx_policies, self.variable_output_policy, &self.account)
-            .await
+        let tb = self.transaction_builder().await?;
+
+        self.call.build_tx(tb, &self.account).await
     }
 
     /// Get a call's estimated cost
@@ -166,13 +178,13 @@ where
         let tx = self.build_tx().await?;
         let provider = self.account.try_provider()?;
 
-        self.cached_tx_id = Some(tx.id(provider.chain_id()));
+        let consensus_parameters = provider.consensus_parameters().await?;
+        let chain_id = consensus_parameters.chain_id();
+        self.cached_tx_id = Some(tx.id(chain_id));
 
         let tx_status = provider.send_transaction_and_await_commit(tx).await?;
 
-        let receipts = tx_status.take_receipts_checked(Some(&self.log_decoder))?;
-
-        self.get_response(receipts)
+        self.get_response(tx_status)
     }
 
     pub async fn submit(mut self) -> Result<SubmitResponse<A, C, T>> {
@@ -187,10 +199,16 @@ where
 
     /// Call a contract's method on the node, in a simulated manner, meaning the state of the
     /// blockchain is *not* modified but simulated.
-    pub async fn simulate(&mut self, execution: Execution) -> Result<CallResponse<T>> {
+    pub async fn simulate(
+        &mut self,
+        Execution {
+            execution_type,
+            at_height,
+        }: Execution,
+    ) -> Result<CallResponse<T>> {
         let provider = self.account.try_provider()?;
 
-        let tx_status = if let Execution::StateReadOnly = execution {
+        let tx_status = if let ExecutionType::StateReadOnly = execution_type {
             let tx = self
                 .transaction_builder()
                 .await?
@@ -198,55 +216,45 @@ where
                 .build(provider)
                 .await?;
 
-            provider.dry_run_opt(tx, false, Some(0)).await?
+            provider.dry_run_opt(tx, false, Some(0), at_height).await?
         } else {
             let tx = self.build_tx().await?;
-            provider.dry_run(tx).await?
+            provider.dry_run_opt(tx, true, None, at_height).await?
         };
-        let receipts = tx_status.take_receipts_checked(Some(&self.log_decoder))?;
 
-        self.get_response(receipts)
-    }
-
-    /// Create a [`CallResponse`] from call receipts
-    pub fn get_response(&self, receipts: Vec<Receipt>) -> Result<CallResponse<T>> {
-        let token = self
-            .call
-            .parse_call(&receipts, self.decoder_config, &T::param_type())?;
-
-        Ok(CallResponse::new(
-            T::from_token(token)?,
-            receipts,
-            self.log_decoder.clone(),
-            self.cached_tx_id,
-        ))
+        self.get_response(tx_status)
     }
 
     /// Create a [`CallResponse`] from `TxStatus`
-    pub fn get_response_from(&self, tx_status: TxStatus) -> Result<CallResponse<T>> {
-        let receipts = tx_status.take_receipts_checked(Some(&self.log_decoder))?;
+    pub fn get_response(&self, tx_status: TxStatus) -> Result<CallResponse<T>> {
+        let success = tx_status.take_success_checked(Some(&self.log_decoder))?;
 
-        self.get_response(receipts)
+        let token =
+            self.call
+                .parse_call(&success.receipts, self.decoder_config, &T::param_type())?;
+
+        Ok(CallResponse {
+            value: T::from_token(token)?,
+            log_decoder: self.log_decoder.clone(),
+            tx_id: self.cached_tx_id,
+            tx_status: success,
+        })
     }
 
-    pub async fn determine_missing_contracts(mut self, max_attempts: Option<u64>) -> Result<Self> {
-        let attempts = max_attempts.unwrap_or(10);
+    pub async fn determine_missing_contracts(mut self) -> Result<Self> {
+        match self.simulate(Execution::realistic()).await {
+            Ok(_) => Ok(self),
 
-        for _ in 0..attempts {
-            match self.simulate(Execution::Realistic).await {
-                Ok(_) => return Ok(self),
-
-                Err(Error::Transaction(Reason::Reverted { ref receipts, .. })) => {
-                    if let Some(contract_id) = find_id_of_missing_contract(receipts) {
-                        self.call.append_external_contract(contract_id);
-                    }
+            Err(Error::Transaction(Reason::Failure { ref receipts, .. })) => {
+                for contract_id in find_ids_of_missing_contracts(receipts) {
+                    self.call.append_external_contract(contract_id);
                 }
 
-                Err(other_error) => return Err(other_error),
+                Ok(self)
             }
-        }
 
-        self.simulate(Execution::Realistic).await.map(|_| self)
+            Err(other_error) => Err(other_error),
+        }
     }
 }
 
@@ -273,6 +281,8 @@ where
             output_param: T::param_type(),
             is_payable,
             custom_assets: Default::default(),
+            inputs: vec![],
+            outputs: vec![],
         };
         CallHandler {
             account,
@@ -283,6 +293,7 @@ where
             decoder_config: DecoderConfig::default(),
             cached_tx_id: None,
             variable_output_policy: VariableOutputPolicy::default(),
+            unresolved_signers: vec![],
         }
     }
 
@@ -331,6 +342,20 @@ where
 
         Ok(self)
     }
+
+    /// Add custom outputs to the `CallHandler`. These outputs
+    /// will appear at the **start** of the final output list.
+    pub fn with_outputs(mut self, outputs: Vec<Output>) -> Self {
+        self.call = self.call.with_outputs(outputs);
+        self
+    }
+
+    /// Add custom inputs to the `CallHandler`. These inputs
+    /// will appear at the **start** of the final input list.
+    pub fn with_inputs(mut self, inputs: Vec<Input>) -> Self {
+        self.call = self.call.with_inputs(inputs);
+        self
+    }
 }
 
 impl<A, T> CallHandler<A, ScriptCall, T>
@@ -361,14 +386,19 @@ where
             decoder_config: DecoderConfig::default(),
             cached_tx_id: None,
             variable_output_policy: VariableOutputPolicy::default(),
+            unresolved_signers: vec![],
         }
     }
 
+    /// Add custom outputs to the `CallHandler`. These outputs
+    /// will appear at the **start** of the final output list.
     pub fn with_outputs(mut self, outputs: Vec<Output>) -> Self {
         self.call = self.call.with_outputs(outputs);
         self
     }
 
+    /// Add custom inputs to the `CallHandler`. These inputs
+    /// will appear at the **start** of the final input list.
     pub fn with_inputs(mut self, inputs: Vec<Input>) -> Self {
         self.call = self.call.with_inputs(inputs);
         self
@@ -389,6 +419,7 @@ where
             decoder_config: DecoderConfig::default(),
             cached_tx_id: None,
             variable_output_policy: VariableOutputPolicy::default(),
+            unresolved_signers: vec![],
         }
     }
 
@@ -408,14 +439,17 @@ where
         Ok(self)
     }
 
-    /// Adds a contract call to be bundled in the transaction
-    /// Note that this is a builder method
+    /// Adds a contract call to be bundled in the transaction.
+    /// Note that if you added custom inputs/outputs that they will follow the
+    /// order in which the calls are added.
     pub fn add_call(
         mut self,
         call_handler: CallHandler<impl Account, ContractCall, impl Tokenizable>,
     ) -> Self {
         self.log_decoder.merge(call_handler.log_decoder);
         self.call.push(call_handler.call);
+        self.unresolved_signers
+            .extend(call_handler.unresolved_signers);
 
         self
     }
@@ -425,13 +459,14 @@ where
         let tx = self.build_tx().await?;
 
         let provider = self.account.try_provider()?;
+        let consensus_parameters = provider.consensus_parameters().await?;
+        let chain_id = consensus_parameters.chain_id();
 
-        self.cached_tx_id = Some(tx.id(provider.chain_id()));
+        self.cached_tx_id = Some(tx.id(chain_id));
 
         let tx_status = provider.send_transaction_and_await_commit(tx).await?;
 
-        let receipts = tx_status.take_receipts_checked(Some(&self.log_decoder))?;
-        self.get_response(receipts)
+        self.get_response(tx_status)
     }
 
     pub async fn submit(mut self) -> Result<SubmitResponse<A, Vec<ContractCall>, ()>> {
@@ -451,11 +486,14 @@ where
     /// [call]: Self::call
     pub async fn simulate<T: Tokenizable + Debug>(
         &mut self,
-        execution: Execution,
+        Execution {
+            execution_type,
+            at_height,
+        }: Execution,
     ) -> Result<CallResponse<T>> {
         let provider = self.account.try_provider()?;
 
-        let tx_status = if let Execution::StateReadOnly = execution {
+        let tx_status = if let ExecutionType::StateReadOnly = execution_type {
             let tx = self
                 .transaction_builder()
                 .await?
@@ -463,14 +501,13 @@ where
                 .build(provider)
                 .await?;
 
-            provider.dry_run_opt(tx, false, Some(0)).await?
+            provider.dry_run_opt(tx, false, Some(0), at_height).await?
         } else {
             let tx = self.build_tx().await?;
-            provider.dry_run(tx).await?
+            provider.dry_run_opt(tx, true, None, at_height).await?
         };
-        let receipts = tx_status.take_receipts_checked(Some(&self.log_decoder))?;
 
-        self.get_response(receipts)
+        self.get_response(tx_status)
     }
 
     /// Simulates a call without needing to resolve the generic for the return type
@@ -483,12 +520,13 @@ where
         Ok(())
     }
 
-    /// Create a [`CallResponse`] from call receipts
+    /// Create a [`CallResponse`] from `TxStatus`
     pub fn get_response<T: Tokenizable + Debug>(
         &self,
-        receipts: Vec<Receipt>,
+        tx_status: TxStatus,
     ) -> Result<CallResponse<T>> {
-        let mut receipt_parser = ReceiptParser::new(&receipts, self.decoder_config);
+        let success = tx_status.take_success_checked(Some(&self.log_decoder))?;
+        let mut receipt_parser = ReceiptParser::new(&success.receipts, self.decoder_config);
 
         let final_tokens = self
             .call
@@ -497,35 +535,30 @@ where
             .collect::<Result<Vec<_>>>()?;
 
         let tokens_as_tuple = Token::Tuple(final_tokens);
-        let response = CallResponse::<T>::new(
-            T::from_token(tokens_as_tuple)?,
-            receipts,
-            self.log_decoder.clone(),
-            self.cached_tx_id,
-        );
 
-        Ok(response)
+        Ok(CallResponse {
+            value: T::from_token(tokens_as_tuple)?,
+            log_decoder: self.log_decoder.clone(),
+            tx_id: self.cached_tx_id,
+            tx_status: success,
+        })
     }
 
     /// Simulates the call and attempts to resolve missing contract outputs.
     /// Forwards the received error if it cannot be fixed.
-    pub async fn determine_missing_contracts(mut self, max_attempts: Option<u64>) -> Result<Self> {
-        let attempts = max_attempts.unwrap_or(10);
+    pub async fn determine_missing_contracts(mut self) -> Result<Self> {
+        match self.simulate_without_decode().await {
+            Ok(_) => Ok(self),
 
-        for _ in 0..attempts {
-            match self.simulate_without_decode().await {
-                Ok(_) => return Ok(self),
-
-                Err(Error::Transaction(Reason::Reverted { ref receipts, .. })) => {
-                    if let Some(contract_id) = find_id_of_missing_contract(receipts) {
-                        self = self.append_external_contract(contract_id)?;
-                    }
+            Err(Error::Transaction(Reason::Failure { ref receipts, .. })) => {
+                for contract_id in find_ids_of_missing_contracts(receipts) {
+                    self = self.append_external_contract(contract_id)?;
                 }
 
-                Err(other_error) => return Err(other_error),
+                Ok(self)
             }
-        }
 
-        self.simulate_without_decode().await.map(|_| self)
+            Err(other_error) => Err(other_error),
+        }
     }
 }

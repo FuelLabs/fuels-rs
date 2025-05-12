@@ -5,7 +5,7 @@ use fuels_core::types::{
     coin::Coin,
     coin_type::CoinType,
     coin_type_id::CoinTypeId,
-    errors::{error, Error, Result},
+    errors::{Error, Result, error},
     input::Input,
     transaction_builders::TransactionBuilder,
 };
@@ -19,11 +19,11 @@ pub fn extract_message_nonce(receipts: &[Receipt]) -> Option<Nonce> {
 
 pub async fn calculate_missing_base_amount(
     tb: &impl TransactionBuilder,
-    available_base_amount: u64,
-    reserved_base_amount: u64,
+    available_base_amount: u128,
+    reserved_base_amount: u128,
     provider: &Provider,
-) -> Result<u64> {
-    let max_fee = tb.estimate_max_fee(provider).await?;
+) -> Result<u128> {
+    let max_fee: u128 = tb.estimate_max_fee(provider).await?.into();
 
     let total_used = max_fee + reserved_base_amount;
     let missing_amount = if total_used > available_base_amount {
@@ -42,8 +42,8 @@ pub async fn calculate_missing_base_amount(
 pub fn available_base_assets_and_amount(
     tb: &impl TransactionBuilder,
     base_asset_id: &AssetId,
-) -> (Vec<CoinTypeId>, u64) {
-    let mut sum = 0;
+) -> (Vec<CoinTypeId>, u128) {
+    let mut sum = 0u128;
     let iter =
         tb.inputs()
             .iter()
@@ -53,12 +53,17 @@ pub fn available_base_assets_and_amount(
                     CoinType::Coin(Coin {
                         amount, asset_id, ..
                     }) if asset_id == base_asset_id => {
-                        sum += amount;
-                        Some(resource.id())
+                        sum += u128::from(*amount);
+                        resource.id()
                     }
                     CoinType::Message(message) => {
-                        sum += message.amount;
-                        Some(resource.id())
+                        if message.data.is_empty() {
+                            sum += u128::from(message.amount);
+
+                            resource.id()
+                        } else {
+                            None
+                        }
                     }
                     _ => None,
                 },
@@ -90,14 +95,11 @@ fn is_consuming_utxos(tb: &impl TransactionBuilder) -> bool {
         .any(|input| !matches!(input, Input::Contract { .. }))
 }
 
-pub fn adjust_inputs_outputs(
+pub fn add_base_change_if_needed(
     tb: &mut impl TransactionBuilder,
-    new_base_inputs: impl IntoIterator<Item = Input>,
     address: &Bech32Address,
     base_asset_id: &AssetId,
 ) {
-    tb.inputs_mut().extend(new_base_inputs);
-
     let is_base_change_present = tb.outputs().iter().any(|output| {
         matches!(output , Output::Change { asset_id , .. }
                                         if asset_id == base_asset_id)

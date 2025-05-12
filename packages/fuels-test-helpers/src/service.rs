@@ -4,11 +4,11 @@ use std::net::SocketAddr;
 use fuel_core::service::{Config as ServiceConfig, FuelService as CoreFuelService};
 use fuel_core_chain_config::{ChainConfig, StateConfig};
 use fuel_core_services::State;
-use fuels_core::types::errors::{error, Result};
+use fuels_core::types::errors::{Result, error};
 
+use crate::NodeConfig;
 #[cfg(not(feature = "fuel-core-lib"))]
 use crate::fuel_bin_service::FuelService as BinFuelService;
-use crate::NodeConfig;
 
 pub struct FuelService {
     #[cfg(feature = "fuel-core-lib")]
@@ -65,28 +65,34 @@ impl FuelService {
     ) -> ServiceConfig {
         use std::time::Duration;
 
+        #[cfg(feature = "rocksdb")]
+        use fuel_core::state::rocks_db::{ColumnsPolicy, DatabaseConfig};
         use fuel_core::{
             combined_database::CombinedDatabaseConfig,
-            fuel_core_graphql_api::ServiceConfig as GraphQLConfig,
+            fuel_core_graphql_api::ServiceConfig as GraphQLConfig, service::config::GasPriceConfig,
         };
         use fuel_core_chain_config::SnapshotReader;
 
-        use crate::{DbType, MAX_DATABASE_CACHE_SIZE};
+        use crate::DbType;
 
         let snapshot_reader = SnapshotReader::new_in_memory(chain_config, state_config);
 
         let combined_db_config = CombinedDatabaseConfig {
-            max_database_cache_size: node_config
-                .max_database_cache_size
-                .unwrap_or(MAX_DATABASE_CACHE_SIZE),
             database_path: match &node_config.database_type {
                 DbType::InMemory => Default::default(),
                 DbType::RocksDb(path) => path.clone().unwrap_or_default(),
             },
             database_type: node_config.database_type.into(),
             #[cfg(feature = "rocksdb")]
+            database_config: DatabaseConfig {
+                cache_capacity: node_config.max_database_cache_size,
+                max_fds: 512,
+                columns_policy: ColumnsPolicy::Lazy,
+            },
+            #[cfg(feature = "rocksdb")]
             state_rewind_policy: Default::default(),
         };
+
         ServiceConfig {
             graphql_config: GraphQLConfig {
                 addr: node_config.addr,
@@ -96,19 +102,27 @@ impl FuelService {
                 max_queries_resolver_recursive_depth: 1,
                 max_queries_directives: 10,
                 max_concurrent_queries: 1024,
+                required_fuel_block_height_tolerance: 10,
+                required_fuel_block_height_timeout: Duration::from_secs(30),
                 request_body_bytes_limit: 16 * 1024 * 1024,
                 query_log_threshold_time: Duration::from_secs(2),
                 api_request_timeout: Duration::from_secs(60),
                 database_batch_size: 100,
+                assemble_tx_dry_run_limit: 3,
+                assemble_tx_estimate_predicates_limit: 5,
                 costs: Default::default(),
                 number_of_threads: 2,
             },
             combined_db_config,
             snapshot_reader,
+            historical_execution: node_config.historical_execution,
             utxo_validation: node_config.utxo_validation,
             debug: node_config.debug,
             block_production: node_config.block_production.into(),
-            starting_gas_price: node_config.starting_gas_price,
+            gas_price_config: GasPriceConfig {
+                starting_exec_gas_price: node_config.starting_gas_price,
+                ..GasPriceConfig::local_node()
+            },
             ..ServiceConfig::local_node()
         }
     }

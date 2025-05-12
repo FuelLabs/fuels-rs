@@ -9,10 +9,11 @@ publish = false
 repository = { workspace = true }
 description = "Fuel Rust SDK contract examples."
 
-[dev-dependencies]
+[dependencies]
 fuels = { workspace = true, features = ["default"] }
 rand = { workspace = true, features = ["default"] }
 tokio = { workspace = true, features = ["full"] }
+tempfile = { workspace = true }
 
 [features]
 fuel-core-lib = ["fuels/fuel-core-lib"]

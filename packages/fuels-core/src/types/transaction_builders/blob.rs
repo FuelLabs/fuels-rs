@@ -1,27 +1,28 @@
-use std::{fmt::Debug, iter::repeat};
+use std::{fmt::Debug, iter::repeat, sync::Arc};
 
 use async_trait::async_trait;
 use fuel_crypto::Signature;
 use fuel_tx::{
+    BlobIdExt, Chargeable, Output, Transaction as FuelTransaction, UniqueIdentifier, Witness,
     field::{Policies as PoliciesField, Witnesses},
     policies::{Policies, PolicyType},
-    BlobIdExt, Chargeable, Output, Transaction as FuelTransaction, UniqueIdentifier, Witness,
 };
 use fuel_types::bytes::padded_len_usize;
 use itertools::Itertools;
 
 use super::{
-    generate_missing_witnesses, impl_tx_builder_trait, resolve_fuel_inputs, BuildableTransaction,
-    Strategy, TransactionBuilder, UnresolvedWitnessIndexes, GAS_ESTIMATION_BLOCK_HORIZON,
+    BuildableTransaction, GAS_ESTIMATION_BLOCK_HORIZON, Strategy, TransactionBuilder,
+    UnresolvedWitnessIndexes, generate_missing_witnesses, impl_tx_builder_trait,
+    resolve_fuel_inputs,
 };
 use crate::{
     constants::SIGNATURE_WITNESS_SIZE,
     traits::Signer,
     types::{
-        errors::{error, error_transaction, Result},
+        DryRunner,
+        errors::{Result, error, error_transaction},
         input::Input,
         transaction::{BlobTransaction, EstimablePredicates, Transaction, TxPolicies},
-        DryRunner,
     },
     utils::{calculate_witnesses_size, sealed},
 };
@@ -86,6 +87,7 @@ impl From<Blob> for fuel_tx::Witness {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct BlobTransactionBuilder {
     pub inputs: Vec<Input>,
     pub outputs: Vec<Output>,
@@ -96,7 +98,8 @@ pub struct BlobTransactionBuilder {
     pub build_strategy: Strategy,
     pub blob: Blob,
     unresolved_witness_indexes: UnresolvedWitnessIndexes,
-    unresolved_signers: Vec<Box<dyn Signer + Send + Sync>>,
+    unresolved_signers: Vec<Arc<dyn Signer + Send + Sync>>,
+    enable_burn: bool,
 }
 
 impl Default for BlobTransactionBuilder {
@@ -112,6 +115,7 @@ impl Default for BlobTransactionBuilder {
             blob: Default::default(),
             unresolved_witness_indexes: Default::default(),
             unresolved_signers: Default::default(),
+            enable_burn: false,
         }
     }
 }
@@ -121,7 +125,7 @@ impl BlobTransactionBuilder {
     /// Calculates the maximum possible blob size by determining the remaining space available in the current transaction before it reaches the maximum allowed size.
     /// Note: This calculation only considers the transaction size limit and does not account for the maximum gas per transaction.
     pub async fn estimate_max_blob_size(&self, provider: &impl DryRunner) -> Result<usize> {
-        let mut tb = self.clone_without_signers();
+        let mut tb = self.clone();
         tb.blob = Blob::new(vec![]);
 
         let tx = tb
@@ -130,13 +134,22 @@ impl BlobTransactionBuilder {
             .await?;
 
         let current_tx_size = tx.size();
-        let max_tx_size = usize::try_from(provider.consensus_parameters().tx_params().max_size())
-            .unwrap_or(usize::MAX);
+        let max_tx_size = usize::try_from(
+            provider
+                .consensus_parameters()
+                .await?
+                .tx_params()
+                .max_size(),
+        )
+        .unwrap_or(usize::MAX);
 
         Ok(max_tx_size.saturating_sub(current_tx_size))
     }
 
     pub async fn build(mut self, provider: impl DryRunner) -> Result<BlobTransaction> {
+        let consensus_parameters = provider.consensus_parameters().await?;
+        self.intercept_burn(consensus_parameters.base_asset_id())?;
+
         let is_using_predicates = self.is_using_predicates();
 
         let tx = match self.build_strategy {
@@ -154,23 +167,8 @@ impl BlobTransactionBuilder {
         })
     }
 
-    fn clone_without_signers(&self) -> Self {
-        Self {
-            inputs: self.inputs.clone(),
-            outputs: self.outputs.clone(),
-            witnesses: self.witnesses.clone(),
-            tx_policies: self.tx_policies,
-            unresolved_witness_indexes: self.unresolved_witness_indexes.clone(),
-            unresolved_signers: Default::default(),
-            gas_price_estimation_block_horizon: self.gas_price_estimation_block_horizon,
-            max_fee_estimation_tolerance: self.max_fee_estimation_tolerance,
-            build_strategy: self.build_strategy.clone(),
-            blob: self.blob.clone(),
-        }
-    }
-
     async fn resolve_fuel_tx(mut self, provider: &impl DryRunner) -> Result<fuel_tx::Blob> {
-        let chain_id = provider.consensus_parameters().chain_id();
+        let chain_id = provider.consensus_parameters().await?.chain_id();
 
         let free_witness_index = self.num_witnesses()?;
         let body = self.blob.as_blob_body(free_witness_index);

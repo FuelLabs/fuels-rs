@@ -1,5 +1,6 @@
-use crate::types::errors::{Error, Result};
 use sha2::{Digest, Sha256};
+
+use crate::types::errors::{Error, Result};
 
 pub fn checksum_encode(address: &str) -> Result<String> {
     let trimmed = address.trim_start_matches("0x");
@@ -131,8 +132,10 @@ mod test {
     #[test]
     fn will_detect_invalid_characters() {
         let result = checksum_encode(INVALID_CHARACTERS).expect_err("should not encode");
-        assert!(result
-            .to_string()
-            .contains("address contains invalid characters"));
+        assert!(
+            result
+                .to_string()
+                .contains("address contains invalid characters")
+        );
     }
 }

@@ -24,35 +24,36 @@ members = [
   "packages/fuels-macros",
   "packages/fuels-programs",
   "packages/fuels-test-helpers",
+  "scripts/change-log",
   "scripts/check-docs",
   "scripts/fuel-core-version",
   "scripts/versions-replacer",
-  "scripts/change-log",
   "wasm-tests",
 ]
 
 [workspace.package]
 authors = ["Fuel Labs <contact@fuel.sh>"]
-edition = "2021"
+edition = "2024"
 homepage = "https://fuel.network/"
 readme = "README.md"
 license = "Apache-2.0"
 repository = "https://github.com/FuelLabs/fuels-rs"
-rust-version = "1.79.0"
-version = "0.66.9"
+rust-version = "1.85.0"
+version = "0.72.0"
 
 [workspace.dependencies]
 Inflector = "0.11.4"
 anyhow = { version = "1.0", default-features = false }
+dialoguer = { version = "0.11", default-features = false }
 async-trait = { version = "0.1.74", default-features = false }
 bech32 = "0.9.1"
 bytes = { version = "1.5.0", default-features = false }
 chrono = "0.4.31"
-cynic = { version = "2.2", default-features = false }
-elliptic-curve = { version = "0.13.8", default-features = false }
+cynic = { version = "3.1.0", default-features = false }
+test-case = { version = "3.3", default-features = false }
 eth-keystore = "0.5.0"
 flate2 = { version = "1.0", default-features = false }
-fuel-abi-types = "0.7.0"
+fuel-abi-types = "0.8.0"
 futures = "0.3.29"
 hex = { version = "0.4.3", default-features = false }
 itertools = "0.12.0"
@@ -70,6 +71,7 @@ semver = "1.0.20"
 serde = { version = "1.0.193", default-features = false }
 serde_json = "1.0.108"
 serde_with = { version = "3.4.0", default-features = false }
+auto_impl = { version = "1.0", default-features = false }
 sha2 = { version = "0.10.8", default-features = false }
 syn = "2.0.39"
 tai64 = { version = "4.0.0", default-features = false }
@@ -82,34 +84,41 @@ trybuild = "1.0.85"
 uint = { version = "0.9.5", default-features = false }
 which = { version = "6.0.0", default-features = false }
 zeroize = "1.7.0"
-octocrab = { version = "0.39", default-features = false }
+octocrab = { version = "0.43", default-features = false }
 dotenv = { version = "0.15", default-features = false }
+toml = { version = "0.8", default-features = false }
+mockall = { version = "0.13", default-features = false }
+google-cloud-kms = { version = "0.6", default-features = false }
+aws-config = { version = "1", default-features = false }
+aws-sdk-kms = { version = "1", default-features = false }
+testcontainers = { version = "0.23", default-features = false }
+k256 = { version = "0.13", default-features = false }
 
 # Dependencies from the `fuel-core` repository:
-fuel-core = { version = "0.40.0", default-features = false, features = [
+fuel-core = { version = "0.43.2", default-features = false, features = [
   "wasm-executor",
 ] }
-fuel-core-chain-config = { version = "0.40.0", default-features = false }
-fuel-core-client = { version = "0.40.0", default-features = false }
-fuel-core-poa = { version = "0.40.0", default-features = false }
-fuel-core-services = { version = "0.40.0", default-features = false }
-fuel-core-types = { version = "0.40.0", default-features = false }
+fuel-core-chain-config = { version = "0.43.2", default-features = false }
+fuel-core-client = { version = "0.43.2", default-features = false }
+fuel-core-poa = { version = "0.43.2", default-features = false }
+fuel-core-services = { version = "0.43.2", default-features = false }
+fuel-core-types = { version = "0.43.2", default-features = false }
 
 # Dependencies from the `fuel-vm` repository:
-fuel-asm = { version = "0.58.0" }
-fuel-crypto = { version = "0.58.0" }
-fuel-merkle = { version = "0.58.0" }
-fuel-storage = { version = "0.58.0" }
-fuel-tx = { version = "0.58.0" }
-fuel-types = { version = "0.58.0" }
-fuel-vm = { version = "0.58.0" }
+fuel-asm = { version = "0.60.2" }
+fuel-crypto = { version = "0.60.2" }
+fuel-merkle = { version = "0.60.2" }
+fuel-storage = { version = "0.60.2" }
+fuel-tx = { version = "0.60.2" }
+fuel-types = { version = "0.60.2" }
+fuel-vm = { version = "0.60.2" }
 
 # Workspace projects
-fuels = { version = "0.66.9", path = "./packages/fuels", default-features = false }
-fuels-accounts = { version = "0.66.9", path = "./packages/fuels-accounts", default-features = false }
-fuels-code-gen = { version = "0.66.9", path = "./packages/fuels-code-gen", default-features = false }
-fuels-core = { version = "0.66.9", path = "./packages/fuels-core", default-features = false }
-fuels-macros = { version = "0.66.9", path = "./packages/fuels-macros", default-features = false }
-fuels-programs = { version = "0.66.9", path = "./packages/fuels-programs", default-features = false }
-fuels-test-helpers = { version = "0.66.9", path = "./packages/fuels-test-helpers", default-features = false }
-versions-replacer = { version = "0.66.9", path = "./scripts/versions-replacer", default-features = false }
+fuels = { version = "0.72.0", path = "./packages/fuels", default-features = false }
+fuels-accounts = { version = "0.72.0", path = "./packages/fuels-accounts", default-features = false }
+fuels-code-gen = { version = "0.72.0", path = "./packages/fuels-code-gen", default-features = false }
+fuels-core = { version = "0.72.0", path = "./packages/fuels-core", default-features = false }
+fuels-macros = { version = "0.72.0", path = "./packages/fuels-macros", default-features = false }
+fuels-programs = { version = "0.72.0", path = "./packages/fuels-programs", default-features = false }
+fuels-test-helpers = { version = "0.72.0", path = "./packages/fuels-test-helpers", default-features = false }
+versions-replacer = { version = "0.72.0", path = "./scripts/versions-replacer", default-features = false }
