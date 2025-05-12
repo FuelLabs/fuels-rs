@@ -398,7 +398,7 @@ mod tests {
         #[allow(clippy::too_many_arguments)]
         async fn assemble_tx(
             &self,
-            _: &FuelTransaction,
+            _: impl Transaction + Send,
             _: u32,
             _: Vec<RequiredBalance>,
             _: u16,

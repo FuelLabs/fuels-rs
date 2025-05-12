@@ -202,7 +202,7 @@ impl BlobTransactionBuilder {
 
         let mut tx = match dry_runner
             .assemble_tx(
-                &tx.into(),
+                BlobTransaction::from(tx),
                 self.gas_price_estimation_block_horizon,
                 required_balances,
                 fee_index,

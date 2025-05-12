@@ -319,6 +319,22 @@ impl Provider {
     }
 
     #[cfg(feature = "coin-cache")]
+    async fn coins_and_messages_to_exclude<'a>(
+        &self,
+        coin_cache_keys: impl IntoIterator<Item = &'a (Bech32Address, AssetId)>,
+    ) -> (Vec<UtxoId>, Vec<Nonce>) {
+        let mut locked_cache = self.coins_cache.lock().await;
+
+        coin_cache_keys
+            .into_iter()
+            .flat_map(|key| locked_cache.get_active(key))
+            .partition_map(|coin_type_id| match coin_type_id {
+                CoinTypeId::UtxoId(utxo_id) => Either::Left(utxo_id),
+                CoinTypeId::Nonce(nonce) => Either::Right(nonce),
+            })
+    }
+
+    #[cfg(feature = "coin-cache")]
     pub async fn submit<T: Transaction>(&self, tx: T) -> Result<TxId> {
         let consensus_parameters = self.consensus_parameters().await?;
         let base_asset_id = consensus_parameters.base_asset_id();
@@ -393,7 +409,7 @@ impl Provider {
     #[allow(clippy::too_many_arguments)]
     pub async fn assemble_tx(
         &self,
-        transaction: impl Into<FuelTransaction>,
+        transaction: impl Transaction,
         block_horizon: u32,
         required_balances: Vec<RequiredBalance>,
         fee_address_index: u16,
@@ -402,16 +418,23 @@ impl Provider {
         reserve_gas: Option<u64>,
     ) -> Result<AssembleTransactionResult> {
         #[cfg(feature = "coin-cache")]
+        let base_asset_id = *self.consensus_parameters().await?.base_asset_id();
+
+        #[cfg(feature = "coin-cache")]
+        let keys_from_required_balances: Vec<_> = required_balances
+            .iter()
+            .map(|rb| (Bech32Address::from(rb.account.owner()), rb.asset_id))
+            .collect();
+
+        #[cfg(feature = "coin-cache")]
         let (cache_utxos, cache_nonces) = self
-            .coins_cache
-            .lock()
-            .await
-            .get_all_active()
-            .into_iter()
-            .partition_map(|coin_type_id| match coin_type_id {
-                CoinTypeId::UtxoId(utxo_id) => Either::Left(utxo_id),
-                CoinTypeId::Nonce(nonce) => Either::Right(nonce),
-            });
+            .coins_and_messages_to_exclude(
+                transaction
+                    .used_coins(&base_asset_id)
+                    .keys()
+                    .chain(keys_from_required_balances.iter()),
+            )
+            .await;
 
         #[cfg(feature = "coin-cache")]
         let exclude = match exclude {
@@ -985,7 +1008,7 @@ impl DryRunner for Provider {
 
     async fn assemble_tx(
         &self,
-        transaction: &FuelTransaction,
+        transaction: impl Transaction + Send,
         block_horizon: u32,
         required_balances: Vec<RequiredBalance>,
         fee_address_index: u16,
@@ -993,18 +1016,15 @@ impl DryRunner for Provider {
         estimate_predicates: bool,
         reserve_gas: Option<u64>,
     ) -> Result<AssembleTransactionResult> {
-        Ok(self
-            .uncached_client()
-            .assemble_tx(
-                transaction,
-                block_horizon,
-                required_balances,
-                fee_address_index,
-                exclude,
-                estimate_predicates,
-                reserve_gas,
-            )
-            .await?
-            .into())
+        self.assemble_tx(
+            transaction,
+            block_horizon,
+            required_balances,
+            fee_address_index,
+            exclude,
+            estimate_predicates,
+            reserve_gas,
+        )
+        .await
     }
 }

@@ -9,6 +9,8 @@ use crate::types::{
     errors::Result,
 };
 
+use super::transaction::Transaction;
+
 #[derive(Debug, Clone, Copy)]
 pub struct DryRun {
     pub succeeded: bool,
@@ -34,7 +36,7 @@ pub trait DryRunner: Send + Sync {
     #[allow(clippy::too_many_arguments)]
     async fn assemble_tx(
         &self,
-        transaction: &FuelTransaction,
+        transaction: impl Transaction + Send,
         block_horizon: u32,
         required_balances: Vec<RequiredBalance>,
         fee_address_index: u16,
@@ -66,7 +68,7 @@ impl<T: DryRunner> DryRunner for &T {
     #[allow(clippy::too_many_arguments)]
     async fn assemble_tx(
         &self,
-        transaction: &FuelTransaction,
+        transaction: impl Transaction + Send,
         block_horizon: u32,
         required_balances: Vec<RequiredBalance>,
         fee_address_index: u16,

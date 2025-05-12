@@ -824,7 +824,7 @@ impl ScriptTransactionBuilder {
 
         let mut tx = match dry_runner
             .assemble_tx(
-                &tx.into(),
+                ScriptTransaction::from(tx),
                 self.gas_price_estimation_block_horizon,
                 required_balances,
                 fee_index,
@@ -1252,7 +1252,7 @@ impl CreateTransactionBuilder {
 
         let mut tx = match dry_runner
             .assemble_tx(
-                &tx.into(),
+                CreateTransaction::from(tx),
                 self.gas_price_estimation_block_horizon,
                 required_balances,
                 fee_index,
@@ -1452,7 +1452,7 @@ impl UploadTransactionBuilder {
 
         let mut tx = match dry_runner
             .assemble_tx(
-                &tx.into(),
+                UploadTransaction::from(tx),
                 self.gas_price_estimation_block_horizon,
                 required_balances,
                 fee_index,
@@ -1656,7 +1656,7 @@ impl UpgradeTransactionBuilder {
 
         let mut tx = match dry_runner
             .assemble_tx(
-                &tx.into(),
+                UpgradeTransaction::from(tx),
                 self.gas_price_estimation_block_horizon,
                 required_balances,
                 fee_index,
@@ -2109,7 +2109,7 @@ mod tests {
         #[allow(clippy::too_many_arguments)]
         async fn assemble_tx(
             &self,
-            _transaction: &FuelTransaction,
+            _transaction: impl Transaction + Send,
             _block_horizon: u32,
             _required_balances: Vec<RequiredBalance>,
             _fee_address_index: u16,

@@ -761,7 +761,6 @@ async fn test_sway_timestamp() -> Result<()> {
     Ok(())
 }
 
-#[cfg(feature = "coin-cache")]
 async fn create_transfer(
     wallet: &Wallet,
     amount: u64,
@@ -806,6 +805,43 @@ async fn transactions_with_the_same_utxo() -> Result<()> {
         err.to_string()
             .contains("was submitted recently in a transaction ")
     );
+
+    Ok(())
+}
+
+#[cfg(feature = "coin-cache")]
+#[tokio::test]
+async fn transfers_at_same_time_with_cache() -> Result<()> {
+    let amount = 1000;
+    let num_coins = 10;
+    let mut wallets = launch_custom_provider_and_get_wallets(
+        WalletsConfig::new(Some(1), Some(num_coins), Some(amount)),
+        Some(NodeConfig::default()),
+        None,
+    )
+    .await?;
+    let wallet_1 = wallets.pop().unwrap();
+    let provider = wallet_1.provider();
+    let wallet_2 = Wallet::random(&mut thread_rng(), provider.clone());
+    let asset_id = AssetId::zeroed();
+
+    let tx_1 = create_transfer(&wallet_1, 100, wallet_2.address()).await?;
+    let _tx_id = provider.submit(tx_1).await?;
+
+    // will use assemble tx and exclude coins from the above submit
+    wallet_1
+        .transfer(
+            // will use assemble tx and exclude coins from the above submit
+            wallet_2.address(),
+            101,
+            AssetId::zeroed(),
+            TxPolicies::default(),
+        )
+        .await?;
+
+    let balance = wallet_2.get_asset_balance(&asset_id).await?;
+
+    assert_eq!(201, balance);
 
     Ok(())
 }
