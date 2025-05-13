@@ -459,6 +459,7 @@ mod tests {
                                 type_id: 1,
                                 ..Default::default()
                             }]),
+                            error_message: None,
                         },
                         UnifiedTypeApplication {
                             name: "len".to_string(),
@@ -792,6 +793,7 @@ mod tests {
                 type_parameters: vec![],
             },
             type_arguments: vec![],
+            error_message: None,
         }
     }
 }
