@@ -355,7 +355,7 @@ where
             account,
             call: vec![],
             tx_policies: TxPolicies::default(),
-            log_decoder: LogDecoder::new(Default::default()),
+            log_decoder: LogDecoder::new(Default::default(), Default::default()),
             datatype: PhantomData,
             script_gas_limit: None,
             decoder_config: DecoderConfig::default(),

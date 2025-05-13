@@ -13,8 +13,15 @@ use crate::{
 };
 
 #[derive(Debug)]
+pub(crate) struct Component {
+    pub(crate) ident: Ident,
+    pub(crate) resolved_type: ResolvedType,
+    pub(crate) error_message: Option<String>,
+}
+
+#[derive(Debug)]
 pub(crate) struct Components {
-    components: Vec<(Ident, ResolvedType)>,
+    components: Vec<Component>,
 }
 
 impl Components {
@@ -34,16 +41,28 @@ impl Components {
                 };
 
                 let ident = safe_ident(&name);
-                let ty = type_resolver.resolve(type_application)?;
-                Result::Ok((ident, ty))
+                let resolved_type = type_resolver.resolve(type_application)?;
+                let error_message = type_application.error_message.clone();
+
+                Result::Ok(Component {
+                    ident,
+                    resolved_type,
+                    error_message,
+                })
             })
             .collect::<Result<Vec<_>>>()?;
 
         Ok(Self { components })
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = (&Ident, &ResolvedType)> {
-        self.components.iter().map(|(ident, ty)| (ident, ty))
+    pub fn has_error_messages(&self) -> bool {
+        self.components
+            .iter()
+            .all(|component| component.error_message.is_some())
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = &Component> {
+        self.components.iter()
     }
 
     pub fn is_empty(&self) -> bool {
@@ -51,13 +70,19 @@ impl Components {
     }
 
     pub fn as_enum_variants(&self) -> impl Iterator<Item = TokenStream> + '_ {
-        self.components.iter().map(|(ident, ty)| {
-            if let ResolvedType::Unit = ty {
-                quote! {#ident}
-            } else {
-                quote! {#ident(#ty)}
-            }
-        })
+        self.components.iter().map(
+            |Component {
+                 ident,
+                 resolved_type,
+                 ..
+             }| {
+                if let ResolvedType::Unit = resolved_type {
+                    quote! {#ident}
+                } else {
+                    quote! {#ident(#resolved_type)}
+                }
+            },
+        )
     }
 
     pub fn generate_parameters_for_unused_generics(
@@ -96,7 +121,7 @@ impl Components {
     fn named_generics(&self) -> HashSet<Ident> {
         self.components
             .iter()
-            .flat_map(|(_, ty)| ty.generics())
+            .flat_map(|Component { resolved_type, .. }| resolved_type.generics())
             .filter_map(|generic_type| {
                 if let GenericType::Named(name) = generic_type {
                     Some(name)
@@ -184,7 +209,7 @@ mod tests {
         let sut = Components::new(&[type_application], true, TypePath::default())?;
 
         // then
-        assert_eq!(sut.iter().next().unwrap().0, "was_not_snake_cased");
+        assert_eq!(sut.iter().next().unwrap().ident, "was_not_snake_cased");
 
         Ok(())
     }
@@ -196,7 +221,7 @@ mod tests {
 
             let sut = Components::new(&[type_application], false, TypePath::default())?;
 
-            assert_eq!(sut.iter().next().unwrap().0, "if_");
+            assert_eq!(sut.iter().next().unwrap().ident, "if_");
         }
 
         {
@@ -204,7 +229,7 @@ mod tests {
 
             let sut = Components::new(&[type_application], false, TypePath::default())?;
 
-            assert_eq!(sut.iter().next().unwrap().0, "let_");
+            assert_eq!(sut.iter().next().unwrap().ident, "let_");
         }
 
         Ok(())
@@ -219,6 +244,7 @@ mod tests {
                 type_parameters: vec![],
             },
             type_arguments: vec![],
+            error_message: None,
         }
     }
 }
