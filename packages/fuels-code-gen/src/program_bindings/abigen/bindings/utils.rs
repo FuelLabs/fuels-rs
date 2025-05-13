@@ -61,6 +61,7 @@ mod tests {
                     type_parameters: vec![],
                 },
                 type_arguments: vec![],
+                error_message: None,
             },
             vec![],
         )

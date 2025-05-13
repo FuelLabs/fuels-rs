@@ -9,7 +9,7 @@ use crate::{
         abigen::{
             bindings::function_generator::FunctionGenerator,
             configurables::generate_code_for_configurable_constants,
-            logs::log_formatters_instantiation_code,
+            logs::{generate_id_error_codes_pairs, log_formatters_instantiation_code},
         },
         generated_code::GeneratedCode,
     },
@@ -27,6 +27,9 @@ pub(crate) fn contract_bindings(
 
     let log_formatters =
         log_formatters_instantiation_code(quote! {contract_id.clone().into()}, &abi.logged_types);
+
+    let error_codes = generate_id_error_codes_pairs(abi.error_codes);
+    let error_codes = quote! {::std::collections::HashMap::from([#(#error_codes),*])};
 
     let methods_name = ident(&format!("{name}Methods"));
 
@@ -52,7 +55,7 @@ pub(crate) fn contract_bindings(
                 account: A,
             ) -> Self {
                 let contract_id: ::fuels::types::bech32::Bech32ContractId = contract_id.into();
-                let log_decoder = ::fuels::core::codec::LogDecoder::new(#log_formatters);
+                let log_decoder = ::fuels::core::codec::LogDecoder::new(#log_formatters, #error_codes);
                 let encoder_config = ::fuels::core::codec::EncoderConfig::default();
                 Self { contract_id, account, log_decoder, encoder_config }
             }

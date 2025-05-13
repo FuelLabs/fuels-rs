@@ -6,7 +6,7 @@ use crate::{
     error::Result,
     program_bindings::{
         resolved_type::TypeResolver,
-        utils::{Components, get_equivalent_bech32_type},
+        utils::{Component, Components, get_equivalent_bech32_type},
     },
     utils::{TypePath, safe_ident},
 };
@@ -61,13 +61,19 @@ impl FunctionGenerator {
     }
 
     pub fn tokenized_args(&self) -> TokenStream {
-        let arg_names = self.args.iter().map(|(name, ty)| {
-            get_equivalent_bech32_type(ty)
-                .map(|_| {
-                    quote! {<#ty>::from(#name.into())}
-                })
-                .unwrap_or(quote! {#name})
-        });
+        let arg_names = self.args.iter().map(
+            |Component {
+                 ident,
+                 resolved_type,
+                 ..
+             }| {
+                get_equivalent_bech32_type(resolved_type)
+                    .map(|_| {
+                        quote! {<#resolved_type>::from(#ident.into())}
+                    })
+                    .unwrap_or(quote! {#ident})
+            },
+        );
         quote! {[#(::fuels::core::traits::Tokenizable::into_token(#arg_names)),*]}
     }
 
@@ -90,13 +96,19 @@ impl FunctionGenerator {
             })
             .collect();
 
-        let arg_declarations = self.args.iter().map(|(name, ty)| {
-            get_equivalent_bech32_type(ty)
-                .map(|new_type| {
-                    quote! { #name: impl ::core::convert::Into<#new_type> }
-                })
-                .unwrap_or(quote! { #name: #ty })
-        });
+        let arg_declarations = self.args.iter().map(
+            |Component {
+                 ident,
+                 resolved_type,
+                 ..
+             }| {
+                get_equivalent_bech32_type(resolved_type)
+                    .map(|new_type| {
+                        quote! { #ident: impl ::core::convert::Into<#new_type> }
+                    })
+                    .unwrap_or(quote! { #ident: #resolved_type })
+            },
+        );
 
         let output_type = self.output_type();
         let body = &self.body;
@@ -191,6 +203,7 @@ mod tests {
                 name: "field_a".to_string(),
                 type_decl: generic_type_t.clone(),
                 type_arguments: vec![],
+                error_message: None,
             }],
             type_parameters: vec![generic_type_t],
         };
@@ -206,7 +219,9 @@ mod tests {
                     type_parameters: vec![],
                 },
                 type_arguments: vec![],
+                error_message: None,
             }],
+            error_message: None,
         };
         let fn_inputs = vec![FullTypeApplication {
             name: "arg_0".to_string(),
@@ -219,7 +234,9 @@ mod tests {
                     type_parameters: vec![],
                 },
                 type_arguments: vec![],
+                error_message: None,
             }],
+            error_message: None,
         }];
 
         FullABIFunction::new("test_function".to_string(), fn_inputs, fn_output, vec![])
