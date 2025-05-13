@@ -206,14 +206,14 @@
 <p>Scripts use the same interfaces for setting external contracts as <a href="./calling-contracts/other-contracts.html">contract methods</a>.</p>
 <p>Below is an example that uses <code>with_contracts(&amp;[&amp;contract_instance, ...])</code>.</p>
 <pre><code class="language-rust ignore">    let response = script_instance
-        .main(contract_id)
+        .main(contract_id, MatchEnum::Logs)
         .with_contracts(&amp;[&amp;contract_instance])
         .call()
         .await?;
 </code></pre>
 <p>And this is an example that uses <code>with_contract_ids(&amp;[&amp;contract_id, ...])</code>.</p>
 <pre><code class="language-rust ignore">    let response = script_instance
-        .main(contract_id)
+        .main(contract_id, MatchEnum::Logs)
         .with_contract_ids(&amp;[contract_id.into()])
         .call()
         .await?;
