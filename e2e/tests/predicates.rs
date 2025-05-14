@@ -1227,14 +1227,13 @@ async fn predicate_blobs() -> Result<()> {
     // gonna make later on
     // ANCHOR: uploading_the_blob
     loader.upload_blob(extra_wallet).await?;
-
     predicate.set_provider(provider.clone());
 
-    let expected_fee = 1;
-    predicate
+    let amount_to_send = 42;
+    let response = predicate
         .transfer(
             receiver.address(),
-            predicate_balance - expected_fee,
+            amount_to_send,
             asset_id,
             TxPolicies::default(),
         )
@@ -1242,14 +1241,21 @@ async fn predicate_blobs() -> Result<()> {
     // ANCHOR_END: uploading_the_blob
 
     // The predicate has spent the funds
-    assert_address_balance(predicate.address(), &provider, asset_id, 0).await;
+    let transaction_fee = response.tx_status.total_fee;
+    assert_address_balance(
+        predicate.address(),
+        &provider,
+        asset_id,
+        predicate_balance - amount_to_send - transaction_fee,
+    )
+    .await;
 
     // Funds were transferred
     assert_address_balance(
         receiver.address(),
         &provider,
         asset_id,
-        receiver_balance + predicate_balance - expected_fee,
+        receiver_balance + amount_to_send,
     )
     .await;
 
@@ -1365,7 +1371,7 @@ async fn predicate_transfer_respects_maturity_and_expiration() -> Result<()> {
 
         assert!(err.to_string().contains("TransactionMaturity"));
     }
-    let transfer_fee = {
+    let transaction_fee = {
         provider.produce_blocks(15, None).await?;
 
         predicate
@@ -1390,7 +1396,7 @@ async fn predicate_transfer_respects_maturity_and_expiration() -> Result<()> {
         predicate.address(),
         &provider,
         asset_id,
-        predicate_balance - amount_to_send - transfer_fee,
+        predicate_balance - amount_to_send - transaction_fee,
     )
     .await;
 

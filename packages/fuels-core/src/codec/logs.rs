@@ -5,6 +5,36 @@ use std::{
     iter::FilterMap,
 };
 
+#[derive(Debug, Clone)]
+pub struct ErrorDetails {
+    pub(crate) pkg: String,
+    pub(crate) file: String,
+    pub(crate) line: u64,
+    pub(crate) column: u64,
+    pub(crate) log_id: Option<String>,
+    pub(crate) msg: Option<String>,
+}
+
+impl ErrorDetails {
+    pub fn new(
+        pkg: String,
+        file: String,
+        line: u64,
+        column: u64,
+        log_id: Option<String>,
+        msg: Option<String>,
+    ) -> Self {
+        Self {
+            pkg,
+            file,
+            line,
+            column,
+            log_id,
+            msg,
+        }
+    }
+}
+
 use fuel_tx::{ContractId, Receipt};
 
 use crate::{
@@ -20,9 +50,16 @@ pub struct LogFormatter {
 }
 
 impl LogFormatter {
-    pub fn new<T: Tokenizable + Parameterize + Debug + 'static>() -> Self {
+    pub fn new_log<T: Tokenizable + Parameterize + Debug + 'static>() -> Self {
         Self {
             formatter: Self::format_log::<T>,
+            type_id: TypeId::of::<T>(),
+        }
+    }
+
+    pub fn new_error<T: Tokenizable + Parameterize + std::error::Error + 'static>() -> Self {
+        Self {
+            formatter: Self::format_error::<T>,
             type_id: TypeId::of::<T>(),
         }
     }
@@ -34,6 +71,15 @@ impl LogFormatter {
         let token = ABIDecoder::new(decoder_config).decode(&T::param_type(), bytes)?;
 
         Ok(format!("{:?}", T::from_token(token)?))
+    }
+
+    fn format_error<T: Parameterize + Tokenizable + std::error::Error>(
+        decoder_config: DecoderConfig,
+        bytes: &[u8],
+    ) -> Result<String> {
+        let token = ABIDecoder::new(decoder_config).decode(&T::param_type(), bytes)?;
+
+        Ok(T::from_token(token)?.to_string())
     }
 
     pub fn can_handle_type<T: Tokenizable + Parameterize + 'static>(&self) -> bool {
@@ -62,6 +108,7 @@ pub struct LogId(ContractId, String);
 pub struct LogDecoder {
     /// A mapping of LogId and param-type
     log_formatters: HashMap<LogId, LogFormatter>,
+    error_codes: HashMap<u64, ErrorDetails>,
     decoder_config: DecoderConfig,
 }
 
@@ -87,11 +134,19 @@ impl LogResult {
 }
 
 impl LogDecoder {
-    pub fn new(log_formatters: HashMap<LogId, LogFormatter>) -> Self {
+    pub fn new(
+        log_formatters: HashMap<LogId, LogFormatter>,
+        error_codes: HashMap<u64, ErrorDetails>,
+    ) -> Self {
         Self {
             log_formatters,
+            error_codes,
             decoder_config: Default::default(),
         }
+    }
+
+    pub fn get_error_codes(&self, id: &u64) -> Option<&ErrorDetails> {
+        self.error_codes.get(id)
     }
 
     pub fn set_decoder_config(&mut self, decoder_config: DecoderConfig) -> &mut Self {
@@ -184,6 +239,7 @@ impl LogDecoder {
 
     pub fn merge(&mut self, log_decoder: LogDecoder) {
         self.log_formatters.extend(log_decoder.log_formatters);
+        self.error_codes.extend(log_decoder.error_codes);
     }
 }
 

@@ -27,6 +27,7 @@ fuel-crypto = { workspace = true, features = ["random"] }
 fuel-tx = { workspace = true }
 fuel-types = { workspace = true, features = ["random"] }
 fuels-core = { workspace = true, default-features = false }
+futures = { workspace = true}
 google-cloud-kms = { workspace = true, features = ["auth"], optional = true }
 itertools = { workspace = true }
 k256 = { workspace = true, features = ["ecdsa-core", "pem"] }

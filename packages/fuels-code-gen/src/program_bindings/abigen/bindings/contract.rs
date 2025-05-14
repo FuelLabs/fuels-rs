@@ -1,7 +1,7 @@
 use fuel_abi_types::abi::full_program::{FullABIFunction, FullProgramABI};
 use itertools::Itertools;
 use proc_macro2::{Ident, TokenStream};
-use quote::{TokenStreamExt, quote};
+use quote::{quote, TokenStreamExt};
 
 use crate::{
     error::Result,
@@ -11,11 +11,11 @@ use crate::{
             configurables::{
                 generate_code_for_configurable_constants, generate_code_for_configurable_reader,
             },
-            logs::log_formatters_instantiation_code,
+            logs::{generate_id_error_codes_pairs, log_formatters_instantiation_code},
         },
         generated_code::GeneratedCode,
     },
-    utils::{TypePath, ident},
+    utils::{ident, TypePath},
 };
 
 pub(crate) fn contract_bindings(
@@ -29,6 +29,9 @@ pub(crate) fn contract_bindings(
 
     let log_formatters =
         log_formatters_instantiation_code(quote! {contract_id.clone().into()}, &abi.logged_types);
+
+    let error_codes = generate_id_error_codes_pairs(abi.error_codes);
+    let error_codes = quote! {::std::collections::HashMap::from([#(#error_codes),*])};
 
     let methods_name = ident(&format!("{name}Methods"));
 
@@ -58,7 +61,7 @@ pub(crate) fn contract_bindings(
                 account: A,
             ) -> Self {
                 let contract_id: ::fuels::types::bech32::Bech32ContractId = contract_id.into();
-                let log_decoder = ::fuels::core::codec::LogDecoder::new(#log_formatters);
+                let log_decoder = ::fuels::core::codec::LogDecoder::new(#log_formatters, #error_codes);
                 let encoder_config = ::fuels::core::codec::EncoderConfig::default();
                 Self { contract_id, account, log_decoder, encoder_config }
             }

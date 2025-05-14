@@ -414,7 +414,7 @@ where
             account,
             call: vec![],
             tx_policies: TxPolicies::default(),
-            log_decoder: LogDecoder::new(Default::default()),
+            log_decoder: LogDecoder::new(Default::default(), Default::default()),
             datatype: PhantomData,
             decoder_config: DecoderConfig::default(),
             cached_tx_id: None,

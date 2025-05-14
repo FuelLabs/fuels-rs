@@ -12,11 +12,11 @@ use crate::{
             configurables::{
                 generate_code_for_configurable_constants, generate_code_for_configurable_reader,
             },
-            logs::log_formatters_instantiation_code,
+            logs::{generate_id_error_codes_pairs, log_formatters_instantiation_code},
         },
         generated_code::GeneratedCode,
     },
-    utils::{TypePath, ident},
+    utils::{ident, TypePath},
 };
 
 pub(crate) fn script_bindings(
@@ -31,10 +31,13 @@ pub(crate) fn script_bindings(
     let main_function_abi = extract_main_fn(&abi.functions)?;
     let main_function = expand_fn(main_function_abi)?;
 
-    let log_formatters_lookup = log_formatters_instantiation_code(
+    let log_formatters = log_formatters_instantiation_code(
         quote! {::fuels::types::ContractId::zeroed()},
         &abi.logged_types,
     );
+
+    let error_codes = generate_id_error_codes_pairs(abi.error_codes);
+    let error_codes = quote! {vec![#(#error_codes),*].into_iter().collect()};
 
     let configuration_struct_name = ident(&format!("{name}Configurables"));
     let constant_configuration_code =
@@ -65,7 +68,7 @@ pub(crate) fn script_bindings(
                     unconfigured_binary: binary,
                     configurables: ::core::default::Default::default(),
                     converted_into_loader: false,
-                    log_decoder: ::fuels::core::codec::LogDecoder::new(#log_formatters_lookup),
+                    log_decoder: ::fuels::core::codec::LogDecoder::new(#log_formatters, #error_codes),
                     encoder_config: ::fuels::core::codec::EncoderConfig::default(),
                 }
             }
