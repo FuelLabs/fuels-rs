@@ -275,9 +275,9 @@ impl From<ClientTransactionStatus> for TxStatus {
 }
 
 #[cfg(feature = "std")]
-impl From<TransactionExecutionStatus> for TxStatus {
-    fn from(value: TransactionExecutionStatus) -> Self {
-        match value.result {
+impl From<TransactionExecutionResult> for TxStatus {
+    fn from(value: TransactionExecutionResult) -> Self {
+        match value {
             TransactionExecutionResult::Success {
                 receipts,
                 total_gas,
@@ -310,5 +310,12 @@ impl From<TransactionExecutionStatus> for TxStatus {
                 })
             }
         }
+    }
+}
+
+#[cfg(feature = "std")]
+impl From<TransactionExecutionStatus> for TxStatus {
+    fn from(value: TransactionExecutionStatus) -> Self {
+        value.result.into()
     }
 }

@@ -15,6 +15,7 @@ use fuels::{
         Bits256,
         coin_type::CoinType,
         message::Message,
+        output::Output,
         transaction_builders::{BuildableTransaction, ScriptTransactionBuilder},
         tx_status::{Success, TxStatus},
     },
@@ -361,7 +362,7 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<()> {
     let response = contract_instance
         .methods()
         .initialize_counter(42)
-        .with_tx_policies(TxPolicies::default().with_script_gas_limit(gas_limit))
+        .with_script_gas_limit(gas_limit)
         .call()
         .await?;
 
@@ -412,14 +413,12 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
         .await?;
     assert_eq!(balance_response.value, 5_000_000);
 
-    let tx_policies = TxPolicies::default().with_script_gas_limit(1_000_000);
     // Forward 1_000_000 coin amount of base asset_id
-    // this is a big number for checking that amount can be a u64
     let call_params = CallParameters::default().with_amount(1_000_000);
 
     let response = contract_methods
         .get_msg_amount()
-        .with_tx_policies(tx_policies)
+        .with_script_gas_limit(1_000_000)
         .call_params(call_params)?
         .call()
         .await?;
@@ -445,7 +444,6 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
     // withdraw some tokens to wallet
     contract_methods
         .transfer(1_000_000, asset_id, address.into())
-        .with_variable_output_policy(VariableOutputPolicy::Exactly(1))
         .call()
         .await?;
 
@@ -453,11 +451,10 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
     let call_params = CallParameters::default()
         .with_amount(0)
         .with_asset_id(asset_id);
-    let tx_policies = TxPolicies::default().with_script_gas_limit(1_000_000);
 
     let response = contract_methods
         .get_msg_amount()
-        .with_tx_policies(tx_policies)
+        .with_script_gas_limit(1_000_000)
         .call_params(call_params)?
         .call()
         .await?;
@@ -509,28 +506,6 @@ async fn test_gas_errors() -> Result<()> {
         ),
     );
 
-    // Test running out of gas. Gas price as `None` will be 0.
-    let gas_limit = 42;
-    let contract_instance_call = contract_instance
-        .methods()
-        .initialize_counter(42) // Build the ABI call
-        .with_tx_policies(TxPolicies::default().with_script_gas_limit(gas_limit));
-
-    //  Test that the call will use more gas than the gas limit
-    let total_gas = contract_instance_call
-        .estimate_transaction_cost(None, None)
-        .await?
-        .total_gas;
-    assert!(total_gas > gas_limit);
-
-    let response = contract_instance_call
-        .call()
-        .await
-        .expect_err("should error");
-
-    let expected = "transaction reverted: OutOfGas";
-    assert!(response.to_string().starts_with(expected));
-
     // Test for insufficient base asset amount to pay for the transaction fee
     let response = contract_instance
         .methods()
@@ -540,7 +515,7 @@ async fn test_gas_errors() -> Result<()> {
         .await
         .expect_err("should error");
 
-    let expected = "Response errors; Validity(InsufficientFeeAmount";
+    let expected = "the target cannot be met";
     assert!(response.to_string().contains(expected));
 
     Ok(())
@@ -566,7 +541,7 @@ async fn test_call_param_gas_errors() -> Result<()> {
     let contract_methods = contract_instance.methods();
     let response = contract_methods
         .initialize_counter(42)
-        .with_tx_policies(TxPolicies::default().with_script_gas_limit(446000))
+        .with_script_gas_limit(446000)
         .call_params(CallParameters::default().with_gas_forwarded(1))?
         .call()
         .await
@@ -578,7 +553,7 @@ async fn test_call_param_gas_errors() -> Result<()> {
     // Call params gas_forwarded exceeds transaction limit
     let response = contract_methods
         .initialize_counter(42)
-        .with_tx_policies(TxPolicies::default().with_script_gas_limit(1))
+        .with_script_gas_limit(1)
         .call_params(CallParameters::default().with_gas_forwarded(1_000))?
         .call()
         .await
@@ -624,7 +599,7 @@ async fn test_parse_block_time() -> Result<()> {
     let coins = setup_single_asset_coins(signer.address(), asset_id, 1, DEFAULT_COIN_AMOUNT);
     let provider = setup_test_provider(coins.clone(), vec![], None, None).await?;
     let wallet = Wallet::new(signer, provider.clone());
-    let tx_policies = TxPolicies::default().with_script_gas_limit(2000);
+    let tx_policies = TxPolicies::default();
 
     let wallet_2 = wallet.lock();
     let tx_response = wallet
@@ -818,8 +793,8 @@ async fn transactions_with_the_same_utxo() -> Result<()> {
     let tx_1 = create_transfer(&wallet_1, 100, wallet_2.address()).await?;
     let tx_2 = create_transfer(&wallet_1, 101, wallet_2.address()).await?;
 
-    let _tx_id = provider.send_transaction(tx_1).await?;
-    let res = provider.send_transaction(tx_2).await;
+    let _tx_id = provider.submit(tx_1).await?;
+    let res = provider.submit(tx_2).await;
 
     let err = res.expect_err("is error");
 
@@ -831,6 +806,43 @@ async fn transactions_with_the_same_utxo() -> Result<()> {
         err.to_string()
             .contains("was submitted recently in a transaction ")
     );
+
+    Ok(())
+}
+
+#[cfg(feature = "coin-cache")]
+#[tokio::test]
+async fn transfers_at_same_time_with_cache() -> Result<()> {
+    let amount = 1000;
+    let num_coins = 10;
+    let mut wallets = launch_custom_provider_and_get_wallets(
+        WalletsConfig::new(Some(1), Some(num_coins), Some(amount)),
+        Some(NodeConfig::default()),
+        None,
+    )
+    .await?;
+    let wallet_1 = wallets.pop().unwrap();
+    let provider = wallet_1.provider();
+    let wallet_2 = Wallet::random(&mut thread_rng(), provider.clone());
+    let asset_id = AssetId::zeroed();
+
+    let tx_1 = create_transfer(&wallet_1, 100, wallet_2.address()).await?;
+    let _tx_id = provider.submit(tx_1).await?;
+
+    // will use assemble tx and exclude coins from the above submit
+    wallet_1
+        .transfer(
+            // will use assemble tx and exclude coins from the above submit
+            wallet_2.address(),
+            101,
+            AssetId::zeroed(),
+            TxPolicies::default(),
+        )
+        .await?;
+
+    let balance = wallet_2.get_asset_balance(&asset_id).await?;
+
+    assert_eq!(201, balance);
 
     Ok(())
 }
@@ -858,7 +870,7 @@ async fn coin_caching() -> Result<()> {
     let mut tx_ids = vec![];
     for _ in 0..num_iterations {
         let tx = create_transfer(&wallet_1, amount_to_send, wallet_2.address()).await?;
-        let tx_id = provider.send_transaction(tx).await?;
+        let tx_id = provider.submit(tx).await?;
         tx_ids.push(tx_id);
     }
 
@@ -1080,7 +1092,7 @@ async fn send_transaction_and_subscribe_status() -> Result<()> {
 
     // When
     let mut statuses = provider.subscribe_transaction_status(&tx_id, true).await?;
-    let _ = provider.send_transaction(tx).await?;
+    let _ = provider.submit(tx).await?;
 
     // Then
     assert!(matches!(
@@ -1127,7 +1139,7 @@ async fn can_produce_blocks_with_trig_never() -> Result<()> {
     let tx = tb.build(provider).await?;
     let tx_id = tx.id(consensus_parameters.chain_id());
 
-    provider.send_transaction(tx).await?;
+    provider.submit(tx).await?;
     provider.produce_blocks(1, None).await?;
 
     tokio::time::sleep(std::time::Duration::from_millis(500)).await;
@@ -1181,7 +1193,7 @@ async fn can_upload_executor_and_trigger_upgrade() -> Result<()> {
     wallet.adjust_for_fee(&mut builder, 0).await?;
     let tx = builder.build(provider.clone()).await?;
 
-    provider.send_transaction(tx).await?;
+    provider.submit(tx).await?;
 
     Ok(())
 }
@@ -1214,7 +1226,6 @@ async fn tx_respects_policies() -> Result<()> {
         Some(maturity),
         Some(expiration),
         Some(max_fee),
-        Some(script_gas_limit),
     );
 
     // advance the block height to ensure the maturity is respected
@@ -1227,6 +1238,7 @@ async fn tx_respects_policies() -> Result<()> {
         .methods()
         .initialize_counter(42)
         .with_tx_policies(tx_policies)
+        .with_script_gas_limit(script_gas_limit)
         .call()
         .await?;
 
@@ -1244,7 +1256,7 @@ async fn tx_respects_policies() -> Result<()> {
     assert_eq!(script.tip().unwrap(), tip);
     assert_eq!(script.witness_limit().unwrap(), witness_limit);
     assert_eq!(script.max_fee().unwrap(), max_fee);
-    assert_eq!(script.gas_limit(), script_gas_limit);
+    assert_eq!(script.gas_limit(), 3000);
 
     Ok(())
 }
@@ -1450,6 +1462,54 @@ async fn is_account_query_test() -> Result<()> {
         let is_account = provider.is_user_account(tx_id).await?;
         assert!(!is_account);
     }
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn assemble_tx_transfer() -> Result<()> {
+    // ANCHOR: assemble_wallets
+    let wallet = launch_provider_and_get_wallet().await?;
+    let provider = wallet.provider().clone();
+    let receiver = Wallet::random(&mut thread_rng(), provider.clone());
+    // ANCHOR_END: assemble_wallets
+
+    // ANCHOR: assemble_output
+    let consensus_parameters = provider.consensus_parameters().await?;
+    let base_asset_id = *consensus_parameters.base_asset_id();
+
+    let amount_to_send = 78;
+    let outputs = vec![Output::Coin {
+        to: receiver.address().into(),
+        asset_id: base_asset_id,
+        amount: amount_to_send,
+    }];
+    // ANCHOR_END: assemble_output
+
+    // ANCHOR: assemble_req_balance
+    let fee_index = 0u16;
+    let required_balances = vec![wallet.required_balance(amount_to_send, base_asset_id, None)];
+    // ANCHOR_END: assemble_req_balance
+
+    // ANCHOR: assemble_tb
+    let mut tb = ScriptTransactionBuilder::prepare_transfer(vec![], outputs, TxPolicies::default())
+        .with_build_strategy(ScriptBuildStrategy::AssembleTx {
+            required_balances,
+            fee_index,
+        });
+    tb.add_signer(wallet.signer().clone())?;
+
+    let tx = tb.build(&provider).await?;
+    // ANCHOR_END: assemble_tb
+
+    // ANCHOR: assemble_response
+    let _tx_status = provider.send_transaction_and_await_commit(tx).await?;
+
+    assert_eq!(
+        amount_to_send,
+        receiver.get_asset_balance(&base_asset_id).await?
+    );
+    // ANCHOR_END: assemble_response
 
     Ok(())
 }

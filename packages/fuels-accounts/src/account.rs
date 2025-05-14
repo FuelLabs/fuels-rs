@@ -2,9 +2,10 @@ use std::collections::HashMap;
 
 use async_trait::async_trait;
 use fuel_core_client::client::pagination::{PaginatedResult, PaginationRequest};
-use fuel_tx::{Output, TxId, TxPointer, UtxoId};
+use fuel_tx::{Address, Output, TxId, TxPointer, UtxoId};
 use fuel_types::{AssetId, Bytes32, ContractId, Nonce};
 use fuels_core::types::{
+    assemble_tx::{Account as ClientAccount, ChangePolicy, RequiredBalance},
     bech32::{Bech32Address, Bech32ContractId},
     coin::Coin,
     coin_type::CoinType,
@@ -13,7 +14,9 @@ use fuels_core::types::{
     input::Input,
     message::Message,
     transaction::{Transaction, TxPolicies},
-    transaction_builders::{BuildableTransaction, ScriptTransactionBuilder, TransactionBuilder},
+    transaction_builders::{
+        BuildableTransaction, ScriptBuildStrategy, ScriptTransactionBuilder, TransactionBuilder,
+    },
     transaction_response::TransactionResponse,
     tx_response::TxResponse,
     tx_status::Success,
@@ -170,6 +173,22 @@ pub trait Account: ViewOnlyAccount {
         Ok(())
     }
 
+    /// Create a required balance for assemble tx using a specific account type
+    fn required_balance(
+        &self,
+        amount: u64,
+        asset_id: AssetId,
+        change_address: Option<Address>,
+    ) -> RequiredBalance {
+        let account_address = self.address().into();
+        RequiredBalance {
+            asset_id,
+            amount,
+            account: ClientAccount::Address(account_address),
+            change_policy: ChangePolicy::Change(change_address.unwrap_or(account_address)),
+        }
+    }
+
     /// Transfer funds from this account to another `Address`.
     /// Fails if amount for asset ID is larger than address's spendable coins.
     /// Returns the transaction ID that was sent and the list of receipts.
@@ -181,26 +200,31 @@ pub trait Account: ViewOnlyAccount {
         tx_policies: TxPolicies,
     ) -> Result<TxResponse> {
         let provider = self.try_provider()?;
+        let consensus_parameters = provider.consensus_parameters().await?;
+        let base_asset_id = *consensus_parameters.base_asset_id();
 
-        let inputs = self
-            .get_asset_inputs_for_amount(asset_id, amount.into(), None)
-            .await?;
-        let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
+        let outputs = vec![Output::Coin {
+            to: to.into(),
+            asset_id,
+            amount,
+        }];
+
+        let mut fee_index = 0u16;
+        let mut required_balances = vec![self.required_balance(amount, asset_id, None)];
+
+        if asset_id != base_asset_id {
+            fee_index = 1;
+            required_balances.push(self.required_balance(0, base_asset_id, None));
+        }
 
         let mut tx_builder =
-            ScriptTransactionBuilder::prepare_transfer(inputs, outputs, tx_policies);
+            ScriptTransactionBuilder::prepare_transfer(vec![], outputs, tx_policies)
+                .with_build_strategy(ScriptBuildStrategy::AssembleTx {
+                    required_balances,
+                    fee_index,
+                });
 
         self.add_witnesses(&mut tx_builder)?;
-
-        let consensus_parameters = provider.consensus_parameters().await?;
-        let used_base_amount = if asset_id == *consensus_parameters.base_asset_id() {
-            amount.into()
-        } else {
-            0
-        };
-        self.adjust_for_fee(&mut tx_builder, used_base_amount)
-            .await
-            .context("failed to adjust inputs to cover for missing base asset")?;
 
         let tx = tx_builder.build(provider).await?;
         let tx_id = tx.id(consensus_parameters.chain_id());
@@ -230,11 +254,13 @@ pub trait Account: ViewOnlyAccount {
         tx_policies: TxPolicies,
     ) -> Result<TxResponse> {
         let provider = self.try_provider()?;
+        let consensus_parameters = provider.consensus_parameters().await?;
+        let base_asset_id = *consensus_parameters.base_asset_id();
 
         let zeroes = Bytes32::zeroed();
         let plain_contract_id: ContractId = to.into();
 
-        let mut inputs = vec![Input::contract(
+        let inputs = vec![Input::contract(
             UtxoId::new(zeroes, 0),
             zeroes,
             zeroes,
@@ -242,17 +268,16 @@ pub trait Account: ViewOnlyAccount {
             plain_contract_id,
         )];
 
-        inputs.extend(
-            self.get_asset_inputs_for_amount(asset_id, balance.into(), None)
-                .await?,
-        );
+        let outputs = vec![Output::contract(0, zeroes, zeroes)];
 
-        let outputs = vec![
-            Output::contract(0, zeroes, zeroes),
-            Output::change(self.address().into(), 0, asset_id),
-        ];
+        let mut fee_index = 0u16;
+        let mut required_balances = vec![self.required_balance(balance, asset_id, None)];
 
-        // Build transaction and sign it
+        if asset_id != base_asset_id {
+            fee_index = 1;
+            required_balances.push(self.required_balance(0, base_asset_id, None));
+        }
+
         let mut tb = ScriptTransactionBuilder::prepare_contract_transfer(
             plain_contract_id,
             balance,
@@ -260,12 +285,13 @@ pub trait Account: ViewOnlyAccount {
             inputs,
             outputs,
             tx_policies,
-        );
+        )
+        .with_build_strategy(ScriptBuildStrategy::AssembleTx {
+            required_balances,
+            fee_index,
+        });
 
         self.add_witnesses(&mut tb)?;
-        self.adjust_for_fee(&mut tb, balance.into())
-            .await
-            .context("failed to adjust inputs to cover for missing base asset")?;
 
         let tx = tb.build(provider).await?;
 
@@ -291,25 +317,25 @@ pub trait Account: ViewOnlyAccount {
     ) -> Result<WithdrawToBaseResponse> {
         let provider = self.try_provider()?;
         let consensus_parameters = provider.consensus_parameters().await?;
+        let base_asset_id = *consensus_parameters.base_asset_id();
 
-        let inputs = self
-            .get_asset_inputs_for_amount(*consensus_parameters.base_asset_id(), amount.into(), None)
-            .await?;
+        let fee_index = 0u16;
+        let required_balances = vec![self.required_balance(amount, base_asset_id, None)];
 
-        let mut tb = ScriptTransactionBuilder::prepare_message_to_output(
+        let mut tx_builder = ScriptTransactionBuilder::prepare_message_to_output(
             to.into(),
             amount,
-            inputs,
+            vec![],
             tx_policies,
-            *consensus_parameters.base_asset_id(),
-        );
+        )
+        .with_build_strategy(ScriptBuildStrategy::AssembleTx {
+            required_balances,
+            fee_index,
+        });
 
-        self.add_witnesses(&mut tb)?;
-        self.adjust_for_fee(&mut tb, amount.into())
-            .await
-            .context("failed to adjust inputs to cover for missing base asset")?;
+        self.add_witnesses(&mut tx_builder)?;
 
-        let tx = tb.build(provider).await?;
+        let tx = tx_builder.build(provider).await?;
         let tx_id = tx.id(consensus_parameters.chain_id());
 
         let tx_status = provider.send_transaction_and_await_commit(tx).await?;
@@ -334,7 +360,9 @@ mod tests {
     use fuel_tx::{Address, ConsensusParameters, Output, Transaction as FuelTransaction};
     use fuels_core::{
         traits::Signer,
-        types::{DryRun, DryRunner, transaction::Transaction},
+        types::{
+            DryRun, DryRunner, assemble_tx::AssembleTransactionResult, transaction::Transaction,
+        },
     };
 
     use super::*;
@@ -363,11 +391,21 @@ mod tests {
             Ok(0)
         }
 
-        async fn estimate_predicates(
+        async fn estimate_predicates(&self, _: &FuelTransaction) -> Result<FuelTransaction> {
+            unimplemented!()
+        }
+
+        #[allow(clippy::too_many_arguments)]
+        async fn assemble_tx(
             &self,
-            _: &FuelTransaction,
-            _: Option<u32>,
-        ) -> Result<FuelTransaction> {
+            _: impl Transaction + Send,
+            _: u32,
+            _: Vec<RequiredBalance>,
+            _: u16,
+            _: Option<(Vec<UtxoId>, Vec<Nonce>)>,
+            _: bool,
+            _: Option<u64>,
+        ) -> Result<AssembleTransactionResult> {
             unimplemented!()
         }
     }

@@ -30,8 +30,9 @@ use fuels_core::{
     constants::{DEFAULT_GAS_ESTIMATION_BLOCK_HORIZON, DEFAULT_GAS_ESTIMATION_TOLERANCE},
     types::{
         DryRun, DryRunner,
+        assemble_tx::{AssembleTransactionResult, RequiredBalance},
         bech32::{Bech32Address, Bech32ContractId},
-        block::{Block, Header},
+        block::Block,
         chain_info::ChainInfo,
         coin::Coin,
         coin_type::CoinType,
@@ -46,6 +47,8 @@ use fuels_core::{
     },
 };
 use futures::StreamExt;
+#[cfg(feature = "coin-cache")]
+use itertools::{Either, Itertools};
 pub use retry_util::{Backoff, RetryConfig};
 pub use supported_fuel_core_version::SUPPORTED_FUEL_CORE_VERSION;
 use tai64::Tai64;
@@ -187,7 +190,6 @@ impl Provider {
         self.check_inputs_already_in_cache(&tx.used_coins(&base_asset_id))
             .await?;
 
-        let tx = self.prepare_transaction_for_sending(tx).await?;
         let tx_status = self
             .uncached_client()
             .submit_and_await_commit(&tx.clone().into())
@@ -223,10 +225,10 @@ impl Provider {
         #[cfg(feature = "coin-cache")]
         self.check_inputs_already_in_cache(&used_base_coins).await?;
 
-        let tx = self.prepare_transaction_for_sending(tx).await?.into();
+        let fuel_tx = tx.into();
         let mut stream = self
             .uncached_client()
-            .submit_and_await_status(&tx, include_preconfirmation)
+            .submit_and_await_status(&fuel_tx, include_preconfirmation)
             .await?;
 
         let mut statuses = Vec::new();
@@ -257,33 +259,6 @@ impl Provider {
 
         Ok(statuses)
     }
-
-    async fn prepare_transaction_for_sending<T: Transaction>(&self, mut tx: T) -> Result<T> {
-        let consensus_parameters = self.consensus_parameters().await?;
-        tx.precompute(&consensus_parameters.chain_id())?;
-
-        let chain_info = self.chain_info().await?;
-        let Header {
-            height: latest_block_height,
-            state_transition_bytecode_version: latest_chain_executor_version,
-            ..
-        } = chain_info.latest_block.header;
-
-        if tx.is_using_predicates() {
-            tx.estimate_predicates(self, Some(latest_chain_executor_version))
-                .await?;
-            tx.clone()
-                .validate_predicates(&consensus_parameters, latest_block_height)?;
-        }
-
-        Ok(tx)
-    }
-
-    pub async fn send_transaction<T: Transaction>(&self, tx: T) -> Result<TxId> {
-        let tx = self.prepare_transaction_for_sending(tx).await?;
-        self.submit(tx).await
-    }
-
     pub async fn await_transaction_commit<T: Transaction>(&self, id: TxId) -> Result<TxStatus> {
         Ok(self
             .uncached_client()
@@ -293,7 +268,7 @@ impl Provider {
     }
 
     #[cfg(not(feature = "coin-cache"))]
-    async fn submit<T: Transaction>(&self, tx: T) -> Result<TxId> {
+    pub async fn submit<T: Transaction>(&self, tx: T) -> Result<TxId> {
         Ok(self.uncached_client().submit(&tx.into()).await?)
     }
 
@@ -344,7 +319,23 @@ impl Provider {
     }
 
     #[cfg(feature = "coin-cache")]
-    async fn submit<T: Transaction>(&self, tx: T) -> Result<TxId> {
+    async fn coins_and_messages_to_exclude<'a>(
+        &self,
+        coin_cache_keys: impl IntoIterator<Item = &'a (Bech32Address, AssetId)>,
+    ) -> (Vec<UtxoId>, Vec<Nonce>) {
+        let mut locked_cache = self.coins_cache.lock().await;
+
+        coin_cache_keys
+            .into_iter()
+            .flat_map(|key| locked_cache.get_active(key))
+            .partition_map(|coin_type_id| match coin_type_id {
+                CoinTypeId::UtxoId(utxo_id) => Either::Left(utxo_id),
+                CoinTypeId::Nonce(nonce) => Either::Right(nonce),
+            })
+    }
+
+    #[cfg(feature = "coin-cache")]
+    pub async fn submit<T: Transaction>(&self, tx: T) -> Result<TxId> {
         let consensus_parameters = self.consensus_parameters().await?;
         let base_asset_id = consensus_parameters.base_asset_id();
 
@@ -413,6 +404,62 @@ impl Provider {
             .expect("should have only one element");
 
         Ok(tx_status)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub async fn assemble_tx(
+        &self,
+        transaction: impl Transaction,
+        block_horizon: u32,
+        required_balances: Vec<RequiredBalance>,
+        fee_address_index: u16,
+        exclude: Option<(Vec<UtxoId>, Vec<Nonce>)>,
+        estimate_predicates: bool,
+        reserve_gas: Option<u64>,
+    ) -> Result<AssembleTransactionResult> {
+        #[cfg(feature = "coin-cache")]
+        let base_asset_id = *self.consensus_parameters().await?.base_asset_id();
+
+        #[cfg(feature = "coin-cache")]
+        let keys_from_required_balances: Vec<_> = required_balances
+            .iter()
+            .map(|rb| (Bech32Address::from(rb.account.owner()), rb.asset_id))
+            .collect();
+
+        #[cfg(feature = "coin-cache")]
+        let (cache_utxos, cache_nonces) = self
+            .coins_and_messages_to_exclude(
+                transaction
+                    .used_coins(&base_asset_id)
+                    .keys()
+                    .chain(keys_from_required_balances.iter()),
+            )
+            .await;
+
+        #[cfg(feature = "coin-cache")]
+        let exclude = match exclude {
+            Some((mut utxos, mut nonces)) => {
+                utxos.extend(cache_utxos);
+                nonces.extend(cache_nonces);
+
+                Some((utxos, nonces))
+            }
+            None => Some((cache_utxos, cache_nonces)),
+        };
+
+        Ok(self
+            .uncached_client()
+            .assemble_tx(
+                &transaction.into(),
+                block_horizon,
+                required_balances,
+                fee_address_index,
+                exclude,
+                estimate_predicates,
+                reserve_gas,
+            )
+            .await?
+            .into())
     }
 
     pub async fn dry_run_multiple(
@@ -955,11 +1002,29 @@ impl DryRunner for Provider {
         Provider::consensus_parameters(self).await
     }
 
-    async fn estimate_predicates(
-        &self,
-        tx: &FuelTransaction,
-        _latest_chain_executor_version: Option<u32>,
-    ) -> Result<FuelTransaction> {
+    async fn estimate_predicates(&self, tx: &FuelTransaction) -> Result<FuelTransaction> {
         Ok(self.uncached_client().estimate_predicates(tx).await?)
+    }
+
+    async fn assemble_tx(
+        &self,
+        transaction: impl Transaction + Send,
+        block_horizon: u32,
+        required_balances: Vec<RequiredBalance>,
+        fee_address_index: u16,
+        exclude: Option<(Vec<UtxoId>, Vec<Nonce>)>,
+        estimate_predicates: bool,
+        reserve_gas: Option<u64>,
+    ) -> Result<AssembleTransactionResult> {
+        self.assemble_tx(
+            transaction,
+            block_horizon,
+            required_balances,
+            fee_address_index,
+            exclude,
+            estimate_predicates,
+            reserve_gas,
+        )
+        .await
     }
 }

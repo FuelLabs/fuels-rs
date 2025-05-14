@@ -10,7 +10,7 @@ use fuels_core::{
 use crate::{
     calls::{
         CallHandler, ContractCall,
-        traits::{ContractDependencyConfigurator, ResponseParser, TransactionTuner},
+        traits::{ResponseParser, TransactionTuner},
     },
     responses::CallResponse,
 };
@@ -42,7 +42,7 @@ pub struct SubmitResponse<A, C, T> {
 impl<A, C, T> SubmitResponse<A, C, T>
 where
     A: Account,
-    C: ContractDependencyConfigurator + TransactionTuner + ResponseParser,
+    C: TransactionTuner + ResponseParser,
     T: Tokenizable + Parameterize + Debug,
 {
     pub fn new(tx_id: Bytes32, call_handler: CallHandler<A, C, T>) -> Self {

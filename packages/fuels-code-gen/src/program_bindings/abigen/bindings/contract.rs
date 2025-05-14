@@ -64,6 +64,10 @@ pub(crate) fn contract_bindings(
                 &self.contract_id
             }
 
+            pub fn log_decoder(&self) -> ::fuels::core::codec::LogDecoder {
+                self.log_decoder.clone()
+            }
+
             pub fn account(&self) -> &A {
                 &self.account
             }
@@ -112,18 +116,6 @@ pub(crate) fn contract_bindings(
 
         impl<A: ::fuels::accounts::Account + Clone> #methods_name<A> {
             #contract_functions
-        }
-
-        impl<A>
-            ::fuels::programs::calls::ContractDependency for #name<A>
-        {
-            fn id(&self) -> ::fuels::types::bech32::Bech32ContractId {
-                self.contract_id.clone()
-            }
-
-            fn log_decoder(&self) -> ::fuels::core::codec::LogDecoder {
-                self.log_decoder.clone()
-            }
         }
 
         #constant_configuration_code

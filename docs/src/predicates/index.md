@@ -54,3 +54,5 @@ Each configurable constant will get a dedicated `with` method in the SDK. For ex
 ```rust,ignore
 {{#include ../../../e2e/tests/predicates.rs:predicate_configurables}}
 ```
+
+> **Note:** if a custom transaction is using predicates where the execution is dependant on some malleable fields and the fields are changed, then you will have to re-estimate the predicates to set the right gas limit.

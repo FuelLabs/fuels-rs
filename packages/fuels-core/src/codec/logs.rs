@@ -172,7 +172,7 @@ impl LogDecoder {
                 error!(
                     Codec,
                     "missing log formatter for log_id: `{:?}`, data: `{:?}`. \
-                     Consider adding external contracts using `with_contracts()`",
+                     Consider adding external log decoder using `add_log_decoder()`",
                     log_id,
                     data
                 )

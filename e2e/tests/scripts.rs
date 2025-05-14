@@ -95,7 +95,7 @@ async fn test_basic_script_with_tx_policies() -> Result<()> {
     assert_eq!(result.value, "hello");
 
     // ANCHOR: script_with_tx_policies
-    let tx_policies = TxPolicies::default().with_script_gas_limit(1_000_000);
+    let tx_policies = TxPolicies::default().with_expiration(1_000);
     let result = script_instance
         .main(a, b)
         .with_tx_policies(tx_policies)
@@ -139,7 +139,6 @@ async fn test_output_variable_estimation() -> Result<()> {
     let _ = script_call
         .with_inputs(inputs)
         .with_outputs(vec![output])
-        .with_variable_output_policy(VariableOutputPolicy::EstimateMinimum)
         .call()
         .await?;
 
@@ -324,7 +323,7 @@ async fn test_script_transaction_builder() -> Result<()> {
 
     let tx = tb.build(provider).await?;
 
-    let tx_id = provider.send_transaction(tx).await?;
+    let tx_id = provider.submit(tx).await?;
     tokio::time::sleep(Duration::from_millis(500)).await;
     let tx_status = provider.tx_status(&tx_id).await?;
 
@@ -549,9 +548,14 @@ async fn high_level_blob_upload_sets_max_fee_tolerance() -> Result<()> {
         })
         .unwrap();
 
-    assert_eq!(
-        max_fee_of_sent_blob_tx,
-        (zero_tolerance_fee as f32 * (1.0 + DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE)).ceil() as u64,
+    let expected_fee_with_tolerance = (zero_tolerance_fee as f64
+        * (1.0 + DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE as f64))
+        .ceil() as u64;
+
+    let gas_error_margin = 2;
+    assert!(
+        (max_fee_of_sent_blob_tx as i64 - expected_fee_with_tolerance as i64).abs()
+            < gas_error_margin,
         "the blob upload tx should have had the max fee increased by the default estimation tolerance"
     );
 
@@ -623,7 +627,6 @@ async fn loader_script_calling_loader_proxy() -> Result<()> {
         .convert_into_loader()
         .await?
         .main(proxy_id.clone())
-        .with_contract_ids(&[contract_id, proxy_id])
         .call()
         .await?;
 

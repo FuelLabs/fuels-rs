@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use fuel_crypto::Signature;
 use fuel_tx::{
     BlobIdExt, Chargeable, Output, Transaction as FuelTransaction, UniqueIdentifier, Witness,
-    field::{Policies as PoliciesField, Witnesses},
+    field::{MaxFeeLimit, Policies as PoliciesField, WitnessLimit, Witnesses},
     policies::{Policies, PolicyType},
 };
 use fuel_types::bytes::padded_len_usize;
@@ -12,17 +12,20 @@ use itertools::Itertools;
 
 use super::{
     BuildableTransaction, GAS_ESTIMATION_BLOCK_HORIZON, Strategy, TransactionBuilder,
-    UnresolvedWitnessIndexes, generate_missing_witnesses, impl_tx_builder_trait,
-    resolve_fuel_inputs,
+    UnresolvedWitnessIndexes, add_tolerance_to_max_fee, generate_missing_witnesses,
+    impl_tx_builder_trait, resolve_fuel_inputs, update_witnesses,
 };
 use crate::{
     constants::SIGNATURE_WITNESS_SIZE,
     traits::Signer,
     types::{
         DryRunner,
+        assemble_tx::RequiredBalance,
         errors::{Result, error, error_transaction},
         input::Input,
-        transaction::{BlobTransaction, EstimablePredicates, Transaction, TxPolicies},
+        transaction::{
+            BlobTransaction, EstimablePredicates, Transaction, TransactionType, TxPolicies,
+        },
     },
     utils::{calculate_witnesses_size, sealed},
 };
@@ -147,10 +150,8 @@ impl BlobTransactionBuilder {
     }
 
     pub async fn build(mut self, provider: impl DryRunner) -> Result<BlobTransaction> {
-        let consensus_parameters = provider.consensus_parameters().await?;
-        self.intercept_burn(consensus_parameters.base_asset_id())?;
-
         let is_using_predicates = self.is_using_predicates();
+        let enable_burn = self.enable_burn;
 
         let tx = match self.build_strategy {
             Strategy::Complete => self.resolve_fuel_tx(&provider).await?,
@@ -159,12 +160,103 @@ impl BlobTransactionBuilder {
                 self.unresolved_signers = Default::default();
                 self.resolve_fuel_tx(&provider).await?
             }
+            Strategy::AssembleTx {
+                ref mut required_balances,
+                fee_index,
+            } => {
+                let required_balances = std::mem::take(required_balances);
+                self.assemble_tx(required_balances, fee_index, &provider)
+                    .await?
+            }
         };
 
-        Ok(BlobTransaction {
+        let blob_transaction = BlobTransaction {
             is_using_predicates,
             tx,
-        })
+        };
+
+        if !enable_burn {
+            blob_transaction
+                .intercept_burn(provider.consensus_parameters().await?.base_asset_id())?;
+        }
+
+        Ok(blob_transaction)
+    }
+
+    async fn assemble_tx(
+        mut self,
+        required_balances: Vec<RequiredBalance>,
+        fee_index: u16,
+        dry_runner: impl DryRunner,
+    ) -> Result<fuel_tx::Blob> {
+        let consensus_parameters = dry_runner.consensus_parameters().await?;
+
+        let free_witness_index = self.num_witnesses()?;
+        let body = self.blob.as_blob_body(free_witness_index);
+
+        let blob_witness = std::mem::take(&mut self.blob).into();
+        self.witnesses_mut().push(blob_witness);
+
+        let num_witnesses = self.num_witnesses()?;
+        let policies = self.generate_fuel_policies_assemble();
+
+        let tx = FuelTransaction::blob(
+            body,
+            policies,
+            resolve_fuel_inputs(self.inputs, num_witnesses, &self.unresolved_witness_indexes)?,
+            self.outputs,
+            self.witnesses,
+        );
+
+        let mut tx = match dry_runner
+            .assemble_tx(
+                BlobTransaction::from(tx),
+                self.gas_price_estimation_block_horizon,
+                required_balances,
+                fee_index,
+                None,
+                true,
+                None,
+            )
+            .await?
+            .transaction
+        {
+            TransactionType::Blob(blob) => blob.tx,
+            _ => {
+                return Err(error_transaction!(
+                    Builder,
+                    "`asseble_tx` did not return the right transaction type. Expected `blob`"
+                ));
+            }
+        };
+
+        add_tolerance_to_max_fee(&mut tx, self.max_fee_estimation_tolerance);
+
+        //if user set `max_fee` we will use it's value only
+        //if it is higher then the one estimated by assemble_tx + tolerance
+        if let Some(max_fee) = self.tx_policies.max_fee() {
+            if max_fee > tx.max_fee_limit() {
+                tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
+            }
+        }
+
+        //if user set `witness_limit` we will use it's value only
+        //if it is higher then the one estimated by assemble_tx
+        if let Some(witness_limit) = self.tx_policies.witness_limit() {
+            if witness_limit > tx.witness_limit() {
+                tx.policies_mut()
+                    .set(PolicyType::WitnessLimit, Some(witness_limit));
+            }
+        }
+
+        update_witnesses(
+            &mut tx,
+            &self.unresolved_signers,
+            &consensus_parameters.chain_id(),
+        )
+        .await?;
+
+        Ok(tx)
     }
 
     async fn resolve_fuel_tx(mut self, provider: &impl DryRunner) -> Result<fuel_tx::Blob> {
@@ -188,6 +280,15 @@ impl BlobTransactionBuilder {
             self.witnesses,
         );
 
+        if is_using_predicates {
+            let tx_new = provider.estimate_predicates(&tx.into()).await?;
+
+            tx = match tx_new {
+                FuelTransaction::Blob(blob) => blob,
+                _ => panic!("should be `blob`"),
+            };
+        }
+
         if let Some(max_fee) = self.tx_policies.max_fee() {
             tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
         } else {
@@ -195,7 +296,6 @@ impl BlobTransactionBuilder {
                 &mut tx,
                 &provider,
                 self.gas_price_estimation_block_horizon,
-                is_using_predicates,
                 self.max_fee_estimation_tolerance,
             )
             .await?;

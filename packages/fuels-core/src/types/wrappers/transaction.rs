@@ -109,7 +109,6 @@ pub struct TxPolicies {
     maturity: Option<u64>,
     expiration: Option<u64>,
     max_fee: Option<u64>,
-    script_gas_limit: Option<u64>,
 }
 // ANCHOR_END: tx_policies_struct
 
@@ -120,7 +119,6 @@ impl TxPolicies {
         maturity: Option<u64>,
         expiration: Option<u64>,
         max_fee: Option<u64>,
-        script_gas_limit: Option<u64>,
     ) -> Self {
         Self {
             tip,
@@ -128,7 +126,6 @@ impl TxPolicies {
             maturity,
             expiration,
             max_fee,
-            script_gas_limit,
         }
     }
 
@@ -176,15 +173,6 @@ impl TxPolicies {
     pub fn max_fee(&self) -> Option<u64> {
         self.max_fee
     }
-
-    pub fn with_script_gas_limit(mut self, script_gas_limit: u64) -> Self {
-        self.script_gas_limit = Some(script_gas_limit);
-        self
-    }
-
-    pub fn script_gas_limit(&self) -> Option<u64> {
-        self.script_gas_limit
-    }
 }
 
 use fuel_tx::field::{BytecodeWitnessIndex, Salt, StorageSlots};
@@ -208,11 +196,7 @@ pub trait EstimablePredicates: sealed::Sealed {
     /// If a transaction contains predicates, we have to estimate them
     /// before sending the transaction to the node. The estimation will check
     /// all predicates and set the `predicate_gas_used` to the actual consumed gas.
-    async fn estimate_predicates(
-        &mut self,
-        provider: impl DryRunner,
-        latest_chain_executor_version: Option<u32>,
-    ) -> Result<()>;
+    async fn estimate_predicates(&mut self, provider: impl DryRunner) -> Result<()>;
 }
 
 pub trait ValidatablePredicates: sealed::Sealed {
@@ -290,6 +274,8 @@ pub trait Transaction:
         signer: &(impl Signer + Send + Sync),
         chain_id: ChainId,
     ) -> Result<Signature>;
+
+    fn intercept_burn(&self, base_asset_id: &AssetId) -> Result<()>;
 }
 
 impl TryFrom<TransactionType> for FuelTransaction {
@@ -303,6 +289,19 @@ impl TryFrom<TransactionType> for FuelTransaction {
             TransactionType::Upgrade(tx) => Ok(tx.into()),
             TransactionType::Blob(tx) => Ok(tx.into()),
             TransactionType::Unknown => Err(error_transaction!(Other, "`Unknown` transaction")),
+        }
+    }
+}
+
+impl From<FuelTransaction> for TransactionType {
+    fn from(value: FuelTransaction) -> Self {
+        match value {
+            FuelTransaction::Script(tx) => TransactionType::Script(tx.into()),
+            FuelTransaction::Create(tx) => TransactionType::Create(tx.into()),
+            FuelTransaction::Mint(tx) => TransactionType::Mint(tx.into()),
+            FuelTransaction::Upgrade(tx) => TransactionType::Upgrade(tx.into()),
+            FuelTransaction::Upload(tx) => TransactionType::Upload(tx.into()),
+            FuelTransaction::Blob(tx) => TransactionType::Blob(tx.into()),
         }
     }
 }
@@ -526,6 +525,47 @@ macro_rules! impl_tx_wrapper {
                     .into_group_map()
             }
 
+            fn intercept_burn(&self, base_asset_id: &$crate::types::AssetId) -> Result<()> {
+                use std::collections::HashSet;
+
+                let assets_w_change = self
+                    .tx
+                    .outputs()
+                    .iter()
+                    .filter_map(|output| match output {
+                        Output::Change { asset_id, .. } => Some(*asset_id),
+                        _ => None,
+                    })
+                    .collect::<HashSet<_>>();
+
+                let input_assets = self
+                    .inputs()
+                    .iter()
+                    .filter_map(|input| match input {
+                        Input::CoinSigned(coin) => Some(coin.asset_id),
+                        Input::CoinPredicate(coin) => Some(coin.asset_id),
+                        Input::MessageCoinSigned(_) |
+                        Input::MessageCoinPredicate(_) |
+                        Input::MessageDataSigned(_) |
+                        Input::MessageDataPredicate(_) => Some(*base_asset_id),
+                        _ => None,
+                    })
+                    .collect::<HashSet<_>>();
+
+                let diff = input_assets.difference(&assets_w_change).collect_vec();
+                if !diff.is_empty() {
+                    return Err(error_transaction!(
+                        Builder,
+                        "the following assets have no change outputs and may be burned unintentionally: {:?}. \
+                        To resolve this, either add the necessary change outputs manually or explicitly allow asset burning \
+                        by calling `.enable_burn(true)` on the transaction builder.",
+                        diff
+                    ));
+                }
+
+                Ok(())
+            }
+
             async fn sign_with(
                 &mut self,
                 signer: &(impl Signer + Send + Sync),
@@ -552,13 +592,9 @@ impl_tx_wrapper!(BlobTransaction, Blob);
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl EstimablePredicates for UploadTransaction {
-    async fn estimate_predicates(
-        &mut self,
-        provider: impl DryRunner,
-        latest_chain_executor_version: Option<u32>,
-    ) -> Result<()> {
+    async fn estimate_predicates(&mut self, provider: impl DryRunner) -> Result<()> {
         let tx = provider
-            .estimate_predicates(&self.tx.clone().into(), latest_chain_executor_version)
+            .estimate_predicates(&self.tx.clone().into())
             .await?;
 
         tx.as_upload().expect("is upload").clone_into(&mut self.tx);
@@ -570,13 +606,9 @@ impl EstimablePredicates for UploadTransaction {
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl EstimablePredicates for UpgradeTransaction {
-    async fn estimate_predicates(
-        &mut self,
-        provider: impl DryRunner,
-        latest_chain_executor_version: Option<u32>,
-    ) -> Result<()> {
+    async fn estimate_predicates(&mut self, provider: impl DryRunner) -> Result<()> {
         let tx = provider
-            .estimate_predicates(&self.tx.clone().into(), latest_chain_executor_version)
+            .estimate_predicates(&self.tx.clone().into())
             .await?;
 
         tx.as_upgrade()
@@ -590,13 +622,9 @@ impl EstimablePredicates for UpgradeTransaction {
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl EstimablePredicates for CreateTransaction {
-    async fn estimate_predicates(
-        &mut self,
-        provider: impl DryRunner,
-        latest_chain_executor_version: Option<u32>,
-    ) -> Result<()> {
+    async fn estimate_predicates(&mut self, provider: impl DryRunner) -> Result<()> {
         let tx = provider
-            .estimate_predicates(&self.tx.clone().into(), latest_chain_executor_version)
+            .estimate_predicates(&self.tx.clone().into())
             .await?;
 
         tx.as_create().expect("is create").clone_into(&mut self.tx);
@@ -622,13 +650,9 @@ impl CreateTransaction {
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl EstimablePredicates for ScriptTransaction {
-    async fn estimate_predicates(
-        &mut self,
-        provider: impl DryRunner,
-        latest_chain_executor_version: Option<u32>,
-    ) -> Result<()> {
+    async fn estimate_predicates(&mut self, provider: impl DryRunner) -> Result<()> {
         let tx = provider
-            .estimate_predicates(&self.tx.clone().into(), latest_chain_executor_version)
+            .estimate_predicates(&self.tx.clone().into())
             .await?;
 
         tx.as_script().expect("is script").clone_into(&mut self.tx);
@@ -640,13 +664,9 @@ impl EstimablePredicates for ScriptTransaction {
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl EstimablePredicates for BlobTransaction {
-    async fn estimate_predicates(
-        &mut self,
-        provider: impl DryRunner,
-        latest_chain_executor_version: Option<u32>,
-    ) -> Result<()> {
+    async fn estimate_predicates(&mut self, provider: impl DryRunner) -> Result<()> {
         let tx = provider
-            .estimate_predicates(&self.tx.clone().into(), latest_chain_executor_version)
+            .estimate_predicates(&self.tx.clone().into())
             .await?;
 
         tx.as_blob().expect("is blob").clone_into(&mut self.tx);

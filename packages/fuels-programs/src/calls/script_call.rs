@@ -33,6 +33,13 @@ impl ScriptCall {
         self
     }
 
+    pub fn with_external_contracts(self, external_contracts: Vec<Bech32ContractId>) -> Self {
+        Self {
+            external_contracts,
+            ..self
+        }
+    }
+
     pub(crate) fn prepare_inputs_outputs(&self) -> Result<(Vec<Input>, Vec<Output>)> {
         let contract_ids: HashSet<ContractId> = self
             .external_contracts

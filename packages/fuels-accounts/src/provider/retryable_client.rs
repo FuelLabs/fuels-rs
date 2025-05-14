@@ -10,6 +10,7 @@ use fuel_core_client::client::{
     types::{
         Balance, Blob, Block, ChainInfo, Coin, CoinType, ContractBalance, Message, MessageProof,
         NodeInfo, TransactionResponse, TransactionStatus,
+        assemble_tx::{AssembleTransactionResult, RequiredBalance},
         gas_price::{EstimateGasPrice, LatestGasPrice},
         primitives::{BlockId, TransactionId},
     },
@@ -206,6 +207,31 @@ impl RetryableClient {
             let mut new_tx = tx.clone();
             self.client.estimate_predicates(&mut new_tx).await?;
             Ok(new_tx)
+        })
+        .await
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub async fn assemble_tx(
+        &self,
+        tx: &Transaction,
+        block_horizon: u32,
+        required_balances: Vec<RequiredBalance>,
+        fee_address_index: u16,
+        exclude: Option<(Vec<UtxoId>, Vec<Nonce>)>,
+        estimate_predicates: bool,
+        reserve_gas: Option<u64>,
+    ) -> RequestResult<AssembleTransactionResult> {
+        self.wrap(|| {
+            self.client.assemble_tx(
+                tx,
+                block_horizon,
+                required_balances.clone(),
+                fee_address_index,
+                exclude.clone(),
+                estimate_predicates,
+                reserve_gas,
+            )
         })
         .await
     }

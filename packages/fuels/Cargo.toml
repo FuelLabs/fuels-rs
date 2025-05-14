@@ -24,7 +24,7 @@ fuels-programs = { workspace = true }
 fuels-test-helpers = { workspace = true, optional = true }
 
 [features]
-default = ["std", "fuels-test-helpers?/fuels-accounts", "coin-cache"]
+default = ["std", "coin-cache"]
 coin-cache = ["fuels-accounts/coin-cache"]
 test-helpers = ["dep:fuels-test-helpers", "fuels-accounts/test-helpers"]
 
@@ -35,6 +35,7 @@ std = [
   "dep:fuel-core-client",
   "fuels-programs/std",
   "dep:fuels-test-helpers",
+  "fuels-test-helpers/fuels-accounts",
   "fuels-accounts/std",
   "fuels-core/std",
   "fuels-test-helpers?/std",

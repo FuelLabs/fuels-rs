@@ -390,13 +390,13 @@ async fn multi_call_contract_with_contract_logs() -> Result<()> {
 
     let call_handler_1 = contract_caller_instance
         .methods()
-        .logs_from_external_contract(contract_instance.id())
-        .with_contracts(&[&contract_instance]);
+        .logs_from_external_contract(contract_instance.contract_id())
+        .add_log_decoder(contract_instance.log_decoder());
 
     let call_handler_2 = contract_caller_instance2
         .methods()
-        .logs_from_external_contract(contract_instance.id())
-        .with_contracts(&[&contract_instance]);
+        .logs_from_external_contract(contract_instance.contract_id())
+        .add_log_decoder(contract_instance.log_decoder());
 
     let multi_call_handler = CallHandler::new_multi_call(wallet.clone())
         .add_call(call_handler_1)
@@ -750,8 +750,8 @@ async fn contract_with_contract_logs() -> Result<()> {
 
     let logs = contract_caller_instance
         .methods()
-        .logs_from_external_contract(contract_instance.id())
-        .with_contracts(&[&contract_instance])
+        .logs_from_external_contract(contract_instance.contract_id())
+        .add_log_decoder(contract_instance.log_decoder())
         .call()
         .await?
         .decode_logs();
@@ -802,21 +802,13 @@ async fn script_logs_with_contract_logs() -> Result<()> {
     ];
 
     // ANCHOR: instance_to_contract_id
-    let contract_id: ContractId = contract_instance.id().into();
+    let contract_id: ContractId = contract_instance.contract_id().into();
     // ANCHOR_END: instance_to_contract_id
-
-    // ANCHOR: external_contract_ids
-    let response = script_instance
-        .main(contract_id, MatchEnum::Logs)
-        .with_contract_ids(&[contract_id.into()])
-        .call()
-        .await?;
-    // ANCHOR_END: external_contract_ids
 
     // ANCHOR: external_contract
     let response = script_instance
         .main(contract_id, MatchEnum::Logs)
-        .with_contracts(&[&contract_instance])
+        .add_log_decoder(contract_instance.log_decoder())
         .call()
         .await?;
     // ANCHOR_END: external_contract
@@ -1024,8 +1016,8 @@ async fn contract_require_from_contract() -> Result<()> {
 
     let error = contract_caller_instance
         .methods()
-        .require_from_contract(contract_instance.id())
-        .with_contracts(&[&contract_instance])
+        .require_from_contract(contract_instance.contract_id())
+        .add_log_decoder(contract_instance.log_decoder())
         .call()
         .await
         .expect_err("should return a revert error");
@@ -1077,8 +1069,8 @@ async fn multi_call_contract_require_from_contract() -> Result<()> {
 
     let call_handler_2 = contract_caller_instance
         .methods()
-        .require_from_contract(lib_contract_instance.id())
-        .with_contracts(&[&lib_contract_instance]);
+        .require_from_contract(lib_contract_instance.contract_id())
+        .add_log_decoder(lib_contract_instance.log_decoder());
 
     let multi_call_handler = CallHandler::new_multi_call(wallet.clone())
         .add_call(call_handler_1)
@@ -1122,8 +1114,8 @@ async fn script_require_from_contract() -> Result<()> {
     );
 
     let error = script_instance
-        .main(contract_instance.id())
-        .with_contracts(&[&contract_instance])
+        .main(contract_instance.contract_id())
+        .add_log_decoder(contract_instance.log_decoder())
         .call()
         .await
         .expect_err("should return a revert error");
@@ -1167,8 +1159,8 @@ async fn loader_script_require_from_loader_contract() -> Result<()> {
     script_instance.convert_into_loader().await?;
 
     let error = script_instance
-        .main(contract_instance.id())
-        .with_contracts(&[&contract_instance])
+        .main(contract_instance.contract_id())
+        .add_log_decoder(contract_instance.log_decoder())
         .call()
         .await
         .expect_err("should return a revert error");
@@ -1573,8 +1565,8 @@ async fn log_results() -> Result<()> {
 
     let expected_err = format!(
         "codec: missing log formatter for log_id: `LogId({:?}, \"128\")`, data: `{:?}`. \
-         Consider adding external contracts using `with_contracts()`",
-        contract_instance.id().hash,
+         Consider adding external log decoder using `add_log_decoder()`",
+        contract_instance.contract_id().hash,
         [0u8; 8]
     );
 
@@ -1933,8 +1925,8 @@ async fn contract_with_contract_panic() -> Result<()> {
         ($method:ident, call, $msg:expr) => {
             let error = contract_caller_instance
                 .methods()
-                .$method(contract_instance.id())
-                .with_contracts(&[&contract_instance])
+                .$method(contract_instance.contract_id())
+                .add_log_decoder(contract_instance.log_decoder())
                 .call()
                 .await
                 .expect_err("should return a revert error");
@@ -1944,8 +1936,8 @@ async fn contract_with_contract_panic() -> Result<()> {
         ($method:ident, simulate, $msg:expr) => {
             let error = contract_caller_instance
                 .methods()
-                .$method(contract_instance.id())
-                .with_contracts(&[&contract_instance])
+                .$method(contract_instance.contract_id())
+                .add_log_decoder(contract_instance.log_decoder())
                 .simulate(Execution::realistic())
                 .await
                 .expect_err("should return a revert error");
@@ -2057,7 +2049,7 @@ async fn script_with_contract_panic() -> Result<()> {
         ($arg1:expr, $arg2:expr, call, $msg:expr) => {
             let error = script_instance
                 .main($arg1, $arg2)
-                .with_contracts(&[&contract_instance])
+                .add_log_decoder(contract_instance.log_decoder())
                 .call()
                 .await
                 .expect_err("should return a revert error");
@@ -2066,19 +2058,19 @@ async fn script_with_contract_panic() -> Result<()> {
         ($arg1:expr, $arg2:expr, simulate, $msg:expr) => {
             let error = script_instance
                 .main($arg1, $arg2)
-                .with_contracts(&[&contract_instance])
+                .add_log_decoder(contract_instance.log_decoder())
                 .simulate(Execution::realistic())
                 .await
                 .expect_err("should return a revert error");
             assert_revert_containing_msg($msg, error);
         };
     }
-    let contract_id = contract_instance.id();
+    let contract_id = contract_instance.contract_id();
 
     {
-        reverts_with_msg!(&contract_id, MatchEnum::Panic, call, "some panic message");
+        reverts_with_msg!(contract_id, MatchEnum::Panic, call, "some panic message");
         reverts_with_msg!(
-            &contract_id,
+            contract_id,
             MatchEnum::Panic,
             simulate,
             "some panic message"
@@ -2086,13 +2078,13 @@ async fn script_with_contract_panic() -> Result<()> {
     }
     {
         reverts_with_msg!(
-            &contract_id,
+            contract_id,
             MatchEnum::PanicError,
             call,
             "some complex error B: B { id: 42, val: 36 }"
         );
         reverts_with_msg!(
-            &contract_id,
+            contract_id,
             MatchEnum::PanicError,
             simulate,
             "some complex error B: B { id: 42, val: 36 }"

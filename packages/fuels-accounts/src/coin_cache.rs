@@ -176,7 +176,7 @@ mod tests {
     }
 
     #[test]
-    fn test_remove_items() {
+    fn remove_items() {
         let mut cache = CoinsCache::new(Duration::from_secs(60));
 
         let key: CoinCacheKey = Default::default();

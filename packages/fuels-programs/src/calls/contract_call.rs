@@ -78,6 +78,13 @@ impl ContractCall {
         self.inputs = inputs;
         self
     }
+
+    pub fn with_external_contracts(self, external_contracts: Vec<Bech32ContractId>) -> Self {
+        Self {
+            external_contracts,
+            ..self
+        }
+    }
 }
 
 impl sealed::Sealed for ContractCall {}
