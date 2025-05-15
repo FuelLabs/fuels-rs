@@ -8,7 +8,7 @@ use fuel_types::{AssetId, Nonce};
 use fuels_accounts::provider::Provider;
 use fuels_core::types::{
     bech32::Bech32Address,
-    coin::{Coin, CoinStatus},
+    coin::Coin,
     errors::Result,
     message::{Message, MessageStatus},
 };
@@ -96,8 +96,6 @@ pub fn setup_single_asset_coins(
                 utxo_id,
                 amount: amount_per_coin,
                 asset_id,
-                status: CoinStatus::Unspent,
-                block_created: Default::default(),
             }
         })
         .collect();
