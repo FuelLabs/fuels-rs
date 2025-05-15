@@ -15,6 +15,7 @@ members = [
   "examples/predicates",
   "examples/providers",
   "examples/rust_bindings",
+  "examples/scripts",
   "examples/types",
   "examples/wallets",
   "packages/fuels",

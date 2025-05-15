@@ -9,6 +9,7 @@ members = [
   'sway/contracts/auth_testing_abi',
   'sway/contracts/auth_testing_contract',
   'sway/contracts/block_timestamp',
+  'sway/contracts/dyn_configurables',
   'sway/contracts/configurables',
   'sway/contracts/contract_test',
   'sway/contracts/huge_contract',
@@ -40,6 +41,7 @@ members = [
   'sway/logs/script_with_contract_logs',
   'sway/predicates/basic_predicate',
   'sway/predicates/predicate_blobs',
+  'sway/predicates/predicate_dyn_configurables',
   'sway/predicates/predicate_configurables',
   'sway/predicates/predicate_witnesses',
   'sway/predicates/signatures',
@@ -53,6 +55,7 @@ members = [
   'sway/scripts/script_array',
   'sway/scripts/script_asserts',
   'sway/scripts/script_blobs',
+  'sway/scripts/script_dyn_configurables',
   'sway/scripts/script_configurables',
   'sway/scripts/script_enum',
   'sway/scripts/script_needs_custom_decoder',
@@ -119,5 +122,6 @@ members = [
   'sway/types/scripts/script_vectors',
 ]
 
+#TODO: [issue](https://github.com/FuelLabs/fuels-rs/issues/1610)
 [patch.'https://github.com/fuellabs/sway']
-std = { git = "https://github.com/fuellabs/sway", branch = "ironcev/error-codes-in-abi-json" }
+std = { git = "https://github.com/fuellabs/sway", branch = "xunilrj/dynamic-types-configurables" }

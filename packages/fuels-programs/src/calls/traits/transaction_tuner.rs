@@ -66,11 +66,12 @@ impl TransactionTuner for ScriptCall {
         _account: &T,
     ) -> Result<ScriptTransactionBuilder> {
         let (inputs, outputs) = self.prepare_inputs_outputs()?;
+        let script_binary = self.script_binary.clone()?;
 
         Ok(ScriptTransactionBuilder::default()
             .with_variable_output_policy(variable_output_policy)
             .with_tx_policies(tx_policies)
-            .with_script(self.script_binary.clone())
+            .with_script(script_binary)
             .with_script_data(self.compute_script_data()?)
             .with_inputs(inputs)
             .with_outputs(outputs)
