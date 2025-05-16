@@ -18,10 +18,10 @@ mod tests {
 
         let amount = 500000000;
         let key = kms.create_signer().await?;
-        let address = key.address().clone();
+        let address = key.address();
 
         wallet
-            .transfer(&address, amount, AssetId::zeroed(), TxPolicies::default())
+            .transfer(address, amount, AssetId::zeroed(), TxPolicies::default())
             .await
             .context("Failed to transfer funds")?;
 
@@ -47,10 +47,10 @@ mod tests {
 
         let amount = 500000000;
         let key = kms.create_signer().await?;
-        let address = key.address().clone();
+        let address = key.address();
 
         wallet
-            .transfer(&address, amount, AssetId::zeroed(), TxPolicies::default())
+            .transfer(address, amount, AssetId::zeroed(), TxPolicies::default())
             .await
             .context("Failed to transfer funds")?;
 

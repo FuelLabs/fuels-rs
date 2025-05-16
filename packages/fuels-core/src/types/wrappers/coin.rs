@@ -6,7 +6,7 @@ use fuel_core_client::client::types::{
     primitives::{AssetId, UtxoId},
 };
 
-use crate::types::bech32::Bech32Address;
+use crate::types::Address;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
 pub enum CoinStatus {
@@ -21,7 +21,7 @@ pub struct Coin {
     pub block_created: u32,
     pub asset_id: AssetId,
     pub utxo_id: UtxoId,
-    pub owner: Bech32Address,
+    pub owner: Address,
     pub status: CoinStatus,
 }
 
@@ -32,7 +32,7 @@ impl From<ClientCoin> for Coin {
             block_created: coin.block_created,
             asset_id: coin.asset_id,
             utxo_id: coin.utxo_id,
-            owner: Bech32Address::from(coin.owner),
+            owner: coin.owner,
             status: CoinStatus::Unspent,
         }
     }
@@ -45,7 +45,7 @@ impl From<Coin> for CoinConfig {
             output_index: coin.utxo_id.output_index(),
             tx_pointer_block_height: coin.block_created.into(),
             tx_pointer_tx_idx: Default::default(),
-            owner: coin.owner.into(),
+            owner: coin.owner,
             amount: coin.amount,
             asset_id: coin.asset_id,
         }

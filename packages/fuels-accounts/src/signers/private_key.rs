@@ -2,10 +2,7 @@ use async_trait::async_trait;
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
 use fuels_core::{
     traits::Signer,
-    types::{
-        bech32::{Bech32Address, FUEL_BECH32_HRP},
-        errors::Result,
-    },
+    types::{Address, errors::Result},
 };
 use rand::{CryptoRng, Rng, RngCore};
 use zeroize::{Zeroize, ZeroizeOnDrop};
@@ -20,7 +17,7 @@ pub fn generate_mnemonic_phrase<R: Rng>(rng: &mut R, count: usize) -> Result<Str
 pub struct PrivateKeySigner {
     private_key: SecretKey,
     #[zeroize(skip)]
-    address: Bech32Address,
+    address: Address,
 }
 
 impl std::fmt::Debug for PrivateKeySigner {
@@ -35,8 +32,7 @@ impl std::fmt::Debug for PrivateKeySigner {
 impl PrivateKeySigner {
     pub fn new(private_key: SecretKey) -> Self {
         let public = PublicKey::from(&private_key);
-        let hashed = public.hash();
-        let address = Bech32Address::new(FUEL_BECH32_HRP, hashed);
+        let address = Address::from(*public.hash());
 
         Self {
             private_key,
@@ -48,12 +44,13 @@ impl PrivateKeySigner {
         Self::new(SecretKey::random(rng))
     }
 
-    pub fn address(&self) -> &Bech32Address {
-        &self.address
+    pub fn address(&self) -> Address {
+        self.address
     }
 }
 
-#[async_trait]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl Signer for PrivateKeySigner {
     async fn sign(&self, message: Message) -> Result<Signature> {
         let sig = Signature::sign(&self.private_key, &message);
@@ -61,8 +58,8 @@ impl Signer for PrivateKeySigner {
         Ok(sig)
     }
 
-    fn address(&self) -> &Bech32Address {
-        &self.address
+    fn address(&self) -> Address {
+        self.address
     }
 }
 
@@ -112,7 +109,7 @@ mod tests {
         // Recover the public key that signed the message
         let recovered_pub_key: PublicKey = signature.recover(&message)?;
 
-        assert_eq!(signer.address().hash(), recovered_pub_key.hash());
+        assert_eq!(*signer.address, *recovered_pub_key.hash());
 
         // Verify signature
         signature.verify(&recovered_pub_key, &message)?;

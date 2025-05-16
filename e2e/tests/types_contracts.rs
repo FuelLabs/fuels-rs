@@ -5,12 +5,6 @@ use fuels::{
     types::{B512, Bits256, EvmAddress, Identity, SizedAsciiString, U256},
 };
 
-pub fn null_contract_id() -> Bech32ContractId {
-    // a bech32 contract address that decodes to [0u8;32]
-    Bech32ContractId::from_str("fuel1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqsx2mt2")
-        .expect("is valid")
-}
-
 #[tokio::test]
 async fn test_methods_typeless_argument() -> Result<()> {
     setup_program_test!(

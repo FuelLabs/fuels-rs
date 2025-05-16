@@ -24,8 +24,7 @@ use itertools::Itertools;
 use crate::{
     traits::Signer,
     types::{
-        DryRunner,
-        bech32::Bech32Address,
+        Address, DryRunner,
         errors::{Error, Result, error, error_transaction},
     },
     utils::{calculate_witnesses_size, sealed},
@@ -280,10 +279,7 @@ pub trait Transaction:
     /// Append witness and return the corresponding witness index
     fn append_witness(&mut self, witness: Witness) -> Result<usize>;
 
-    fn used_coins(
-        &self,
-        base_asset_id: &AssetId,
-    ) -> HashMap<(Bech32Address, AssetId), Vec<CoinTypeId>>;
+    fn used_coins(&self, base_asset_id: &AssetId) -> HashMap<(Address, AssetId), Vec<CoinTypeId>>;
 
     async fn sign_with(
         &mut self,
@@ -317,18 +313,16 @@ fn extract_coin_type_id(input: &Input) -> Option<CoinTypeId> {
     None
 }
 
-pub fn extract_owner_or_recipient(input: &Input) -> Option<Bech32Address> {
-    let addr = match input {
+pub fn extract_owner_or_recipient(input: &Input) -> Option<Address> {
+    match input {
         Input::CoinSigned(CoinSigned { owner, .. })
-        | Input::CoinPredicate(CoinPredicate { owner, .. }) => Some(owner),
+        | Input::CoinPredicate(CoinPredicate { owner, .. }) => Some(*owner),
         Input::MessageCoinSigned(MessageCoinSigned { recipient, .. })
         | Input::MessageCoinPredicate(MessageCoinPredicate { recipient, .. })
         | Input::MessageDataSigned(MessageDataSigned { recipient, .. })
-        | Input::MessageDataPredicate(MessageDataPredicate { recipient, .. }) => Some(recipient),
+        | Input::MessageDataPredicate(MessageDataPredicate { recipient, .. }) => Some(*recipient),
         Input::Contract(_) => None,
-    };
-
-    addr.map(|addr| Bech32Address::from(*addr))
+    }
 }
 
 macro_rules! impl_tx_wrapper {
@@ -506,7 +500,7 @@ macro_rules! impl_tx_wrapper {
             fn used_coins(
                 &self,
                 base_asset_id: &AssetId,
-            ) -> HashMap<(Bech32Address, AssetId), Vec<CoinTypeId>> {
+            ) -> HashMap<(Address, AssetId), Vec<CoinTypeId>> {
                 self.inputs()
                     .iter()
                     .filter_map(|input| match input {
