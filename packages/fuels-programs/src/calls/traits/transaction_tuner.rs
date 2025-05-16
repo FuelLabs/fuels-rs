@@ -11,7 +11,7 @@ use crate::{
     DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE,
     calls::{
         ContractCall, ScriptCall,
-        utils::{build_with_tb, sealed, transaction_builder_from_contract_calls},
+        utils::{build_with_tb, sealed, transaction_builder_from_contract_calls, tx_builder_from_ct_calls_with_max_fee_est_tolerance},
     },
 };
 
@@ -22,6 +22,14 @@ pub trait TransactionTuner: sealed::Sealed {
         tx_policies: TxPolicies,
         variable_output_policy: VariableOutputPolicy,
         account: &T,
+    ) -> Result<ScriptTransactionBuilder>;
+
+    async fn tx_builder_with_max_fee_est_tolerance<T: Account>(
+        &self,
+        tx_policies: TxPolicies,
+        variable_output_policy: VariableOutputPolicy,
+        account: &T,
+        max_fee_estimation_tolerance: f32
     ) -> Result<ScriptTransactionBuilder>;
 
     async fn build_tx<T: Account>(
@@ -39,11 +47,29 @@ impl TransactionTuner for ContractCall {
         variable_output_policy: VariableOutputPolicy,
         account: &T,
     ) -> Result<ScriptTransactionBuilder> {
-        transaction_builder_from_contract_calls(
+        tx_builder_from_ct_calls_with_max_fee_est_tolerance(
             std::slice::from_ref(self),
             tx_policies,
             variable_output_policy,
             account,
+            DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE,
+        )
+            .await
+    }
+    
+    async fn tx_builder_with_max_fee_est_tolerance<T: Account>(
+        &self,
+        tx_policies: TxPolicies,
+        variable_output_policy: VariableOutputPolicy,
+        account: &T,
+        max_fee_estimation_tolerance: f32
+    ) -> Result<ScriptTransactionBuilder> {
+        tx_builder_from_ct_calls_with_max_fee_est_tolerance(
+            std::slice::from_ref(self),
+            tx_policies,
+            variable_output_policy,
+            account,
+            max_fee_estimation_tolerance,
         )
         .await
     }
@@ -65,6 +91,22 @@ impl TransactionTuner for ScriptCall {
         variable_output_policy: VariableOutputPolicy,
         _account: &T,
     ) -> Result<ScriptTransactionBuilder> {
+        self.tx_builder_with_max_fee_est_tolerance(
+            tx_policies, 
+            variable_output_policy, 
+            _account, 
+            DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE
+        )
+            .await
+    }
+
+    async fn tx_builder_with_max_fee_est_tolerance<T: Account>(
+        &self,
+        tx_policies: TxPolicies,
+        variable_output_policy: VariableOutputPolicy,
+        _account: &T,
+        max_fee_estimation_tolerance: f32
+    ) -> Result<ScriptTransactionBuilder> {
         let (inputs, outputs) = self.prepare_inputs_outputs()?;
 
         Ok(ScriptTransactionBuilder::default()
@@ -75,7 +117,7 @@ impl TransactionTuner for ScriptCall {
             .with_inputs(inputs)
             .with_outputs(outputs)
             .with_gas_estimation_tolerance(DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE)
-            .with_max_fee_estimation_tolerance(DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE))
+            .with_max_fee_estimation_tolerance(max_fee_estimation_tolerance))
     }
 
     async fn build_tx<T: Account>(
@@ -106,6 +148,18 @@ impl TransactionTuner for Vec<ContractCall> {
         validate_contract_calls(self)?;
 
         transaction_builder_from_contract_calls(self, tx_policies, variable_output_policy, account)
+            .await
+    }
+    
+    async fn tx_builder_with_max_fee_est_tolerance<T: Account>(
+        &self,
+        tx_policies: TxPolicies,
+        variable_output_policy: VariableOutputPolicy,
+        account: &T,
+        max_fee_estimation_tolerance: f32
+    ) -> Result<ScriptTransactionBuilder> {
+        validate_contract_calls(self)?;
+        tx_builder_from_ct_calls_with_max_fee_est_tolerance(self, tx_policies, variable_output_policy, account, max_fee_estimation_tolerance)
             .await
     }
 
