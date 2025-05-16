@@ -53,7 +53,8 @@ impl PrivateKeySigner {
     }
 }
 
-#[async_trait]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl Signer for PrivateKeySigner {
     async fn sign(&self, message: Message) -> Result<Signature> {
         let sig = Signature::sign(&self.private_key, &message);
