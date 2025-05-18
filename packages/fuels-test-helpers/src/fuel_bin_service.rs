@@ -110,6 +110,11 @@ impl ExtendedConfig {
             self.node_config.starting_gas_price
         ));
 
+        args.push(format!(
+            "--gas-price-change-percent={}",
+            self.node_config.gas_price_change_percent
+        ));
+
         Ok(args)
     }
 
