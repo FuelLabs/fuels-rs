@@ -54,6 +54,7 @@ pub struct NodeConfig {
     pub vm_backtrace: bool,
     pub silent: bool,
     pub starting_gas_price: u64,
+    pub gas_price_change_percent: u64,
     pub graphql_request_body_bytes_limit: u64,
 }
 
@@ -70,6 +71,7 @@ impl Default for NodeConfig {
             vm_backtrace: false,
             silent: true,
             starting_gas_price: 1,
+            gas_price_change_percent: 0,
             graphql_request_body_bytes_limit: u64::MAX,
         }
     }
