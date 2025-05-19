@@ -341,11 +341,7 @@ mod test {
     use std::slice;
 
     use fuels_accounts::signers::private_key::PrivateKeySigner;
-    use fuels_core::types::{
-        coin::{Coin, CoinStatus},
-        coin_type::CoinType,
-        param_types::ParamType,
-    };
+    use fuels_core::types::{coin::Coin, coin_type::CoinType, param_types::ParamType};
     use rand::{Rng, thread_rng};
 
     use super::*;
@@ -522,11 +518,9 @@ mod test {
             .map(|asset_id| {
                 let coin = CoinType::Coin(Coin {
                     amount: 100,
-                    block_created: 0u32,
                     asset_id,
                     utxo_id: Default::default(),
                     owner: Default::default(),
-                    status: CoinStatus::Unspent,
                 });
                 Input::resource_signed(coin)
             })
