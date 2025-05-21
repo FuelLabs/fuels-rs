@@ -1,12 +1,4 @@
-use std::str::FromStr;
-
 use fuels::{core::traits::Tokenizable, prelude::*, types::Token};
-
-pub fn null_contract_id() -> Bech32ContractId {
-    // a bech32 contract address that decodes to [0u8;32]
-    Bech32ContractId::from_str("fuel1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqsx2mt2")
-        .unwrap()
-}
 
 #[tokio::test]
 async fn create_struct_from_decoded_tokens() -> Result<()> {

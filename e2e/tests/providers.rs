@@ -2,7 +2,6 @@ use std::{ops::Add, path::Path};
 
 use chrono::{DateTime, Duration, TimeZone, Utc};
 use fuel_asm::RegId;
-use fuel_tx::Witness;
 use fuels::{
     accounts::{
         Account,
@@ -10,9 +9,9 @@ use fuels::{
     },
     client::{PageDirection, PaginationRequest},
     prelude::*,
-    tx::Receipt,
+    tx::{ContractIdExt, Receipt, Witness},
     types::{
-        Bits256,
+        Bytes32,
         coin_type::CoinType,
         message::Message,
         transaction_builders::{BuildableTransaction, ScriptTransactionBuilder},
@@ -48,7 +47,7 @@ async fn test_provider_launch_and_connect() -> Result<()> {
     .await?
     .contract_id;
 
-    let contract_instance_connected = MyContract::new(contract_id.clone(), wallet.clone());
+    let contract_instance_connected = MyContract::new(contract_id, wallet.clone());
 
     let response = contract_instance_connected
         .methods()
@@ -116,7 +115,7 @@ async fn test_input_message() -> Result<()> {
         setup_single_asset_coins(signer.address(), AssetId::zeroed(), 1, DEFAULT_COIN_AMOUNT);
 
     let messages = vec![setup_single_message(
-        &Bech32Address::default(),
+        Address::default(),
         signer.address(),
         DEFAULT_COIN_AMOUNT,
         0.into(),
@@ -159,10 +158,7 @@ async fn test_input_message_pays_fee() -> Result<()> {
     let signer = PrivateKeySigner::random(&mut thread_rng());
 
     let messages = setup_single_message(
-        &Bech32Address {
-            hrp: "".to_string(),
-            hash: Default::default(),
-        },
+        Address::default(),
         signer.address(),
         DEFAULT_COIN_AMOUNT,
         0.into(),
@@ -356,7 +352,7 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<()> {
     );
 
     // The gas used by the script to call a contract and forward remaining gas limit.
-    let gas_used_by_script = 244;
+    let gas_used_by_script = 243;
     let gas_limit = 225_883;
     let response = contract_instance
         .methods()
@@ -396,7 +392,7 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
     );
     let contract_id = contract_instance.contract_id();
     let contract_methods = contract_instance.methods();
-    let asset_id = contract_id.asset_id(&Bits256::zeroed());
+    let asset_id = contract_id.asset_id(&Bytes32::zeroed());
 
     let mut balance_response = contract_methods
         .get_balance(contract_id, asset_id)
@@ -449,7 +445,7 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
         .call()
         .await?;
 
-    let asset_id = AssetId::from(*contract_id.hash());
+    let asset_id = AssetId::from(*contract_id);
     let call_params = CallParameters::default()
         .with_amount(0)
         .with_asset_id(asset_id);
@@ -475,7 +471,7 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
     assert_eq!(call_response.unwrap().amount().unwrap(), 0);
     assert_eq!(
         call_response.unwrap().asset_id().unwrap(),
-        &AssetId::from(*contract_id.hash())
+        &AssetId::from(*contract_id)
     );
 
     Ok(())
@@ -662,7 +658,7 @@ async fn test_get_spendable_with_exclusion() -> Result<()> {
         .collect::<Vec<_>>();
 
     let message_amount = 200;
-    let message = given_a_message(address.clone(), message_amount);
+    let message = given_a_message(address, message_amount);
 
     let coin_1_utxo_id = coins[0].utxo_id;
     let coin_2_utxo_id = coins[1].utxo_id;
@@ -689,7 +685,7 @@ async fn test_get_spendable_with_exclusion() -> Result<()> {
 
     {
         let filter = ResourceFilter {
-            from: wallet.address().clone(),
+            from: wallet.address(),
             amount: coin_amount_1.into(),
             excluded_utxos: vec![coin_2_utxo_id],
             excluded_message_nonces: vec![message_nonce],
@@ -710,10 +706,10 @@ async fn test_get_spendable_with_exclusion() -> Result<()> {
     Ok(())
 }
 
-fn given_a_message(address: Bech32Address, message_amount: u64) -> Message {
+fn given_a_message(address: Address, message_amount: u64) -> Message {
     setup_single_message(
-        &Bech32Address::default(),
-        &address,
+        Address::default(),
+        address,
         message_amount,
         0.into(),
         vec![],
@@ -787,11 +783,7 @@ async fn test_sway_timestamp() -> Result<()> {
 }
 
 #[cfg(feature = "coin-cache")]
-async fn create_transfer(
-    wallet: &Wallet,
-    amount: u64,
-    to: &Bech32Address,
-) -> Result<ScriptTransaction> {
+async fn create_transfer(wallet: &Wallet, amount: u64, to: Address) -> Result<ScriptTransaction> {
     let asset_id = AssetId::zeroed();
     let inputs = wallet
         .get_asset_inputs_for_amount(asset_id, amount.into(), None)
@@ -888,7 +880,7 @@ async fn create_revert_tx(wallet: &Wallet) -> Result<ScriptTransaction> {
     let inputs = wallet
         .get_asset_inputs_for_amount(asset_id, amount.into(), None)
         .await?;
-    let outputs = wallet.get_asset_outputs_for_amount(&Bech32Address::default(), asset_id, amount);
+    let outputs = wallet.get_asset_outputs_for_amount(Address::default(), asset_id, amount);
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default())
         .with_script(script);
@@ -1022,7 +1014,7 @@ async fn send_transaction_and_await_status() -> Result<()> {
         .get_asset_inputs_for_amount(*consensus_parameters.base_asset_id(), 100, None)
         .await?;
     let outputs = wallet.get_asset_outputs_for_amount(
-        &Bech32Address::default(),
+        Address::default(),
         *consensus_parameters.base_asset_id(),
         100,
     );
@@ -1066,7 +1058,7 @@ async fn send_transaction_and_subscribe_status() -> Result<()> {
         .get_asset_inputs_for_amount(*consensus_parameters.base_asset_id(), 100, None)
         .await?;
     let outputs = wallet.get_asset_outputs_for_amount(
-        &Bech32Address::default(),
+        Address::default(),
         *consensus_parameters.base_asset_id(),
         100,
     );
@@ -1117,7 +1109,7 @@ async fn can_produce_blocks_with_trig_never() -> Result<()> {
         .get_asset_inputs_for_amount(*consensus_parameters.base_asset_id(), 100, None)
         .await?;
     let outputs = wallet.get_asset_outputs_for_amount(
-        &Bech32Address::default(),
+        Address::default(),
         *consensus_parameters.base_asset_id(),
         100,
     );
@@ -1153,7 +1145,7 @@ async fn can_upload_executor_and_trigger_upgrade() -> Result<()> {
     let mut chain_config = ChainConfig::local_testnet();
     chain_config
         .consensus_parameters
-        .set_privileged_address(signer.address().into());
+        .set_privileged_address(signer.address());
 
     let provider = setup_test_provider(coins, vec![], None, Some(chain_config)).await?;
     let wallet = Wallet::new(signer, provider.clone());
@@ -1359,7 +1351,7 @@ async fn contract_call_with_impersonation() -> Result<()> {
     let wallet = wallets.pop().unwrap();
     let provider = wallet.provider();
 
-    let impersonator = Wallet::new(FakeSigner::new(wallet.address().clone()), provider.clone());
+    let impersonator = Wallet::new(FakeSigner::new(wallet.address()), provider.clone());
 
     abigen!(Contract(
         name = "MyContract",

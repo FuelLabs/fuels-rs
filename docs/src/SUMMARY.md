@@ -55,7 +55,6 @@
   - [`Address`](./types/address.md)
   - [`ContractId`](./types/contract-id.md)
   - [`AssetId`](./types/asset-id.md)
-  - [`Bech32`](./types/bech32.md)
   - [Structs and enums](./types/custom_types.md)
   - [`String`](./types/string.md)
   - [`Bits256`](./types/bits256.md)

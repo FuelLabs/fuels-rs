@@ -23,14 +23,13 @@ use fuel_core_types::services::executor::TransactionExecutionResult;
 use fuel_tx::{
     AssetId, ConsensusParameters, Receipt, Transaction as FuelTransaction, TxId, UtxoId,
 };
-use fuel_types::{Address, BlockHeight, Bytes32, Nonce};
+
 #[cfg(feature = "coin-cache")]
 use fuels_core::types::coin_type_id::CoinTypeId;
 use fuels_core::{
     constants::{DEFAULT_GAS_ESTIMATION_BLOCK_HORIZON, DEFAULT_GAS_ESTIMATION_TOLERANCE},
     types::{
-        DryRun, DryRunner,
-        bech32::{Bech32Address, Bech32ContractId},
+        Address, BlockHeight, Bytes32, ContractId, DryRun, DryRunner, Nonce,
         block::{Block, Header},
         chain_info::ChainInfo,
         coin::Coin,
@@ -93,7 +92,7 @@ impl ResourceQueries {
 #[derive(Default)]
 // ANCHOR: resource_filter
 pub struct ResourceFilter {
-    pub from: Bech32Address,
+    pub from: Address,
     pub asset_id: Option<AssetId>,
     pub amount: u128,
     pub excluded_utxos: Vec<UtxoId>,
@@ -103,7 +102,7 @@ pub struct ResourceFilter {
 
 impl ResourceFilter {
     pub fn owner(&self) -> Address {
-        (&self.from).into()
+        self.from
     }
 
     pub(crate) fn resource_queries(&self) -> ResourceQueries {
@@ -300,8 +299,8 @@ impl Provider {
     #[cfg(feature = "coin-cache")]
     async fn find_in_cache<'a>(
         &self,
-        coin_ids: impl IntoIterator<Item = (&'a (Bech32Address, AssetId), &'a Vec<CoinTypeId>)>,
-    ) -> Option<((Bech32Address, AssetId), CoinTypeId)> {
+        coin_ids: impl IntoIterator<Item = (&'a (Address, AssetId), &'a Vec<CoinTypeId>)>,
+    ) -> Option<((Address, AssetId), CoinTypeId)> {
         let mut locked_cache = self.coins_cache.lock().await;
 
         for (key, ids) in coin_ids {
@@ -313,7 +312,7 @@ impl Provider {
 
             for id in ids {
                 if items.contains(id) {
-                    return Some((key.clone(), id.clone()));
+                    return Some((*key, id.clone()));
                 }
             }
         }
@@ -324,7 +323,7 @@ impl Provider {
     #[cfg(feature = "coin-cache")]
     async fn check_inputs_already_in_cache<'a>(
         &self,
-        coin_ids: impl IntoIterator<Item = (&'a (Bech32Address, AssetId), &'a Vec<CoinTypeId>)>,
+        coin_ids: impl IntoIterator<Item = (&'a (Address, AssetId), &'a Vec<CoinTypeId>)>,
     ) -> Result<()> {
         use fuels_core::types::errors::{Error, transaction};
 
@@ -475,7 +474,7 @@ impl Provider {
     }
 
     /// Gets all unspent coins owned by address `from`, with asset ID `asset_id`.
-    pub async fn get_coins(&self, from: &Bech32Address, asset_id: AssetId) -> Result<Vec<Coin>> {
+    pub async fn get_coins(&self, from: &Address, asset_id: AssetId) -> Result<Vec<Coin>> {
         let mut coins: Vec<Coin> = vec![];
         let mut cursor = None;
 
@@ -483,7 +482,7 @@ impl Provider {
             let response = self
                 .uncached_client()
                 .coins(
-                    &from.into(),
+                    from,
                     Some(&asset_id),
                     PaginationRequest {
                         cursor: cursor.clone(),
@@ -555,7 +554,7 @@ impl Provider {
         let asset_id = filter
             .asset_id
             .unwrap_or(*consensus_parameters.base_asset_id());
-        let used_coins = cache.get_active(&(filter.from.clone(), asset_id));
+        let used_coins = cache.get_active(&(filter.from, asset_id));
 
         let excluded_utxos = used_coins
             .iter()
@@ -586,33 +585,29 @@ impl Provider {
     /// Get the balance of all spendable coins `asset_id` for address `address`. This is different
     /// from getting coins because we are just returning a number (the sum of UTXOs amount) instead
     /// of the UTXOs.
-    pub async fn get_asset_balance(
-        &self,
-        address: &Bech32Address,
-        asset_id: AssetId,
-    ) -> Result<u64> {
+    pub async fn get_asset_balance(&self, address: &Address, asset_id: &AssetId) -> Result<u64> {
         Ok(self
             .uncached_client()
-            .balance(&address.into(), Some(&asset_id))
+            .balance(address, Some(asset_id))
             .await?)
     }
 
     /// Get the balance of all spendable coins `asset_id` for contract with id `contract_id`.
     pub async fn get_contract_asset_balance(
         &self,
-        contract_id: &Bech32ContractId,
-        asset_id: AssetId,
+        contract_id: &ContractId,
+        asset_id: &AssetId,
     ) -> Result<u64> {
         Ok(self
             .uncached_client()
-            .contract_balance(&contract_id.into(), Some(&asset_id))
+            .contract_balance(contract_id, Some(asset_id))
             .await?)
     }
 
     /// Get all the spendable balances of all assets for address `address`. This is different from
     /// getting the coins because we are only returning the numbers (the sum of UTXOs coins amount
     /// for each asset id) and not the UTXOs coins themselves
-    pub async fn get_balances(&self, address: &Bech32Address) -> Result<HashMap<String, u128>> {
+    pub async fn get_balances(&self, address: &Address) -> Result<HashMap<String, u128>> {
         let mut balances = HashMap::new();
 
         let mut register_balances = |results: Vec<_>| {
@@ -635,10 +630,7 @@ impl Provider {
                     results: NUM_RESULTS_PER_REQUEST,
                     direction: PageDirection::Forward,
                 };
-                let response = self
-                    .uncached_client()
-                    .balances(&address.into(), pagination)
-                    .await?;
+                let response = self.uncached_client().balances(address, pagination).await?;
 
                 if response.results.is_empty() {
                     break;
@@ -653,10 +645,7 @@ impl Provider {
                 results: 9999,
                 direction: PageDirection::Forward,
             };
-            let response = self
-                .uncached_client()
-                .balances(&address.into(), pagination)
-                .await?;
+            let response = self.uncached_client().balances(address, pagination).await?;
 
             register_balances(response.results)
         }
@@ -667,7 +656,7 @@ impl Provider {
     /// Get all balances of all assets for the contract with id `contract_id`.
     pub async fn get_contract_balances(
         &self,
-        contract_id: &Bech32ContractId,
+        contract_id: &ContractId,
     ) -> Result<HashMap<AssetId, u64>> {
         let mut contract_balances = HashMap::new();
         let mut cursor = None;
@@ -676,7 +665,7 @@ impl Provider {
             let response = self
                 .uncached_client()
                 .contract_balances(
-                    &contract_id.into(),
+                    contract_id,
                     PaginationRequest {
                         cursor: cursor.clone(),
                         results: NUM_RESULTS_PER_REQUEST,
@@ -727,12 +716,12 @@ impl Provider {
     // Get transaction(s) by owner
     pub async fn get_transactions_by_owner(
         &self,
-        owner: &Bech32Address,
+        owner: &Address,
         request: PaginationRequest<String>,
     ) -> Result<PaginatedResult<TransactionResponse, String>> {
         let pr = self
             .uncached_client()
-            .transactions_by_owner(&owner.into(), request)
+            .transactions_by_owner(owner, request)
             .await?;
 
         Ok(PaginatedResult {
@@ -838,7 +827,7 @@ impl Provider {
             .unwrap_or(0)
     }
 
-    pub async fn get_messages(&self, from: &Bech32Address) -> Result<Vec<Message>> {
+    pub async fn get_messages(&self, from: &Address) -> Result<Vec<Message>> {
         let mut messages = Vec::new();
         let mut cursor = None;
 
@@ -846,7 +835,7 @@ impl Provider {
             let response = self
                 .uncached_client()
                 .messages(
-                    Some(&from.into()),
+                    Some(from),
                     PaginationRequest {
                         cursor: cursor.clone(),
                         results: NUM_RESULTS_PER_REQUEST,
@@ -897,11 +886,8 @@ impl Provider {
         self
     }
 
-    pub async fn contract_exists(&self, contract_id: &Bech32ContractId) -> Result<bool> {
-        Ok(self
-            .uncached_client()
-            .contract_exists(&contract_id.into())
-            .await?)
+    pub async fn contract_exists(&self, contract_id: &ContractId) -> Result<bool> {
+        Ok(self.uncached_client().contract_exists(contract_id).await?)
     }
 
     fn uncached_client(&self) -> &RetryableClient {

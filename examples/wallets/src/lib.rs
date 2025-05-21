@@ -69,7 +69,7 @@ mod tests {
         let signer = PrivateKeySigner::new(key);
         let wallet = Wallet::new(signer, provider);
 
-        let expected_address = "fuel17x9kg3k7hqf42396vqenukm4yf59e5k0vj4yunr4mae9zjv9pdjszy098t";
+        let expected_address = "f18b6446deb8135544ba60333e5b7522685cd2cf64aa4e4c75df725149850b65";
 
         assert_eq!(wallet.address().to_string(), expected_address);
         // ANCHOR_END: create_wallet_from_mnemonic
@@ -184,7 +184,7 @@ mod tests {
         let amount = 300;
         let asset_id = random_asset_id;
         let _res = wallet
-            .force_transfer_to_contract(&contract_id, amount, asset_id, TxPolicies::default())
+            .force_transfer_to_contract(contract_id, amount, asset_id, TxPolicies::default())
             .await?;
 
         // Check that the contract now has 1 coin.
@@ -296,7 +296,7 @@ mod tests {
 
         // ANCHOR: wallet_to_address
         let wallet = Wallet::random(&mut rng, provider);
-        let address: Address = wallet.address().into();
+        let address: Address = wallet.address();
         // ANCHOR_END: wallet_to_address
         Ok(())
     }
@@ -352,11 +352,10 @@ mod tests {
         let base_layer_address = Address::from_str(
             "0x4710162c2e3a95a6faff05139150017c9e38e5e280432d546fae345d6ce6d8fe",
         )?;
-        let base_layer_address = Bech32Address::from(base_layer_address);
 
         // Transfer an amount of 1000 to the specified base layer address.
         let response = wallet
-            .withdraw_to_base_layer(&base_layer_address, amount, TxPolicies::default())
+            .withdraw_to_base_layer(base_layer_address, amount, TxPolicies::default())
             .await?;
 
         let _block_height = wallet.provider().produce_blocks(1, None).await?;

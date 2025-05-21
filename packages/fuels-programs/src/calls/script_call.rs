@@ -1,10 +1,10 @@
 use std::{collections::HashSet, fmt::Debug};
 
-use fuel_tx::{ContractId, Output};
 use fuels_core::types::{
-    bech32::Bech32ContractId,
+    ContractId,
     errors::{Result, error},
     input::Input,
+    output::Output,
 };
 use itertools::chain;
 
@@ -17,7 +17,7 @@ pub struct ScriptCall {
     pub encoded_args: Result<Vec<u8>>,
     pub inputs: Vec<Input>,
     pub outputs: Vec<Output>,
-    pub external_contracts: Vec<Bech32ContractId>,
+    pub external_contracts: Vec<ContractId>,
 }
 
 impl ScriptCall {
@@ -34,11 +34,7 @@ impl ScriptCall {
     }
 
     pub(crate) fn prepare_inputs_outputs(&self) -> Result<(Vec<Input>, Vec<Output>)> {
-        let contract_ids: HashSet<ContractId> = self
-            .external_contracts
-            .iter()
-            .map(|bech32| bech32.into())
-            .collect();
+        let contract_ids: HashSet<ContractId> = self.external_contracts.iter().copied().collect();
         let num_of_contracts = contract_ids.len();
 
         let inputs = chain!(

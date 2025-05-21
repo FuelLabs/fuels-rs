@@ -127,15 +127,11 @@ async fn test_output_variable_estimation() -> Result<()> {
 
     let amount = 1000;
     let asset_id = AssetId::zeroed();
-    let script_call = script_instance.main(
-        amount,
-        asset_id,
-        Identity::Address(receiver.address().into()),
-    );
+    let script_call = script_instance.main(amount, asset_id, Identity::Address(receiver.address()));
     let inputs = wallet
         .get_asset_inputs_for_amount(asset_id, amount.into(), None)
         .await?;
-    let output = Output::change(wallet.address().into(), 0, asset_id);
+    let output = Output::change(wallet.address(), 0, asset_id);
     let _ = script_call
         .with_inputs(inputs)
         .with_outputs(vec![output])
@@ -611,10 +607,10 @@ async fn loader_script_calling_loader_proxy() -> Result<()> {
         .await?
         .contract_id;
 
-    let proxy = MyProxy::new(proxy_id.clone(), wallet.clone());
+    let proxy = MyProxy::new(proxy_id, wallet.clone());
     proxy
         .methods()
-        .set_target_contract(contract_id.clone())
+        .set_target_contract(contract_id)
         .call()
         .await?;
 
@@ -622,7 +618,7 @@ async fn loader_script_calling_loader_proxy() -> Result<()> {
     let result = my_script
         .convert_into_loader()
         .await?
-        .main(proxy_id.clone())
+        .main(proxy_id)
         .with_contract_ids(&[contract_id, proxy_id])
         .call()
         .await?;
@@ -757,7 +753,7 @@ async fn script_tx_input_output() -> Result<()> {
         "sway/scripts/script_tx_input_output/out/release/script_tx_input_output.bin";
 
     // Set `wallet_1` as the custom input owner
-    let configurables = TxScriptConfigurables::default().with_OWNER(wallet_1.address().into())?;
+    let configurables = TxScriptConfigurables::default().with_OWNER(wallet_1.address())?;
 
     let script_instance =
         TxScript::new(wallet_2.clone(), script_binary).with_configurables(configurables);
@@ -772,7 +768,7 @@ async fn script_tx_input_output() -> Result<()> {
             .take(1)
             .collect();
 
-        let custom_output = vec![Output::change(wallet_1.address().into(), 0, asset_id)];
+        let custom_output = vec![Output::change(wallet_1.address(), 0, asset_id)];
 
         // Input at first position is a coin owned by wallet_1
         // Output at first position is change to wallet_1

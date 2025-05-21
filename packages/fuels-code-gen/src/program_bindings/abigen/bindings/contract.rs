@@ -42,7 +42,7 @@ pub(crate) fn contract_bindings(
     let code = quote! {
         #[derive(Debug, Clone)]
         pub struct #name<A> {
-            contract_id: ::fuels::types::bech32::Bech32ContractId,
+            contract_id: ::fuels::types::ContractId,
             account: A,
             log_decoder: ::fuels::core::codec::LogDecoder,
             encoder_config: ::fuels::core::codec::EncoderConfig,
@@ -51,17 +51,16 @@ pub(crate) fn contract_bindings(
         impl<A> #name<A>
         {
             pub fn new(
-                contract_id: impl ::core::convert::Into<::fuels::types::bech32::Bech32ContractId>,
+                contract_id: ::fuels::types::ContractId,
                 account: A,
             ) -> Self {
-                let contract_id: ::fuels::types::bech32::Bech32ContractId = contract_id.into();
                 let log_decoder = ::fuels::core::codec::LogDecoder::new(#log_formatters, #error_codes);
                 let encoder_config = ::fuels::core::codec::EncoderConfig::default();
                 Self { contract_id, account, log_decoder, encoder_config }
             }
 
-            pub fn contract_id(&self) -> &::fuels::types::bech32::Bech32ContractId {
-                &self.contract_id
+            pub fn contract_id(&self) -> ::fuels::types::ContractId {
+                self.contract_id
             }
 
             pub fn account(&self) -> &A {
@@ -104,7 +103,7 @@ pub(crate) fn contract_bindings(
 
         // Implement struct that holds the contract methods
         pub struct #methods_name<A> {
-            contract_id: ::fuels::types::bech32::Bech32ContractId,
+            contract_id: ::fuels::types::ContractId,
             account: A,
             log_decoder: ::fuels::core::codec::LogDecoder,
             encoder_config: ::fuels::core::codec::EncoderConfig,
@@ -117,8 +116,8 @@ pub(crate) fn contract_bindings(
         impl<A>
             ::fuels::programs::calls::ContractDependency for #name<A>
         {
-            fn id(&self) -> ::fuels::types::bech32::Bech32ContractId {
-                self.contract_id.clone()
+            fn id(&self) -> ::fuels::types::ContractId {
+                self.contract_id
             }
 
             fn log_decoder(&self) -> ::fuels::core::codec::LogDecoder {

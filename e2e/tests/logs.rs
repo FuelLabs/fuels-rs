@@ -1,7 +1,8 @@
 use fuels::{
     core::codec::DecoderConfig,
     prelude::*,
-    types::{AsciiString, Bits256, SizedAsciiString, errors::transaction::Reason},
+    tx::ContractIdExt,
+    types::{AsciiString, Bits256, Bytes32, SizedAsciiString, errors::transaction::Reason},
 };
 
 #[tokio::test]
@@ -802,13 +803,13 @@ async fn script_logs_with_contract_logs() -> Result<()> {
     ];
 
     // ANCHOR: instance_to_contract_id
-    let contract_id: ContractId = contract_instance.id().into();
+    let contract_id: ContractId = contract_instance.contract_id();
     // ANCHOR_END: instance_to_contract_id
 
     // ANCHOR: external_contract_ids
     let response = script_instance
         .main(contract_id, MatchEnum::Logs)
-        .with_contract_ids(&[contract_id.into()])
+        .with_contract_ids(&[contract_id])
         .call()
         .await?;
     // ANCHOR_END: external_contract_ids
@@ -1525,7 +1526,7 @@ async fn contract_token_ops_error_messages() -> Result<()> {
 
     {
         let contract_id = contract_instance.contract_id();
-        let asset_id = contract_id.asset_id(&Bits256::zeroed());
+        let asset_id = contract_id.asset_id(&Bytes32::zeroed());
         let address = wallet.address();
 
         let error = contract_methods
@@ -1574,7 +1575,7 @@ async fn log_results() -> Result<()> {
     let expected_err = format!(
         "codec: missing log formatter for log_id: `LogId({:?}, \"128\")`, data: `{:?}`. \
          Consider adding external contracts using `with_contracts()`",
-        contract_instance.id().hash,
+        contract_instance.id(),
         [0u8; 8]
     );
 
@@ -2076,9 +2077,9 @@ async fn script_with_contract_panic() -> Result<()> {
     let contract_id = contract_instance.id();
 
     {
-        reverts_with_msg!(&contract_id, MatchEnum::Panic, call, "some panic message");
+        reverts_with_msg!(contract_id, MatchEnum::Panic, call, "some panic message");
         reverts_with_msg!(
-            &contract_id,
+            contract_id,
             MatchEnum::Panic,
             simulate,
             "some panic message"
@@ -2086,13 +2087,13 @@ async fn script_with_contract_panic() -> Result<()> {
     }
     {
         reverts_with_msg!(
-            &contract_id,
+            contract_id,
             MatchEnum::PanicError,
             call,
             "some complex error B: B { id: 42, val: 36 }"
         );
         reverts_with_msg!(
-            &contract_id,
+            contract_id,
             MatchEnum::PanicError,
             simulate,
             "some complex error B: B { id: 42, val: 36 }"

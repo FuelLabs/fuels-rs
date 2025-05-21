@@ -17,7 +17,7 @@ pub mod tx {
         ConsensusParameters, ContractIdExt, ContractParameters, FeeParameters, GasCosts,
         PredicateParameters, Receipt, ScriptExecutionResult, ScriptParameters, StorageSlot,
         Transaction as FuelTransaction, TxId, TxParameters, TxPointer, UpgradePurpose,
-        UploadSubsection, UtxoId, Witness, field,
+        UploadSubsection, UtxoId, Witness, consensus_parameters, field,
     };
 }
 
@@ -83,7 +83,6 @@ pub mod prelude {
         tx::Receipt,
         types::{
             Address, AssetId, Bytes, ContractId, RawSlice, Salt,
-            bech32::{Bech32Address, Bech32ContractId},
             errors::{Error, Result},
             transaction::*,
         },

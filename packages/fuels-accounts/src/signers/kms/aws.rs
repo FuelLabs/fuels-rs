@@ -10,7 +10,7 @@ use fuel_crypto::{Message, PublicKey, Signature};
 use fuels_core::{
     traits::Signer,
     types::{
-        bech32::{Bech32Address, FUEL_BECH32_HRP},
+        Address,
         errors::{Error, Result},
     },
 };
@@ -27,7 +27,7 @@ pub struct AwsKmsSigner {
     key_id: String,
     client: Client,
     public_key_der: Vec<u8>,
-    fuel_address: Bech32Address,
+    fuel_address: Address,
 }
 
 impl AwsKmsSigner {
@@ -79,12 +79,13 @@ impl AwsKmsSigner {
             })
     }
 
-    fn derive_fuel_address(public_key: &[u8]) -> Result<Bech32Address> {
+    fn derive_fuel_address(public_key: &[u8]) -> Result<Address> {
         let k256_key = K256PublicKey::from_public_key_der(public_key)
             .map_err(|_| Error::Other(format!("{AWS_KMS_ERROR_PREFIX}: Invalid DER encoding")))?;
 
         let fuel_public_key = PublicKey::from(k256_key);
-        Ok(Bech32Address::new(FUEL_BECH32_HRP, fuel_public_key.hash()))
+
+        Ok(Address::from(*fuel_public_key.hash()))
     }
 
     async fn request_kms_signature(&self, message: Message) -> Result<Vec<u8>> {
@@ -140,8 +141,8 @@ impl Signer for AwsKmsSigner {
         ))
     }
 
-    fn address(&self) -> &Bech32Address {
-        &self.fuel_address
+    fn address(&self) -> Address {
+        self.fuel_address
     }
 }
 

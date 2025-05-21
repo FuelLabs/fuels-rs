@@ -8,7 +8,6 @@ Below you can find examples for common type conversions:
 - [Convert to `ContractId`](#convert-to-contractid)
 - [Convert to `Identity`](#convert-to-identity)
 - [Convert to `AssetId`](#convert-to-assetid)
-- [Convert to `Bech32`](#convert-to-bech32)
 - [Convert to `str`](#convert-to-str)
 - [Convert to `Bits256`](#convert-to-bits256)
 - [Convert to `Bytes`](#convert-to-bytes)
@@ -43,12 +42,6 @@ Convert a `[u8; 32]` array to an `Address`:
 
 ```rust,ignore
 {{#include ../../../examples/types/src/lib.rs:array_to_address}}
-```
-
-Convert a `Bech32` address to an `Address`:
-
-```rust,ignore
-{{#include ../../../examples/types/src/lib.rs:bech32_to_address}}
 ```
 
 Convert a wallet to an `Address`:
@@ -109,32 +102,6 @@ Convert a hex string to an `AssetId`:
 
 ```rust,ignore
 {{#include ../../../examples/types/src/lib.rs:string_to_asset_id}}
-```
-
-## Convert to `Bech32`
-
-Convert a `[u8; 32]` array to a `Bech32` address:
-
-```rust,ignore
-{{#include ../../../examples/types/src/lib.rs:array_to_bech32}}
-```
-
-Convert `Bytes32` to a `Bech32` address:
-
-```rust,ignore
-{{#include ../../../examples/types/src/lib.rs:bytes32_to_bech32}}
-```
-
-Convert a string to a `Bech32` address:
-
-```rust,ignore
-{{#include ../../../examples/types/src/lib.rs:str_to_bech32}}
-```
-
-Convert an `Address` to a `Bech32` address:
-
-```rust,ignore
-{{#include ../../../examples/types/src/lib.rs:address_to_bech32}}
 ```
 
 ## Convert to `str`

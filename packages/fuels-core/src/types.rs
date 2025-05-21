@@ -7,7 +7,6 @@ pub use fuel_types::{
 pub use crate::types::{core::*, token::*, wrappers::*};
 use crate::{error, types::errors::Result};
 
-pub mod bech32;
 mod core;
 mod dry_runner;
 pub mod errors;

@@ -27,7 +27,6 @@ use crate::{
     traits::Signer,
     types::{
         Address, AssetId, ContractId, DryRunner,
-        bech32::Bech32Address,
         coin::Coin,
         coin_type::CoinType,
         errors::{Result, error, error_transaction},
@@ -50,7 +49,7 @@ const GAS_ESTIMATION_BLOCK_HORIZON: u32 = DEFAULT_GAS_ESTIMATION_BLOCK_HORIZON;
 
 #[derive(Debug, Clone, Default)]
 struct UnresolvedWitnessIndexes {
-    owner_to_idx_offset: HashMap<Bech32Address, u64>,
+    owner_to_idx_offset: HashMap<Address, u64>,
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
@@ -190,7 +189,7 @@ macro_rules! impl_tx_builder_trait {
 
 
             fn add_signer(&mut self, signer: impl Signer + Send + Sync + 'static) -> Result<&mut Self> {
-                self.validate_no_signer_available(signer.address())?;
+                self.validate_no_signer_available(&signer.address())?;
 
 
                 let index_offset = self.unresolved_signers.len() as u64;
@@ -204,7 +203,7 @@ macro_rules! impl_tx_builder_trait {
 
             fn add_signers<'a>(&mut self, signers: impl IntoIterator<Item=&'a std::sync::Arc<dyn Signer + Send + Sync>>) -> Result<&mut Self> {
                 for signer in signers {
-                    self.validate_no_signer_available(signer.address())?;
+                    self.validate_no_signer_available(&signer.address())?;
 
                     let index_offset = self.unresolved_signers.len() as u64;
                     self.unresolved_witness_indexes
@@ -313,7 +312,7 @@ macro_rules! impl_tx_builder_trait {
         }
 
         impl $ty {
-            fn validate_no_signer_available(&self, address: &$crate::types::bech32::Bech32Address) -> Result<()> {
+            fn validate_no_signer_available(&self, address: &$crate::types::Address) -> Result<()> {
                 if self
                     .unresolved_witness_indexes
                     .owner_to_idx_offset
@@ -1413,7 +1412,7 @@ fn resolve_predicate_resource(
 pub fn create_coin_input(coin: Coin, witness_index: u16) -> FuelInput {
     FuelInput::coin_signed(
         coin.utxo_id,
-        coin.owner.into(),
+        coin.owner,
         coin.amount,
         coin.asset_id,
         TxPointer::default(),
@@ -1424,16 +1423,16 @@ pub fn create_coin_input(coin: Coin, witness_index: u16) -> FuelInput {
 pub fn create_coin_message_input(message: Message, witness_index: u16) -> FuelInput {
     if message.data.is_empty() {
         FuelInput::message_coin_signed(
-            message.sender.into(),
-            message.recipient.into(),
+            message.sender,
+            message.recipient,
             message.amount,
             message.nonce,
             witness_index,
         )
     } else {
         FuelInput::message_data_signed(
-            message.sender.into(),
-            message.recipient.into(),
+            message.sender,
+            message.recipient,
             message.amount,
             message.nonce,
             witness_index,
@@ -1450,7 +1449,7 @@ pub fn create_coin_predicate(
 ) -> FuelInput {
     FuelInput::coin_predicate(
         coin.utxo_id,
-        coin.owner.into(),
+        coin.owner,
         coin.amount,
         asset_id,
         TxPointer::default(),
@@ -1467,8 +1466,8 @@ pub fn create_coin_message_predicate(
 ) -> FuelInput {
     if message.data.is_empty() {
         FuelInput::message_coin_predicate(
-            message.sender.into(),
-            message.recipient.into(),
+            message.sender,
+            message.recipient,
             message.amount,
             message.nonce,
             0u64,
@@ -1477,8 +1476,8 @@ pub fn create_coin_message_predicate(
         )
     } else {
         FuelInput::message_data_predicate(
-            message.sender.into(),
-            message.recipient.into(),
+            message.sender,
+            message.recipient,
             message.amount,
             message.nonce,
             0u64,
@@ -1512,7 +1511,7 @@ mod tests {
     use fuel_tx::{ConsensusParameters, UtxoId, input::coin::CoinSigned};
 
     use super::*;
-    use crate::types::{DryRun, bech32::Bech32Address, message::MessageStatus};
+    use crate::types::{DryRun, message::MessageStatus};
 
     #[test]
     fn storage_slots_are_sorted_when_set() {
@@ -1566,8 +1565,8 @@ mod tests {
 
     fn given_a_message(data: Vec<u8>) -> Message {
         Message {
-            sender: Bech32Address::default(),
-            recipient: Bech32Address::default(),
+            sender: Address::default(),
+            recipient: Address::default(),
             nonce: 0.into(),
             amount: 0,
             data,
@@ -1579,7 +1578,7 @@ mod tests {
     fn given_a_coin(tx_id: [u8; 32], owner: [u8; 32], amount: u64) -> Coin {
         Coin {
             utxo_id: UtxoId::new(tx_id.into(), 0),
-            owner: Bech32Address::new("fuel", owner),
+            owner: Address::from(owner),
             amount,
             ..Default::default()
         }
@@ -1773,7 +1772,7 @@ mod tests {
 
     #[derive(Clone, Debug, Default)]
     struct MockSigner {
-        address: Bech32Address,
+        address: Address,
     }
 
     #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
@@ -1783,8 +1782,8 @@ mod tests {
         async fn sign(&self, _message: fuel_crypto::Message) -> Result<Signature> {
             Ok(Signature::default())
         }
-        fn address(&self) -> &Bech32Address {
-            &self.address
+        fn address(&self) -> Address {
+            self.address
         }
     }
 

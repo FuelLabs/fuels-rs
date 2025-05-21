@@ -3,9 +3,8 @@ use std::collections::HashMap;
 use async_trait::async_trait;
 use fuel_core_client::client::pagination::{PaginatedResult, PaginationRequest};
 use fuel_tx::{Output, TxId, TxPointer, UtxoId};
-use fuel_types::{AssetId, Bytes32, ContractId, Nonce};
 use fuels_core::types::{
-    bech32::{Bech32Address, Bech32ContractId},
+    Address, AssetId, Bytes32, ContractId, Nonce,
     coin::Coin,
     coin_type::CoinType,
     coin_type_id::CoinTypeId,
@@ -36,7 +35,7 @@ pub struct WithdrawToBaseResponse {
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait ViewOnlyAccount: Send + Sync {
-    fn address(&self) -> &Bech32Address;
+    fn address(&self) -> Address;
 
     fn try_provider(&self) -> Result<&Provider>;
 
@@ -46,7 +45,7 @@ pub trait ViewOnlyAccount: Send + Sync {
     ) -> Result<PaginatedResult<TransactionResponse, String>> {
         Ok(self
             .try_provider()?
-            .get_transactions_by_owner(self.address(), request)
+            .get_transactions_by_owner(&self.address(), request)
             .await?)
     }
 
@@ -54,7 +53,7 @@ pub trait ViewOnlyAccount: Send + Sync {
     async fn get_coins(&self, asset_id: AssetId) -> Result<Vec<Coin>> {
         Ok(self
             .try_provider()?
-            .get_coins(self.address(), asset_id)
+            .get_coins(&self.address(), asset_id)
             .await?)
     }
 
@@ -63,20 +62,20 @@ pub trait ViewOnlyAccount: Send + Sync {
     /// of the UTXOs.
     async fn get_asset_balance(&self, asset_id: &AssetId) -> Result<u64> {
         self.try_provider()?
-            .get_asset_balance(self.address(), *asset_id)
+            .get_asset_balance(&self.address(), asset_id)
             .await
     }
 
     /// Gets all unspent messages owned by the account.
     async fn get_messages(&self) -> Result<Vec<Message>> {
-        Ok(self.try_provider()?.get_messages(self.address()).await?)
+        Ok(self.try_provider()?.get_messages(&self.address()).await?)
     }
 
     /// Get all the spendable balances of all assets for the account. This is different from getting
     /// the coins because we are only returning the sum of UTXOs coins amount and not the UTXOs
     /// coins themselves.
     async fn get_balances(&self) -> Result<HashMap<String, u128>> {
-        self.try_provider()?.get_balances(self.address()).await
+        self.try_provider()?.get_balances(&self.address()).await
     }
 
     /// Get some spendable resources (coins and messages) of asset `asset_id` owned by the account
@@ -92,7 +91,7 @@ pub trait ViewOnlyAccount: Send + Sync {
             split_into_utxo_ids_and_nonces(excluded_coins);
 
         let filter = ResourceFilter {
-            from: self.address().clone(),
+            from: self.address(),
             asset_id: Some(asset_id),
             amount,
             excluded_utxos,
@@ -105,15 +104,15 @@ pub trait ViewOnlyAccount: Send + Sync {
     /// Returns a vector containing the output coin and change output given an asset and amount
     fn get_asset_outputs_for_amount(
         &self,
-        to: &Bech32Address,
+        to: Address,
         asset_id: AssetId,
         amount: u64,
     ) -> Vec<Output> {
         vec![
-            Output::coin(to.into(), amount, asset_id),
+            Output::coin(to, amount, asset_id),
             // Note that the change will be computed by the node.
             // Here we only have to tell the node who will own the change and its asset ID.
-            Output::change(self.address().into(), 0, asset_id),
+            Output::change(self.address(), 0, asset_id),
         ]
     }
 
@@ -157,7 +156,7 @@ pub trait ViewOnlyAccount: Send + Sync {
             tb.inputs_mut().extend(new_base_inputs);
         };
 
-        add_base_change_if_needed(tb, self.address(), consensus_parameters.base_asset_id());
+        add_base_change_if_needed(tb, self.address(), *consensus_parameters.base_asset_id());
 
         Ok(())
     }
@@ -175,7 +174,7 @@ pub trait Account: ViewOnlyAccount {
     /// Returns the transaction ID that was sent and the list of receipts.
     async fn transfer(
         &self,
-        to: &Bech32Address,
+        to: Address,
         amount: u64,
         asset_id: AssetId,
         tx_policies: TxPolicies,
@@ -224,7 +223,7 @@ pub trait Account: ViewOnlyAccount {
     /// to the PERMANENT LOSS OF COINS if not used with care.
     async fn force_transfer_to_contract(
         &self,
-        to: &Bech32ContractId,
+        to: ContractId,
         balance: u64,
         asset_id: AssetId,
         tx_policies: TxPolicies,
@@ -232,14 +231,13 @@ pub trait Account: ViewOnlyAccount {
         let provider = self.try_provider()?;
 
         let zeroes = Bytes32::zeroed();
-        let plain_contract_id: ContractId = to.into();
 
         let mut inputs = vec![Input::contract(
             UtxoId::new(zeroes, 0),
             zeroes,
             zeroes,
             TxPointer::default(),
-            plain_contract_id,
+            to,
         )];
 
         inputs.extend(
@@ -249,12 +247,12 @@ pub trait Account: ViewOnlyAccount {
 
         let outputs = vec![
             Output::contract(0, zeroes, zeroes),
-            Output::change(self.address().into(), 0, asset_id),
+            Output::change(self.address(), 0, asset_id),
         ];
 
         // Build transaction and sign it
         let mut tb = ScriptTransactionBuilder::prepare_contract_transfer(
-            plain_contract_id,
+            to,
             balance,
             asset_id,
             inputs,
@@ -285,7 +283,7 @@ pub trait Account: ViewOnlyAccount {
     /// Returns the transaction ID, message ID and the list of receipts.
     async fn withdraw_to_base_layer(
         &self,
-        to: &Bech32Address,
+        to: Address,
         amount: u64,
         tx_policies: TxPolicies,
     ) -> Result<WithdrawToBaseResponse> {
@@ -297,7 +295,7 @@ pub trait Account: ViewOnlyAccount {
             .await?;
 
         let mut tb = ScriptTransactionBuilder::prepare_message_to_output(
-            to.into(),
+            to,
             amount,
             inputs,
             tx_policies,
@@ -385,7 +383,7 @@ mod tests {
             let input_coin = Input::ResourceSigned {
                 resource: CoinType::Coin(Coin {
                     amount: 10000000,
-                    owner: signer.address().clone(),
+                    owner: signer.address(),
                     ..Default::default()
                 }),
             };
@@ -397,7 +395,7 @@ mod tests {
                 1,
                 Default::default(),
             );
-            let change = Output::change(signer.address().into(), 0, Default::default());
+            let change = Output::change(signer.address(), 0, Default::default());
 
             ScriptTransactionBuilder::prepare_transfer(
                 vec![input_coin],
@@ -434,7 +432,7 @@ mod tests {
         // Recover the address that signed the transaction
         let recovered_address = signature.recover(&message)?;
 
-        assert_eq!(signer.address().hash(), recovered_address.hash());
+        assert_eq!(*signer.address(), *recovered_address.hash());
 
         // Verify signature
         signature.verify(&recovered_address, &message)?;

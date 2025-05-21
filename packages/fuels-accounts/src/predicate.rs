@@ -4,7 +4,7 @@ use std::{fmt::Debug, fs};
 use fuels_core::types::{AssetId, coin_type_id::CoinTypeId, input::Input};
 use fuels_core::{
     Configurables, error,
-    types::{bech32::Bech32Address, errors::Result},
+    types::{Address, errors::Result},
 };
 
 #[cfg(feature = "std")]
@@ -14,7 +14,7 @@ use crate::{Account, ViewOnlyAccount, provider::Provider};
 
 #[derive(Debug, Clone)]
 pub struct Predicate {
-    address: Bech32Address,
+    address: Address,
     code: Vec<u8>,
     data: Vec<u8>,
     #[cfg(feature = "std")]
@@ -22,8 +22,8 @@ pub struct Predicate {
 }
 
 impl Predicate {
-    pub fn address(&self) -> &Bech32Address {
-        &self.address
+    pub fn address(&self) -> Address {
+        self.address
     }
 
     pub fn code(&self) -> &[u8] {
@@ -34,8 +34,8 @@ impl Predicate {
         &self.data
     }
 
-    pub fn calculate_address(code: &[u8]) -> Bech32Address {
-        fuel_tx::Input::predicate_owner(code).into()
+    pub fn calculate_address(code: &[u8]) -> Address {
+        fuel_tx::Input::predicate_owner(code)
     }
 
     pub fn load_from(file_path: &str) -> Result<Self> {
@@ -102,7 +102,7 @@ impl Predicate {
 #[cfg(feature = "std")]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 impl ViewOnlyAccount for Predicate {
-    fn address(&self) -> &Bech32Address {
+    fn address(&self) -> Address {
         self.address()
     }
 
