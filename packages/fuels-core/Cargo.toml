@@ -30,7 +30,6 @@ serde_json = { workspace = true, default-features = true }
 sha2 = { workspace = true }
 thiserror = { workspace = true, default-features = false }
 uint = { workspace = true, default-features = false }
-rand = { workspace = true }
 auto_impl = { workspace = true }
 
 [dev-dependencies]
