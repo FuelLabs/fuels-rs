@@ -3,7 +3,7 @@ use fuel_crypto::{Message, PublicKey, Signature};
 use fuels_core::{
     traits::Signer,
     types::{
-        bech32::{Bech32Address, FUEL_BECH32_HRP},
+        Address,
         errors::{Error, Result},
     },
 };
@@ -27,7 +27,7 @@ pub struct GoogleKmsSigner {
     key_path: String,
     client: Client,
     public_key_pem: String,
-    fuel_address: Bech32Address,
+    fuel_address: Address,
 }
 
 #[derive(Debug, Clone)]
@@ -101,13 +101,14 @@ impl GoogleKmsSigner {
         Ok(response.pem)
     }
 
-    fn derive_fuel_address(pem: &str) -> Result<Bech32Address> {
+    fn derive_fuel_address(pem: &str) -> Result<Address> {
         let k256_key = K256PublicKey::from_public_key_pem(pem).map_err(|_| {
             Error::Other(format!("{GOOGLE_KMS_ERROR_PREFIX}: Invalid PEM encoding"))
         })?;
 
         let fuel_public_key = PublicKey::from(k256_key);
-        Ok(Bech32Address::new(FUEL_BECH32_HRP, fuel_public_key.hash()))
+
+        Ok(Address::from(*fuel_public_key.hash()))
     }
 
     async fn request_gcp_signature(&self, message: Message) -> Result<Vec<u8>> {
@@ -170,8 +171,8 @@ impl Signer for GoogleKmsSigner {
         ))
     }
 
-    fn address(&self) -> &Bech32Address {
-        &self.fuel_address
+    fn address(&self) -> Address {
+        self.fuel_address
     }
 }
 
