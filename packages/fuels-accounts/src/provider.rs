@@ -590,7 +590,7 @@ impl Provider {
         &self,
         address: &Bech32Address,
         asset_id: AssetId,
-    ) -> Result<u64> {
+    ) -> Result<u128> {
         Ok(self
             .uncached_client()
             .balance(&address.into(), Some(&asset_id))
