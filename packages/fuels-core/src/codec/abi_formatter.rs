@@ -3,9 +3,8 @@ use std::{collections::HashMap, io::Read};
 use fuel_abi_types::abi::unified_program::UnifiedProgramABI;
 use itertools::Itertools;
 
-use crate::{Result, error, offsets::extract_offset_at, types::param_types::ParamType};
-
 use super::{ABIDecoder, DecoderConfig};
+use crate::{Result, error, offsets::extract_offset_at, types::param_types::ParamType};
 
 struct FormatterConfigurable {
     name: String,

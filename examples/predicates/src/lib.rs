@@ -191,7 +191,7 @@ mod tests {
         ));
 
         let configurables_reader = MyPredicateConfigurablesReader::load_from(
-            "../../e2e/sway/predicates/predicate_configurables/out/release/predicate_configurables.bin"
+            "../../e2e/sway/predicates/predicate_configurables/out/release/predicate_configurables.bin",
         )?;
 
         let some_bool = configurables_reader.BOOL()?;
