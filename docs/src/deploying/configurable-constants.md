@@ -18,7 +18,7 @@ In addition to writing, you are able to read the configurable constants directly
 {{#include ../../../examples/contracts/src/lib.rs:contract_configurables_reader}}
 ```
 
-If you need to manually read the configurable constants, you can use helper functions provided by the sdk.
+If you need to manually read the configurable constants, you can use helper functions provided by the SDK.
 
 ```rust,ignore
 {{#include ../../../e2e/tests/configurables.rs:manual_configurables}}
