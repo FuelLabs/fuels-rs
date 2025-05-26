@@ -147,6 +147,7 @@ pub(crate) fn expected_storage_slots_filepath(contract_binary: &Path) -> Option<
 
     Some(dir.join(format!("{binary_filename}-storage_slots.json")))
 }
+
 pub(crate) fn validate_path_and_extension(file_path: &Path, extension: &str) -> Result<()> {
     if !file_path.exists() {
         return Err(error!(IO, "file {file_path:?} does not exist"));

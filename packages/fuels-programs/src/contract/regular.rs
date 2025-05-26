@@ -31,7 +31,7 @@ pub struct DeployResponse {
 // In a mod so that we eliminate the footgun of getting the private `code` field without applying
 // configurables
 mod code_types {
-    use fuels_core::Configurables;
+    use fuels_core::{Configurables, types::errors::Result};
 
     #[derive(Debug, Clone, PartialEq)]
     pub struct Regular {
@@ -47,20 +47,29 @@ mod code_types {
             }
         }
 
-        pub(crate) fn with_code(self, code: Vec<u8>) -> Self {
-            Self { code, ..self }
+        pub(crate) fn with_code(self, code: Vec<u8>) -> Result<Self> {
+            let mut new_code = code.clone();
+            self.configurables.update_constants_in(&mut new_code)?;
+
+            Ok(Self { code, ..self })
         }
 
-        pub(crate) fn with_configurables(self, configurables: Configurables) -> Self {
-            Self {
+        pub(crate) fn with_configurables(self, configurables: Configurables) -> Result<Self> {
+            let mut new_code = self.code.clone();
+            configurables.update_constants_in(&mut new_code)?;
+
+            Ok(Self {
                 configurables,
                 ..self
-            }
+            })
         }
 
         pub(crate) fn code(&self) -> Vec<u8> {
             let mut code = self.code.clone();
-            self.configurables.update_constants_in(&mut code);
+            self.configurables
+                .update_constants_in(&mut code)
+                .expect("is ok as it is checked in `with_code` and `with_configurables`");
+
             code
         }
     }
@@ -68,19 +77,19 @@ mod code_types {
 pub use code_types::*;
 
 impl Contract<Regular> {
-    pub fn with_code(self, code: Vec<u8>) -> Self {
-        Self {
-            code: self.code.with_code(code),
+    pub fn with_code(self, code: Vec<u8>) -> Result<Self> {
+        Ok(Self {
+            code: self.code.with_code(code)?,
             salt: self.salt,
             storage_slots: self.storage_slots,
-        }
+        })
     }
 
-    pub fn with_configurables(self, configurables: impl Into<Configurables>) -> Self {
-        Self {
-            code: self.code.with_configurables(configurables.into()),
+    pub fn with_configurables(self, configurables: impl Into<Configurables>) -> Result<Self> {
+        Ok(Self {
+            code: self.code.with_configurables(configurables.into())?,
             ..self
-        }
+        })
     }
 
     pub fn code(&self) -> Vec<u8> {

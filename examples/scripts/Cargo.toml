@@ -1,0 +1,14 @@
+[package]
+name = "fuels-example-scripts"
+version = { workspace = true }
+authors = { workspace = true }
+edition = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+publish = false
+repository = { workspace = true }
+description = "Fuel Rust SDK scripts examples."
+
+[dev-dependencies]
+fuels = { workspace = true, features = ["default"] }
+tokio = { workspace = true, features = ["full"] }

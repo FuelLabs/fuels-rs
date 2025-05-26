@@ -13,7 +13,7 @@ use crate::calls::utils::{generate_contract_inputs, generate_contract_outputs, s
 #[derive(Debug, Clone)]
 /// Contains all data relevant to a single script call
 pub struct ScriptCall {
-    pub script_binary: Vec<u8>,
+    pub script_binary: Result<Vec<u8>>,
     pub encoded_args: Result<Vec<u8>>,
     pub inputs: Vec<Input>,
     pub outputs: Vec<Output>,

@@ -179,4 +179,30 @@ mod tests {
         // ANCHOR_END: predicate_data_unlock
         Ok(())
     }
+
+    #[tokio::test]
+    async fn predicate_configurables_reader() -> Result<()> {
+        use fuels::prelude::*;
+
+        // ANCHOR: predicate_configurables_reader
+        abigen!(Predicate(
+            name = "MyPredicate",
+            abi = "e2e/sway/predicates/predicate_configurables/out/release/predicate_configurables-abi.json"
+        ));
+
+        let configurables_reader = MyPredicateConfigurablesReader::load_from(
+            "../../e2e/sway/predicates/predicate_configurables/out/release/predicate_configurables.bin",
+        )?;
+
+        let some_bool = configurables_reader.BOOL()?;
+        let some_u8 = configurables_reader.U8()?;
+        let some_array = configurables_reader.ARRAY()?;
+        // ANCHOR_END: predicate_configurables_reader
+
+        assert!(some_bool);
+        assert_eq!(some_u8, 8);
+        assert_eq!(some_array, [253, 254, 255]);
+
+        Ok(())
+    }
 }

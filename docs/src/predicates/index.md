@@ -54,3 +54,9 @@ Each configurable constant will get a dedicated `with` method in the SDK. For ex
 ```rust,ignore
 {{#include ../../../e2e/tests/predicates.rs:predicate_configurables}}
 ```
+
+In addition to writing, you are able to read the configurable constants directly from the binary:
+
+```rust,ignore
+{{#include ../../../examples/predicates/src/lib.rs:predicate_configurables_reader}}
+```

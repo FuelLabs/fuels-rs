@@ -90,10 +90,11 @@ impl Executable<Regular> {
     /// # Returns
     ///
     /// The bytecode of the executable with configurables updated.
-    pub fn code(&self) -> Vec<u8> {
+    pub fn code(&self) -> Result<Vec<u8>> {
         let mut code = self.state.code.clone();
-        self.state.configurables.update_constants_in(&mut code);
-        code
+        self.state.configurables.update_constants_in(&mut code)?;
+
+        Ok(code)
     }
 
     /// Converts the `Executable<Regular>` into an `Executable<Loader>`.
@@ -133,26 +134,25 @@ impl Executable<Loader> {
     }
 
     #[deprecated(note = "Use `configurables_offset_in_code` instead")]
-    pub fn data_offset_in_code(&self) -> usize {
-        self.loader_code().configurables_section_offset()
+    pub fn data_offset_in_code(&self) -> Result<usize> {
+        Ok(self.loader_code()?.configurables_section_offset())
     }
 
-    pub fn configurables_offset_in_code(&self) -> usize {
-        self.loader_code().configurables_section_offset()
+    pub fn configurables_offset_in_code(&self) -> Result<usize> {
+        Ok(self.loader_code()?.configurables_section_offset())
     }
 
-    fn loader_code(&self) -> LoaderCode {
+    fn loader_code(&self) -> Result<LoaderCode> {
         let mut code = self.state.code.clone();
 
-        self.state.configurables.update_constants_in(&mut code);
+        self.state.configurables.update_constants_in(&mut code)?;
 
         LoaderCode::from_normal_binary(code)
-            .expect("checked before turning into a Executable<Loader>")
     }
 
     /// Returns the code of the loader executable with configurables applied.
-    pub fn code(&self) -> Vec<u8> {
-        self.loader_code().as_bytes().to_vec()
+    pub fn code(&self) -> Result<Vec<u8>> {
+        Ok(self.loader_code()?.as_bytes().to_vec())
     }
 
     /// A Blob containing the original executable code minus the data section.
@@ -202,7 +202,7 @@ fn validate_loader_can_be_made_from_code(
     mut code: Vec<u8>,
     configurables: Configurables,
 ) -> Result<()> {
-    configurables.update_constants_in(&mut code);
+    configurables.update_constants_in(&mut code)?;
 
     let _ = LoaderCode::from_normal_binary(code)?;
 
@@ -272,7 +272,7 @@ mod tests {
         // Given: An Executable<Regular> and some configurables
         let code = vec![1u8, 2, 3, 4];
         let executable = Executable::<Regular>::from_bytes(code);
-        let configurables = Configurables::new(vec![(2, vec![1])]);
+        let configurables = Configurables::new(vec![(2, vec![1])], vec![]);
 
         // When: Setting new configurables
         let new_executable = executable.with_configurables(configurables.clone());
@@ -285,12 +285,12 @@ mod tests {
     fn test_executable_regular_code() {
         // Given: An Executable<Regular> with some code and configurables
         let code = vec![1u8, 2, 3, 4];
-        let configurables = Configurables::new(vec![(1, vec![1])]);
+        let configurables = Configurables::new(vec![(1, vec![1])], vec![]);
         let executable =
             Executable::<Regular>::from_bytes(code.clone()).with_configurables(configurables);
 
         // When: Retrieving the code after applying configurables
-        let modified_code = executable.code();
+        let modified_code = executable.code().unwrap();
 
         assert_eq!(modified_code, vec![1, 1, 3, 4]);
     }
@@ -330,7 +330,7 @@ mod tests {
         assert_eq!(blob.as_ref(), data_stripped_code);
 
         // And: Loader code should match expected binary
-        let loader_code = loader.code();
+        let loader_code = loader.code().unwrap();
 
         assert_eq!(
             loader_code,
@@ -373,7 +373,7 @@ mod tests {
         assert_eq!(blob.as_ref(), configurable_stripped_code);
 
         // And: Loader code should match expected binary
-        let loader_code = loader.code();
+        let loader_code = loader.code().unwrap();
         assert_eq!(
             loader_code,
             LoaderCode::from_normal_binary(code).unwrap().as_bytes()

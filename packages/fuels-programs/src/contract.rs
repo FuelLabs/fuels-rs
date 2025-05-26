@@ -243,16 +243,6 @@ mod tests {
         Ok(())
     }
 
-    macro_rules! getters_work {
-        ($contract: ident, $contract_id: expr, $state_root: expr, $code_root: expr, $salt: expr, $code: expr) => {
-            assert_eq!($contract.contract_id(), $contract_id);
-            assert_eq!($contract.state_root(), $state_root);
-            assert_eq!($contract.code_root(), $code_root);
-            assert_eq!($contract.salt(), $salt);
-            assert_eq!($contract.code(), $code);
-        };
-    }
-
     #[test]
     fn regular_contract_has_expected_getters() -> Result<()> {
         let contract_binary = b"some fake contract code";
@@ -267,16 +257,23 @@ mod tests {
             "69ca130191e9e469f1580229760b327a0729237f1aff65cf1d076b2dd8360031".parse()?;
         let expected_salt = Salt::zeroed();
 
-        getters_work!(
-            contract,
-            expected_contract_id,
-            expected_state_root,
-            expected_code_root,
-            expected_salt,
-            contract_binary
-        );
+        assert_eq!(contract.contract_id(), expected_contract_id);
+        assert_eq!(contract.state_root(), expected_state_root);
+        assert_eq!(contract.code_root(), expected_code_root);
+        assert_eq!(contract.salt(), expected_salt);
+        assert_eq!(contract.code(), contract_binary);
 
         Ok(())
+    }
+
+    macro_rules! getters_work {
+        ($contract: ident, $contract_id: expr, $state_root: expr, $code_root: expr, $salt: expr, $code: expr) => {
+            assert_eq!($contract.contract_id(), $contract_id);
+            assert_eq!($contract.state_root(), $state_root);
+            assert_eq!($contract.code_root(), $code_root);
+            assert_eq!($contract.salt(), $salt);
+            assert_eq!($contract.code(), $code);
+        };
     }
 
     #[test]
@@ -303,7 +300,7 @@ mod tests {
         let loader = original.clone().convert_to_loader(1024)?;
 
         let loader_asm = loader_contract_asm(&loader.blob_ids()).unwrap();
-        let manual_loader = original.with_code(loader_asm);
+        let manual_loader = original.with_code(loader_asm)?;
 
         getters_work!(
             loader,
@@ -348,7 +345,7 @@ mod tests {
         let loader = Contract::loader_from_blob_ids(blob_ids.clone(), Salt::default(), vec![])?;
 
         let loader_asm = loader_contract_asm(&blob_ids).unwrap();
-        let manual_loader = original_contract.with_code(loader_asm);
+        let manual_loader = original_contract.with_code(loader_asm)?;
 
         getters_work!(
             loader,

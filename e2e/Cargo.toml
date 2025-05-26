@@ -22,6 +22,8 @@ fuel-tx = { workspace = true }
 # used in test assertions
 tai64 = { workspace = true }
 tempfile = { workspace = true }
+tokio = { workspace = true, features = ["test-util"] }
+test-case = { workspace = true }
 
 [build-dependencies]
 anyhow = { workspace = true, features = ["std"] }

@@ -9,7 +9,9 @@ use crate::{
     program_bindings::{
         abigen::{
             bindings::{function_generator::FunctionGenerator, utils::extract_main_fn},
-            configurables::generate_code_for_configurable_constants,
+            configurables::{
+                generate_code_for_configurable_constants, generate_code_for_configurable_reader,
+            },
             logs::{generate_id_error_codes_pairs, log_formatters_instantiation_code},
         },
         generated_code::GeneratedCode,
@@ -40,6 +42,10 @@ pub(crate) fn script_bindings(
     let configuration_struct_name = ident(&format!("{name}Configurables"));
     let constant_configuration_code =
         generate_code_for_configurable_constants(&configuration_struct_name, &abi.configurables)?;
+
+    let configuration_reader_name = ident(&format!("{name}ConfigurablesReader"));
+    let constant_configuration_reader_code =
+        generate_code_for_configurable_reader(&configuration_reader_name, &abi.configurables)?;
 
     let code = quote! {
         #[derive(Debug,Clone)]
@@ -85,7 +91,7 @@ pub(crate) fn script_bindings(
                 self
             }
 
-            pub fn code(&self) -> ::std::vec::Vec<u8> {
+            pub fn code(&self) -> ::fuels::types::errors::Result<::std::vec::Vec<u8>> {
                 let regular = ::fuels::programs::executable::Executable::from_bytes(self.unconfigured_binary.clone()).with_configurables(self.configurables.clone());
 
                 if self.converted_into_loader {
@@ -135,10 +141,11 @@ pub(crate) fn script_bindings(
         }
 
         #constant_configuration_code
+        #constant_configuration_reader_code
     };
 
     // All publicly available types generated above should be listed here.
-    let type_paths = [name, &configuration_struct_name]
+    let type_paths = [name, &configuration_struct_name, &configuration_reader_name]
         .map(|type_name| TypePath::new(type_name).expect("We know the given types are not empty"))
         .into_iter()
         .collect();

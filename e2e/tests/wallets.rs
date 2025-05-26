@@ -529,6 +529,7 @@ async fn wallet_transfer_respects_maturity_and_expiration() -> Result<()> {
     }
     let transaction_fee = {
         provider.produce_blocks(15, None).await?;
+
         wallet
             .transfer(&receiver, amount_to_send, asset_id, tx_policies)
             .await

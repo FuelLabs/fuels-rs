@@ -19,7 +19,7 @@ configurable {
     U64: u64 = 63,
     U256: u256 = 0x0000000000000000000000000000000000000000000000000000000000000008u256,
     B256: b256 = 0x0101010101010101010101010101010101010101010101010101010101010101,
-    STR_4: str[4] = __to_str_array("fuel"),
+    STR: str = "fuel",
     TUPLE: (u8, bool) = (8, true),
     ARRAY: [u32; 3] = [253, 254, 255],
     STRUCT: StructWithGeneric<u8> = StructWithGeneric {
@@ -31,11 +31,11 @@ configurable {
 //U128: u128 = 128, //TODO: add once https://github.com/FuelLabs/sway/issues/5356 is done
 
 abi TestContract {
-    fn return_configurables() -> (bool, u8, u16, u32, u64, u256, b256, str[4], (u8, bool), [u32; 3], StructWithGeneric<u8>, EnumWithGeneric<bool>);
+    fn return_configurables() -> (bool, u8, u16, u32, u64, u256, b256, str, (u8, bool), [u32; 3], StructWithGeneric<u8>, EnumWithGeneric<bool>);
 }
 
 impl TestContract for Contract {
-    fn return_configurables() -> (bool, u8, u16, u32, u64, u256, b256, str[4], (u8, bool), [u32; 3], StructWithGeneric<u8>, EnumWithGeneric<bool>) {
-        (BOOL, U8, U16, U32, U64, U256, B256, STR_4, TUPLE, ARRAY, STRUCT, ENUM)
+    fn return_configurables() -> (bool, u8, u16, u32, u64, u256, b256, str, (u8, bool), [u32; 3], StructWithGeneric<u8>, EnumWithGeneric<bool>) {
+        (BOOL, U8, U16, U32, U64, U256, B256, STR, TUPLE, ARRAY, STRUCT, ENUM)
     }
 }
