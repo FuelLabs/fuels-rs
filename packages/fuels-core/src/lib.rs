@@ -54,12 +54,18 @@ impl ConfigurablesReader {
         self
     }
 
+    /// Decodes direct (static) configurables from a binary starting at `offset`
+    /// into a concrete type.
     pub fn try_from_direct<T: Tokenizable + Parameterize>(&self, offset: usize) -> Result<T> {
         check_binary_len(&self.binary, offset)?;
 
         try_from_bytes(&self.binary[offset..], self.decoder_config)
     }
 
+    /// Decodes indirect (dynamic) configurables from a binary into a concrete type.
+    /// As indirect configurables use a pointer to point to the dynamic data,
+    /// this method will first read the dynamic data offset and then decode the data
+    /// starting at the dynamic offset.
     pub fn try_from_indirect<T: Tokenizable + Parameterize>(&self, offset: usize) -> Result<T> {
         let data_offset = extract_data_offset(&self.binary)?;
         let dyn_offset = extract_offset_at(&self.binary, offset)?;
@@ -72,12 +78,17 @@ impl ConfigurablesReader {
         )
     }
 
+    /// Decodes direct (static) configurables from a binary starting at `offset`.
     pub fn decode_direct(&self, offset: usize, param_type: &ParamType) -> Result<Token> {
         check_binary_len(&self.binary, offset)?;
 
         ABIDecoder::new(self.decoder_config).decode(param_type, &self.binary[offset..])
     }
 
+    /// Decodes indirect (dynamic) configurables from a binary.
+    /// As indirect configurables use a pointer to point to the dynamic data,
+    /// this method will first read the dynamic data offset and then decode the data
+    /// starting at the dynamic offset.
     pub fn decode_indirect(&self, offset: usize, param_type: &ParamType) -> Result<Token> {
         let data_offset = extract_data_offset(&self.binary)?;
         let dyn_offset = extract_offset_at(&self.binary, offset)?;
