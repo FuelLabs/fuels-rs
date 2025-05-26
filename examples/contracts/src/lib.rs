@@ -1082,7 +1082,7 @@ mod tests {
             .contract_params()
             .contract_max_size();
 
-        assert!(contract.code()?.len() as u64 > max_allowed);
+        assert!(contract.code().len() as u64 > max_allowed);
         // ANCHOR_END: show_contract_is_too_big
 
         let wallet = main_wallet.clone();
@@ -1194,7 +1194,7 @@ mod tests {
             "all chunks, except the last, must be word-aligned"
         );
         let blobs = contract
-            .code()?
+            .code()
             .chunks(chunk_size)
             .map(|chunk| Blob::new(chunk.to_vec()))
             .collect();
@@ -1288,7 +1288,7 @@ mod tests {
 
         let wallet = launch_provider_and_get_wallet().await?;
 
-        let str_4: fuels::types::SizedAsciiString<4> = "FUEL".try_into()?;
+        let str: fuels::types::AsciiString = "FUEL".try_into()?;
         let new_struct = StructWithGeneric {
             field_1: 16u8,
             field_2: 32,
@@ -1303,7 +1303,7 @@ mod tests {
             .with_U64(63)?
             .with_U256(fuels::types::U256::from(8))?
             .with_B256(Bits256([2; 32]))?
-            .with_STR_4(str_4.clone())?
+            .with_STR(str.clone())?
             .with_TUPLE((7, false))?
             .with_ARRAY([252, 253, 254])?
             .with_STRUCT(new_struct.clone())?
@@ -1334,7 +1334,7 @@ mod tests {
             63,
             fuels::types::U256::from(8),
             Bits256([2; 32]),
-            str_4,
+            str,
             (7, false),
             [252, 253, 254],
             new_struct,
@@ -1362,14 +1362,14 @@ mod tests {
 
         let some_bool = configurables_reader.BOOL()?;
         let some_u8 = configurables_reader.U8()?;
-        let some_str_4 = configurables_reader.STR_4()?;
+        let some_str = configurables_reader.STR()?;
         let some_array = configurables_reader.ARRAY()?;
         // ANCHOR_END: contract_configurables_reader
 
-        let str_4: fuels::types::SizedAsciiString<4> = "fuel".try_into()?;
+        let str: fuels::types::AsciiString = "fuel".try_into()?;
         assert!(some_bool);
         assert_eq!(some_u8, 8);
-        assert_eq!(some_str_4, str_4);
+        assert_eq!(some_str, str);
         assert_eq!(some_array, [253, 254, 255]);
 
         Ok(())

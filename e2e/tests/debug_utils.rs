@@ -20,7 +20,7 @@ async fn can_debug_single_call_tx() -> Result<()> {
         "sway/types/contracts/nested_structs/out/release/nested_structs.bin",
         Default::default(),
     )?
-    .contract_id()?;
+    .contract_id();
 
     let call_handler = MyContract::new(contract_id, wallet)
         .methods()
@@ -137,7 +137,7 @@ async fn can_debug_multi_call_tx() -> Result<()> {
         "sway/types/contracts/nested_structs/out/release/nested_structs.bin",
         Default::default(),
     )?
-    .contract_id()?;
+    .contract_id();
 
     let call1 = MyContract::new(contract_id, wallet.clone())
         .methods()

@@ -1419,7 +1419,7 @@ async fn is_account_query_test() -> Result<()> {
             "sway/contracts/contract_test/out/release/contract_test.bin",
             LoadConfiguration::default(),
         )?;
-        let contract_id = contract.contract_id()?;
+        let contract_id = contract.contract_id();
 
         let is_account = provider.is_user_account(*contract_id).await?;
         assert!(is_account);

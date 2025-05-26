@@ -224,7 +224,7 @@ mod tests {
         )?;
 
         // then
-        assert_eq!(contract.code()?, code);
+        assert_eq!(contract.code(), code);
 
         Ok(())
     }
@@ -238,7 +238,7 @@ mod tests {
         let contract = Contract::regular(binary.to_vec(), Salt::zeroed(), vec![]);
 
         // then
-        assert_eq!(contract.code()?, binary);
+        assert_eq!(contract.code(), binary);
 
         Ok(())
     }
@@ -257,11 +257,11 @@ mod tests {
             "69ca130191e9e469f1580229760b327a0729237f1aff65cf1d076b2dd8360031".parse()?;
         let expected_salt = Salt::zeroed();
 
-        assert_eq!(contract.contract_id()?, expected_contract_id);
-        assert_eq!(contract.state_root()?, expected_state_root);
-        assert_eq!(contract.code_root()?, expected_code_root);
+        assert_eq!(contract.contract_id(), expected_contract_id);
+        assert_eq!(contract.state_root(), expected_state_root);
+        assert_eq!(contract.code_root(), expected_code_root);
         assert_eq!(contract.salt(), expected_salt);
-        assert_eq!(contract.code()?, contract_binary);
+        assert_eq!(contract.code(), contract_binary);
 
         Ok(())
     }
@@ -300,15 +300,15 @@ mod tests {
         let loader = original.clone().convert_to_loader(1024)?;
 
         let loader_asm = loader_contract_asm(&loader.blob_ids()).unwrap();
-        let manual_loader = original.with_code(loader_asm);
+        let manual_loader = original.with_code(loader_asm)?;
 
         getters_work!(
             loader,
-            manual_loader.contract_id()?,
-            manual_loader.state_root()?,
-            manual_loader.code_root()?,
+            manual_loader.contract_id(),
+            manual_loader.state_root(),
+            manual_loader.code_root(),
             manual_loader.salt(),
-            manual_loader.code()?
+            manual_loader.code()
         );
 
         Ok(())
@@ -345,15 +345,15 @@ mod tests {
         let loader = Contract::loader_from_blob_ids(blob_ids.clone(), Salt::default(), vec![])?;
 
         let loader_asm = loader_contract_asm(&blob_ids).unwrap();
-        let manual_loader = original_contract.with_code(loader_asm);
+        let manual_loader = original_contract.with_code(loader_asm)?;
 
         getters_work!(
             loader,
-            manual_loader.contract_id()?,
-            manual_loader.state_root()?,
-            manual_loader.code_root()?,
+            manual_loader.contract_id(),
+            manual_loader.state_root(),
+            manual_loader.code_root(),
             manual_loader.salt(),
-            manual_loader.code()?
+            manual_loader.code()
         );
 
         Ok(())
