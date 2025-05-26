@@ -127,7 +127,7 @@ async fn contract_configurables(is_regular: bool) -> Result<()> {
 
     let wallet = launch_provider_and_get_wallet().await?;
 
-    let str_4: SizedAsciiString<4> = "FUEL".try_into()?;
+    let str: AsciiString = "FUEL".try_into()?;
     let new_struct = StructWithGeneric {
         field_1: 16u8,
         field_2: 32,
@@ -142,7 +142,7 @@ async fn contract_configurables(is_regular: bool) -> Result<()> {
         .with_U64(63)?
         .with_U256(U256::from(8))?
         .with_B256(Bits256([2; 32]))?
-        .with_STR_4(str_4.clone())?
+        .with_STR(str.clone())?
         .with_TUPLE((7, false))?
         .with_ARRAY([252, 253, 254])?
         .with_STRUCT(new_struct.clone())?
@@ -182,7 +182,7 @@ async fn contract_configurables(is_regular: bool) -> Result<()> {
         63,
         U256::from(8),
         Bits256([2; 32]),
-        str_4,
+        str,
         (7, false),
         [252, 253, 254],
         new_struct,
@@ -435,17 +435,18 @@ async fn contract_configurables_reader() -> Result<()> {
 
 #[tokio::test]
 async fn contract_configurables_reader_manual() -> Result<()> {
-    // TODO: add documentation
+    // ANCHOR: manual_configurables
     let configurables_reader = ConfigurablesReader::load_from(
         "sway/contracts/dyn_configurables/out/release/dyn_configurables.bin",
     )?;
 
-    let some_bool: bool = configurables_reader.try_from_direct(2094)?;
-    let some_u8: u8 = configurables_reader.try_from_direct(2944)?;
-    let some_str: AsciiString = configurables_reader.try_from_indirect(2920)?;
-    let some_str2: AsciiString = configurables_reader.try_from_indirect(2928)?;
-    let some_str3: AsciiString = configurables_reader.try_from_indirect(2936)?;
-    let some_last_u8: u8 = configurables_reader.try_from_direct(2912)?;
+    let some_bool: bool = configurables_reader.try_from_direct(2648)?;
+    let some_u8: u8 = configurables_reader.try_from_direct(2688)?;
+    let some_str: AsciiString = configurables_reader.try_from_indirect(2664)?;
+    let some_str2: AsciiString = configurables_reader.try_from_indirect(2672)?;
+    let some_str3: AsciiString = configurables_reader.try_from_indirect(2680)?;
+    let some_last_u8: u8 = configurables_reader.try_from_direct(2656)?;
+    // ANCHOR_END: manual_configurables
 
     assert!(some_bool);
     assert_eq!(some_u8, 8);
@@ -459,17 +460,18 @@ async fn contract_configurables_reader_manual() -> Result<()> {
 
 #[tokio::test]
 async fn contract_configurables_reader_runtime() -> Result<()> {
-    // TODO: add documentation
+    // ANCHOR: manual_runtime_configurables
     let configurables_reader = ConfigurablesReader::load_from(
         "sway/contracts/dyn_configurables/out/release/dyn_configurables.bin",
     )?;
 
-    let some_bool = configurables_reader.decode_direct(2094, &bool::param_type())?;
-    let some_u8 = configurables_reader.decode_direct(2944, &u8::param_type())?;
-    let some_str = configurables_reader.decode_indirect(2920, &AsciiString::param_type())?;
-    let some_str2 = configurables_reader.decode_indirect(2928, &AsciiString::param_type())?;
-    let some_str3 = configurables_reader.decode_indirect(2936, &AsciiString::param_type())?;
-    let some_last_u8 = configurables_reader.decode_direct(2912, &u8::param_type())?;
+    let some_bool = configurables_reader.decode_direct(2648, &bool::param_type())?;
+    let some_u8 = configurables_reader.decode_direct(2688, &u8::param_type())?;
+    let some_str = configurables_reader.decode_indirect(2664, &AsciiString::param_type())?;
+    let some_str2 = configurables_reader.decode_indirect(2672, &AsciiString::param_type())?;
+    let some_str3 = configurables_reader.decode_indirect(2680, &AsciiString::param_type())?;
+    let some_last_u8 = configurables_reader.decode_direct(2656, &u8::param_type())?;
+    // ANCHOR_END: manual_runtime_configurables
 
     assert_eq!(some_bool, true.into_token());
     assert_eq!(some_u8, 8u8.into_token());
