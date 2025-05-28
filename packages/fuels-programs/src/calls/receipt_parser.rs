@@ -1,11 +1,10 @@
 use std::collections::VecDeque;
 
-use fuel_tx::{ContractId, Receipt};
+use fuel_tx::Receipt;
 use fuels_core::{
     codec::{ABIDecoder, DecoderConfig},
     types::{
-        Token,
-        bech32::Bech32ContractId,
+        ContractId, Token,
         errors::{Error, Result, error},
         param_types::ParamType,
     },
@@ -34,11 +33,11 @@ impl ReceiptParser {
     /// and the output param, parse the values and return them as Token.
     pub fn parse_call(
         &mut self,
-        contract_id: &Bech32ContractId,
+        contract_id: ContractId,
         output_param: &ParamType,
     ) -> Result<Token> {
         let data = self
-            .extract_contract_call_data(contract_id.into())
+            .extract_contract_call_data(contract_id)
             .ok_or_else(|| Self::missing_receipts_error(output_param))?;
 
         self.decoder.decode(output_param, data.as_slice())
@@ -199,7 +198,7 @@ mod tests {
         let output_param = ParamType::U8;
 
         let error = ReceiptParser::new(&receipts, Default::default())
-            .parse_call(&target_contract().into(), &output_param)
+            .parse_call(target_contract(), &output_param)
             .expect_err("should error");
 
         let expected_error = ReceiptParser::missing_receipts_error(&output_param);
@@ -211,12 +210,11 @@ mod tests {
     #[tokio::test]
     async fn receipt_parser_extract_return_data() -> Result<()> {
         let receipts = get_relevant_receipts();
-        let contract_id = target_contract();
 
         let mut parser = ReceiptParser::new(&receipts, Default::default());
 
         let token = parser
-            .parse_call(&contract_id.into(), &<[u8; 3]>::param_type())
+            .parse_call(target_contract(), &<[u8; 3]>::param_type())
             .expect("parsing should succeed");
 
         assert_eq!(&<[u8; 3]>::from_token(token)?, DECODED_DATA);
@@ -246,10 +244,10 @@ mod tests {
         let mut parser = ReceiptParser::new(&receipts, Default::default());
 
         let token_1 = parser
-            .parse_call(&contract_top_lvl.into(), &<[u8; 3]>::param_type())
+            .parse_call(contract_top_lvl, &<[u8; 3]>::param_type())
             .expect("parsing should succeed");
         let token_2 = parser
-            .parse_call(&contract_top_lvl.into(), &<[u8; 3]>::param_type())
+            .parse_call(contract_top_lvl, &<[u8; 3]>::param_type())
             .expect("parsing should succeed");
 
         assert_eq!(&<[u8; 3]>::from_token(token_1)?, &CORRECT_DATA_1);

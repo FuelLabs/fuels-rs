@@ -32,18 +32,18 @@ async fn assert_predicate_spendable(data: Vec<u8>, project_path: impl AsRef<Path
 
     // The predicate has spent the funds
     assert_address_balance(
-        predicate.address(),
+        &predicate.address(),
         &provider,
-        asset_id,
+        &asset_id,
         predicate_balance - amount_to_send - fee,
     )
     .await;
 
     // Funds were transferred
     assert_address_balance(
-        receiver.address(),
+        &receiver.address(),
         &provider,
-        asset_id,
+        &asset_id,
         receiver_balance + amount_to_send,
     )
     .await;
@@ -67,9 +67,9 @@ fn project_binary(project_root: impl AsRef<Path>) -> String {
 }
 
 async fn assert_address_balance(
-    address: &Bech32Address,
+    address: &Address,
     provider: &Provider,
-    asset_id: AssetId,
+    asset_id: &AssetId,
     amount: u64,
 ) {
     let balance = provider
@@ -80,7 +80,7 @@ async fn assert_address_balance(
 }
 
 fn get_test_coins_and_messages(
-    address: &Bech32Address,
+    address: Address,
     num_coins: u64,
     num_messages: u64,
     amount: u64,
@@ -88,7 +88,7 @@ fn get_test_coins_and_messages(
     let asset_id = AssetId::zeroed();
     let coins = setup_single_asset_coins(address, asset_id, num_coins, amount);
     let messages = (0..num_messages)
-        .map(|i| setup_single_message(&Bech32Address::default(), address, amount, i.into(), vec![]))
+        .map(|i| setup_single_message(Address::default(), address, amount, i.into(), vec![]))
         .collect();
 
     (coins, messages, asset_id)
@@ -97,7 +97,7 @@ fn get_test_coins_and_messages(
 // Setup function used to assign coins and messages to a predicate address
 // and create a `receiver` wallet
 async fn setup_predicate_test(
-    predicate_address: &Bech32Address,
+    predicate_address: Address,
     num_coins: u64,
     num_messages: u64,
     amount: u64,

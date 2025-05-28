@@ -6,7 +6,7 @@ use crate::{
     error::Result,
     program_bindings::{
         resolved_type::TypeResolver,
-        utils::{Component, Components, get_equivalent_bech32_type},
+        utils::{Component, Components},
     },
     utils::{TypePath, safe_ident},
 };
@@ -61,19 +61,10 @@ impl FunctionGenerator {
     }
 
     pub fn tokenized_args(&self) -> TokenStream {
-        let arg_names = self.args.iter().map(
-            |Component {
-                 ident,
-                 resolved_type,
-                 ..
-             }| {
-                get_equivalent_bech32_type(resolved_type)
-                    .map(|_| {
-                        quote! {<#resolved_type>::from(#ident.into())}
-                    })
-                    .unwrap_or(quote! {#ident})
-            },
-        );
+        let arg_names = self.args.iter().map(|Component { ident, .. }| {
+            quote! {#ident}
+        });
+
         quote! {[#(::fuels::core::traits::Tokenizable::into_token(#arg_names)),*]}
     }
 
@@ -102,11 +93,7 @@ impl FunctionGenerator {
                  resolved_type,
                  ..
              }| {
-                get_equivalent_bech32_type(resolved_type)
-                    .map(|new_type| {
-                        quote! { #ident: impl ::core::convert::Into<#new_type> }
-                    })
-                    .unwrap_or(quote! { #ident: #resolved_type })
+                quote! { #ident: #resolved_type }
             },
         );
 

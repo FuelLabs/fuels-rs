@@ -1,14 +1,12 @@
 use core::{fmt::Debug, marker::PhantomData};
 use std::sync::Arc;
 
-use fuel_tx::{AssetId, Bytes32};
 use fuels_accounts::{Account, provider::TransactionCost};
 use fuels_core::{
     codec::{ABIEncoder, DecoderConfig, EncoderConfig, LogDecoder},
     traits::{Parameterize, Signer, Tokenizable},
     types::{
-        Selector, Token,
-        bech32::{Bech32Address, Bech32ContractId},
+        Address, AssetId, Bytes32, ContractId, Selector, Token,
         errors::{Error, Result, error, transaction::Reason},
         input::Input,
         output::Output,
@@ -34,7 +32,7 @@ use crate::{
 // Trait implemented by contract instances so that
 // they can be passed to the `with_contracts` method
 pub trait ContractDependency {
-    fn id(&self) -> Bech32ContractId;
+    fn id(&self) -> ContractId;
     fn log_decoder(&self) -> LogDecoder;
 }
 
@@ -148,7 +146,7 @@ where
     ///
     /// [`Input::Contract`]: fuel_tx::Input::Contract
     /// [`Output::Contract`]: fuel_tx::Output::Contract
-    pub fn with_contract_ids(mut self, contract_ids: &[Bech32ContractId]) -> Self {
+    pub fn with_contract_ids(mut self, contract_ids: &[ContractId]) -> Self {
         self.call = self.call.with_external_contracts(contract_ids.to_vec());
 
         self
@@ -264,7 +262,7 @@ where
     T: Tokenizable + Parameterize + Debug,
 {
     pub fn new_contract_call(
-        contract_id: Bech32ContractId,
+        contract_id: ContractId,
         account: A,
         encoded_selector: Selector,
         args: &[Token],
@@ -313,12 +311,7 @@ where
     /// let amount = 5000;
     /// my_contract_instance.my_method(...).add_custom_asset(asset_id, amount, None).call()
     /// ```
-    pub fn add_custom_asset(
-        mut self,
-        asset_id: AssetId,
-        amount: u64,
-        to: Option<Bech32Address>,
-    ) -> Self {
+    pub fn add_custom_asset(mut self, asset_id: AssetId, amount: u64, to: Option<Address>) -> Self {
         self.call.add_custom_asset(asset_id, amount, to);
         self
     }
@@ -423,7 +416,7 @@ where
         }
     }
 
-    fn append_external_contract(mut self, contract_id: Bech32ContractId) -> Result<Self> {
+    fn append_external_contract(mut self, contract_id: ContractId) -> Result<Self> {
         if self.call.is_empty() {
             return Err(error!(
                 Other,
@@ -434,7 +427,7 @@ where
         self.call
             .iter_mut()
             .take(1)
-            .for_each(|call| call.append_external_contract(contract_id.clone()));
+            .for_each(|call| call.append_external_contract(contract_id));
 
         Ok(self)
     }
@@ -531,7 +524,7 @@ where
         let final_tokens = self
             .call
             .iter()
-            .map(|call| receipt_parser.parse_call(&call.contract_id, &call.output_param))
+            .map(|call| receipt_parser.parse_call(call.contract_id, &call.output_param))
             .collect::<Result<Vec<_>>>()?;
 
         let tokens_as_tuple = Token::Tuple(final_tokens);

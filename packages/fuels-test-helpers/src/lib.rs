@@ -7,7 +7,7 @@ use fuel_tx::{Bytes32, ConsensusParameters, ContractParameters, TxParameters, Ut
 use fuel_types::{AssetId, Nonce};
 use fuels_accounts::provider::Provider;
 use fuels_core::types::{
-    bech32::Bech32Address,
+    Address,
     coin::Coin,
     errors::Result,
     message::{Message, MessageStatus},
@@ -36,7 +36,7 @@ mod wallets_config;
 /// pre-existing coins, with `num_asset` different asset ids. Note that one of the assets is the
 /// base asset to pay for gas.
 pub fn setup_multiple_assets_coins(
-    owner: &Bech32Address,
+    owner: Address,
     num_asset: u64,
     coins_per_asset: u64,
     amount_per_coin: u64,
@@ -63,7 +63,7 @@ pub fn setup_multiple_assets_coins(
 }
 
 /// Create a vector of UTXOs with the provided AssetIds, num_coins, and amount_per_coin
-pub fn setup_custom_assets_coins(owner: &Bech32Address, assets: &[AssetConfig]) -> Vec<Coin> {
+pub fn setup_custom_assets_coins(owner: Address, assets: &[AssetConfig]) -> Vec<Coin> {
     let coins = assets
         .iter()
         .flat_map(|asset| {
@@ -77,7 +77,7 @@ pub fn setup_custom_assets_coins(owner: &Bech32Address, assets: &[AssetConfig]) 
 /// The output of this function can be used with `setup_test_provider` to get a client with some
 /// pre-existing coins, but with only one asset ID.
 pub fn setup_single_asset_coins(
-    owner: &Bech32Address,
+    owner: Address,
     asset_id: AssetId,
     num_coins: u64,
     amount_per_coin: u64,
@@ -92,7 +92,7 @@ pub fn setup_single_asset_coins(
             let utxo_id = UtxoId::new(r, 0);
 
             Coin {
-                owner: owner.clone(),
+                owner,
                 utxo_id,
                 amount: amount_per_coin,
                 asset_id,
@@ -104,15 +104,15 @@ pub fn setup_single_asset_coins(
 }
 
 pub fn setup_single_message(
-    sender: &Bech32Address,
-    recipient: &Bech32Address,
+    sender: Address,
+    recipient: Address,
     amount: u64,
     nonce: Nonce,
     data: Vec<u8>,
 ) -> Message {
     Message {
-        sender: sender.clone(),
-        recipient: recipient.clone(),
+        sender,
+        recipient,
         nonce,
         amount,
         data,
@@ -178,18 +178,13 @@ mod tests {
     use std::net::{Ipv4Addr, SocketAddr};
 
     use fuel_tx::{ConsensusParameters, ContractParameters, FeeParameters, TxParameters};
-    use fuels_core::types::bech32::FUEL_BECH32_HRP;
 
     use super::*;
 
     #[tokio::test]
     async fn test_setup_single_asset_coins() -> Result<()> {
         let mut rng = rand::thread_rng();
-        let mut addr_data = Bytes32::new([0u8; 32]);
-        addr_data
-            .try_fill(&mut rng)
-            .expect("failed to fill with random data");
-        let address = Bech32Address::new("test", addr_data);
+        let address = rng.r#gen();
 
         let mut asset_id = AssetId::zeroed();
         asset_id
@@ -198,7 +193,7 @@ mod tests {
 
         let number_of_coins = 11;
         let amount_per_coin = 10;
-        let coins = setup_single_asset_coins(&address, asset_id, number_of_coins, amount_per_coin);
+        let coins = setup_single_asset_coins(address, asset_id, number_of_coins, amount_per_coin);
 
         assert_eq!(coins.len() as u64, number_of_coins);
         for coin in coins {
@@ -213,17 +208,13 @@ mod tests {
     #[tokio::test]
     async fn test_setup_multiple_assets_coins() -> Result<()> {
         let mut rng = rand::thread_rng();
-        let mut addr_data = Bytes32::new([0u8; 32]);
-        addr_data
-            .try_fill(&mut rng)
-            .expect("failed to fill with random data");
-        let address = Bech32Address::new("test", addr_data);
+        let address = rng.r#gen();
 
         let number_of_assets = 7;
         let coins_per_asset = 10;
         let amount_per_coin = 13;
         let (coins, unique_asset_ids) = setup_multiple_assets_coins(
-            &address,
+            address,
             number_of_assets,
             coins_per_asset,
             amount_per_coin,
@@ -256,10 +247,7 @@ mod tests {
     #[tokio::test]
     async fn test_setup_custom_assets_coins() -> Result<()> {
         let mut rng = rand::thread_rng();
-        let mut hash = [0u8; 32];
-        hash.try_fill(&mut rng)
-            .expect("failed to fill with random data");
-        let address = Bech32Address::new(FUEL_BECH32_HRP, hash);
+        let address = rng.r#gen();
 
         let asset_base = AssetConfig {
             id: AssetId::zeroed(),
@@ -288,7 +276,7 @@ mod tests {
         };
 
         let assets = vec![asset_base, asset_1, asset_2];
-        let coins = setup_custom_assets_coins(&address, &assets);
+        let coins = setup_custom_assets_coins(address, &assets);
 
         for asset in assets {
             let coins_asset_id: Vec<Coin> = coins
