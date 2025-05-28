@@ -8,8 +8,9 @@ mod tests {
         prelude::{LoadConfiguration, NodeConfig, StorageConfiguration},
         programs::debug::ScriptType,
         test_helpers::{ChainConfig, StateConfig},
+        tx::ContractIdExt,
         types::{
-            Bits256,
+            Bytes32,
             errors::{Result, transaction::Reason},
         },
     };
@@ -120,8 +121,8 @@ mod tests {
             .await?;
         // ANCHOR_END: contract_call_cost_estimation
 
-        let expected_script_gas = 2498;
-        let expected_total_gas = 8750;
+        let expected_script_gas = 2488;
+        let expected_total_gas = 8740;
 
         assert_eq!(transaction_cost.script_gas, expected_script_gas);
         assert_eq!(transaction_cost.total_gas, expected_total_gas);
@@ -297,7 +298,7 @@ mod tests {
         .contract_id;
 
         // ANCHOR: tx_policies
-        let contract_methods = MyContract::new(contract_id.clone(), wallet.clone()).methods();
+        let contract_methods = MyContract::new(contract_id, wallet.clone()).methods();
 
         let tx_policies = TxPolicies::default()
             .with_tip(1)
@@ -351,7 +352,7 @@ mod tests {
     #[allow(unused_variables)]
     #[cfg(any(not(feature = "fuel-core-lib"), feature = "rocksdb"))]
     async fn token_ops_tests() -> Result<()> {
-        use fuels::prelude::*;
+        use fuels::{prelude::*, types::Bytes32};
         abigen!(Contract(
             name = "MyContract",
             abi = "e2e/sway/contracts/token_ops/out/release/token_ops-abi.json"
@@ -394,7 +395,7 @@ mod tests {
         .await?
         .contract_id;
 
-        let contract_methods = MyContract::new(contract_id.clone(), wallet.clone()).methods();
+        let contract_methods = MyContract::new(contract_id, wallet.clone()).methods();
         // ANCHOR: simulate
         // you would mint 100 coins if the transaction wasn't simulated
         let counter = contract_methods
@@ -404,7 +405,6 @@ mod tests {
         // ANCHOR_END: simulate
 
         {
-            let contract_id = contract_id.clone();
             // ANCHOR: simulate_read_state
             // you don't need any funds to read state
             let balance = contract_methods
@@ -418,7 +418,6 @@ mod tests {
             let provider = wallet.provider();
             provider.produce_blocks(2, None).await?;
             let block_height = provider.latest_block_height().await?;
-            let contract_id = contract_id.clone();
 
             // ANCHOR: simulate_read_state_at_height
             let balance = contract_methods
@@ -432,7 +431,7 @@ mod tests {
         let response = contract_methods.mint_coins(1_000_000).call().await?;
         // ANCHOR: variable_outputs
         let address = wallet.address();
-        let asset_id = contract_id.asset_id(&Bits256::zeroed());
+        let asset_id = contract_id.asset_id(&Bytes32::zeroed());
 
         // withdraw some tokens to wallet
         let response = contract_methods
@@ -461,8 +460,7 @@ mod tests {
         )?
         .deploy(&wallet, TxPolicies::default())
         .await?
-        .contract_id
-        .into();
+        .contract_id;
 
         let bin_path =
             "../../e2e/sway/contracts/lib_contract_caller/out/release/lib_contract_caller.bin";
@@ -471,8 +469,7 @@ mod tests {
             .await?
             .contract_id;
 
-        let contract_methods =
-            MyContract::new(caller_contract_id.clone(), wallet.clone()).methods();
+        let contract_methods = MyContract::new(caller_contract_id, wallet.clone()).methods();
 
         // ANCHOR: dependency_estimation_fail
         let address = wallet.address();
@@ -493,12 +490,12 @@ mod tests {
         let response = contract_methods
             .mint_then_increment_from_contract(called_contract_id, amount, address.into())
             .with_variable_output_policy(VariableOutputPolicy::Exactly(1))
-            .with_contract_ids(&[called_contract_id.into()])
+            .with_contract_ids(&[called_contract_id])
             .call()
             .await?;
         // ANCHOR_END: dependency_estimation_manual
 
-        let asset_id = caller_contract_id.asset_id(&Bits256::zeroed());
+        let asset_id = caller_contract_id.asset_id(&Bytes32::zeroed());
         let balance = wallet.get_asset_balance(&asset_id).await?;
         assert_eq!(balance, amount);
 
@@ -532,21 +529,11 @@ mod tests {
         let wallet_original = launch_provider_and_get_wallet().await?;
 
         let wallet = wallet_original.clone();
-        // Your bech32m encoded contract ID.
-        let contract_id: Bech32ContractId =
-            "fuel1vkm285ypjesypw7vhdlhnty3kjxxx4efckdycqh3ttna4xvmxtfs6murwy".parse()?;
-
-        let connected_contract_instance = MyContract::new(contract_id, wallet);
-        // You can now use the `connected_contract_instance` just as you did above!
-        // ANCHOR_END: deployed_contracts
-
-        let wallet = wallet_original;
-        // ANCHOR: deployed_contracts_hex
         let contract_id: ContractId =
             "0x65b6a3d081966040bbccbb7f79ac91b48c635729c59a4c02f15ae7da999b32d3".parse()?;
 
         let connected_contract_instance = MyContract::new(contract_id, wallet);
-        // ANCHOR_END: deployed_contracts_hex
+        // ANCHOR_END: deployed_contracts
 
         Ok(())
     }
@@ -686,8 +673,8 @@ mod tests {
             .await?;
         // ANCHOR_END: multi_call_cost_estimation
 
-        let expected_script_gas = 4029;
-        let expected_total_gas = 10858;
+        let expected_script_gas = 4033;
+        let expected_total_gas = 10862;
 
         assert_eq!(transaction_cost.script_gas, expected_script_gas);
         assert_eq!(transaction_cost.total_gas, expected_total_gas);
@@ -750,14 +737,14 @@ mod tests {
             )
         );
 
-        let some_addr: Bech32Address = thread_rng().r#gen();
+        let some_addr: Address = thread_rng().r#gen();
 
         // ANCHOR: add_custom_assets
         let amount = 1000;
         let _ = contract_instance
             .methods()
             .initialize_counter(42)
-            .add_custom_asset(AssetId::zeroed(), amount, Some(some_addr.clone()))
+            .add_custom_asset(AssetId::zeroed(), amount, Some(some_addr))
             .call()
             .await?;
         // ANCHOR_END: add_custom_assets
@@ -1033,7 +1020,7 @@ mod tests {
         .await?
         .contract_id;
 
-        let some_address = wallet.address().clone();
+        let some_address = wallet.address();
         // ANCHOR: contract_call_impersonation
         // create impersonator for an address
         let fake_signer = FakeSigner::new(some_address);

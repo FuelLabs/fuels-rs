@@ -164,7 +164,6 @@ macro_rules! impl_error_from {
 }
 
 impl_error_from!(Other, &'static str);
-impl_error_from!(Other, bech32::Error);
 impl_error_from!(Other, fuel_crypto::Error);
 impl_error_from!(Other, serde_json::Error);
 impl_error_from!(Other, hex::FromHexError);

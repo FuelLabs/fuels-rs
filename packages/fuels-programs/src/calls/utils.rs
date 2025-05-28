@@ -2,12 +2,12 @@ use std::{collections::HashSet, iter, vec};
 
 use fuel_abi_types::error_codes::FAILED_TRANSFER_TO_ADDRESS_SIGNAL;
 use fuel_asm::{RegId, op};
-use fuel_tx::{AssetId, Bytes32, ContractId, Output, PanicReason, Receipt, TxPointer, UtxoId};
+use fuel_tx::{Output, PanicReason, Receipt, TxPointer, UtxoId};
 use fuels_accounts::Account;
 use fuels_core::{
     offsets::call_script_data_offset,
     types::{
-        bech32::{Bech32Address, Bech32ContractId},
+        Address, AssetId, Bytes32, ContractId,
         errors::{Context, Result},
         input::Input,
         transaction::{ScriptTransaction, TxPolicies},
@@ -190,7 +190,7 @@ pub(crate) fn build_script_data_from_contract_calls(
 pub(crate) fn get_transaction_inputs_outputs(
     calls: &[ContractCall],
     asset_inputs: Vec<Input>,
-    address: &Bech32Address,
+    address: Address,
     base_asset_id: AssetId,
 ) -> (Vec<Input>, Vec<Output>) {
     let asset_ids = extract_unique_asset_ids(&asset_inputs, base_asset_id);
@@ -228,20 +228,16 @@ fn generate_custom_outputs(calls: &[ContractCall]) -> Vec<Output> {
     calls
         .iter()
         .flat_map(|call| &call.custom_assets)
-        .group_by(|custom| (custom.0.0, custom.0.1.clone()))
+        .group_by(|custom| (custom.0.0, custom.0.1))
         .into_iter()
         .filter_map(|(asset_id_address, groups_w_same_asset_id_address)| {
             let total_amount_in_group = groups_w_same_asset_id_address
                 .map(|(_, amount)| amount)
                 .sum::<u64>();
-            match asset_id_address.1 {
-                Some(address) => Some(Output::coin(
-                    address.into(),
-                    total_amount_in_group,
-                    asset_id_address.0,
-                )),
-                None => None,
-            }
+
+            asset_id_address
+                .1
+                .map(|address| Output::coin(address, total_amount_in_group, asset_id_address.0))
         })
         .collect::<Vec<_>>()
 }
@@ -259,12 +255,12 @@ fn extract_unique_asset_ids(asset_inputs: &[Input], base_asset_id: AssetId) -> H
 }
 
 fn generate_asset_change_outputs(
-    wallet_address: &Bech32Address,
+    wallet_address: Address,
     asset_ids: HashSet<AssetId>,
 ) -> Vec<Output> {
     asset_ids
         .into_iter()
-        .map(|asset_id| Output::change(wallet_address.into(), 0, asset_id))
+        .map(|asset_id| Output::change(wallet_address, 0, asset_id))
         .collect()
 }
 
@@ -310,8 +306,8 @@ fn extract_unique_contract_ids(calls: &[ContractCall]) -> HashSet<ContractId> {
         .flat_map(|call| {
             call.external_contracts
                 .iter()
-                .map(|bech32| bech32.into())
-                .chain(iter::once((&call.contract_id).into()))
+                .copied()
+                .chain(iter::once(call.contract_id))
         })
         .collect()
 }
@@ -322,7 +318,7 @@ pub fn is_missing_output_variables(receipts: &[Receipt]) -> bool {
     )
 }
 
-pub fn find_ids_of_missing_contracts(receipts: &[Receipt]) -> Vec<Bech32ContractId> {
+pub fn find_ids_of_missing_contracts(receipts: &[Receipt]) -> Vec<ContractId> {
     receipts
         .iter()
         .filter_map(|receipt| match receipt {
@@ -333,7 +329,7 @@ pub fn find_ids_of_missing_contracts(receipts: &[Receipt]) -> Vec<Bech32Contract
             } if *reason.reason() == PanicReason::ContractNotInInputs => {
                 let contract_id = contract_id
                     .expect("panic caused by a contract not in inputs must have a contract id");
-                Some(Bech32ContractId::from(contract_id))
+                Some(contract_id)
             }
             _ => None,
         })
@@ -353,7 +349,7 @@ mod test {
 
     fn new_contract_call_with_random_id() -> ContractCall {
         ContractCall {
-            contract_id: random_bech32_contract_id(),
+            contract_id: random_contract_id(),
             encoded_args: Ok(Default::default()),
             encoded_selector: [0; 8].to_vec(),
             call_parameters: Default::default(),
@@ -366,8 +362,8 @@ mod test {
         }
     }
 
-    fn random_bech32_contract_id() -> Bech32ContractId {
-        Bech32ContractId::new("fuel", rand::thread_rng().r#gen::<[u8; 32]>())
+    fn random_contract_id() -> ContractId {
+        rand::thread_rng().r#gen()
     }
 
     #[test]
@@ -390,7 +386,7 @@ mod test {
                 Bytes32::zeroed(),
                 Bytes32::zeroed(),
                 TxPointer::default(),
-                call.contract_id.into(),
+                call.contract_id,
             )]
         );
     }
@@ -399,7 +395,7 @@ mod test {
     fn contract_input_is_not_duplicated() {
         let call = new_contract_call_with_random_id();
         let call_w_same_contract =
-            new_contract_call_with_random_id().with_contract_id(call.contract_id.clone());
+            new_contract_call_with_random_id().with_contract_id(call.contract_id);
 
         let signer = PrivateKeySigner::random(&mut thread_rng());
 
@@ -419,7 +415,7 @@ mod test {
                 Bytes32::zeroed(),
                 Bytes32::zeroed(),
                 TxPointer::default(),
-                calls[0].contract_id.clone().into(),
+                calls[0].contract_id,
             )]
         );
     }
@@ -446,9 +442,9 @@ mod test {
     #[test]
     fn external_contract_input_present() {
         // given
-        let external_contract_id = random_bech32_contract_id();
-        let call = new_contract_call_with_random_id()
-            .with_external_contracts(vec![external_contract_id.clone()]);
+        let external_contract_id = random_contract_id();
+        let call =
+            new_contract_call_with_random_id().with_external_contracts(vec![external_contract_id]);
 
         let signer = PrivateKeySigner::random(&mut thread_rng());
 
@@ -462,7 +458,7 @@ mod test {
 
         // then
         let mut expected_contract_ids: HashSet<ContractId> =
-            [call.contract_id.into(), external_contract_id.into()].into();
+            [call.contract_id, external_contract_id].into();
 
         for (index, input) in inputs.into_iter().enumerate() {
             match input {
@@ -490,7 +486,7 @@ mod test {
     #[test]
     fn external_contract_output_present() {
         // given
-        let external_contract_id = random_bech32_contract_id();
+        let external_contract_id = random_contract_id();
         let call =
             new_contract_call_with_random_id().with_external_contracts(vec![external_contract_id]);
 
@@ -543,7 +539,7 @@ mod test {
         let expected_change_outputs = asset_ids
             .into_iter()
             .map(|asset_id| Output::Change {
-                to: signer.address().into(),
+                to: signer.address(),
                 amount: 0,
                 asset_id,
             })

@@ -2,9 +2,7 @@
 
 use fuel_core_client::client::types::CoinType as ClientCoinType;
 
-use crate::types::{
-    AssetId, bech32::Bech32Address, coin::Coin, coin_type_id::CoinTypeId, message::Message,
-};
+use crate::types::{Address, AssetId, coin::Coin, coin_type_id::CoinTypeId, message::Message};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum CoinType {
@@ -56,7 +54,7 @@ impl CoinType {
         }
     }
 
-    pub fn owner(&self) -> Option<&Bech32Address> {
+    pub fn owner(&self) -> Option<&Address> {
         match self {
             CoinType::Coin(coin) => Some(&coin.owner),
             CoinType::Message(message) => Some(&message.recipient),

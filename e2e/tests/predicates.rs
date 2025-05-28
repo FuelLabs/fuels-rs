@@ -13,9 +13,9 @@ use fuels::{
 use rand::thread_rng;
 
 async fn assert_address_balance(
-    address: &Bech32Address,
+    address: &Address,
     provider: &Provider,
-    asset_id: AssetId,
+    asset_id: &AssetId,
     amount: u64,
 ) {
     let balance = provider
@@ -26,7 +26,7 @@ async fn assert_address_balance(
 }
 
 fn get_test_coins_and_messages(
-    address: &Bech32Address,
+    address: Address,
     num_coins: u64,
     num_messages: u64,
     amount: u64,
@@ -37,7 +37,7 @@ fn get_test_coins_and_messages(
     let messages = (0..num_messages)
         .map(|i| {
             setup_single_message(
-                &Bech32Address::default(),
+                Address::default(),
                 address,
                 amount,
                 (start_nonce + i).into(),
@@ -49,9 +49,9 @@ fn get_test_coins_and_messages(
     (coins, messages, asset_id)
 }
 
-fn get_test_message_w_data(address: &Bech32Address, amount: u64, nonce: u64) -> Message {
+fn get_test_message_w_data(address: Address, amount: u64, nonce: u64) -> Message {
     setup_single_message(
-        &Bech32Address::default(),
+        Address::default(),
         address,
         amount,
         nonce.into(),
@@ -62,7 +62,7 @@ fn get_test_message_w_data(address: &Bech32Address, amount: u64, nonce: u64) -> 
 // Setup function used to assign coins and messages to a predicate address
 // and create a `receiver` wallet
 async fn setup_predicate_test(
-    predicate_address: &Bech32Address,
+    predicate_address: Address,
     num_coins: u64,
     num_messages: u64,
     amount: u64,
@@ -143,7 +143,7 @@ async fn transfer_coins_and_messages_to_predicate() -> Result<()> {
         .await?;
 
     // The predicate has received the funds
-    assert_address_balance(predicate.address(), &provider, asset_id, balance_to_send).await;
+    assert_address_balance(&predicate.address(), &provider, &asset_id, balance_to_send).await;
 
     Ok(())
 }
@@ -184,18 +184,18 @@ async fn spend_predicate_coins_messages_basic() -> Result<()> {
     // The predicate has spent the funds
     let predicate_current_balance = predicate_balance - amount_to_send - fee;
     assert_address_balance(
-        predicate.address(),
+        &predicate.address(),
         &provider,
-        asset_id,
+        &asset_id,
         predicate_current_balance,
     )
     .await;
 
     // Funds were transferred
     assert_address_balance(
-        receiver.address(),
+        &receiver.address(),
         &provider,
-        asset_id,
+        &asset_id,
         receiver_balance + amount_to_send,
     )
     .await;
@@ -238,7 +238,7 @@ async fn pay_with_predicate() -> Result<()> {
     .await?;
 
     let contract_methods =
-        MyContract::new(deploy_response.contract_id.clone(), predicate.clone()).methods();
+        MyContract::new(deploy_response.contract_id, predicate.clone()).methods();
 
     let consensus_parameters = provider.consensus_parameters().await?;
     let deploy_fee = deploy_response.tx_status.unwrap().total_fee;
@@ -302,7 +302,7 @@ async fn pay_with_predicate_vector_data() -> Result<()> {
     .await?;
 
     let contract_methods =
-        MyContract::new(deploy_response.contract_id.clone(), predicate.clone()).methods();
+        MyContract::new(deploy_response.contract_id, predicate.clone()).methods();
 
     let consensus_parameters = provider.consensus_parameters().await?;
     let deploy_fee = deploy_response.tx_status.unwrap().total_fee;
@@ -362,7 +362,7 @@ async fn predicate_contract_transfer() -> Result<()> {
     let amount = 300;
     predicate
         .force_transfer_to_contract(
-            &contract_id,
+            contract_id,
             amount,
             AssetId::zeroed(),
             TxPolicies::default(),
@@ -408,10 +408,9 @@ async fn predicate_transfer_to_base_layer() -> Result<()> {
     let amount = 1000;
     let base_layer_address =
         Address::from_str("0x4710162c2e3a95a6faff05139150017c9e38e5e280432d546fae345d6ce6d8fe")?;
-    let base_layer_address = Bech32Address::from(base_layer_address);
 
     let withdraw_response = predicate
-        .withdraw_to_base_layer(&base_layer_address, amount, TxPolicies::default())
+        .withdraw_to_base_layer(base_layer_address, amount, TxPolicies::default())
         .await?;
 
     // Create the next commit block to be able generate the proof
@@ -488,7 +487,7 @@ async fn predicate_transfer_with_signed_resources() -> Result<()> {
         .await?;
     inputs.extend(predicate_inputs);
 
-    let outputs = vec![Output::change(predicate.address().into(), 0, asset_id)];
+    let outputs = vec![Output::change(predicate.address(), 0, asset_id)];
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, Default::default());
     tb.add_signer(signer)?;
@@ -498,9 +497,9 @@ async fn predicate_transfer_with_signed_resources() -> Result<()> {
     let tx_status = provider.send_transaction_and_await_commit(tx).await?;
 
     assert_address_balance(
-        predicate.address(),
+        &predicate.address(),
         &provider,
-        asset_id,
+        &asset_id,
         predicate_balance + wallet_balance - tx_status.total_fee(),
     )
     .await;
@@ -548,7 +547,7 @@ async fn contract_tx_and_call_params_with_predicate() -> Result<()> {
     .await?;
 
     let contract_methods =
-        MyContract::new(deploy_response.contract_id.clone(), predicate.clone()).methods();
+        MyContract::new(deploy_response.contract_id, predicate.clone()).methods();
 
     let tx_policies = TxPolicies::default().with_tip(100);
 
@@ -578,7 +577,7 @@ async fn contract_tx_and_call_params_with_predicate() -> Result<()> {
         let response = contract_methods
             .get_msg_amount()
             .call_params(call_params)?
-            .add_custom_asset(custom_asset, 100, Some(Bech32Address::default()))
+            .add_custom_asset(custom_asset, 100, Some(Address::default()))
             .call()
             .await?;
 
@@ -628,7 +627,7 @@ async fn diff_asset_predicate_payment() -> Result<()> {
     .await?
     .contract_id;
 
-    let contract_methods = MyContract::new(contract_id.clone(), predicate.clone()).methods();
+    let contract_methods = MyContract::new(contract_id, predicate.clone()).methods();
 
     let call_params = CallParameters::default()
         .with_amount(1_000_000)
@@ -689,13 +688,13 @@ async fn predicate_default_configurables() -> Result<()> {
         .await?;
 
     // The predicate has spent the funds
-    assert_address_balance(predicate.address(), &provider, asset_id, 0).await;
+    assert_address_balance(&predicate.address(), &provider, &asset_id, 0).await;
 
     // Funds were transferred
     assert_address_balance(
-        receiver.address(),
+        &receiver.address(),
         &provider,
-        asset_id,
+        &asset_id,
         receiver_balance + amount_to_send,
     )
     .await;
@@ -757,13 +756,13 @@ async fn predicate_configurables() -> Result<()> {
         .total_fee;
 
     // The predicate has spent the funds
-    assert_address_balance(predicate.address(), &provider, asset_id, 0).await;
+    assert_address_balance(&predicate.address(), &provider, &asset_id, 0).await;
 
     // Funds were transferred
     assert_address_balance(
-        receiver.address(),
+        &receiver.address(),
         &provider,
-        asset_id,
+        &asset_id,
         receiver_balance + predicate_balance - fee,
     )
     .await;
@@ -847,12 +846,8 @@ async fn predicate_transfer_non_base_asset() -> Result<()> {
         .await?;
     let consensus_parameters = provider.consensus_parameters().await?;
     let outputs = vec![
-        Output::change(wallet.address().into(), 0, non_base_asset_id),
-        Output::change(
-            wallet.address().into(),
-            0,
-            *consensus_parameters.base_asset_id(),
-        ),
+        Output::change(wallet.address(), 0, non_base_asset_id),
+        Output::change(wallet.address(), 0, *consensus_parameters.base_asset_id()),
     ];
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(
@@ -926,18 +921,18 @@ async fn predicate_can_access_manually_added_witnesses() -> Result<()> {
     let fee = tx_status.total_fee();
     // The predicate has spent the funds
     assert_address_balance(
-        predicate.address(),
+        &predicate.address(),
         &provider,
-        asset_id,
+        &asset_id,
         predicate_balance - amount_to_send - fee,
     )
     .await;
 
     // Funds were transferred
     assert_address_balance(
-        receiver.address(),
+        &receiver.address(),
         &provider,
-        asset_id,
+        &asset_id,
         receiver_balance + amount_to_send,
     )
     .await;
@@ -1157,18 +1152,18 @@ async fn predicate_blobs() -> Result<()> {
     // The predicate has spent the funds
     let transaction_fee = response.tx_status.total_fee;
     assert_address_balance(
-        predicate.address(),
+        &predicate.address(),
         &provider,
-        asset_id,
+        &asset_id,
         predicate_balance - amount_to_send - transaction_fee,
     )
     .await;
 
     // Funds were transferred
     assert_address_balance(
-        receiver.address(),
+        &receiver.address(),
         &provider,
-        asset_id,
+        &asset_id,
         receiver_balance + amount_to_send,
     )
     .await;
@@ -1235,13 +1230,13 @@ async fn predicate_configurables_in_blobs() -> Result<()> {
         .await?;
 
     // The predicate has spent the funds
-    assert_address_balance(predicate.address(), &provider, asset_id, 0).await;
+    assert_address_balance(&predicate.address(), &provider, &asset_id, 0).await;
 
     // Funds were transferred
     assert_address_balance(
-        receiver.address(),
+        &receiver.address(),
         &provider,
-        asset_id,
+        &asset_id,
         receiver_balance + amount_to_send,
     )
     .await;
@@ -1306,18 +1301,18 @@ async fn predicate_transfer_respects_maturity_and_expiration() -> Result<()> {
 
     // The predicate has spent the funds
     assert_address_balance(
-        predicate.address(),
+        &predicate.address(),
         &provider,
-        asset_id,
+        &asset_id,
         predicate_balance - amount_to_send - transaction_fee,
     )
     .await;
 
     // Funds were transferred
     assert_address_balance(
-        receiver.address(),
+        &receiver.address(),
         &provider,
-        asset_id,
+        &asset_id,
         receiver_balance + amount_to_send,
     )
     .await;
@@ -1327,15 +1322,15 @@ async fn predicate_transfer_respects_maturity_and_expiration() -> Result<()> {
 
 async fn transfer_to_predicate(
     from: &impl Account,
-    address: &Bech32Address,
+    address: &Address,
     amount: u64,
     asset_id: AssetId,
 ) {
-    from.transfer(address, amount, asset_id, TxPolicies::default())
+    from.transfer(*address, amount, asset_id, TxPolicies::default())
         .await
         .unwrap();
 
-    assert_address_balance(address, from.try_provider().unwrap(), asset_id, amount).await;
+    assert_address_balance(address, from.try_provider().unwrap(), &asset_id, amount).await;
 }
 
 #[tokio::test]
@@ -1363,8 +1358,7 @@ async fn predicate_tx_input_output() -> Result<()> {
     let provider = wallet_1.try_provider()?;
 
     // Predicate expects `wallet_2` as owner
-    let configurables =
-        MyPredicateConfigurables::default().with_OWNER(wallet_2.address().into())?;
+    let configurables = MyPredicateConfigurables::default().with_OWNER(wallet_2.address())?;
 
     // Predicate will check first input and first output
     let predicate_data = MyPredicateEncoder::default().encode_data(0, 0)?;
@@ -1378,7 +1372,7 @@ async fn predicate_tx_input_output() -> Result<()> {
 
     let asset_id = AssetId::zeroed();
     {
-        transfer_to_predicate(&wallet_2, predicate.address(), 42, asset_id).await;
+        transfer_to_predicate(&wallet_2, &predicate.address(), 42, asset_id).await;
 
         // Call contract method with custom `wallet_2` input at first place, predicate at second
         // and custom change to `wallet_2`
@@ -1396,7 +1390,7 @@ async fn predicate_tx_input_output() -> Result<()> {
 
         let custom_inputs = vec![wallet_input, predicate_input];
 
-        let custom_output = vec![Output::change(wallet_2.address().into(), 0, asset_id)];
+        let custom_output = vec![Output::change(wallet_2.address(), 0, asset_id)];
 
         let value = contract_instance
             .methods()
@@ -1411,7 +1405,7 @@ async fn predicate_tx_input_output() -> Result<()> {
         assert_eq!(value, 36);
     }
     {
-        transfer_to_predicate(&wallet_2, predicate.address(), 42, asset_id).await;
+        transfer_to_predicate(&wallet_2, &predicate.address(), 42, asset_id).await;
 
         // Add coin with wrong owner (`wallet_1`)
         let wallet_input = wallet_1

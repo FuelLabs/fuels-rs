@@ -174,7 +174,7 @@ mod tests {
                     assert_eq!(resource.amount(), asset.coin_amount);
                     match resource {
                         CoinType::Coin(coin) => {
-                            assert_eq!(&coin.owner, wallet.address())
+                            assert_eq!(coin.owner, wallet.address())
                         }
                         CoinType::Message(_) => panic!("resources contained messages"),
                         CoinType::Unknown => panic!("resources contained unknown coins"),
@@ -196,7 +196,7 @@ mod tests {
 
         assert_eq!(
             wallets.get(31).unwrap().address().to_string(),
-            "fuel1rsjlwjzx0px3zu2al05jdlzp4j5quqzlk7pzyk4g45x6m7r3elzsz9dwh4".to_string()
+            "1c25f74846784d11715dfbe926fc41aca80e005fb782225aa8ad0dadf871cfc5".to_string()
         );
         Ok(())
     }
