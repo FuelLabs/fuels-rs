@@ -1,16 +1,18 @@
 use std::time::Duration;
 
-use fuel_tx::{
-    ConsensusParameters, FeeParameters, Output,
-    consensus_parameters::{ConsensusParametersV1, FeeParametersV1},
-};
 use fuels::{
     accounts::signers::private_key::PrivateKeySigner,
     core::codec::{DecoderConfig, EncoderConfig, calldata, encode_fn_selector},
     prelude::*,
     programs::DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE,
-    tx::ContractParameters,
-    types::{Bits256, Identity, SizedAsciiString, errors::transaction::Reason, input::Input},
+    tx::{
+        ConsensusParameters, ContractIdExt, ContractParameters, FeeParameters,
+        consensus_parameters::{ConsensusParametersV1, FeeParametersV1},
+    },
+    types::{
+        Bits256, Bytes32, Identity, SizedAsciiString, errors::transaction::Reason, input::Input,
+        output::Output,
+    },
 };
 use rand::thread_rng;
 use tokio::time::Instant;
@@ -113,7 +115,7 @@ async fn test_contract_calling_contract() -> Result<()> {
     let response = contract_caller_instance
         .methods()
         .increment_from_contract(lib_contract_id, 42)
-        .with_contract_ids(&[lib_contract_id.clone()])
+        .with_contract_ids(&[lib_contract_id])
         .call()
         .await?;
     // ANCHOR_END: external_contract_ids
@@ -700,7 +702,7 @@ async fn test_connect_wallet() -> Result<()> {
 }
 
 async fn setup_output_variable_estimation_test()
--> Result<(Vec<Wallet>, [Identity; 3], AssetId, Bech32ContractId)> {
+-> Result<(Vec<Wallet>, [Identity; 3], AssetId, ContractId)> {
     let wallet_config = WalletsConfig::new(Some(3), None, None);
     let wallets = launch_custom_provider_and_get_wallets(wallet_config, None, None).await?;
 
@@ -712,7 +714,7 @@ async fn setup_output_variable_estimation_test()
     .await?
     .contract_id;
 
-    let mint_asset_id = contract_id.asset_id(&Bits256::zeroed());
+    let mint_asset_id = contract_id.asset_id(&Bytes32::zeroed());
     let addresses = wallets
         .iter()
         .map(|wallet| wallet.address().into())
@@ -777,7 +779,7 @@ async fn test_output_variable_estimation_multicall() -> Result<()> {
     let (wallets, addresses, mint_asset_id, contract_id) =
         setup_output_variable_estimation_test().await?;
 
-    let contract_instance = MyContract::new(contract_id.clone(), wallets[0].clone());
+    let contract_instance = MyContract::new(contract_id, wallets[0].clone());
     let contract_methods = contract_instance.methods();
     const NUM_OF_CALLS: u64 = 3;
     let amount = 1000;
@@ -791,7 +793,7 @@ async fn test_output_variable_estimation_multicall() -> Result<()> {
 
     wallets[0]
         .force_transfer_to_contract(
-            &contract_id,
+            contract_id,
             total_amount,
             AssetId::zeroed(),
             TxPolicies::default(),
@@ -822,7 +824,7 @@ async fn test_contract_instance_get_balances() -> Result<()> {
     let signer = PrivateKeySigner::random(&mut rng);
     let (coins, asset_ids) = setup_multiple_assets_coins(signer.address(), 2, 4, 8);
 
-    let random_asset_id = &asset_ids[1];
+    let random_asset_id = asset_ids[1];
     let provider = setup_test_provider(coins.clone(), vec![], None, None).await?;
     let wallet = Wallet::new(signer, provider.clone());
 
@@ -847,14 +849,14 @@ async fn test_contract_instance_get_balances() -> Result<()> {
     // Transfer an amount to the contract
     let amount = 8;
     wallet
-        .force_transfer_to_contract(contract_id, amount, *random_asset_id, TxPolicies::default())
+        .force_transfer_to_contract(contract_id, amount, random_asset_id, TxPolicies::default())
         .await?;
 
     // Check that the contract now has 1 coin
     let contract_balances = contract_instance.get_balances().await?;
     assert_eq!(contract_balances.len(), 1);
 
-    let random_asset_balance = contract_balances.get(random_asset_id).unwrap();
+    let random_asset_balance = contract_balances.get(&random_asset_id).unwrap();
     assert_eq!(*random_asset_balance, amount);
 
     Ok(())
@@ -1122,8 +1124,8 @@ async fn test_add_custom_assets() -> Result<()> {
     let response = contract_instance
         .methods()
         .get(5, 6)
-        .add_custom_asset(asset_id_1, amount_1, Some(wallet_2.address().clone()))
-        .add_custom_asset(asset_id_2, amount_2, Some(wallet_2.address().clone()))
+        .add_custom_asset(asset_id_1, amount_1, Some(wallet_2.address()))
+        .add_custom_asset(asset_id_2, amount_2, Some(wallet_2.address()))
         .call()
         .await?;
 
@@ -1226,10 +1228,8 @@ async fn multi_call_from_calls_with_different_account_types() -> Result<()> {
     let wallet = launch_provider_and_get_wallet().await?;
     let predicate = Predicate::from_code(vec![]);
 
-    let contract_methods_wallet =
-        MyContract::new(Bech32ContractId::default(), wallet.clone()).methods();
-    let contract_methods_predicate =
-        MyContract::new(Bech32ContractId::default(), predicate).methods();
+    let contract_methods_wallet = MyContract::new(ContractId::default(), wallet.clone()).methods();
+    let contract_methods_predicate = MyContract::new(ContractId::default(), predicate).methods();
 
     let call_handler_1 = contract_methods_wallet.initialize_counter(42);
     let call_handler_2 = contract_methods_predicate.get_array([42; 2]);
@@ -1730,7 +1730,7 @@ async fn contract_custom_call_no_signatures_strategy() -> Result<()> {
         .await?;
     tb.inputs_mut().extend(new_base_inputs);
     tb.outputs_mut()
-        .push(Output::change(wallet.address().into(), 0, base_asset_id));
+        .push(Output::change(wallet.address(), 0, base_asset_id));
 
     // ANCHOR: tb_no_signatures_strategy
     let mut tx = tb
@@ -1772,7 +1772,7 @@ async fn contract_encoder_config_is_applied() -> Result<()> {
     .await?
     .contract_id;
 
-    let instance = TestContract::new(contract_id.clone(), wallet.clone());
+    let instance = TestContract::new(contract_id, wallet.clone());
 
     {
         let _encoding_ok = instance
@@ -1917,7 +1917,7 @@ async fn variable_output_estimation_is_optimized() -> Result<()> {
     let contract_methods = contract_instance.methods();
 
     let coins = 252;
-    let recipient = Identity::Address(wallet.address().into());
+    let recipient = Identity::Address(wallet.address());
     let start = Instant::now();
     let _ = contract_methods
         .mint(coins, recipient)
@@ -2512,7 +2512,7 @@ async fn loader_works_via_proxy() -> Result<()> {
     let proxy = MyProxy::new(proxy_id, wallet.clone());
     proxy
         .methods()
-        .set_target_contract(contract_id.clone())
+        .set_target_contract(contract_id)
         .call()
         .await?;
 
@@ -2569,14 +2569,14 @@ async fn loader_storage_works_via_proxy() -> Result<()> {
     let proxy = MyProxy::new(proxy_id, wallet.clone());
     proxy
         .methods()
-        .set_target_contract(contract_id.clone())
+        .set_target_contract(contract_id)
         .call()
         .await?;
 
     let response = proxy
         .methods()
         .read_some_u64()
-        .with_contract_ids(&[contract_id.clone()])
+        .with_contract_ids(&[contract_id])
         .call()
         .await?
         .value;
@@ -2586,7 +2586,7 @@ async fn loader_storage_works_via_proxy() -> Result<()> {
     let _res = proxy
         .methods()
         .write_some_u64(36)
-        .with_contract_ids(&[contract_id.clone()])
+        .with_contract_ids(&[contract_id])
         .call()
         .await?;
 
@@ -2647,7 +2647,7 @@ async fn tx_input_output() -> Result<()> {
     let contract_binary = "sway/contracts/tx_input_output/out/release/tx_input_output.bin";
 
     // Set `wallet_1` as the custom input owner
-    let configurables = TxContractConfigurables::default().with_OWNER(wallet_1.address().into())?;
+    let configurables = TxContractConfigurables::default().with_OWNER(wallet_1.address())?;
 
     let contract = Contract::load_from(
         contract_binary,
@@ -2678,7 +2678,7 @@ async fn tx_input_output() -> Result<()> {
             .call()
             .await?;
 
-        let custom_output = Output::change(wallet_1.address().into(), 0, asset_id);
+        let custom_output = Output::change(wallet_1.address(), 0, asset_id);
 
         // Output at first position is change to wallet_1
         let _ = contract_instance
@@ -2730,12 +2730,11 @@ async fn multicall_tx_input_output() -> Result<()> {
     ));
     let contract_binary = "sway/contracts/tx_input_output/out/release/tx_input_output.bin";
 
-    let get_contract_instance = |owner: &Bech32Address| {
+    let get_contract_instance = |owner: Address| {
         let wallet_for_fees = wallet_3.clone();
-        let owner_address = owner.into();
 
         async move {
-            let configurables = TxContractConfigurables::default().with_OWNER(owner_address)?;
+            let configurables = TxContractConfigurables::default().with_OWNER(owner)?;
 
             let contract = Contract::load_from(
                 contract_binary,
@@ -2817,7 +2816,7 @@ async fn multicall_tx_input_output() -> Result<()> {
         assert!(err.to_string().contains("wrong owner"));
     }
     {
-        let custom_output = Output::change(wallet_1.address().into(), 0, asset_id);
+        let custom_output = Output::change(wallet_1.address(), 0, asset_id);
 
         // Output at first position is change to wallet_1
         let ch1 = contract_instance_1

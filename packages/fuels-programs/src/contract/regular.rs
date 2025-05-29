@@ -1,13 +1,13 @@
 use std::{default::Default, fmt::Debug, path::Path};
 
-use fuel_tx::{Bytes32, ContractId, Salt, StorageSlot, TxId};
+use fuel_tx::{StorageSlot, TxId};
 use fuels_accounts::Account;
 use fuels_core::{
     Configurables,
     constants::WORD_SIZE,
     error,
     types::{
-        bech32::Bech32ContractId,
+        Bytes32, ContractId, Salt,
         errors::{Context, Result},
         transaction::{Transaction, TxPolicies},
         transaction_builders::{Blob, CreateTransactionBuilder},
@@ -25,7 +25,7 @@ use crate::DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE;
 pub struct DeployResponse {
     pub tx_status: Option<Success>,
     pub tx_id: Option<TxId>,
-    pub contract_id: Bech32ContractId,
+    pub contract_id: ContractId,
 }
 
 // In a mod so that we eliminate the footgun of getting the private `code` field without applying
@@ -180,7 +180,7 @@ impl Contract<Regular> {
         Ok(DeployResponse {
             tx_status: Some(tx_status.take_success_checked(None)?),
             tx_id,
-            contract_id: contract_id.into(),
+            contract_id,
         })
     }
 
@@ -191,7 +191,7 @@ impl Contract<Regular> {
         account: &impl Account,
         tx_policies: TxPolicies,
     ) -> Result<DeployResponse> {
-        let contract_id = Bech32ContractId::from(self.contract_id());
+        let contract_id = self.contract_id();
         let provider = account.try_provider()?;
         if provider.contract_exists(&contract_id).await? {
             Ok(DeployResponse {

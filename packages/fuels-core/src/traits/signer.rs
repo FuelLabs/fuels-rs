@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use auto_impl::auto_impl;
 use fuel_crypto::{Message, Signature};
 
-use crate::types::{bech32::Bech32Address, errors::Result};
+use crate::types::{Address, errors::Result};
 
 /// Trait for signing transactions and messages
 ///
@@ -12,5 +12,5 @@ use crate::types::{bech32::Bech32Address, errors::Result};
 #[auto_impl(&, Box, Rc, Arc)]
 pub trait Signer {
     async fn sign(&self, message: Message) -> Result<Signature>;
-    fn address(&self) -> &Bech32Address;
+    fn address(&self) -> Address;
 }
