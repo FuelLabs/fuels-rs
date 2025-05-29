@@ -35,7 +35,7 @@ mod tests {
         // ANCHOR_END: use_kms_wallet
 
         let total_base_balance = wallet.get_asset_balance(&AssetId::zeroed()).await?;
-        assert_eq!(total_base_balance, amount);
+        assert_eq!(total_base_balance, amount as u128);
         Ok(())
     }
 

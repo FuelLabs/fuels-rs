@@ -199,7 +199,10 @@ async fn test_input_message_pays_fee() -> Result<()> {
     let balance = wallet.get_asset_balance(base_asset_id).await?;
     let deploy_fee = deploy_response.tx_status.unwrap().total_fee;
     let call_fee = call_response.tx_status.total_fee;
-    assert_eq!(balance, DEFAULT_COIN_AMOUNT - deploy_fee - call_fee);
+    assert_eq!(
+        balance,
+        (DEFAULT_COIN_AMOUNT - deploy_fee - call_fee) as u128
+    );
 
     Ok(())
 }
@@ -873,7 +876,7 @@ async fn coin_caching() -> Result<()> {
     // Verify the transfers were successful
     assert_eq!(
         wallet_2.get_asset_balance(&AssetId::zeroed()).await?,
-        num_iterations * amount_to_send
+        (num_iterations * amount_to_send) as u128
     );
 
     Ok(())

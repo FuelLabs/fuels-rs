@@ -85,7 +85,7 @@ mod tests {
         let lp_token_balance = wallet.get_asset_balance(&lp_asset_id).await?;
 
         let call_params = CallParameters::default()
-            .with_amount(lp_token_balance)
+            .with_amount(lp_token_balance.try_into().unwrap())
             .with_asset_id(lp_asset_id);
 
         contract_methods
@@ -96,7 +96,7 @@ mod tests {
             .await?;
 
         let base_balance = wallet.get_asset_balance(&base_asset_id).await?;
-        assert_eq!(base_balance, deposit_amount);
+        assert_eq!(base_balance, deposit_amount as u128);
         // ANCHOR_END: liquidity_withdraw
         Ok(())
     }
@@ -334,10 +334,7 @@ mod tests {
         let status = provider.tx_status(&tx_id).await?;
         assert!(matches!(status, TxStatus::Success { .. }));
 
-        let balance: u128 = cold_wallet
-            .get_asset_balance(&bridged_asset_id)
-            .await?
-            .into();
+        let balance: u128 = cold_wallet.get_asset_balance(&bridged_asset_id).await?;
         assert_eq!(balance, locked_amount);
         // ANCHOR_END: custom_tx_verify
 

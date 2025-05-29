@@ -500,7 +500,7 @@ mod tests {
 
         let asset_id = caller_contract_id.asset_id(&Bits256::zeroed());
         let balance = wallet.get_asset_balance(&asset_id).await?;
-        assert_eq!(balance, amount);
+        assert_eq!(balance, amount as u128);
 
         // ANCHOR: dependency_estimation
         let response = contract_methods
@@ -513,7 +513,7 @@ mod tests {
         // ANCHOR_END: dependency_estimation
 
         let balance = wallet.get_asset_balance(&asset_id).await?;
-        assert_eq!(balance, 2 * amount);
+        assert_eq!(balance, 2 * amount as u128);
 
         Ok(())
     }

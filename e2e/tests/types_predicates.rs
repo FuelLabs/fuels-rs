@@ -76,7 +76,7 @@ async fn assert_address_balance(
         .get_asset_balance(address, asset_id)
         .await
         .expect("Could not retrieve balance");
-    assert_eq!(balance, amount);
+    assert_eq!(balance, amount as u128);
 }
 
 fn get_test_coins_and_messages(

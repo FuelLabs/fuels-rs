@@ -22,7 +22,7 @@ async fn assert_address_balance(
         .get_asset_balance(address, asset_id)
         .await
         .expect("Could not retrieve balance");
-    assert_eq!(balance, amount);
+    assert_eq!(balance, amount as u128);
 }
 
 fn get_test_coins_and_messages(
@@ -246,7 +246,7 @@ async fn pay_with_predicate() -> Result<()> {
         predicate
             .get_asset_balance(consensus_parameters.base_asset_id())
             .await?,
-        predicate_balance - deploy_fee
+        (predicate_balance - deploy_fee) as u128
     );
 
     let response = contract_methods
@@ -259,7 +259,7 @@ async fn pay_with_predicate() -> Result<()> {
         predicate
             .get_asset_balance(consensus_parameters.base_asset_id())
             .await?,
-        predicate_balance - deploy_fee - response.tx_status.total_fee
+        (predicate_balance - deploy_fee - response.tx_status.total_fee) as u128
     );
 
     Ok(())
@@ -310,7 +310,7 @@ async fn pay_with_predicate_vector_data() -> Result<()> {
         predicate
             .get_asset_balance(consensus_parameters.base_asset_id())
             .await?,
-        predicate_balance - deploy_fee
+        (predicate_balance - deploy_fee) as u128
     );
 
     let response = contract_methods.initialize_counter(42).call().await?;
@@ -320,7 +320,7 @@ async fn pay_with_predicate_vector_data() -> Result<()> {
         predicate
             .get_asset_balance(consensus_parameters.base_asset_id())
             .await?,
-        predicate_balance - deploy_fee - response.tx_status.total_fee
+        (predicate_balance - deploy_fee - response.tx_status.total_fee) as u128
     );
 
     Ok(())
@@ -569,7 +569,7 @@ async fn contract_tx_and_call_params_with_predicate() -> Result<()> {
         let call_fee = call_response.tx_status.total_fee;
         assert_eq!(
             predicate.get_asset_balance(&AssetId::zeroed()).await?,
-            predicate_balance - deploy_fee - call_params_amount - call_fee
+            (predicate_balance - deploy_fee - call_params_amount - call_fee) as u128
         );
     }
     {
@@ -873,7 +873,7 @@ async fn predicate_transfer_non_base_asset() -> Result<()> {
 
     let wallet_balance = wallet.get_asset_balance(&non_base_asset_id).await?;
 
-    assert_eq!(wallet_balance, amount);
+    assert_eq!(wallet_balance, amount as u128);
 
     Ok(())
 }
@@ -1065,7 +1065,7 @@ async fn predicate_transfers_non_base_asset() -> Result<()> {
 
     assert_eq!(
         receiver.get_asset_balance(&other_asset_id).await?,
-        send_amount,
+        send_amount as u128,
     );
 
     Ok(())
