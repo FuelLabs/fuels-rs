@@ -414,6 +414,10 @@ impl RetryableClient {
 
         Ok(!is_resource)
     }
+
+    pub fn inner(&self) -> &FuelClient {
+        &self.client
+    }
 }
 
 mod custom_queries {

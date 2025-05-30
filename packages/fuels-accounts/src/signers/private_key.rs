@@ -51,6 +51,10 @@ impl PrivateKeySigner {
     pub fn address(&self) -> &Bech32Address {
         &self.address
     }
+
+    pub fn private_key(&self) -> SecretKey {
+        self.private_key
+    }
 }
 
 #[async_trait]

@@ -12,6 +12,7 @@ pub use cache::TtlConfig;
 use cache::{CachedClient, SystemClock};
 use chrono::{DateTime, Utc};
 use fuel_core_client::client::{
+    FuelClient,
     pagination::{PageDirection, PaginatedResult, PaginationRequest},
     types::{
         balance::Balance,
@@ -133,6 +134,10 @@ impl Provider {
     pub async fn from(addr: impl Into<SocketAddr>) -> Result<Self> {
         let addr = addr.into();
         Self::connect(format!("http://{addr}")).await
+    }
+
+    pub fn client(&self) -> &FuelClient {
+        self.uncached_client().inner()
     }
 
     pub fn set_cache_ttl(&mut self, ttl: TtlConfig) {
