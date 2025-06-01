@@ -18,6 +18,7 @@ jobs:
         with:
           mdbook-version: "0.4.15"
 
+      - run: cargo run --package versions-replacer -- ./docs --manifest-path ./Cargo.toml --filename-regex "\.md$"
       - run: mdbook build docs
 
       - name: Deploy master
