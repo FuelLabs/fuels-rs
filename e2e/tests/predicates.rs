@@ -1098,7 +1098,9 @@ async fn predicate_with_invalid_data_fails() -> Result<()> {
         .unwrap_err()
         .to_string();
 
-    assert!(error_string.contains("PredicateVerificationFailed(Panic(PredicateReturnedNonOne))"));
+    assert!(error_string.contains(
+        "PredicateVerificationFailed(Panic { index: 0, reason: PredicateReturnedNonOne })"
+    ));
     assert_eq!(receiver.get_asset_balance(&other_asset_id).await?, 0);
 
     Ok(())
