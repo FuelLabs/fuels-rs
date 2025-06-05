@@ -10,7 +10,7 @@ mod tests {
         test_helpers::{ChainConfig, StateConfig},
         tx::ContractIdExt,
         types::{
-            Bytes32,
+            SubAssetId,
             errors::{Result, transaction::Reason},
         },
     };
@@ -352,7 +352,7 @@ mod tests {
     #[allow(unused_variables)]
     #[cfg(any(not(feature = "fuel-core-lib"), feature = "rocksdb"))]
     async fn token_ops_tests() -> Result<()> {
-        use fuels::{prelude::*, types::Bytes32};
+        use fuels::{prelude::*, types::SubAssetId};
         abigen!(Contract(
             name = "MyContract",
             abi = "e2e/sway/contracts/token_ops/out/release/token_ops-abi.json"
@@ -431,7 +431,7 @@ mod tests {
         let response = contract_methods.mint_coins(1_000_000).call().await?;
         // ANCHOR: variable_outputs
         let address = wallet.address();
-        let asset_id = contract_id.asset_id(&Bytes32::zeroed());
+        let asset_id = contract_id.asset_id(&SubAssetId::zeroed());
 
         // withdraw some tokens to wallet
         let response = contract_methods
@@ -495,7 +495,7 @@ mod tests {
             .await?;
         // ANCHOR_END: dependency_estimation_manual
 
-        let asset_id = caller_contract_id.asset_id(&Bytes32::zeroed());
+        let asset_id = caller_contract_id.asset_id(&SubAssetId::zeroed());
         let balance = wallet.get_asset_balance(&asset_id).await?;
         assert_eq!(balance, amount as u128);
 

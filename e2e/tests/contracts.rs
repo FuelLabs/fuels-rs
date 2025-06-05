@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+use fuel_tx::SubAssetId;
 use fuels::{
     accounts::signers::private_key::PrivateKeySigner,
     core::codec::{DecoderConfig, EncoderConfig, calldata, encode_fn_selector},
@@ -10,7 +11,7 @@ use fuels::{
         consensus_parameters::{ConsensusParametersV1, FeeParametersV1},
     },
     types::{
-        Bits256, Bytes32, Identity, SizedAsciiString, errors::transaction::Reason, input::Input,
+        Bits256, Identity, SizedAsciiString, errors::transaction::Reason, input::Input,
         output::Output,
     },
 };
@@ -714,7 +715,7 @@ async fn setup_output_variable_estimation_test()
     .await?
     .contract_id;
 
-    let mint_asset_id = contract_id.asset_id(&Bytes32::zeroed());
+    let mint_asset_id = contract_id.asset_id(&SubAssetId::zeroed());
     let addresses = wallets
         .iter()
         .map(|wallet| wallet.address().into())

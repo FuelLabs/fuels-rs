@@ -11,7 +11,7 @@ mod tests {
         test_helpers::{setup_single_asset_coins, setup_test_provider},
         tx::ContractIdExt,
         types::{
-            Address, AssetId, Bytes32,
+            Address, AssetId, SubAssetId,
             transaction::TxPolicies,
             transaction_builders::{
                 BuildableTransaction, ScriptTransactionBuilder, TransactionBuilder,
@@ -80,7 +80,7 @@ mod tests {
         // ANCHOR_END: liquidity_deposit
 
         // ANCHOR: liquidity_withdraw
-        let lp_asset_id = contract_id.asset_id(&Bytes32::zeroed());
+        let lp_asset_id = contract_id.asset_id(&SubAssetId::zeroed());
         let lp_token_balance = wallet.get_asset_balance(&lp_asset_id).await?;
 
         let call_params = CallParameters::default()

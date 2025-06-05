@@ -2,6 +2,7 @@ use std::{ops::Add, path::Path};
 
 use chrono::{DateTime, Duration, TimeZone, Utc};
 use fuel_asm::RegId;
+use fuel_tx::SubAssetId;
 use fuels::{
     accounts::{
         Account,
@@ -11,7 +12,6 @@ use fuels::{
     prelude::*,
     tx::{ContractIdExt, Receipt, Witness},
     types::{
-        Bytes32,
         coin_type::CoinType,
         message::Message,
         transaction_builders::{BuildableTransaction, ScriptTransactionBuilder},
@@ -395,7 +395,7 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
     );
     let contract_id = contract_instance.contract_id();
     let contract_methods = contract_instance.methods();
-    let asset_id = contract_id.asset_id(&Bytes32::zeroed());
+    let asset_id = contract_id.asset_id(&SubAssetId::zeroed());
 
     let mut balance_response = contract_methods
         .get_balance(contract_id, asset_id)
