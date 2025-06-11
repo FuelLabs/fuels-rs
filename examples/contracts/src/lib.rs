@@ -121,7 +121,7 @@ mod tests {
             .await?;
         // ANCHOR_END: contract_call_cost_estimation
 
-        let expected_script_gas = 2427;
+        let expected_script_gas = 2448;
         let expected_total_gas = 8679;
 
         assert_eq!(transaction_cost.script_gas, expected_script_gas);
