@@ -16,11 +16,11 @@ env:
   CARGO_TERM_COLOR: always
   DASEL_VERSION: https://github.com/TomWright/dasel/releases/download/v2.3.6/dasel_linux_amd64
   RUSTFLAGS: "-D warnings"
-  FUEL_CORE_VERSION: 0.43.2
+  FUEL_CORE_VERSION: 0.44.0
   FUEL_CORE_PATCH_BRANCH: ""
   FUEL_CORE_PATCH_REVISION: ""
   RUST_VERSION: 1.85.0
-  FORC_VERSION: 0.68.0
+  FORC_VERSION: 0.68.7
   FORC_PATCH_BRANCH: "ironcev/error-codes-in-abi-json"
   FORC_PATCH_REVISION: ""
   NEXTEST_HIDE_PROGRESS_BAR: "true"

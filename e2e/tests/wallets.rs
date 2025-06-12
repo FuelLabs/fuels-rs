@@ -9,7 +9,7 @@ async fn assert_address_balance(
     address: &Address,
     provider: &Provider,
     asset_id: &AssetId,
-    amount: u64,
+    amount: u128,
 ) {
     let balance = provider
         .get_asset_balance(address, asset_id)
@@ -37,8 +37,8 @@ async fn test_wallet_balance_api_multi_asset() -> Result<()> {
     assert_eq!(balances.len() as u64, number_of_assets);
 
     for asset_id in asset_ids {
-        let balance = wallet.get_asset_balance(&asset_id).await;
-        assert_eq!(balance?, coins_per_asset * amount_per_coin);
+        let balance = wallet.get_asset_balance(&asset_id).await?;
+        assert_eq!(balance, (coins_per_asset * amount_per_coin) as u128);
 
         let expected_key = asset_id.to_string();
         assert!(balances.contains_key(&expected_key));
@@ -66,8 +66,8 @@ async fn test_wallet_balance_api_single_asset() -> Result<()> {
     let wallet = Wallet::new(signer, provider.clone());
 
     for coin in coins {
-        let balance = wallet.get_asset_balance(&coin.asset_id).await;
-        assert_eq!(balance?, number_of_coins * amount_per_coin);
+        let balance = wallet.get_asset_balance(&coin.asset_id).await?;
+        assert_eq!(balance, (number_of_coins * amount_per_coin) as u128);
     }
 
     let balances = wallet.get_balances().await?;
@@ -179,7 +179,10 @@ async fn adjust_for_fee_with_message_data_input() -> Result<()> {
             .await
             .unwrap();
 
-        assert_eq!(receiver.get_asset_balance(&asset_id).await?, amount_to_send);
+        assert_eq!(
+            receiver.get_asset_balance(&asset_id).await?,
+            amount_to_send as u128
+        );
     }
 
     Ok(())
@@ -248,7 +251,7 @@ async fn test_transfer() -> Result<()> {
     let wallet_2_coins = wallet_2.get_coins(base_asset_id).await.unwrap();
     let wallet_2_balance = wallet_2.get_asset_balance(&base_asset_id).await?;
     assert_eq!(wallet_2_coins.len(), 2);
-    assert_eq!(wallet_2_balance, amount + amount / 2);
+    assert_eq!(wallet_2_balance, (amount + amount / 2) as u128);
 
     Ok(())
 }
@@ -436,7 +439,7 @@ async fn transfer_coins_of_non_base_asset() -> Result<()> {
         .await?;
 
     let wallet_1_balance = wallet_1.get_asset_balance(&asset_id).await?;
-    assert_eq!(wallet_1_balance, AMOUNT - SEND_AMOUNT);
+    assert_eq!(wallet_1_balance, (AMOUNT - SEND_AMOUNT) as u128);
 
     let wallet_2_final_coins = wallet_2.get_coins(asset_id).await?;
     assert_eq!(wallet_2_final_coins.len(), 1);
@@ -493,7 +496,7 @@ async fn test_transfer_with_multiple_signatures() -> Result<()> {
         receiver
             .get_asset_balance(consensus_parameters.base_asset_id())
             .await?,
-        amount_to_receive,
+        amount_to_receive as u128,
     );
 
     Ok(())
@@ -547,12 +550,12 @@ async fn wallet_transfer_respects_maturity_and_expiration() -> Result<()> {
         &wallet.address(),
         provider,
         &asset_id,
-        wallet_balance - amount_to_send - transaction_fee,
+        wallet_balance - amount_to_send as u128 - transaction_fee as u128,
     )
     .await;
 
     // Funds were transferred
-    assert_address_balance(&receiver, provider, &asset_id, amount_to_send).await;
+    assert_address_balance(&receiver, provider, &asset_id, amount_to_send as u128).await;
 
     Ok(())
 }

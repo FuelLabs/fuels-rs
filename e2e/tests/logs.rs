@@ -1,8 +1,9 @@
+use fuel_tx::SubAssetId;
 use fuels::{
     core::codec::DecoderConfig,
     prelude::*,
     tx::ContractIdExt,
-    types::{AsciiString, Bits256, Bytes32, SizedAsciiString, errors::transaction::Reason},
+    types::{AsciiString, Bits256, SizedAsciiString, errors::transaction::Reason},
 };
 
 #[tokio::test]
@@ -1526,7 +1527,7 @@ async fn contract_token_ops_error_messages() -> Result<()> {
 
     {
         let contract_id = contract_instance.contract_id();
-        let asset_id = contract_id.asset_id(&Bytes32::zeroed());
+        let asset_id = contract_id.asset_id(&SubAssetId::zeroed());
         let address = wallet.address();
 
         let error = contract_methods

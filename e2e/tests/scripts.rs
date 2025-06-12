@@ -140,7 +140,7 @@ async fn test_output_variable_estimation() -> Result<()> {
         .await?;
 
     let receiver_balance = receiver.get_asset_balance(&asset_id).await?;
-    assert_eq!(receiver_balance, amount);
+    assert_eq!(receiver_balance, amount as u128);
 
     Ok(())
 }

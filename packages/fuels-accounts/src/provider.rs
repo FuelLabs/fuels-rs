@@ -585,7 +585,7 @@ impl Provider {
     /// Get the balance of all spendable coins `asset_id` for address `address`. This is different
     /// from getting coins because we are just returning a number (the sum of UTXOs amount) instead
     /// of the UTXOs.
-    pub async fn get_asset_balance(&self, address: &Address, asset_id: &AssetId) -> Result<u64> {
+    pub async fn get_asset_balance(&self, address: &Address, asset_id: &AssetId) -> Result<u128> {
         Ok(self
             .uncached_client()
             .balance(address, Some(asset_id))

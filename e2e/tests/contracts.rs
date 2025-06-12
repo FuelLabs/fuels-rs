@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+use fuel_tx::SubAssetId;
 use fuels::{
     accounts::signers::private_key::PrivateKeySigner,
     core::codec::{DecoderConfig, EncoderConfig, calldata, encode_fn_selector},
@@ -10,7 +11,7 @@ use fuels::{
         consensus_parameters::{ConsensusParametersV1, FeeParametersV1},
     },
     types::{
-        Bits256, Bytes32, Identity, SizedAsciiString, errors::transaction::Reason, input::Input,
+        Bits256, Identity, SizedAsciiString, errors::transaction::Reason, input::Input,
         output::Output,
     },
 };
@@ -681,7 +682,7 @@ async fn test_connect_wallet() -> Result<()> {
 
     // confirm that funds have been deducted
     let wallet_balance = wallet.get_asset_balance(&Default::default()).await?;
-    assert!(DEFAULT_COIN_AMOUNT > wallet_balance);
+    assert!(DEFAULT_COIN_AMOUNT as u128 > wallet_balance);
 
     // pay for call with wallet_2
     contract_instance
@@ -696,7 +697,7 @@ async fn test_connect_wallet() -> Result<()> {
     let wallet_balance_second_call = wallet.get_asset_balance(&Default::default()).await?;
     let wallet_2_balance = wallet_2.get_asset_balance(&Default::default()).await?;
     assert_eq!(wallet_balance_second_call, wallet_balance);
-    assert!(DEFAULT_COIN_AMOUNT > wallet_2_balance);
+    assert!(DEFAULT_COIN_AMOUNT as u128 > wallet_2_balance);
 
     Ok(())
 }
@@ -714,7 +715,7 @@ async fn setup_output_variable_estimation_test()
     .await?
     .contract_id;
 
-    let mint_asset_id = contract_id.asset_id(&Bytes32::zeroed());
+    let mint_asset_id = contract_id.asset_id(&SubAssetId::zeroed());
     let addresses = wallets
         .iter()
         .map(|wallet| wallet.address().into())
@@ -762,7 +763,7 @@ async fn test_output_variable_estimation() -> Result<()> {
 
         for wallet in wallets.iter() {
             let balance = wallet.get_asset_balance(&mint_asset_id).await?;
-            assert_eq!(balance, amount);
+            assert_eq!(balance, amount as u128);
         }
     }
 
@@ -812,7 +813,7 @@ async fn test_output_variable_estimation_multicall() -> Result<()> {
 
     for wallet in wallets.iter() {
         let balance = wallet.get_asset_balance(&mint_asset_id).await?;
-        assert_eq!(balance, 3 * amount);
+        assert_eq!(balance, 3 * amount as u128);
     }
 
     Ok(())
@@ -1133,13 +1134,13 @@ async fn test_add_custom_assets() -> Result<()> {
 
     let balance_asset_1 = wallet_1.get_asset_balance(&asset_id_1).await?;
     let balance_asset_2 = wallet_1.get_asset_balance(&asset_id_2).await?;
-    assert_eq!(balance_asset_1, initial_amount - amount_1);
-    assert_eq!(balance_asset_2, initial_amount - amount_2);
+    assert_eq!(balance_asset_1, (initial_amount - amount_1) as u128);
+    assert_eq!(balance_asset_2, (initial_amount - amount_2) as u128);
 
     let balance_asset_1 = wallet_2.get_asset_balance(&asset_id_1).await?;
     let balance_asset_2 = wallet_2.get_asset_balance(&asset_id_2).await?;
-    assert_eq!(balance_asset_1, initial_amount + amount_1);
-    assert_eq!(balance_asset_2, initial_amount + amount_2);
+    assert_eq!(balance_asset_1, (initial_amount + amount_1) as u128);
+    assert_eq!(balance_asset_2, (initial_amount + amount_2) as u128);
 
     Ok(())
 }

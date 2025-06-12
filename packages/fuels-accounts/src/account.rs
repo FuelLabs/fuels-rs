@@ -60,7 +60,7 @@ pub trait ViewOnlyAccount: Send + Sync {
     /// Get the balance of all spendable coins `asset_id` for address `address`. This is different
     /// from getting coins because we are just returning a number (the sum of UTXOs amount) instead
     /// of the UTXOs.
-    async fn get_asset_balance(&self, asset_id: &AssetId) -> Result<u64> {
+    async fn get_asset_balance(&self, asset_id: &AssetId) -> Result<u128> {
         self.try_provider()?
             .get_asset_balance(&self.address(), asset_id)
             .await

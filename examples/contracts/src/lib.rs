@@ -10,7 +10,7 @@ mod tests {
         test_helpers::{ChainConfig, StateConfig},
         tx::ContractIdExt,
         types::{
-            Bytes32,
+            SubAssetId,
             errors::{Result, transaction::Reason},
         },
     };
@@ -121,8 +121,8 @@ mod tests {
             .await?;
         // ANCHOR_END: contract_call_cost_estimation
 
-        let expected_script_gas = 2488;
-        let expected_total_gas = 8740;
+        let expected_script_gas = 2448;
+        let expected_total_gas = 8700;
 
         assert_eq!(transaction_cost.script_gas, expected_script_gas);
         assert_eq!(transaction_cost.total_gas, expected_total_gas);
@@ -352,7 +352,7 @@ mod tests {
     #[allow(unused_variables)]
     #[cfg(any(not(feature = "fuel-core-lib"), feature = "rocksdb"))]
     async fn token_ops_tests() -> Result<()> {
-        use fuels::{prelude::*, types::Bytes32};
+        use fuels::{prelude::*, types::SubAssetId};
         abigen!(Contract(
             name = "MyContract",
             abi = "e2e/sway/contracts/token_ops/out/release/token_ops-abi.json"
@@ -431,7 +431,7 @@ mod tests {
         let response = contract_methods.mint_coins(1_000_000).call().await?;
         // ANCHOR: variable_outputs
         let address = wallet.address();
-        let asset_id = contract_id.asset_id(&Bytes32::zeroed());
+        let asset_id = contract_id.asset_id(&SubAssetId::zeroed());
 
         // withdraw some tokens to wallet
         let response = contract_methods
@@ -495,9 +495,9 @@ mod tests {
             .await?;
         // ANCHOR_END: dependency_estimation_manual
 
-        let asset_id = caller_contract_id.asset_id(&Bytes32::zeroed());
+        let asset_id = caller_contract_id.asset_id(&SubAssetId::zeroed());
         let balance = wallet.get_asset_balance(&asset_id).await?;
-        assert_eq!(balance, amount);
+        assert_eq!(balance, amount as u128);
 
         // ANCHOR: dependency_estimation
         let response = contract_methods
@@ -510,7 +510,7 @@ mod tests {
         // ANCHOR_END: dependency_estimation
 
         let balance = wallet.get_asset_balance(&asset_id).await?;
-        assert_eq!(balance, 2 * amount);
+        assert_eq!(balance, 2 * amount as u128);
 
         Ok(())
     }
@@ -673,8 +673,8 @@ mod tests {
             .await?;
         // ANCHOR_END: multi_call_cost_estimation
 
-        let expected_script_gas = 4033;
-        let expected_total_gas = 10862;
+        let expected_script_gas = 3993;
+        let expected_total_gas = 10_822;
 
         assert_eq!(transaction_cost.script_gas, expected_script_gas);
         assert_eq!(transaction_cost.total_gas, expected_total_gas);

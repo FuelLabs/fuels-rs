@@ -2,6 +2,7 @@ use std::{ops::Add, path::Path};
 
 use chrono::{DateTime, Duration, TimeZone, Utc};
 use fuel_asm::RegId;
+use fuel_tx::SubAssetId;
 use fuels::{
     accounts::{
         Account,
@@ -11,7 +12,6 @@ use fuels::{
     prelude::*,
     tx::{ContractIdExt, Receipt, Witness},
     types::{
-        Bytes32,
         coin_type::CoinType,
         message::Message,
         transaction_builders::{BuildableTransaction, ScriptTransactionBuilder},
@@ -195,7 +195,10 @@ async fn test_input_message_pays_fee() -> Result<()> {
     let balance = wallet.get_asset_balance(base_asset_id).await?;
     let deploy_fee = deploy_response.tx_status.unwrap().total_fee;
     let call_fee = call_response.tx_status.total_fee;
-    assert_eq!(balance, DEFAULT_COIN_AMOUNT - deploy_fee - call_fee);
+    assert_eq!(
+        balance,
+        (DEFAULT_COIN_AMOUNT - deploy_fee - call_fee) as u128
+    );
 
     Ok(())
 }
@@ -352,7 +355,7 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<()> {
     );
 
     // The gas used by the script to call a contract and forward remaining gas limit.
-    let gas_used_by_script = 243;
+    let gas_used_by_script = 203;
     let gas_limit = 225_883;
     let response = contract_instance
         .methods()
@@ -392,7 +395,7 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
     );
     let contract_id = contract_instance.contract_id();
     let contract_methods = contract_instance.methods();
-    let asset_id = contract_id.asset_id(&Bytes32::zeroed());
+    let asset_id = contract_id.asset_id(&SubAssetId::zeroed());
 
     let mut balance_response = contract_methods
         .get_balance(contract_id, asset_id)
@@ -865,7 +868,7 @@ async fn coin_caching() -> Result<()> {
     // Verify the transfers were successful
     assert_eq!(
         wallet_2.get_asset_balance(&AssetId::zeroed()).await?,
-        num_iterations * amount_to_send
+        (num_iterations * amount_to_send) as u128
     );
 
     Ok(())
