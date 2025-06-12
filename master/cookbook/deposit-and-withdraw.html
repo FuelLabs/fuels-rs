@@ -218,11 +218,11 @@ impl LiquidityPool for Contract {
             .await?;
 </code></pre>
 <p>As a final demonstration, let's use all our liquidity asset balance to withdraw from the pool and confirm we retrieved the initial amount. For this, we get our liquidity asset balance and supply it to the <code>withdraw()</code> call via <code>CallParameters</code>.</p>
-<pre><code class="language-rust ignore">        let lp_asset_id = contract_id.asset_id(&amp;Bytes32::zeroed());
+<pre><code class="language-rust ignore">        let lp_asset_id = contract_id.asset_id(&amp;SubAssetId::zeroed());
         let lp_token_balance = wallet.get_asset_balance(&amp;lp_asset_id).await?;
 
         let call_params = CallParameters::default()
-            .with_amount(lp_token_balance)
+            .with_amount(lp_token_balance.try_into().unwrap())
             .with_asset_id(lp_asset_id);
 
         contract_methods
@@ -233,7 +233,7 @@ impl LiquidityPool for Contract {
             .await?;
 
         let base_balance = wallet.get_asset_balance(&amp;base_asset_id).await?;
-        assert_eq!(base_balance, deposit_amount);
+        assert_eq!(base_balance, deposit_amount as u128);
 </code></pre>
 
                     </main>

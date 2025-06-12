@@ -215,10 +215,7 @@
 <pre><code class="language-rust ignore">        let status = provider.tx_status(&amp;tx_id).await?;
         assert!(matches!(status, TxStatus::Success { .. }));
 
-        let balance: u128 = cold_wallet
-            .get_asset_balance(&amp;bridged_asset_id)
-            .await?
-            .into();
+        let balance: u128 = cold_wallet.get_asset_balance(&amp;bridged_asset_id).await?;
         assert_eq!(balance, locked_amount);
 </code></pre>
 <h2 id="building-a-transaction-without-signatures"><a class="header" href="#building-a-transaction-without-signatures">Building a transaction without signatures</a></h2>

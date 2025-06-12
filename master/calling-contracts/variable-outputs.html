@@ -149,7 +149,7 @@
 </code></pre>
 <p>When calling <code>transfer_coins_to_output</code> with the SDK, you can specify the number of variable outputs:</p>
 <pre><code class="language-rust ignore">        let address = wallet.address();
-        let asset_id = contract_id.asset_id(&amp;Bytes32::zeroed());
+        let asset_id = contract_id.asset_id(&amp;SubAssetId::zeroed());
 
         // withdraw some tokens to wallet
         let response = contract_methods

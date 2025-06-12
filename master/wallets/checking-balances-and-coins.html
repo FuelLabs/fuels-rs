@@ -143,7 +143,7 @@
 <p>In the Fuel network, each UTXO corresponds to a unique <em>coin</em>, and said <em>coin</em> has a corresponding <em>amount</em> (the same way a dollar bill has either 10$ or 5$ face value). So, when you want to query the balance for a given asset ID, you want to query the sum of the amount in each unspent coin. This querying is done very easily with a wallet:</p>
 <!-- balance:example:end -->
 <pre><code class="language-rust ignore">        let asset_id = AssetId::zeroed();
-        let balance: u64 = wallet.get_asset_balance(&amp;asset_id).await?;
+        let balance: u128 = wallet.get_asset_balance(&amp;asset_id).await?;
 </code></pre>
 <!-- This section should explain getting all of the balances of a wallet -->
 <!-- balances:example:start -->

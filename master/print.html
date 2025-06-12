@@ -714,7 +714,7 @@ When storing keys on disk, <strong>always encrypt</strong> them (the SDK provide
 <p>In the Fuel network, each UTXO corresponds to a unique <em>coin</em>, and said <em>coin</em> has a corresponding <em>amount</em> (the same way a dollar bill has either 10$ or 5$ face value). So, when you want to query the balance for a given asset ID, you want to query the sum of the amount in each unspent coin. This querying is done very easily with a wallet:</p>
 <!-- balance:example:end -->
 <pre><code class="language-rust ignore">        let asset_id = AssetId::zeroed();
-        let balance: u64 = wallet.get_asset_balance(&amp;asset_id).await?;
+        let balance: u128 = wallet.get_asset_balance(&amp;asset_id).await?;
 </code></pre>
 <!-- This section should explain getting all of the balances of a wallet -->
 <!-- balances:example:start -->
@@ -2095,7 +2095,7 @@ let is_error = response.is_err();
 </code></pre>
 <p>When calling <code>transfer_coins_to_output</code> with the SDK, you can specify the number of variable outputs:</p>
 <pre><code class="language-rust ignore">        let address = wallet.address();
-        let asset_id = contract_id.asset_id(&amp;Bytes32::zeroed());
+        let asset_id = contract_id.asset_id(&amp;SubAssetId::zeroed());
 
         // withdraw some tokens to wallet
         let response = contract_methods
@@ -2727,7 +2727,7 @@ fn main(signatures: [B512; 3]) -&gt; bool {
             .await?;
 
         let predicate_balance = predicate.get_asset_balance(&amp;asset_id).await?;
-        assert_eq!(predicate_balance, amount_to_predicate);
+        assert_eq!(predicate_balance, amount_to_predicate as u128);
 </code></pre>
 <p>We can use the <code>transfer</code> method from the <a href="predicates/../accounts.html">Account</a> trait to transfer the assets. If the predicate data is correct, the <code>receiver</code> wallet will get the funds, and we will verify that the amount is correct.</p>
 <pre><code class="language-rust ignore">        let amount_to_receiver = 300;
@@ -2741,7 +2741,10 @@ fn main(signatures: [B512; 3]) -&gt; bool {
             .await?;
 
         let receiver_balance_after = receiver.get_asset_balance(&amp;asset_id).await?;
-        assert_eq!(initial_balance + amount_to_receiver, receiver_balance_after);
+        assert_eq!(
+            (initial_balance + amount_to_receiver) as u128,
+            receiver_balance_after
+        );
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="pre-uploading-code"><a class="header" href="#pre-uploading-code">Pre-uploading code</a></h1>
 <p>If you have a script or predicate that is larger than normal or which you plan
@@ -2901,10 +2904,7 @@ from subsequent callers.</p>
 <pre><code class="language-rust ignore">        let status = provider.tx_status(&amp;tx_id).await?;
         assert!(matches!(status, TxStatus::Success { .. }));
 
-        let balance: u128 = cold_wallet
-            .get_asset_balance(&amp;bridged_asset_id)
-            .await?
-            .into();
+        let balance: u128 = cold_wallet.get_asset_balance(&amp;bridged_asset_id).await?;
         assert_eq!(balance, locked_amount);
 </code></pre>
 <h2 id="building-a-transaction-without-signatures"><a class="header" href="#building-a-transaction-without-signatures">Building a transaction without signatures</a></h2>
@@ -4028,11 +4028,11 @@ impl LiquidityPool for Contract {
             .await?;
 </code></pre>
 <p>As a final demonstration, let's use all our liquidity asset balance to withdraw from the pool and confirm we retrieved the initial amount. For this, we get our liquidity asset balance and supply it to the <code>withdraw()</code> call via <code>CallParameters</code>.</p>
-<pre><code class="language-rust ignore">        let lp_asset_id = contract_id.asset_id(&amp;Bytes32::zeroed());
+<pre><code class="language-rust ignore">        let lp_asset_id = contract_id.asset_id(&amp;SubAssetId::zeroed());
         let lp_token_balance = wallet.get_asset_balance(&amp;lp_asset_id).await?;
 
         let call_params = CallParameters::default()
-            .with_amount(lp_token_balance)
+            .with_amount(lp_token_balance.try_into().unwrap())
             .with_asset_id(lp_asset_id);
 
         contract_methods
@@ -4043,7 +4043,7 @@ impl LiquidityPool for Contract {
             .await?;
 
         let base_balance = wallet.get_asset_balance(&amp;base_asset_id).await?;
-        assert_eq!(base_balance, deposit_amount);
+        assert_eq!(base_balance, deposit_amount as u128);
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="transfer-all-assets"><a class="header" href="#transfer-all-assets">Transfer all assets</a></h1>
 <p>The <code>transfer()</code> method lets you transfer a single asset, but what if you needed to move all of your assets to a different wallet? You could repeatably call <code>transfer()</code>, initiating a transaction each time, or you bundle all the transfers into a single transaction. This chapter guides you through crafting your custom transaction for transferring all assets owned by a wallet.</p>
