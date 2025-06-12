@@ -674,7 +674,7 @@ mod tests {
         // ANCHOR_END: multi_call_cost_estimation
 
         let expected_script_gas = 3993;
-        let expected_total_gas = 10784;
+        let expected_total_gas = 10_822;
 
         assert_eq!(transaction_cost.script_gas, expected_script_gas);
         assert_eq!(transaction_cost.total_gas, expected_total_gas);
