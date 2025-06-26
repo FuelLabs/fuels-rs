@@ -4,7 +4,7 @@ use fuel_tx::TxId;
 use fuels_core::{
     codec::{LogDecoder, LogResult},
     traits::{Parameterize, Tokenizable},
-    types::{errors::Result, tx_status::Success},
+    types::{Token, errors::Result, tx_status::Success},
 };
 
 /// [`CallResponse`] is a struct that is returned by a call to the contract or script. Its value
@@ -23,6 +23,15 @@ pub struct CallResponse<D> {
 impl<D> CallResponse<D> {
     pub fn decode_logs(&self) -> LogResult {
         self.log_decoder.decode_logs(&self.tx_status.receipts)
+    }
+
+    pub fn filter_logs<O>(&self, token: Token, offset: O) -> Result<LogResult>
+    where
+        O: Into<u16>,
+    {
+        let offset = offset.into();
+        self.log_decoder
+            .filter_logs_at_offset(&self.tx_status.receipts, token, offset)
     }
 
     pub fn decode_logs_with_type<T: Tokenizable + Parameterize + 'static>(&self) -> Result<Vec<T>> {

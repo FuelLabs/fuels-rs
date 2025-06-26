@@ -36,9 +36,12 @@ mod setup_program_test;
 pub fn abigen(input: TokenStream) -> TokenStream {
     let targets = parse_macro_input!(input as MacroAbigenTargets);
 
-    Abigen::generate(targets.into(), false)
+    let code = Abigen::generate(targets.into(), false)
         .expect("abigen generation failed")
-        .into()
+        .into();
+    println!("{}", code);
+
+    code
 }
 
 #[proc_macro]

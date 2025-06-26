@@ -10,8 +10,13 @@ use fuel_tx::{ContractId, Receipt};
 use crate::{
     codec::{ABIDecoder, DecoderConfig},
     traits::{Parameterize, Tokenizable},
-    types::errors::{Error, Result, error},
+    types::{
+        Token,
+        errors::{Error, Result, error},
+    },
 };
+
+use super::{ABIEncoder, EncoderConfig};
 
 #[derive(Clone)]
 pub struct LogFormatter {
@@ -110,6 +115,22 @@ impl LogDecoder {
         LogResult { results }
     }
 
+    /// Get all filtered logs results from the given receipts as `Result<String>`
+    pub fn filter_logs_at_offset(
+        &self,
+        receipts: &[Receipt],
+        token: Token,
+        offset: u16,
+    ) -> Result<LogResult> {
+        let results = receipts
+            .iter()
+            .extract_filtered_log_id_and_data(token, offset)?
+            .map(|(log_id, data)| self.format_log(&log_id, &data))
+            .collect();
+
+        Ok(LogResult { results })
+    }
+
     fn format_log(&self, log_id: &LogId, data: &[u8]) -> Result<String> {
         self.log_formatters
             .get(log_id)
@@ -192,6 +213,11 @@ trait ExtractLogIdData {
     fn extract_log_id_and_data(self) -> Self::Output;
 }
 
+trait ExtractFilterLogIdData {
+    type Output: Iterator<Item = (LogId, Vec<u8>)>;
+    fn extract_filtered_log_id_and_data(self, token: Token, offset: u16) -> Result<Self::Output>;
+}
+
 impl<'a, I: Iterator<Item = &'a Receipt>> ExtractLogIdData for I {
     type Output = FilterMap<Self, fn(&Receipt) -> Option<(LogId, Vec<u8>)>>;
     fn extract_log_id_and_data(self) -> Self::Output {
@@ -207,6 +233,41 @@ impl<'a, I: Iterator<Item = &'a Receipt>> ExtractLogIdData for I {
             }
             _ => None,
         })
+    }
+}
+
+impl<'a, I: Iterator<Item = &'a Receipt>> ExtractFilterLogIdData for I {
+    type Output = std::vec::IntoIter<(LogId, Vec<u8>)>;
+    fn extract_filtered_log_id_and_data(self, token: Token, offset: u16) -> Result<Self::Output> {
+        if !token.is_exact_size_abi() {
+            return Err(Error::Other("Token is not a fixed-size ABI type".into()));
+        }
+
+        let encoder = ABIEncoder::new(EncoderConfig::default());
+        let encoded_token = encoder.encode(&[token])?;
+
+        let offset_usize = offset as usize;
+        let tok_len = encoded_token.len();
+
+        let results: Vec<(LogId, Vec<u8>)> = self
+            .filter_map(|r| {
+                if let Receipt::LogData { rb, data: Some(data), id, .. } = r {
+                    // must have enough bytes after offset
+                    if data.len() >= offset_usize + tok_len
+                        // and the slice matches our encoded_token
+                        && &data[offset_usize .. offset_usize + tok_len] == encoded_token.as_slice()
+                    {
+                        Some((LogId(*id, rb.to_string()), data.clone()))
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        Ok(results.into_iter())
     }
 }
 

@@ -10,6 +10,7 @@ pub(crate) fn log_formatters_instantiation_code(
 ) -> TokenStream {
     let resolved_logs = resolve_logs(logged_types);
     let log_id_log_formatter_pairs = generate_log_id_log_formatter_pairs(&resolved_logs);
+    println!("{:#?}", log_id_log_formatter_pairs);
     quote! {::fuels::core::codec::log_formatters_lookup(vec![#(#log_id_log_formatter_pairs),*], #contract_id)}
 }
 
@@ -27,6 +28,7 @@ fn resolve_logs(logged_types: &[FullLoggedType]) -> Vec<ResolvedLog> {
             let resolved_type = TypeResolver::default()
                 .resolve(&l.application)
                 .expect("Failed to resolve log type");
+            println!("{:#?}", resolved_type);
 
             ResolvedLog {
                 log_id: l.log_id.clone(),

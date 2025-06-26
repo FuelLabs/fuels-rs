@@ -88,3 +88,57 @@ impl Default for Token {
         Token::U8(0)
     }
 }
+
+impl Token {
+    /// Returns true if this [Token] is an exact-size ABI type.
+    pub fn is_exact_size_abi(&self) -> bool {
+        match self {
+            Token::Unit
+            | Token::Bool(_)
+            | Token::U8(_) | Token::U16(_) | Token::U32(_) | Token::U64(_) | Token::U128(_) | Token::U256(_)
+            | Token::B256(_) => true,
+
+            // Dynamic or heap-allocated
+            Token::Bytes(_) | Token::String(_) | Token::RawSlice(_)
+            | Token::StringArray(_) | Token::StringSlice(_)
+            | Token::Vector(_) => false,
+
+            // Nested container: all elements must be exact-size
+            Token::Tuple(elems) | Token::Array(elems) | Token::Struct(elems) => {
+                elems.iter().all(|t| t.is_exact_size_abi())
+            }
+
+            // Enum: second element of selector is the payload Token
+            Token::Enum(selector) => selector.1.is_exact_size_abi(),
+        }
+    }
+}
+
+mod tests {
+
+
+    #[test]
+    fn primitives() {
+        assert!(Token::U32(0).is_exact_size_abi());
+        assert!(Token::B256([0u8; 32]).is_exact_size_abi());
+        assert!(!Token::String("a".into()).is_exact_size_abi());
+    }
+
+    #[test]
+    fn nested() {
+        let good = Token::Tuple(vec![Token::U16(1), Token::Bool(true)]);
+        assert!(good.is_exact_size_abi());
+
+        let bad = Token::Struct(vec![Token::U8(2), Token::Bytes(vec![1])]);
+        assert!(!bad.is_exact_size_abi());
+    }
+
+    // #[test]
+    // fn enum_token() {
+    //     let ok = Token::Enum(Box::new((0, Token::U64(5), EnumVariants::default())));
+    //     assert!(ok.is_exact_size_abi());
+
+    //     let err = Token::Enum(Box::new((1, Token::String("e".into()), EnumVariants::default())));
+    //     assert!(!err.is_exact_size_abi());
+    // }
+}
