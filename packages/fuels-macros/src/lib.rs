@@ -1,3 +1,5 @@
+use std::{env, fs, path::Path};
+
 use fuels_code_gen::Abigen;
 use proc_macro::TokenStream;
 use syn::{DeriveInput, parse_macro_input};
@@ -57,9 +59,32 @@ pub fn wasm_abigen(input: TokenStream) -> TokenStream {
 pub fn setup_program_test(input: TokenStream) -> TokenStream {
     let test_program_commands = parse_macro_input!(input as TestProgramCommands);
 
-    generate_setup_program_test_code(test_program_commands)
-        .unwrap_or_else(|e| e.to_compile_error())
-        .into()
+    // Generate the TokenStream
+    let tokens = match generate_setup_program_test_code(test_program_commands) {
+        Ok(toks) => toks,
+        Err(err) => return err.to_compile_error().into(),
+    };
+
+    // Only dump when DEBUG_SETUP=1 is set in the build environment
+    if env::var_os("DEBUG_SETUP").is_some() {
+        let target_dir = env::var("CARGO_TARGET_DIR").unwrap_or_else(|_| "target".into());
+        let profile   = env::var("PROFILE").unwrap_or_else(|_| "debug".into());
+        let out_dir   = Path::new(&target_dir)
+            .join(&profile)
+            .join("generated_tests");
+
+        if let Err(e) = fs::create_dir_all(&out_dir) {
+            panic!("failed to create debug dir {:?}: {}", out_dir, e);
+        }
+        let file_path = out_dir.join("setup_program_test.rs");
+        if let Err(e) = fs::write(&file_path, tokens.to_string()) {
+            panic!("failed to write debug file {:?}: {}", file_path, e);
+        }
+
+        eprintln!("[setup_program_test] Wrote generated code to {:?}", file_path);
+    }
+
+    tokens.into()
 }
 
 #[proc_macro_derive(Parameterize, attributes(FuelsTypesPath, FuelsCorePath, NoStd, Ignore))]

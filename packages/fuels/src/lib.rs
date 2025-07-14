@@ -41,6 +41,10 @@ pub mod core {
     pub use fuels_core::{Configurables, codec, constants, offsets, traits};
 }
 
+pub mod code_gen {
+    pub use fuels_code_gen::*;
+}
+
 pub mod crypto {
     pub use fuel_crypto::{Hasher, Message, PublicKey, SecretKey, Signature};
 }

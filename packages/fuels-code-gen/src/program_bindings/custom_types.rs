@@ -2,14 +2,12 @@ use std::collections::HashSet;
 
 use fuel_abi_types::abi::full_program::FullTypeDeclaration;
 use itertools::Itertools;
-use quote::quote;
+use quote::{quote, ToTokens};
 
 use crate::{
     error::Result,
     program_bindings::{
-        custom_types::{enums::expand_custom_enum, structs::expand_custom_struct},
-        generated_code::GeneratedCode,
-        utils::sdk_provided_custom_types_lookup,
+        custom_types::{enums::expand_custom_enum, structs::expand_custom_struct}, generated_code::GeneratedCode, resolved_type::TypeResolver, utils::sdk_provided_custom_types_lookup
     },
     utils::TypePath,
 };
@@ -40,6 +38,8 @@ pub(crate) fn generate_types<'a, T: IntoIterator<Item = &'a FullTypeDeclaration>
         .map(|ttype: &FullTypeDeclaration| {
             if shared_types.contains(ttype) {
                 reexport_the_shared_type(ttype, no_std)
+            } else if ttype.is_alias_type() {
+                expand_alias_type(ttype, no_std)
             } else if ttype.is_struct_type() {
                 expand_custom_struct(ttype, no_std)
             } else {
@@ -51,13 +51,62 @@ pub(crate) fn generate_types<'a, T: IntoIterator<Item = &'a FullTypeDeclaration>
         })
 }
 
+fn expand_alias_type(ttype: &FullTypeDeclaration, no_std: bool) -> Result<GeneratedCode> {
+    let type_path = ttype.alias_type_path().expect("This must be an alias type");
+    let type_path_ident = syn::Ident::new(
+        type_path.ident().unwrap().to_string().as_str(),
+        proc_macro2::Span::call_site(),
+    );
+
+    let alias_of = ttype.alias_of.as_ref().unwrap();
+    //eprintln!("alias_of: {:?}", alias_of);
+
+    // let mut raw_type_str = alias_of.name.as_str();
+
+    // if let Some(stripped) = raw_type_str.strip_prefix("struct ") {
+    //     raw_type_str = stripped;
+    // } else if let Some(stripped) = raw_type_str.strip_prefix("enum ") {
+    //     raw_type_str = stripped;
+    // }
+
+    let resolver = TypeResolver::default();
+    let resolved_alias = resolver.resolve(alias_of)?;
+    //eprintln!("resolved_alias: {:?}", resolved_alias);
+    // panic!();
+    
+    // let alias_of_path: syn::Type =
+    //     syn::parse_str(raw_type_str).expect("Failed to parse type");
+    
+    let alias_of_path = resolved_alias.to_token_stream();
+
+    // eprintln!("type_path: {:?}", type_path);
+    // panic!();
+
+    let type_mod = type_path.parent();
+
+    let top_lvl_mod = TypePath::default();
+    let from_current_mod_to_top_level = top_lvl_mod.relative_path_from(&type_mod);
+
+    let path = from_current_mod_to_top_level.append(type_path);
+
+    let the_reexport = quote! {pub type #type_path_ident = #alias_of_path;};
+
+    Ok(GeneratedCode::new(the_reexport, Default::default(), no_std).wrap_in_mod(type_mod))
+}
+
 /// Instead of generating bindings for `ttype` this fn will just generate a `pub use` pointing to
 /// the already generated equivalent shared type.
 fn reexport_the_shared_type(ttype: &FullTypeDeclaration, no_std: bool) -> Result<GeneratedCode> {
     // e.g. some_library::another_mod::SomeStruct
-    let type_path = ttype
-        .custom_type_path()
-        .expect("This must be a custom type due to the previous filter step");
+    let type_path = if ttype.is_custom_type() {
+        ttype
+            .custom_type_path()
+            .expect("This must be a custom type due to the previous filter step")
+    } else if ttype.is_alias_type() {
+        ttype.alias_type_path().expect("This must be an alias type")
+    } else {
+        unreachable!()
+    };
 
     let type_mod = type_path.parent();
 
@@ -85,6 +134,10 @@ fn reexport_the_shared_type(ttype: &FullTypeDeclaration, no_std: bool) -> Result
 // implementation details of the contract's Vec type and are not directly
 // used in the SDK.
 fn should_skip_codegen(type_decl: &FullTypeDeclaration) -> bool {
+    if type_decl.is_alias_type() {
+        return false;
+    }
+
     if !type_decl.is_custom_type() {
         return true;
     }
