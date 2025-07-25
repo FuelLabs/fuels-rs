@@ -19,6 +19,7 @@ fuel-crypto = { workspace = true }
 fuel-tx = { workspace = true }
 fuels-accounts = { workspace = true, default-features = false }
 fuels-core = { workspace = true }
+fuels-code-gen = { workspace = true }
 fuels-macros = { workspace = true }
 fuels-programs = { workspace = true }
 fuels-test-helpers = { workspace = true, optional = true }

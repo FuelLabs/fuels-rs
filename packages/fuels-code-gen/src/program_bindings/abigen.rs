@@ -34,7 +34,14 @@ impl Abigen {
     ///   for, and of what nature (Contract, Script or Predicate).
     /// * `no_std`: don't use the Rust std library.
     pub fn generate(targets: Vec<AbigenTarget>, no_std: bool) -> Result<TokenStream> {
+        // eprintln!("{:#?}", targets);
+
         let generated_code = Self::generate_code(no_std, targets)?;
+
+        // eprintln!(
+        //     "========================== CODE: \n {:#}",
+        //     generated_code.code()
+        // );
 
         let use_statements = generated_code.use_statements_for_uniquely_named_types();
 
@@ -69,8 +76,15 @@ impl Abigen {
         let custom_types = Self::filter_custom_types(&parsed_targets);
         let shared_types = Self::filter_shared_types(custom_types);
 
+        // TODO: Shared type handling.
+        let _alias_types = Self::filter_alias_types(&parsed_targets)
+            .cloned()
+            .collect::<Vec<_>>();
+
         let bindings = Self::generate_all_bindings(parsed_targets, no_std, &shared_types)?;
+        //eprintln!("bindings {:#}", bindings.code().to_string());
         let shared_types = Self::generate_shared_types(shared_types, no_std)?;
+        //eprintln!("shared_types {:#}", shared_types.code().to_string());
 
         let mod_name = ident("abigen_bindings");
         Ok(shared_types.merge(bindings).wrap_in_mod(mod_name))
@@ -94,11 +108,14 @@ impl Abigen {
         no_std: bool,
         shared_types: &HashSet<FullTypeDeclaration>,
     ) -> Result<GeneratedCode> {
+        //eprintln!("generate_bindings shared_types {:#?}", shared_types);
         let mod_name = ident(&format!("{}_mod", &target.name.to_snake_case()));
 
         let recompile_trigger =
             Self::generate_macro_recompile_trigger(target.source.path.as_ref(), no_std);
         let types = generate_types(&target.source.abi.types, shared_types, no_std)?;
+        //eprintln!("generate_bindings types {:#?}", types);
+
         let bindings = generate_bindings(target, no_std)?;
         Ok(recompile_trigger
             .merge(types)
@@ -143,6 +160,15 @@ impl Abigen {
             .iter()
             .flat_map(|target| &target.source.abi.types)
             .filter(|ttype| ttype.is_custom_type())
+    }
+
+    fn filter_alias_types(
+        all_types: &[AbigenTarget],
+    ) -> impl Iterator<Item = &FullTypeDeclaration> {
+        all_types
+            .iter()
+            .flat_map(|target| &target.source.abi.types)
+            .filter(|ttype| ttype.is_alias_type())
     }
 
     /// A type is considered "shared" if it appears at least twice in
