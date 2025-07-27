@@ -39,21 +39,20 @@ readme = "README.md"
 license = "Apache-2.0"
 repository = "https://github.com/FuelLabs/fuels-rs"
 rust-version = "1.85.0"
-version = "0.72.0"
+version = "0.75.0"
 
 [workspace.dependencies]
 Inflector = "0.11.4"
 anyhow = { version = "1.0", default-features = false }
 dialoguer = { version = "0.11", default-features = false }
 async-trait = { version = "0.1.74", default-features = false }
-bech32 = "0.9.1"
 bytes = { version = "1.5.0", default-features = false }
 chrono = "0.4.31"
 cynic = { version = "3.1.0", default-features = false }
 test-case = { version = "3.3", default-features = false }
 eth-keystore = "0.5.0"
 flate2 = { version = "1.0", default-features = false }
-fuel-abi-types = "0.12.0"
+fuel-abi-types = "0.13.0"
 futures = "0.3.29"
 hex = { version = "0.4.3", default-features = false }
 itertools = "0.12.0"
@@ -95,30 +94,30 @@ testcontainers = { version = "0.23", default-features = false }
 k256 = { version = "0.13", default-features = false }
 
 # Dependencies from the `fuel-core` repository:
-fuel-core = { version = "0.43.2", default-features = false, features = [
+fuel-core = { version = "0.44.0", default-features = false, features = [
   "wasm-executor",
 ] }
-fuel-core-chain-config = { version = "0.43.2", default-features = false }
-fuel-core-client = { version = "0.43.2", default-features = false }
-fuel-core-poa = { version = "0.43.2", default-features = false }
-fuel-core-services = { version = "0.43.2", default-features = false }
-fuel-core-types = { version = "0.43.2", default-features = false }
+fuel-core-chain-config = { version = "0.44.0", default-features = false }
+fuel-core-client = { version = "0.44.0", default-features = false }
+fuel-core-poa = { version = "0.44.0", default-features = false }
+fuel-core-services = { version = "0.44.0", default-features = false }
+fuel-core-types = { version = "0.44.0", default-features = false }
 
 # Dependencies from the `fuel-vm` repository:
-fuel-asm = { version = "0.60.2" }
-fuel-crypto = { version = "0.60.2" }
-fuel-merkle = { version = "0.60.2" }
-fuel-storage = { version = "0.60.2" }
-fuel-tx = { version = "0.60.2" }
-fuel-types = { version = "0.60.2" }
-fuel-vm = { version = "0.60.2" }
+fuel-asm = { version = "0.62.0" }
+fuel-crypto = { version = "0.62.0" }
+fuel-merkle = { version = "0.62.0" }
+fuel-storage = { version = "0.62.0" }
+fuel-tx = { version = "0.62.0" }
+fuel-types = { version = "0.62.0" }
+fuel-vm = { version = "0.62.0" }
 
 # Workspace projects
-fuels = { version = "0.72.0", path = "./packages/fuels", default-features = false }
-fuels-accounts = { version = "0.72.0", path = "./packages/fuels-accounts", default-features = false }
-fuels-code-gen = { version = "0.72.0", path = "./packages/fuels-code-gen", default-features = false }
-fuels-core = { version = "0.72.0", path = "./packages/fuels-core", default-features = false }
-fuels-macros = { version = "0.72.0", path = "./packages/fuels-macros", default-features = false }
-fuels-programs = { version = "0.72.0", path = "./packages/fuels-programs", default-features = false }
-fuels-test-helpers = { version = "0.72.0", path = "./packages/fuels-test-helpers", default-features = false }
-versions-replacer = { version = "0.72.0", path = "./scripts/versions-replacer", default-features = false }
+fuels = { version = "0.75.0", path = "./packages/fuels", default-features = false }
+fuels-accounts = { version = "0.75.0", path = "./packages/fuels-accounts", default-features = false }
+fuels-code-gen = { version = "0.75.0", path = "./packages/fuels-code-gen", default-features = false }
+fuels-core = { version = "0.75.0", path = "./packages/fuels-core", default-features = false }
+fuels-macros = { version = "0.75.0", path = "./packages/fuels-macros", default-features = false }
+fuels-programs = { version = "0.75.0", path = "./packages/fuels-programs", default-features = false }
+fuels-test-helpers = { version = "0.75.0", path = "./packages/fuels-test-helpers", default-features = false }
+versions-replacer = { version = "0.75.0", path = "./scripts/versions-replacer", default-features = false }

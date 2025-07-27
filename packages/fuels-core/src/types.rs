@@ -1,13 +1,12 @@
 use fuel_types::bytes::padded_len;
 pub use fuel_types::{
     Address, AssetId, BlockHeight, Bytes4, Bytes8, Bytes32, Bytes64, ChainId, ContractId,
-    MessageId, Nonce, Salt, Word,
+    MessageId, Nonce, Salt, SubAssetId, Word,
 };
 
 pub use crate::types::{core::*, token::*, wrappers::*};
 use crate::{error, types::errors::Result};
 
-pub mod bech32;
 mod core;
 mod dry_runner;
 pub mod errors;

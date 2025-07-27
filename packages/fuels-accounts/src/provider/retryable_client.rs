@@ -254,7 +254,11 @@ impl RetryableClient {
         .await
     }
 
-    pub async fn balance(&self, owner: &Address, asset_id: Option<&AssetId>) -> RequestResult<u64> {
+    pub async fn balance(
+        &self,
+        owner: &Address,
+        asset_id: Option<&AssetId>,
+    ) -> RequestResult<u128> {
         self.wrap(|| self.client.balance(owner, asset_id)).await
     }
 

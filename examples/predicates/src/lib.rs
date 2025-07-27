@@ -95,7 +95,7 @@ mod tests {
             .await?;
 
         let predicate_balance = predicate.get_asset_balance(&asset_id).await?;
-        assert_eq!(predicate_balance, amount_to_predicate);
+        assert_eq!(predicate_balance, amount_to_predicate as u128);
         // ANCHOR_END: predicate_receive
 
         // ANCHOR: predicate_spend
@@ -110,7 +110,10 @@ mod tests {
             .await?;
 
         let receiver_balance_after = receiver.get_asset_balance(&asset_id).await?;
-        assert_eq!(initial_balance + amount_to_receiver, receiver_balance_after);
+        assert_eq!(
+            (initial_balance + amount_to_receiver) as u128,
+            receiver_balance_after
+        );
         // ANCHOR_END: predicate_spend
 
         Ok(())

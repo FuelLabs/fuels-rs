@@ -18,11 +18,10 @@ impl<S> Wallet<S> {
 
 mod unlocked {
     use async_trait::async_trait;
-    use fuel_tx::AssetId;
     use fuels_core::{
         traits::Signer,
         types::{
-            bech32::Bech32Address, coin_type_id::CoinTypeId, errors::Result, input::Input,
+            Address, AssetId, coin_type_id::CoinTypeId, errors::Result, input::Input,
             transaction_builders::TransactionBuilder,
         },
     };
@@ -68,7 +67,7 @@ mod unlocked {
         S: Signer,
     {
         pub fn lock(&self) -> Wallet<Locked> {
-            Wallet::new_locked(self.state.signer.address().clone(), self.provider.clone())
+            Wallet::new_locked(self.state.signer.address(), self.provider.clone())
         }
     }
 
@@ -77,7 +76,7 @@ mod unlocked {
     where
         S: Signer + Clone + Send + Sync + std::fmt::Debug + 'static,
     {
-        fn address(&self) -> &Bech32Address {
+        fn address(&self) -> Address {
             self.state.signer.address()
         }
 
@@ -116,9 +115,8 @@ pub use unlocked::*;
 
 mod locked {
     use async_trait::async_trait;
-    use fuel_tx::AssetId;
     use fuels_core::types::{
-        bech32::Bech32Address, coin_type_id::CoinTypeId, errors::Result, input::Input,
+        Address, AssetId, coin_type_id::CoinTypeId, errors::Result, input::Input,
     };
 
     use super::Wallet;
@@ -126,17 +124,17 @@ mod locked {
 
     #[derive(Debug, Clone)]
     pub struct Locked {
-        address: Bech32Address,
+        address: Address,
     }
 
     impl Locked {
-        fn new(address: Bech32Address) -> Self {
+        fn new(address: Address) -> Self {
             Self { address }
         }
     }
 
     impl Wallet<Locked> {
-        pub fn new_locked(addr: Bech32Address, provider: Provider) -> Self {
+        pub fn new_locked(addr: Address, provider: Provider) -> Self {
             Self {
                 state: Locked::new(addr),
                 provider,
@@ -146,8 +144,8 @@ mod locked {
 
     #[async_trait]
     impl ViewOnlyAccount for Wallet<Locked> {
-        fn address(&self) -> &Bech32Address {
-            &self.state.address
+        fn address(&self) -> Address {
+            self.state.address
         }
 
         fn try_provider(&self) -> Result<&Provider> {
