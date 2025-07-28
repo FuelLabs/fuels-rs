@@ -6,7 +6,7 @@ use std::{
     iter::repeat,
     sync::Arc,
 };
-
+use std::iter::repeat_n;
 use async_trait::async_trait;
 use fuel_asm::{GTFArgs, RegId, op};
 use fuel_crypto::{Hasher, Message as CryptoMessage, Signature};
@@ -990,12 +990,11 @@ impl ScriptTransactionBuilder {
 
 fn add_variable_outputs(tx: &mut fuel_tx::Script, variable_outputs: usize) {
     tx.outputs_mut().extend(
-        repeat(Output::Variable {
+        repeat_n(Output::Variable {
             amount: 0,
             to: Address::zeroed(),
             asset_id: AssetId::zeroed(),
-        })
-        .take(variable_outputs),
+        }, variable_outputs)
     );
 }
 

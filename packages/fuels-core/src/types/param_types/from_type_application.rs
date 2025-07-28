@@ -17,7 +17,7 @@ impl ParamType {
     ///
     /// * `type_application`: The UnifiedTypeApplication you wish to convert into a ParamType
     /// * `type_lookup`: A HashMap of UnifiedTypeDeclarations mentioned in the
-    ///                  UnifiedTypeApplication where the type id is the key.
+    ///   UnifiedTypeApplication where the type id is the key.
     pub fn try_from_type_application(
         type_application: &UnifiedTypeApplication,
         type_lookup: &HashMap<usize, UnifiedTypeDeclaration>,
@@ -118,7 +118,7 @@ impl Type {
     /// * `type_application`: The type on which the generic parameters are defined.
     /// * `types`: All types used.
     /// * `parent_generic_params`: The generic parameters as inherited from the
-    ///                            enclosing type (a struct/enum/array etc.).
+    ///   enclosing type (a struct/enum/array etc.).
     fn determine_generics_for_type(
         type_application: &UnifiedTypeApplication,
         type_lookup: &HashMap<usize, UnifiedTypeDeclaration>,

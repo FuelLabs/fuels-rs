@@ -1,5 +1,5 @@
-use std::{io::Read, iter::repeat, str};
-
+use std::{io::Read, str};
+use std::iter::repeat_n;
 use crate::{
     codec::{
         DecoderConfig,
@@ -126,14 +126,14 @@ impl BoundedDecoder {
         length: usize,
     ) -> Result<Token> {
         Ok(Token::Array(
-            self.decode_params(repeat(param_type).take(length), bytes)?,
+            self.decode_params(repeat_n(param_type, length), bytes)?,
         ))
     }
 
     fn decode_vector<R: Read>(&mut self, param_type: &ParamType, bytes: &mut R) -> Result<Token> {
         let length = decode_len(bytes)?;
         Ok(Token::Vector(
-            self.decode_params(repeat(param_type).take(length), bytes)?,
+            self.decode_params(repeat_n(param_type, length), bytes)?,
         ))
     }
 
