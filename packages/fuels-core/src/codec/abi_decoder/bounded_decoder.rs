@@ -1,5 +1,3 @@
-use std::{io::Read, str};
-use std::iter::repeat_n;
 use crate::{
     codec::{
         DecoderConfig,
@@ -11,6 +9,8 @@ use crate::{
         param_types::{EnumVariants, NamedParamType, ParamType},
     },
 };
+use std::iter::repeat_n;
+use std::{io::Read, str};
 
 /// Is used to decode bytes into `Token`s from which types implementing `Tokenizable` can be
 /// instantiated. Implements decoding limits to control resource usage.
