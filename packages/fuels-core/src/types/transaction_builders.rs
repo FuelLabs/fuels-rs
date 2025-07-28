@@ -1,12 +1,5 @@
 #![cfg(feature = "std")]
 
-use std::{
-    collections::HashMap,
-    fmt::{Debug, Formatter},
-    iter::repeat,
-    sync::Arc,
-};
-
 use async_trait::async_trait;
 use fuel_asm::{GTFArgs, RegId, op};
 use fuel_crypto::{Hasher, Message as CryptoMessage, Signature};
@@ -21,6 +14,13 @@ pub use fuel_tx::{UpgradePurpose, UploadSubsection};
 use fuel_types::{Bytes32, Salt, bytes::padded_len_usize};
 use itertools::Itertools;
 use script_tx_estimator::ScriptTxEstimator;
+use std::iter::repeat_n;
+use std::{
+    collections::HashMap,
+    fmt::{Debug, Formatter},
+    iter::repeat,
+    sync::Arc,
+};
 
 use crate::{
     constants::{DEFAULT_GAS_ESTIMATION_BLOCK_HORIZON, SIGNATURE_WITNESS_SIZE, WORD_SIZE},
@@ -989,14 +989,14 @@ impl ScriptTransactionBuilder {
 }
 
 fn add_variable_outputs(tx: &mut fuel_tx::Script, variable_outputs: usize) {
-    tx.outputs_mut().extend(
-        repeat(Output::Variable {
+    tx.outputs_mut().extend(repeat_n(
+        Output::Variable {
             amount: 0,
             to: Address::zeroed(),
             asset_id: AssetId::zeroed(),
-        })
-        .take(variable_outputs),
-    );
+        },
+        variable_outputs,
+    ));
 }
 
 impl CreateTransactionBuilder {

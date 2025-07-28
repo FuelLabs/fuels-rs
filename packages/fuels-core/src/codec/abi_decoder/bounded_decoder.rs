@@ -1,5 +1,3 @@
-use std::{io::Read, iter::repeat, str};
-
 use crate::{
     codec::{
         DecoderConfig,
@@ -11,6 +9,8 @@ use crate::{
         param_types::{EnumVariants, NamedParamType, ParamType},
     },
 };
+use std::iter::repeat_n;
+use std::{io::Read, str};
 
 /// Is used to decode bytes into `Token`s from which types implementing `Tokenizable` can be
 /// instantiated. Implements decoding limits to control resource usage.
@@ -126,14 +126,14 @@ impl BoundedDecoder {
         length: usize,
     ) -> Result<Token> {
         Ok(Token::Array(
-            self.decode_params(repeat(param_type).take(length), bytes)?,
+            self.decode_params(repeat_n(param_type, length), bytes)?,
         ))
     }
 
     fn decode_vector<R: Read>(&mut self, param_type: &ParamType, bytes: &mut R) -> Result<Token> {
         let length = decode_len(bytes)?;
         Ok(Token::Vector(
-            self.decode_params(repeat(param_type).take(length), bytes)?,
+            self.decode_params(repeat_n(param_type, length), bytes)?,
         ))
     }
 
