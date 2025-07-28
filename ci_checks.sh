@@ -8,13 +8,13 @@
 # Note, if you need a custom branch, you can replace `--tag {RELEASE}` with the `--branch {BRANCH_NAME}`.
 
 cargo fmt --all -- --check &&
-	forc fmt --check &&
-	forc build --release --terse &&
+	forc fmt --check --path e2e --experimental error_type &&
+	forc build --release --terse --path e2e --experimental error_type &&
 	cargo clippy --all-targets &&
-	forc build --release --terse &&
+	forc build --release --terse --path e2e --experimental error_type &&
 	cargo clippy --all-targets --all-features &&
 	cargo test --all-targets --all-features &&
 	cargo test --all-targets --all-features --workspace &&
 	cargo test --all-targets --workspace &&
 	cargo run --bin check-docs &&
-	cargo doc |& grep -A 6 "warning: unresolved link to"
+	$(cargo doc |& grep -A 6 "warning: unresolved link to")
