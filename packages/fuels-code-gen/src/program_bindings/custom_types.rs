@@ -615,6 +615,7 @@ mod tests {
             type_field: "struct some_shared_lib::SharedStruct".to_string(),
             components: vec![],
             type_parameters: vec![],
+            alias_of: None,
         };
         let shared_types = HashSet::from([type_decl.clone()]);
 

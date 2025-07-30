@@ -169,6 +169,7 @@ mod tests {
             type_field: type_field.to_string(),
             components: vec![],
             type_parameters: vec![],
+            alias_of: None,
         });
 
         let shared_types = Abigen::filter_shared_types(&types);
