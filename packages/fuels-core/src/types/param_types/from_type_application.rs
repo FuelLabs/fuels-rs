@@ -373,6 +373,7 @@ mod tests {
                 type_field: type_field.to_string(),
                 components: None,
                 type_parameters: None,
+                alias_of: None,
             }];
 
             let type_lookup = declarations
@@ -419,12 +420,14 @@ mod tests {
                     error_message: None,
                 }]),
                 type_parameters: None,
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 1,
                 type_field: "u8".to_string(),
                 components: None,
                 type_parameters: None,
+                alias_of: None,
             },
         ];
 
@@ -451,12 +454,14 @@ mod tests {
                 type_field: "generic T".to_string(),
                 components: None,
                 type_parameters: None,
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 2,
                 type_field: "raw untyped ptr".to_string(),
                 components: None,
                 type_parameters: None,
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 3,
@@ -476,6 +481,7 @@ mod tests {
                     },
                 ]),
                 type_parameters: Some(vec![1]),
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 4,
@@ -500,18 +506,21 @@ mod tests {
                     },
                 ]),
                 type_parameters: Some(vec![1]),
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 5,
                 type_field: "u64".to_string(),
                 components: None,
                 type_parameters: None,
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 6,
                 type_field: "u8".to_string(),
                 components: None,
                 type_parameters: None,
+                alias_of: None,
             },
         ];
 
@@ -550,6 +559,7 @@ mod tests {
                 type_field: "generic T".to_string(),
                 components: None,
                 type_parameters: None,
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 2,
@@ -561,12 +571,14 @@ mod tests {
                     error_message: None,
                 }]),
                 type_parameters: Some(vec![1]),
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 3,
                 type_field: "u8".to_string(),
                 components: None,
                 type_parameters: None,
+                alias_of: None,
             },
         ];
 
@@ -612,6 +624,7 @@ mod tests {
                 type_field: "generic T".to_string(),
                 components: None,
                 type_parameters: None,
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 2,
@@ -623,12 +636,14 @@ mod tests {
                     error_message: None,
                 }]),
                 type_parameters: Some(vec![1]),
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 3,
                 type_field: "u8".to_string(),
                 components: None,
                 type_parameters: None,
+                alias_of: None,
             },
         ];
 
@@ -687,18 +702,21 @@ mod tests {
                     },
                 ]),
                 type_parameters: None,
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 2,
                 type_field: "str[15]".to_string(),
                 components: None,
                 type_parameters: None,
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 3,
                 type_field: "u8".to_string(),
                 components: None,
                 type_parameters: None,
+                alias_of: None,
             },
         ];
 
@@ -747,6 +765,7 @@ mod tests {
                     },
                 ]),
                 type_parameters: None,
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 2,
@@ -766,6 +785,7 @@ mod tests {
                     },
                 ]),
                 type_parameters: None,
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 3,
@@ -785,6 +805,7 @@ mod tests {
                     },
                 ]),
                 type_parameters: None,
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 4,
@@ -816,6 +837,7 @@ mod tests {
                     error_message: None,
                 }]),
                 type_parameters: None,
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 5,
@@ -827,6 +849,7 @@ mod tests {
                     error_message: None,
                 }]),
                 type_parameters: None,
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 6,
@@ -838,12 +861,14 @@ mod tests {
                     error_message: None,
                 }]),
                 type_parameters: None,
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 7,
                 type_field: "b256".to_string(),
                 components: None,
                 type_parameters: None,
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 8,
@@ -863,54 +888,63 @@ mod tests {
                     },
                 ]),
                 type_parameters: Some(vec![12]),
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 9,
                 type_field: "generic K".to_string(),
                 components: None,
                 type_parameters: None,
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 10,
                 type_field: "generic L".to_string(),
                 components: None,
                 type_parameters: None,
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 11,
                 type_field: "generic M".to_string(),
                 components: None,
                 type_parameters: None,
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 12,
                 type_field: "generic N".to_string(),
                 components: None,
                 type_parameters: None,
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 13,
                 type_field: "generic T".to_string(),
                 components: None,
                 type_parameters: None,
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 14,
                 type_field: "generic U".to_string(),
                 components: None,
                 type_parameters: None,
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 15,
                 type_field: "raw untyped ptr".to_string(),
                 components: None,
                 type_parameters: None,
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 16,
                 type_field: "str[2]".to_string(),
                 components: None,
                 type_parameters: None,
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 17,
@@ -935,6 +969,7 @@ mod tests {
                     },
                 ]),
                 type_parameters: Some(vec![13, 14]),
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 18,
@@ -951,6 +986,7 @@ mod tests {
                     error_message: None,
                 }]),
                 type_parameters: Some(vec![9]),
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 19,
@@ -970,6 +1006,7 @@ mod tests {
                     },
                 ]),
                 type_parameters: Some(vec![13]),
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 20,
@@ -981,6 +1018,7 @@ mod tests {
                     error_message: None,
                 }]),
                 type_parameters: Some(vec![13]),
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 21,
@@ -992,6 +1030,7 @@ mod tests {
                     error_message: None,
                 }]),
                 type_parameters: Some(vec![10]),
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 22,
@@ -1003,6 +1042,7 @@ mod tests {
                     error_message: None,
                 }]),
                 type_parameters: Some(vec![11]),
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 23,
@@ -1027,18 +1067,21 @@ mod tests {
                     },
                 ]),
                 type_parameters: Some(vec![13]),
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 24,
                 type_field: "u32".to_string(),
                 components: None,
                 type_parameters: None,
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 25,
                 type_field: "u64".to_string(),
                 components: None,
                 type_parameters: None,
+                alias_of: None,
             },
         ];
 
