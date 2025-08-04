@@ -45,8 +45,7 @@ impl ABIDecoder {
     ///
     /// # Arguments
     ///
-    /// * `param_type`: The `ParamType` of the type we expect is encoded
-    ///                  inside `bytes`.
+    /// * `param_type`: The `ParamType` of the type we expect is encoded inside `bytes`.
     /// * `bytes`:       The bytes to be used in the decoding process.
     /// # Examples
     ///
@@ -92,8 +91,7 @@ impl ABIDecoder {
     ///
     /// # Arguments
     ///
-    /// * `param_type`: The `ParamType` of the type we expect is encoded
-    ///                  inside `bytes`.
+    /// * `param_type`: The `ParamType` of the type we expect is encoded inside `bytes`.
     /// * `bytes`:       The bytes to be used in the decoding process.
     /// # Examples
     ///

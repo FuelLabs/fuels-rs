@@ -302,7 +302,7 @@ where
     /// - `asset_id`: The unique identifier of the asset being added.
     /// - `amount`: The amount of the asset being added.
     /// - `address`: The optional account address that the output amount will be sent to.
-    ///              If not provided, the asset will be sent to the users account address.
+    ///   If not provided, the asset will be sent to the users account address.
     ///
     /// Note that this is a builder method, i.e. use it as a chain:
     ///

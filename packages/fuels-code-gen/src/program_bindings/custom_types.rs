@@ -28,7 +28,7 @@ mod utils;
 ///
 /// * `types`: Types you wish to generate Rust code for.
 /// * `shared_types`: Types that are shared between multiple
-///                   contracts/scripts/predicates and thus generated elsewhere.
+///   contracts/scripts/predicates and thus generated elsewhere.
 pub(crate) fn generate_types<'a, T: IntoIterator<Item = &'a FullTypeDeclaration>>(
     types: T,
     shared_types: &HashSet<FullTypeDeclaration>,
@@ -615,6 +615,7 @@ mod tests {
             type_field: "struct some_shared_lib::SharedStruct".to_string(),
             components: vec![],
             type_parameters: vec![],
+            alias_of: None,
         };
         let shared_types = HashSet::from([type_decl.clone()]);
 

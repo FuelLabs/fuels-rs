@@ -183,6 +183,7 @@ mod tests {
             type_field: "generic T".to_string(),
             components: vec![],
             type_parameters: vec![],
+            alias_of: None,
         };
         let custom_struct_type = FullTypeDeclaration {
             type_field: "struct CustomStruct".to_string(),
@@ -193,6 +194,7 @@ mod tests {
                 error_message: None,
             }],
             type_parameters: vec![generic_type_t],
+            alias_of: None,
         };
 
         let fn_output = FullTypeApplication {
@@ -204,6 +206,7 @@ mod tests {
                     type_field: "u64".to_string(),
                     components: vec![],
                     type_parameters: vec![],
+                    alias_of: None,
                 },
                 type_arguments: vec![],
                 error_message: None,
@@ -219,6 +222,7 @@ mod tests {
                     type_field: "u8".to_string(),
                     components: vec![],
                     type_parameters: vec![],
+                    alias_of: None,
                 },
                 type_arguments: vec![],
                 error_message: None,
