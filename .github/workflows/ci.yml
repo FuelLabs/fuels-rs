@@ -6,7 +6,7 @@ on:
       - master
   pull_request:
   release:
-    types: [published]
+    types: [ published ]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -16,12 +16,12 @@ env:
   CARGO_TERM_COLOR: always
   DASEL_VERSION: https://github.com/TomWright/dasel/releases/download/v2.3.6/dasel_linux_amd64
   RUSTFLAGS: "-D warnings"
-  FUEL_CORE_VERSION: 0.44.0
+  FUEL_CORE_VERSION: 0.46.0
   FUEL_CORE_PATCH_BRANCH: ""
   FUEL_CORE_PATCH_REVISION: ""
   RUST_VERSION: 1.86.0
-  FORC_VERSION: 0.68.7
-  FORC_PATCH_BRANCH: "ironcev/error-codes-in-abi-json"
+  FORC_VERSION: 0.69.1
+  FORC_PATCH_BRANCH: ""
   FORC_PATCH_REVISION: ""
   NEXTEST_HIDE_PROGRESS_BAR: "true"
   NEXTEST_STATUS_LEVEL: "fail"
@@ -60,10 +60,10 @@ jobs:
           fi
 
       - name: Check format of Sway test projects
-        run: forc fmt --check --path e2e --experimental error_type
+        run: forc fmt --check --path e2e
 
       - name: Build Sway test projects
-        run: forc build --release --terse --error-on-warnings --path e2e --experimental error_type
+        run: forc build --release --terse --error-on-warnings --path e2e
 
       - uses: actions/upload-artifact@v4
         with:
@@ -164,8 +164,8 @@ jobs:
     runs-on: buildjet-4vcpu-ubuntu-2204
     strategy:
       matrix:
-        cargo_command: [check]
-        args: [--all-features]
+        cargo_command: [ check ]
+        args: [ --all-features ]
         package: ${{fromJSON(needs.get-workspace-members.outputs.members)}}
         include:
           - cargo_command: fmt

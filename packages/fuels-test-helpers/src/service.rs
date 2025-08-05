@@ -105,6 +105,7 @@ impl FuelService {
                 required_fuel_block_height_tolerance: 10,
                 required_fuel_block_height_timeout: Duration::from_secs(30),
                 request_body_bytes_limit: 16 * 1024 * 1024,
+                block_subscriptions_queue: 100,
                 query_log_threshold_time: Duration::from_secs(2),
                 api_request_timeout: Duration::from_secs(60),
                 database_batch_size: 100,

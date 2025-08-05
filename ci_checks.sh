@@ -8,10 +8,10 @@
 # Note, if you need a custom branch, you can replace `--tag {RELEASE}` with the `--branch {BRANCH_NAME}`.
 
 cargo fmt --all -- --check &&
-	forc fmt --check --path e2e --experimental error_type &&
-	forc build --release --terse --path e2e --experimental error_type &&
+	forc fmt --check --path e2e &&
+	forc build --release --terse --path e2e &&
 	cargo clippy --all-targets &&
-	forc build --release --terse --path e2e --experimental error_type &&
+	forc build --release --terse --path e2e &&
 	cargo clippy --all-targets --all-features &&
 	cargo test --all-targets --all-features &&
 	cargo test --all-targets --all-features --workspace &&
