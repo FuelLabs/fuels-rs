@@ -13,12 +13,6 @@ enum State {
     C: (),
 }
 
-impl Hash for str[4] {
-    fn hash(self, ref mut state: Hasher) {
-        state.write_str(from_str_array(self));
-    }
-}
-
 abi MyContract {
     fn returns_tuple(input: (u64, u64)) -> (u64, u64);
     fn returns_struct_in_tuple(input: (u64, Person)) -> (u64, Person);
