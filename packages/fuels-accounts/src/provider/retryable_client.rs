@@ -103,6 +103,10 @@ impl RetryableClient {
         &self.url
     }
 
+    pub fn client(&self) -> &FuelClient {
+        &self.client
+    }
+
     pub(crate) fn set_retry_config(&mut self, retry_config: RetryConfig) {
         self.retry_config = retry_config;
     }
