@@ -1,4 +1,15 @@
+use crate::calls::utils::calculate_required_asset_amounts;
+use crate::{
+    DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE,
+    calls::{
+        ContractCall, ScriptCall,
+        utils::{build_with_tb, sealed, transaction_builder_from_contract_calls},
+    },
+};
+use fuel_tx::ConsensusParameters;
+use fuel_types::AssetId;
 use fuels_accounts::Account;
+use fuels_core::types::input::Input;
 use fuels_core::types::{
     errors::{Context, Result, error},
     transaction::{ScriptTransaction, TxPolicies},
@@ -7,20 +18,16 @@ use fuels_core::types::{
     },
 };
 
-use crate::{
-    DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE,
-    calls::{
-        ContractCall, ScriptCall,
-        utils::{build_with_tb, sealed, transaction_builder_from_contract_calls},
-    },
-};
-
 #[async_trait::async_trait]
 pub trait TransactionTuner: sealed::Sealed {
-    async fn transaction_builder<T: Account>(
+    fn required_assets(&self, base_asset_id: AssetId) -> Vec<(AssetId, u128)>;
+
+    fn transaction_builder<T: Account>(
         &self,
         tx_policies: TxPolicies,
         variable_output_policy: VariableOutputPolicy,
+        consensus_parameters: &ConsensusParameters,
+        asset_input: Vec<Input>,
         account: &T,
     ) -> Result<ScriptTransactionBuilder>;
 
@@ -33,19 +40,26 @@ pub trait TransactionTuner: sealed::Sealed {
 
 #[async_trait::async_trait]
 impl TransactionTuner for ContractCall {
-    async fn transaction_builder<T: Account>(
+    fn required_assets(&self, base_asset_id: AssetId) -> Vec<(AssetId, u128)> {
+        calculate_required_asset_amounts(std::slice::from_ref(self), base_asset_id)
+    }
+
+    fn transaction_builder<T: Account>(
         &self,
         tx_policies: TxPolicies,
         variable_output_policy: VariableOutputPolicy,
+        consensus_parameters: &ConsensusParameters,
+        asset_input: Vec<Input>,
         account: &T,
     ) -> Result<ScriptTransactionBuilder> {
         transaction_builder_from_contract_calls(
             std::slice::from_ref(self),
             tx_policies,
             variable_output_policy,
+            consensus_parameters,
+            asset_input,
             account,
         )
-        .await
     }
 
     async fn build_tx<T: Account>(
@@ -59,10 +73,16 @@ impl TransactionTuner for ContractCall {
 
 #[async_trait::async_trait]
 impl TransactionTuner for ScriptCall {
-    async fn transaction_builder<T: Account>(
+    fn required_assets(&self, _: AssetId) -> Vec<(AssetId, u128)> {
+        vec![]
+    }
+
+    fn transaction_builder<T: Account>(
         &self,
         tx_policies: TxPolicies,
         variable_output_policy: VariableOutputPolicy,
+        _: &ConsensusParameters,
+        _: Vec<Input>,
         _account: &T,
     ) -> Result<ScriptTransactionBuilder> {
         let (inputs, outputs) = self.prepare_inputs_outputs()?;
@@ -97,16 +117,28 @@ impl sealed::Sealed for Vec<ContractCall> {}
 
 #[async_trait::async_trait]
 impl TransactionTuner for Vec<ContractCall> {
-    async fn transaction_builder<T: Account>(
+    fn required_assets(&self, base_asset_id: AssetId) -> Vec<(AssetId, u128)> {
+        calculate_required_asset_amounts(self, base_asset_id)
+    }
+
+    fn transaction_builder<T: Account>(
         &self,
         tx_policies: TxPolicies,
         variable_output_policy: VariableOutputPolicy,
+        consensus_parameters: &ConsensusParameters,
+        asset_input: Vec<Input>,
         account: &T,
     ) -> Result<ScriptTransactionBuilder> {
         validate_contract_calls(self)?;
 
-        transaction_builder_from_contract_calls(self, tx_policies, variable_output_policy, account)
-            .await
+        transaction_builder_from_contract_calls(
+            self,
+            tx_policies,
+            variable_output_policy,
+            consensus_parameters,
+            asset_input,
+            account,
+        )
     }
 
     /// Returns the script that executes the contract calls
