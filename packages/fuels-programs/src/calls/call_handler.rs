@@ -1,6 +1,14 @@
+use crate::{
+    calls::{
+        CallParameters, ContractCall, Execution, ExecutionType, ScriptCall,
+        receipt_parser::ReceiptParser,
+        traits::{ContractDependencyConfigurator, ResponseParser, TransactionTuner},
+        utils::find_ids_of_missing_contracts,
+    },
+    responses::{CallResponse, SubmitResponse},
+};
 use core::{fmt::Debug, marker::PhantomData};
-use std::sync::Arc;
-
+use fuel_tx::ConsensusParameters;
 use fuels_accounts::{Account, provider::TransactionCost};
 use fuels_core::{
     codec::{ABIEncoder, DecoderConfig, EncoderConfig, LogDecoder},
@@ -18,16 +26,7 @@ use fuels_core::{
         tx_status::TxStatus,
     },
 };
-
-use crate::{
-    calls::{
-        CallParameters, ContractCall, Execution, ExecutionType, ScriptCall,
-        receipt_parser::ReceiptParser,
-        traits::{ContractDependencyConfigurator, ResponseParser, TransactionTuner},
-        utils::find_ids_of_missing_contracts,
-    },
-    responses::{CallResponse, SubmitResponse},
-};
+use std::sync::Arc;
 
 // Trait implemented by contract instances so that
 // they can be passed to the `with_contracts` method
@@ -95,10 +94,36 @@ where
     T: Tokenizable + Parameterize + Debug,
 {
     pub async fn transaction_builder(&self) -> Result<ScriptTransactionBuilder> {
-        let mut tb = self
+        let consensus_parameters = self.account.try_provider()?.consensus_parameters().await?;
+        let required_asset_amounts = self
             .call
-            .transaction_builder(self.tx_policies, self.variable_output_policy, &self.account)
-            .await?;
+            .required_assets(*consensus_parameters.base_asset_id());
+
+        // Find the spendable resources required for those calls
+        let mut asset_inputs = vec![];
+        for &(asset_id, amount) in &required_asset_amounts {
+            let resources = self
+                .account
+                .get_asset_inputs_for_amount(asset_id, amount, None)
+                .await?;
+            asset_inputs.extend(resources);
+        }
+
+        self.transaction_builder_with_parameters(&consensus_parameters, asset_inputs)
+    }
+
+    pub fn transaction_builder_with_parameters(
+        &self,
+        consensus_parameters: &ConsensusParameters,
+        asset_inputs: Vec<Input>,
+    ) -> Result<ScriptTransactionBuilder> {
+        let mut tb = self.call.transaction_builder(
+            self.tx_policies,
+            self.variable_output_policy,
+            consensus_parameters,
+            asset_inputs,
+            &self.account,
+        )?;
 
         tb.add_signers(&self.unresolved_signers)?;
 
