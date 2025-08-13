@@ -237,6 +237,35 @@ impl LogDecoder {
             .collect()
     }
 
+    /// Get LogIds and lazy decoders for specific type from a single receipt.
+    pub fn decode_logs_lazy<'a, T: Tokenizable + Parameterize + 'static>(
+        &'a self,
+        receipt: &'a Receipt,
+    ) -> impl Iterator<Item = (LogId, impl FnOnce() -> Result<T>)> + 'a {
+        let target_ids: HashSet<LogId> = self
+            .log_formatters
+            .iter()
+            .filter(|(_, log_formatter)| log_formatter.can_handle_type::<T>())
+            .map(|(log_id, _)| log_id.clone())
+            .collect();
+
+        let decoder_config = self.decoder_config;
+
+        std::iter::once(receipt)
+            .extract_log_id_and_data()
+            .filter_map(move |(log_id, bytes)| {
+                target_ids.contains(&log_id).then(|| {
+                    let bytes_owned = bytes.to_vec();
+                    let decode_fn = move || -> Result<T> {
+                        let token = ABIDecoder::new(decoder_config)
+                            .decode(&T::param_type(), bytes_owned.as_slice())?;
+                        T::from_token(token)
+                    };
+                    (log_id, decode_fn)
+                })
+            })
+    }
+
     pub fn merge(&mut self, log_decoder: LogDecoder) {
         self.log_formatters.extend(log_decoder.log_formatters);
         self.error_codes.extend(log_decoder.error_codes);
