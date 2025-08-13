@@ -241,7 +241,7 @@ impl LogDecoder {
     pub fn decode_logs_lazy<'a, T: Tokenizable + Parameterize + 'static>(
         &'a self,
         receipt: &'a Receipt,
-    ) -> impl Iterator<Item = (LogId, impl FnOnce() -> Result<T>)> + 'a {
+    ) -> impl Iterator<Item = impl FnOnce() -> Result<T>> + 'a {
         let target_ids: HashSet<LogId> = self
             .log_formatters
             .iter()
@@ -261,7 +261,7 @@ impl LogDecoder {
                             .decode(&T::param_type(), bytes_owned.as_slice())?;
                         T::from_token(token)
                     };
-                    (log_id, decode_fn)
+                    decode_fn
                 })
             })
     }
