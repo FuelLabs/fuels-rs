@@ -242,11 +242,11 @@ impl LogDecoder {
         &'a self,
         receipt: &'a Receipt,
     ) -> impl Iterator<Item = impl FnOnce() -> Result<T>> + 'a {
-        let target_ids: HashSet<LogId> = self
+        let target_ids: HashSet<&LogId> = self
             .log_formatters
             .iter()
             .filter(|(_, log_formatter)| log_formatter.can_handle_type::<T>())
-            .map(|(log_id, _)| log_id.clone())
+            .map(|(log_id, _)| log_id)
             .collect();
 
         std::iter::once(receipt).extract_matching_logs_lazy::<T>(target_ids, self.decoder_config)
@@ -266,7 +266,7 @@ trait ExtractLogIdData {
 trait ExtractLogIdLazy {
     fn extract_matching_logs_lazy<T: Tokenizable + Parameterize + 'static>(
         self,
-        target_ids: HashSet<LogId>,
+        target_ids: HashSet<&LogId>,
         decoder_config: DecoderConfig,
     ) -> impl Iterator<Item = impl FnOnce() -> Result<T>>;
 }
@@ -292,7 +292,7 @@ impl<'a, I: Iterator<Item = &'a Receipt>> ExtractLogIdData for I {
 impl<'a, I: Iterator<Item = &'a Receipt>> ExtractLogIdLazy for I {
     fn extract_matching_logs_lazy<T: Tokenizable + Parameterize + 'static>(
         self,
-        target_ids: HashSet<LogId>,
+        target_ids: HashSet<&LogId>,
         decoder_config: DecoderConfig,
     ) -> impl Iterator<Item = impl FnOnce() -> Result<T>> {
         self.filter_map(move |r| {
