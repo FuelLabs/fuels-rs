@@ -19,15 +19,12 @@ use fuels_core::{
     },
 };
 
-use crate::{
-    calls::{
-        CallParameters, ContractCall, Execution, ExecutionType, ScriptCall,
-        receipt_parser::ReceiptParser,
-        traits::{ContractDependencyConfigurator, ResponseParser, TransactionTuner},
-        utils::find_ids_of_missing_contracts,
-    },
-    responses::{CallResponse, SubmitResponse},
-};
+use crate::{calls::{
+    CallParameters, ContractCall, Execution, ExecutionType, ScriptCall,
+    receipt_parser::ReceiptParser,
+    traits::{ContractDependencyConfigurator, ResponseParser, TransactionTuner},
+    utils::find_ids_of_missing_contracts,
+}, responses::{CallResponse, SubmitResponse}, DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE};
 
 // Trait implemented by contract instances so that
 // they can be passed to the `with_contracts` method
@@ -43,6 +40,7 @@ pub struct CallHandler<A, C, T> {
     pub account: A,
     pub call: C,
     pub tx_policies: TxPolicies,
+    pub max_fee_estimation_tolerance: f32,
     pub log_decoder: LogDecoder,
     pub datatype: PhantomData<T>,
     decoder_config: DecoderConfig,
@@ -61,6 +59,11 @@ impl<A, C, T> CallHandler<A, C, T> {
     /// ```
     pub fn with_tx_policies(mut self, tx_policies: TxPolicies) -> Self {
         self.tx_policies = tx_policies;
+        self
+    }
+
+    pub fn with_max_fee_estimation_tolerance(mut self, max_fee_estimation_tolerance: f32) -> Self {
+        self.max_fee_estimation_tolerance = max_fee_estimation_tolerance;
         self
     }
 
@@ -97,7 +100,7 @@ where
     pub async fn transaction_builder(&self) -> Result<ScriptTransactionBuilder> {
         let mut tb = self
             .call
-            .transaction_builder(self.tx_policies, self.variable_output_policy, &self.account)
+            .tx_builder_with_max_fee_est_tolerance(self.tx_policies, self.variable_output_policy, &self.account, self.max_fee_estimation_tolerance)
             .await?;
 
         tb.add_signers(&self.unresolved_signers)?;
@@ -286,6 +289,7 @@ where
             account,
             call,
             tx_policies: TxPolicies::default(),
+            max_fee_estimation_tolerance: DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE,
             log_decoder,
             datatype: PhantomData,
             decoder_config: DecoderConfig::default(),
@@ -374,6 +378,7 @@ where
             account,
             call,
             tx_policies: TxPolicies::default(),
+            max_fee_estimation_tolerance: DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE,
             log_decoder,
             datatype: PhantomData,
             decoder_config: DecoderConfig::default(),
@@ -407,6 +412,7 @@ where
             account,
             call: vec![],
             tx_policies: TxPolicies::default(),
+            max_fee_estimation_tolerance: DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE,
             log_decoder: LogDecoder::new(Default::default(), Default::default()),
             datatype: PhantomData,
             decoder_config: DecoderConfig::default(),

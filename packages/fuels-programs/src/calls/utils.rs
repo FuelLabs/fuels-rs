@@ -29,12 +29,13 @@ pub(crate) mod sealed {
     pub trait Sealed {}
 }
 
-/// Creates a [`ScriptTransactionBuilder`] from contract calls.
-pub(crate) async fn transaction_builder_from_contract_calls(
+/// Creates a [`ScriptTransactionBuilder`] from contract calls with customizable [`max_fee_estimation_tolerance`].
+pub(crate) async fn tx_builder_from_ct_calls_with_max_fee_est_tolerance(
     calls: &[ContractCall],
     tx_policies: TxPolicies,
     variable_outputs: VariableOutputPolicy,
     account: &impl Account,
+    max_fee_estimation_tolerance: f32
 ) -> Result<ScriptTransactionBuilder> {
     let calls_instructions_len = compute_calls_instructions_len(calls);
     let provider = account.try_provider()?;
@@ -75,7 +76,17 @@ pub(crate) async fn transaction_builder_from_contract_calls(
         .with_inputs(inputs)
         .with_outputs(outputs)
         .with_gas_estimation_tolerance(DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE)
-        .with_max_fee_estimation_tolerance(DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE))
+        .with_max_fee_estimation_tolerance(max_fee_estimation_tolerance))
+}
+
+/// Creates a [`ScriptTransactionBuilder`] from contract calls.
+pub(crate) async fn transaction_builder_from_contract_calls(
+    calls: &[ContractCall],
+    tx_policies: TxPolicies,
+    variable_outputs: VariableOutputPolicy,
+    account: &impl Account,
+) -> Result<ScriptTransactionBuilder> {
+    tx_builder_from_ct_calls_with_max_fee_est_tolerance(calls, tx_policies, variable_outputs, account, DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE).await
 }
 
 /// Creates a [`ScriptTransaction`] from contract calls. The internal [Transaction] is
