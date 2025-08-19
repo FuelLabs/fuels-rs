@@ -237,6 +237,21 @@ impl LogDecoder {
             .collect()
     }
 
+    /// Get LogIds and lazy decoders for specific type from a single receipt.
+    pub fn decode_logs_lazy<'a, T: Tokenizable + Parameterize + 'static>(
+        &'a self,
+        receipt: &'a Receipt,
+    ) -> impl Iterator<Item = impl FnOnce() -> Result<T>> + 'a {
+        let target_ids: HashSet<&LogId> = self
+            .log_formatters
+            .iter()
+            .filter(|(_, log_formatter)| log_formatter.can_handle_type::<T>())
+            .map(|(log_id, _)| log_id)
+            .collect();
+
+        std::iter::once(receipt).extract_matching_logs_lazy::<T>(target_ids, self.decoder_config)
+    }
+
     pub fn merge(&mut self, log_decoder: LogDecoder) {
         self.log_formatters.extend(log_decoder.log_formatters);
         self.error_codes.extend(log_decoder.error_codes);
@@ -246,6 +261,14 @@ impl LogDecoder {
 trait ExtractLogIdData {
     type Output: Iterator<Item = (LogId, Vec<u8>)>;
     fn extract_log_id_and_data(self) -> Self::Output;
+}
+
+trait ExtractLogIdLazy {
+    fn extract_matching_logs_lazy<T: Tokenizable + Parameterize + 'static>(
+        self,
+        target_ids: HashSet<&LogId>,
+        decoder_config: DecoderConfig,
+    ) -> impl Iterator<Item = impl FnOnce() -> Result<T>>;
 }
 
 impl<'a, I: Iterator<Item = &'a Receipt>> ExtractLogIdData for I {
@@ -262,6 +285,51 @@ impl<'a, I: Iterator<Item = &'a Receipt>> ExtractLogIdData for I {
                 Some((LogId(*id, (*rb).to_string()), ra.to_be_bytes().to_vec()))
             }
             _ => None,
+        })
+    }
+}
+
+impl<'a, I: Iterator<Item = &'a Receipt>> ExtractLogIdLazy for I {
+    fn extract_matching_logs_lazy<T: Tokenizable + Parameterize + 'static>(
+        self,
+        target_ids: HashSet<&LogId>,
+        decoder_config: DecoderConfig,
+    ) -> impl Iterator<Item = impl FnOnce() -> Result<T>> {
+        self.filter_map(move |r| {
+            let log_id = match r {
+                Receipt::LogData { rb, id, .. } => LogId(*id, (*rb).to_string()),
+                Receipt::Log { rb, id, .. } => LogId(*id, (*rb).to_string()),
+                _ => return None,
+            };
+
+            if !target_ids.contains(&log_id) {
+                return None;
+            }
+
+            enum Data<'a> {
+                LogData(&'a [u8]),
+                LogRa(u64),
+            }
+
+            let data = match r {
+                Receipt::LogData {
+                    data: Some(data), ..
+                } => Some(Data::LogData(data.as_slice())),
+                Receipt::Log { ra, .. } => Some(Data::LogRa(*ra)),
+                _ => None,
+            };
+
+            data.map(move |data| {
+                move || {
+                    let normalized_data = match data {
+                        Data::LogData(data) => data,
+                        Data::LogRa(ra) => &ra.to_be_bytes(),
+                    };
+                    let token = ABIDecoder::new(decoder_config)
+                        .decode(&T::param_type(), normalized_data)?;
+                    T::from_token(token)
+                }
+            })
         })
     }
 }

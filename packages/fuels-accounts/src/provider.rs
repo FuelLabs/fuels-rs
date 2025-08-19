@@ -134,7 +134,7 @@ impl Provider {
 
     /// Returns the underlying uncached client.
     pub fn client(&self) -> &FuelClient {
-        &self.cached_client.inner().client()
+        self.cached_client.inner().client()
     }
 
     pub fn set_cache_ttl(&mut self, ttl: TtlConfig) {
