@@ -2,7 +2,7 @@ use std::{collections::HashSet, iter, vec};
 
 use fuel_abi_types::error_codes::FAILED_TRANSFER_TO_ADDRESS_SIGNAL;
 use fuel_asm::{RegId, op};
-use fuel_tx::{Output, PanicReason, Receipt, TxPointer, UtxoId};
+use fuel_tx::{ConsensusParameters, Output, PanicReason, Receipt, TxPointer, UtxoId};
 use fuels_accounts::Account;
 use fuels_core::{
     offsets::call_script_data_offset,
@@ -30,16 +30,16 @@ pub(crate) mod sealed {
 }
 
 /// Creates a [`ScriptTransactionBuilder`] from contract calls.
-pub(crate) async fn transaction_builder_from_contract_calls(
+pub(crate) fn transaction_builder_from_contract_calls(
     calls: &[ContractCall],
     tx_policies: TxPolicies,
     variable_outputs: VariableOutputPolicy,
+    consensus_parameters: &ConsensusParameters,
+    asset_inputs: Vec<Input>,
     account: &impl Account,
 ) -> Result<ScriptTransactionBuilder> {
     let calls_instructions_len = compute_calls_instructions_len(calls);
-    let provider = account.try_provider()?;
-    let consensus_parameters = provider.consensus_parameters().await?;
-    let data_offset = call_script_data_offset(&consensus_parameters, calls_instructions_len)?;
+    let data_offset = call_script_data_offset(consensus_parameters, calls_instructions_len)?;
 
     let (script_data, call_param_offsets) = build_script_data_from_contract_calls(
         calls,
@@ -47,18 +47,6 @@ pub(crate) async fn transaction_builder_from_contract_calls(
         *consensus_parameters.base_asset_id(),
     )?;
     let script = get_instructions(call_param_offsets);
-
-    let required_asset_amounts =
-        calculate_required_asset_amounts(calls, *consensus_parameters.base_asset_id());
-
-    // Find the spendable resources required for those calls
-    let mut asset_inputs = vec![];
-    for &(asset_id, amount) in &required_asset_amounts {
-        let resources = account
-            .get_asset_inputs_for_amount(asset_id, amount, None)
-            .await?;
-        asset_inputs.extend(resources);
-    }
 
     let (inputs, outputs) = get_transaction_inputs_outputs(
         calls,
@@ -126,7 +114,7 @@ fn compute_calls_instructions_len(calls: &[ContractCall]) -> usize {
 }
 
 /// Compute how much of each asset is required based on all `CallParameters` of the `ContractCalls`
-pub(crate) fn calculate_required_asset_amounts(
+pub fn calculate_required_asset_amounts(
     calls: &[ContractCall],
     base_asset_id: AssetId,
 ) -> Vec<(AssetId, u128)> {

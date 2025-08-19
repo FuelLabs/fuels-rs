@@ -47,6 +47,10 @@ impl PrivateKeySigner {
     pub fn address(&self) -> Address {
         self.address
     }
+
+    pub fn secret_key(&self) -> SecretKey {
+        self.private_key
+    }
 }
 
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
