@@ -52,9 +52,9 @@ impl Configurables {
     }
 }
 
-impl Into<Vec<(u64, Vec<u8>)>> for Configurables {
-    fn into(self) -> Vec<(u64, Vec<u8>)> {
-        self.offsets_with_data.clone()
+impl From<Configurables> for Vec<(u64, Vec<u8>)> {
+    fn from(config: Configurables) -> Vec<(u64, Vec<u8>)> {
+        config.offsets_with_data.clone()
     }
 }
 

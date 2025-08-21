@@ -116,5 +116,10 @@ fn generate_from_impl(configurable_struct_name: &Ident) -> TokenStream {
                 ::fuels::core::Configurables::new(config.offsets_with_data)
             }
         }
+        impl From<#configurable_struct_name> for Vec<(u64, Vec<u8>)> {
+            fn from(config: #configurable_struct_name) -> Vec<(u64, Vec<u8>)> {
+                config.offsets_with_data.clone()
+            }
+        }
     }
 }
