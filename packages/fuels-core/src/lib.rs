@@ -9,7 +9,7 @@ use crate::types::errors::Result;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Configurables {
-    offsets_with_data: Vec<(u64, Vec<u8>)>,
+    pub offsets_with_data: Vec<(u64, Vec<u8>)>,
 }
 
 impl Configurables {
@@ -49,6 +49,12 @@ impl Configurables {
             let offset = *offset as usize;
             binary[offset..offset + data.len()].copy_from_slice(data)
         }
+    }
+}
+
+impl From<Configurables> for Vec<(u64, Vec<u8>)> {
+    fn from(config: Configurables) -> Vec<(u64, Vec<u8>)> {
+        config.offsets_with_data.clone()
     }
 }
 
