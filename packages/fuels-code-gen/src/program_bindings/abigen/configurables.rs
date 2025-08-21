@@ -121,10 +121,5 @@ fn generate_from_impl(configurable_struct_name: &Ident) -> TokenStream {
                 config.offsets_with_data
             }
         }
-        impl Into<::std::vec::Vec<(u64, ::std::vec::Vec<u8>)>> for #configurable_struct_name {
-            fn into(self) -> ::std::vec::Vec<(u64, ::std::vec::Vec<u8>)> {
-                self.offsets_with_data
-            }
-        }
     }
 }
