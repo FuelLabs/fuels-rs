@@ -32,8 +32,10 @@ pub(crate) fn contract_bindings(
     let error_codes = quote! {::std::collections::HashMap::from([#(#error_codes),*])};
 
     let methods_name = ident(&format!("{name}Methods"));
+    let methods_enum_name = ident(&format!("{name}MethodVariants"));
 
     let contract_functions = expand_functions(&abi.functions)?;
+    let method_enum_variants = generate_method_enum_variants(&abi.functions)?;
 
     let configuration_struct_name = ident(&format!("{name}Configurables"));
     let constant_configuration_code =
@@ -126,10 +128,15 @@ pub(crate) fn contract_bindings(
         }
 
         #constant_configuration_code
+
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, ::strum::EnumString)]
+        pub enum #methods_enum_name {
+            #method_enum_variants
+        }
     };
 
     // All publicly available types generated above should be listed here.
-    let type_paths = [name, &methods_name, &configuration_struct_name]
+    let type_paths = [name, &methods_name, &configuration_struct_name, &methods_enum_name]
         .map(|type_name| TypePath::new(type_name).expect("We know the given types are not empty"))
         .into_iter()
         .collect();
@@ -177,6 +184,17 @@ pub(crate) fn expand_fn(abi_fun: &FullABIFunction) -> Result<TokenStream> {
     generator.set_body(body);
 
     Ok(generator.generate())
+}
+
+fn generate_method_enum_variants(functions: &[FullABIFunction]) -> Result<TokenStream> {
+    let variants = functions.iter().map(|func| {
+        let variant_name = ident(&func.name());
+        quote! { #variant_name }
+    });
+
+    Ok(quote! {
+        #(#variants),*
+    })
 }
 
 #[cfg(test)]
