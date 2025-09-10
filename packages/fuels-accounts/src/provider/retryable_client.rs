@@ -103,6 +103,10 @@ impl RetryableClient {
         &self.url
     }
 
+    pub fn client(&self) -> &FuelClient {
+        &self.client
+    }
+
     pub(crate) fn set_retry_config(&mut self, retry_config: RetryConfig) {
         self.retry_config = retry_config;
     }
@@ -254,7 +258,11 @@ impl RetryableClient {
         .await
     }
 
-    pub async fn balance(&self, owner: &Address, asset_id: Option<&AssetId>) -> RequestResult<u64> {
+    pub async fn balance(
+        &self,
+        owner: &Address,
+        asset_id: Option<&AssetId>,
+    ) -> RequestResult<u128> {
         self.wrap(|| self.client.balance(owner, asset_id)).await
     }
 

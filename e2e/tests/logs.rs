@@ -1,11 +1,13 @@
+use fuel_tx::SubAssetId;
 use fuels::{
     core::codec::DecoderConfig,
     prelude::*,
+    tx::ContractIdExt,
     types::{AsciiString, Bits256, SizedAsciiString, errors::transaction::Reason},
 };
 
 #[tokio::test]
-async fn test_parse_logged_variables() -> Result<()> {
+async fn parse_logged_variables() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
@@ -44,7 +46,7 @@ async fn test_parse_logged_variables() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_parse_logs_values() -> Result<()> {
+async fn parse_logs_values() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
@@ -79,7 +81,7 @@ async fn test_parse_logs_values() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_parse_logs_custom_types() -> Result<()> {
+async fn parse_logs_custom_types() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
@@ -120,7 +122,7 @@ async fn test_parse_logs_custom_types() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_parse_logs_generic_types() -> Result<()> {
+async fn parse_logs_generic_types() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
@@ -173,7 +175,7 @@ async fn test_parse_logs_generic_types() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_decode_logs() -> Result<()> {
+async fn decode_logs() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
@@ -228,7 +230,7 @@ async fn test_decode_logs() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_decode_logs_with_no_logs() -> Result<()> {
+async fn decode_logs_with_no_logs() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
@@ -256,7 +258,7 @@ async fn test_decode_logs_with_no_logs() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_multi_call_log_single_contract() -> Result<()> {
+async fn multi_call_log_single_contract() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
@@ -305,7 +307,7 @@ async fn test_multi_call_log_single_contract() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_multi_call_log_multiple_contracts() -> Result<()> {
+async fn multi_call_log_multiple_contracts() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
@@ -358,7 +360,7 @@ async fn test_multi_call_log_multiple_contracts() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_multi_call_contract_with_contract_logs() -> Result<()> {
+async fn multi_call_contract_with_contract_logs() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(
@@ -367,6 +369,12 @@ async fn test_multi_call_contract_with_contract_logs() -> Result<()> {
                 name = "ContractCaller",
                 project = "e2e/sway/logs/contract_with_contract_logs"
             )
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "MyContract",
+            wallet = "wallet",
+            random_salt = false,
         ),
         Deploy(
             name = "contract_caller_instance",
@@ -382,24 +390,14 @@ async fn test_multi_call_contract_with_contract_logs() -> Result<()> {
         ),
     );
 
-    let contract_id = Contract::load_from(
-        "./sway/logs/contract_logs/out/release/contract_logs.bin",
-        LoadConfiguration::default(),
-    )?
-    .deploy_if_not_exists(&wallet, TxPolicies::default())
-    .await?
-    .contract_id;
-
-    let contract_instance = MyContract::new(contract_id.clone(), wallet.clone());
-
     let call_handler_1 = contract_caller_instance
         .methods()
-        .logs_from_external_contract(contract_id.clone())
+        .logs_from_external_contract(contract_instance.id())
         .with_contracts(&[&contract_instance]);
 
     let call_handler_2 = contract_caller_instance2
         .methods()
-        .logs_from_external_contract(contract_id)
+        .logs_from_external_contract(contract_instance.id())
         .with_contracts(&[&contract_instance]);
 
     let multi_call_handler = CallHandler::new_multi_call(wallet.clone())
@@ -425,22 +423,23 @@ async fn test_multi_call_contract_with_contract_logs() -> Result<()> {
 }
 
 fn assert_revert_containing_msg(msg: &str, error: Error) {
-    assert!(matches!(error, Error::Transaction(Reason::Failure { .. })));
-    if let Error::Transaction(Reason::Failure { reason, .. }) = error {
-        assert!(
-            reason.contains(msg),
-            "message: \"{msg}\" not contained in reason: \"{reason}\""
-        );
-    }
+    let Error::Transaction(Reason::Failure { reason, .. }) = error else {
+        panic!("error does not have the transaction failure variant");
+    };
+
+    assert!(
+        reason.contains(msg),
+        "message: \"{msg}\" not contained in reason: \"{reason}\""
+    );
 }
 
 #[tokio::test]
-async fn test_revert_logs() -> Result<()> {
+async fn revert_logs() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
             name = "RevertLogsContract",
-            project = "e2e/sway/contracts/revert_logs"
+            project = "e2e/sway/logs/contract_revert_logs"
         )),
         Deploy(
             name = "contract_instance",
@@ -509,12 +508,12 @@ async fn test_revert_logs() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_multi_call_revert_logs_single_contract() -> Result<()> {
+async fn multi_call_revert_logs_single_contract() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
             name = "RevertLogsContract",
-            project = "e2e/sway/contracts/revert_logs"
+            project = "e2e/sway/logs/contract_revert_logs"
         )),
         Deploy(
             name = "contract_instance",
@@ -577,12 +576,12 @@ async fn test_multi_call_revert_logs_single_contract() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_multi_call_revert_logs_multi_contract() -> Result<()> {
+async fn multi_call_revert_logs_multi_contract() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
             name = "RevertLogsContract",
-            project = "e2e/sway/contracts/revert_logs"
+            project = "e2e/sway/logs/contract_revert_logs"
         )),
         Deploy(
             name = "contract_instance",
@@ -653,7 +652,7 @@ async fn test_multi_call_revert_logs_multi_contract() -> Result<()> {
 
 #[tokio::test]
 #[allow(unused_variables)]
-async fn test_script_decode_logs() -> Result<()> {
+async fn script_decode_logs() -> Result<()> {
     // ANCHOR: script_logs
     abigen!(Script(
         name = "LogScript",
@@ -720,7 +719,7 @@ async fn test_script_decode_logs() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_contract_with_contract_logs() -> Result<()> {
+async fn contract_with_contract_logs() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(
@@ -731,22 +730,18 @@ async fn test_contract_with_contract_logs() -> Result<()> {
             )
         ),
         Deploy(
+            name = "contract_instance",
+            contract = "MyContract",
+            wallet = "wallet",
+            random_salt = false,
+        ),
+        Deploy(
             name = "contract_caller_instance",
             contract = "ContractCaller",
             wallet = "wallet",
             random_salt = false,
         )
     );
-
-    let contract_id = Contract::load_from(
-        "./sway/logs/contract_logs/out/release/contract_logs.bin",
-        LoadConfiguration::default(),
-    )?
-    .deploy_if_not_exists(&wallet, TxPolicies::default())
-    .await?
-    .contract_id;
-
-    let contract_instance = MyContract::new(contract_id.clone(), wallet.clone());
 
     let expected_logs: Vec<String> = vec![
         format!("{:?}", 64),
@@ -757,7 +752,7 @@ async fn test_contract_with_contract_logs() -> Result<()> {
 
     let logs = contract_caller_instance
         .methods()
-        .logs_from_external_contract(contract_id)
+        .logs_from_external_contract(contract_instance.id())
         .with_contracts(&[&contract_instance])
         .call()
         .await?
@@ -770,7 +765,7 @@ async fn test_contract_with_contract_logs() -> Result<()> {
 
 #[tokio::test]
 #[allow(unused_variables)]
-async fn test_script_logs_with_contract_logs() -> Result<()> {
+async fn script_logs_with_contract_logs() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(
@@ -809,20 +804,20 @@ async fn test_script_logs_with_contract_logs() -> Result<()> {
     ];
 
     // ANCHOR: instance_to_contract_id
-    let contract_id: ContractId = contract_instance.id().into();
+    let contract_id: ContractId = contract_instance.contract_id();
     // ANCHOR_END: instance_to_contract_id
 
     // ANCHOR: external_contract_ids
     let response = script_instance
-        .main(contract_id)
-        .with_contract_ids(&[contract_id.into()])
+        .main(contract_id, MatchEnum::Logs)
+        .with_contract_ids(&[contract_id])
         .call()
         .await?;
     // ANCHOR_END: external_contract_ids
 
     // ANCHOR: external_contract
     let response = script_instance
-        .main(contract_id)
+        .main(contract_id, MatchEnum::Logs)
         .with_contracts(&[&contract_instance])
         .call()
         .await?;
@@ -848,7 +843,7 @@ async fn test_script_logs_with_contract_logs() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_script_decode_logs_with_type() -> Result<()> {
+async fn script_decode_logs_with_type() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Script(
@@ -925,12 +920,12 @@ async fn test_script_decode_logs_with_type() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_script_require_log() -> Result<()> {
+async fn script_require_log() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Script(
             name = "LogScript",
-            project = "e2e/sway/scripts/script_revert_logs"
+            project = "e2e/sway/logs/script_revert_logs"
         )),
         LoadScript(
             name = "script_instance",
@@ -1002,7 +997,7 @@ async fn test_script_require_log() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_contract_require_from_contract() -> Result<()> {
+async fn contract_require_from_contract() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(
@@ -1016,6 +1011,12 @@ async fn test_contract_require_from_contract() -> Result<()> {
             )
         ),
         Deploy(
+            name = "contract_instance",
+            contract = "MyContract",
+            wallet = "wallet",
+            random_salt = false,
+        ),
+        Deploy(
             name = "contract_caller_instance",
             contract = "ContractCaller",
             wallet = "wallet",
@@ -1023,19 +1024,9 @@ async fn test_contract_require_from_contract() -> Result<()> {
         )
     );
 
-    let contract_id = Contract::load_from(
-        "./sway/contracts/lib_contract/out/release/lib_contract.bin",
-        LoadConfiguration::default(),
-    )?
-    .deploy_if_not_exists(&wallet, TxPolicies::default())
-    .await?
-    .contract_id;
-
-    let contract_instance = MyContract::new(contract_id.clone(), wallet.clone());
-
     let error = contract_caller_instance
         .methods()
-        .require_from_contract(contract_id)
+        .require_from_contract(contract_instance.id())
         .with_contracts(&[&contract_instance])
         .call()
         .await
@@ -1047,7 +1038,7 @@ async fn test_contract_require_from_contract() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_multi_call_contract_require_from_contract() -> Result<()> {
+async fn multi_call_contract_require_from_contract() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(
@@ -1065,6 +1056,12 @@ async fn test_multi_call_contract_require_from_contract() -> Result<()> {
             )
         ),
         Deploy(
+            name = "lib_contract_instance",
+            contract = "MyContract",
+            wallet = "wallet",
+            random_salt = false,
+        ),
+        Deploy(
             name = "contract_instance",
             contract = "ContractLogs",
             wallet = "wallet",
@@ -1078,21 +1075,11 @@ async fn test_multi_call_contract_require_from_contract() -> Result<()> {
         ),
     );
 
-    let contract_id = Contract::load_from(
-        "./sway/contracts/lib_contract/out/release/lib_contract.bin",
-        LoadConfiguration::default(),
-    )?
-    .deploy_if_not_exists(&wallet, TxPolicies::default())
-    .await?
-    .contract_id;
-
-    let lib_contract_instance = MyContract::new(contract_id.clone(), wallet.clone());
-
     let call_handler_1 = contract_instance.methods().produce_logs_values();
 
     let call_handler_2 = contract_caller_instance
         .methods()
-        .require_from_contract(contract_id)
+        .require_from_contract(lib_contract_instance.id())
         .with_contracts(&[&lib_contract_instance]);
 
     let multi_call_handler = CallHandler::new_multi_call(wallet.clone())
@@ -1110,7 +1097,7 @@ async fn test_multi_call_contract_require_from_contract() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_script_require_from_contract() -> Result<()> {
+async fn script_require_from_contract() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(
@@ -1149,7 +1136,7 @@ async fn test_script_require_from_contract() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_loader_script_require_from_loader_contract() -> Result<()> {
+async fn loader_script_require_from_loader_contract() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(
@@ -1208,7 +1195,7 @@ fn assert_assert_ne_containing_msg<T: std::fmt::Debug>(left: T, right: T, error:
 }
 
 #[tokio::test]
-async fn test_contract_asserts_log() -> Result<()> {
+async fn contract_asserts_log() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
@@ -1364,7 +1351,7 @@ async fn test_contract_asserts_log() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_script_asserts_log() -> Result<()> {
+async fn script_asserts_log() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Script(
@@ -1540,7 +1527,7 @@ async fn contract_token_ops_error_messages() -> Result<()> {
 
     {
         let contract_id = contract_instance.contract_id();
-        let asset_id = contract_id.asset_id(&Bits256::zeroed());
+        let asset_id = contract_id.asset_id(&SubAssetId::zeroed());
         let address = wallet.address();
 
         let error = contract_methods
@@ -1563,7 +1550,7 @@ async fn contract_token_ops_error_messages() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_log_results() -> Result<()> {
+async fn log_results() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
@@ -1589,7 +1576,7 @@ async fn test_log_results() -> Result<()> {
     let expected_err = format!(
         "codec: missing log formatter for log_id: `LogId({:?}, \"128\")`, data: `{:?}`. \
          Consider adding external contracts using `with_contracts()`",
-        contract_instance.id().hash,
+        contract_instance.id(),
         [0u8; 8]
     );
 
@@ -1855,6 +1842,263 @@ async fn script_heap_log() -> Result<()> {
         let logs = response.decode_logs_with_type::<Vec<Vec<Vec<EnumWithGeneric<Vec<u16>>>>>>()?;
 
         assert_eq!(vec![expected_vec], logs);
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn contract_panic() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Contract(
+            name = "LogContract",
+            project = "e2e/sway/logs/contract_logs"
+        )),
+        Deploy(
+            name = "contract_instance",
+            contract = "LogContract",
+            wallet = "wallet",
+            random_salt = false,
+        ),
+    );
+
+    macro_rules! reverts_with_msg {
+        ($method:ident, call, $msg:expr) => {
+            let error = contract_instance
+                .methods()
+                .$method()
+                .call()
+                .await
+                .expect_err("should return a revert error");
+
+            assert_revert_containing_msg($msg, error);
+        };
+        ($method:ident, simulate, $msg:expr) => {
+            let error = contract_instance
+                .methods()
+                .$method()
+                .simulate(Execution::realistic())
+                .await
+                .expect_err("should return a revert error");
+
+            assert_revert_containing_msg($msg, error);
+        };
+    }
+
+    {
+        reverts_with_msg!(produce_panic, call, "some panic message");
+        reverts_with_msg!(produce_panic, simulate, "some panic message");
+    }
+    {
+        reverts_with_msg!(
+            produce_panic_with_error,
+            call,
+            "some complex error B: B { id: 42, val: 36 }"
+        );
+        reverts_with_msg!(
+            produce_panic_with_error,
+            simulate,
+            "some complex error B: B { id: 42, val: 36 }"
+        );
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn contract_with_contract_panic() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(
+            Contract(name = "MyContract", project = "e2e/sway/logs/contract_logs",),
+            Contract(
+                name = "ContractCaller",
+                project = "e2e/sway/logs/contract_with_contract_logs",
+            )
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "MyContract",
+            wallet = "wallet",
+            random_salt = false,
+        ),
+        Deploy(
+            name = "contract_caller_instance",
+            contract = "ContractCaller",
+            wallet = "wallet",
+            random_salt = false,
+        )
+    );
+
+    macro_rules! reverts_with_msg {
+        ($method:ident, call, $msg:expr) => {
+            let error = contract_caller_instance
+                .methods()
+                .$method(contract_instance.id())
+                .with_contracts(&[&contract_instance])
+                .call()
+                .await
+                .expect_err("should return a revert error");
+
+            assert_revert_containing_msg($msg, error);
+        };
+        ($method:ident, simulate, $msg:expr) => {
+            let error = contract_caller_instance
+                .methods()
+                .$method(contract_instance.id())
+                .with_contracts(&[&contract_instance])
+                .simulate(Execution::realistic())
+                .await
+                .expect_err("should return a revert error");
+
+            assert_revert_containing_msg($msg, error);
+        };
+    }
+
+    {
+        reverts_with_msg!(panic_from_external_contract, call, "some panic message");
+        reverts_with_msg!(panic_from_external_contract, simulate, "some panic message");
+    }
+    {
+        reverts_with_msg!(
+            panic_error_from_external_contract,
+            call,
+            "some complex error B: B { id: 42, val: 36 }"
+        );
+        reverts_with_msg!(
+            panic_error_from_external_contract,
+            simulate,
+            "some complex error B: B { id: 42, val: 36 }"
+        );
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn script_panic() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Script(
+            name = "LogScript",
+            project = "e2e/sway/logs/script_revert_logs"
+        )),
+        LoadScript(
+            name = "script_instance",
+            script = "LogScript",
+            wallet = "wallet"
+        )
+    );
+
+    macro_rules! reverts_with_msg {
+        ($arg:expr, call, $msg:expr) => {
+            let error = script_instance
+                .main($arg)
+                .call()
+                .await
+                .expect_err("should return a revert error");
+            assert_revert_containing_msg($msg, error);
+        };
+        ($arg:expr, simulate, $msg:expr) => {
+            let error = script_instance
+                .main($arg)
+                .simulate(Execution::realistic())
+                .await
+                .expect_err("should return a revert error");
+            assert_revert_containing_msg($msg, error);
+        };
+    }
+
+    {
+        reverts_with_msg!(MatchEnum::Panic, call, "some panic message");
+        reverts_with_msg!(MatchEnum::Panic, simulate, "some panic message");
+    }
+    {
+        reverts_with_msg!(
+            MatchEnum::PanicError,
+            call,
+            "some complex error B: B { id: 42, val: 36 }"
+        );
+        reverts_with_msg!(
+            MatchEnum::PanicError,
+            simulate,
+            "some complex error B: B { id: 42, val: 36 }"
+        );
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
+#[allow(unused_variables)]
+async fn script_with_contract_panic() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(
+            Contract(name = "MyContract", project = "e2e/sway/logs/contract_logs",),
+            Script(
+                name = "LogScript",
+                project = "e2e/sway/logs/script_with_contract_logs"
+            )
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "MyContract",
+            wallet = "wallet",
+            random_salt = false,
+        ),
+        LoadScript(
+            name = "script_instance",
+            script = "LogScript",
+            wallet = "wallet"
+        )
+    );
+
+    macro_rules! reverts_with_msg {
+        ($arg1:expr, $arg2:expr, call, $msg:expr) => {
+            let error = script_instance
+                .main($arg1, $arg2)
+                .with_contracts(&[&contract_instance])
+                .call()
+                .await
+                .expect_err("should return a revert error");
+            assert_revert_containing_msg($msg, error);
+        };
+        ($arg1:expr, $arg2:expr, simulate, $msg:expr) => {
+            let error = script_instance
+                .main($arg1, $arg2)
+                .with_contracts(&[&contract_instance])
+                .simulate(Execution::realistic())
+                .await
+                .expect_err("should return a revert error");
+            assert_revert_containing_msg($msg, error);
+        };
+    }
+    let contract_id = contract_instance.id();
+
+    {
+        reverts_with_msg!(contract_id, MatchEnum::Panic, call, "some panic message");
+        reverts_with_msg!(
+            contract_id,
+            MatchEnum::Panic,
+            simulate,
+            "some panic message"
+        );
+    }
+    {
+        reverts_with_msg!(
+            contract_id,
+            MatchEnum::PanicError,
+            call,
+            "some complex error B: B { id: 42, val: 36 }"
+        );
+        reverts_with_msg!(
+            contract_id,
+            MatchEnum::PanicError,
+            simulate,
+            "some complex error B: B { id: 42, val: 36 }"
+        );
     }
 
     Ok(())

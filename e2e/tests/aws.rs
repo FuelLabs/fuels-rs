@@ -18,10 +18,10 @@ mod tests {
 
         let amount = 500000000;
         let key = kms.create_signer().await?;
-        let address = key.address().clone();
+        let address = key.address();
 
         wallet
-            .transfer(&address, amount, AssetId::zeroed(), TxPolicies::default())
+            .transfer(address, amount, AssetId::zeroed(), TxPolicies::default())
             .await
             .context("Failed to transfer funds")?;
 
@@ -35,7 +35,7 @@ mod tests {
         // ANCHOR_END: use_kms_wallet
 
         let total_base_balance = wallet.get_asset_balance(&AssetId::zeroed()).await?;
-        assert_eq!(total_base_balance, amount);
+        assert_eq!(total_base_balance, amount as u128);
         Ok(())
     }
 
@@ -47,10 +47,10 @@ mod tests {
 
         let amount = 500000000;
         let key = kms.create_signer().await?;
-        let address = key.address().clone();
+        let address = key.address();
 
         wallet
-            .transfer(&address, amount, AssetId::zeroed(), TxPolicies::default())
+            .transfer(address, amount, AssetId::zeroed(), TxPolicies::default())
             .await
             .context("Failed to transfer funds")?;
 

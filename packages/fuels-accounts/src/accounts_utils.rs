@@ -1,7 +1,7 @@
 use fuel_tx::{AssetId, Output, Receipt, UtxoId};
 use fuel_types::Nonce;
 use fuels_core::types::{
-    bech32::Bech32Address,
+    Address,
     coin::Coin,
     coin_type::CoinType,
     coin_type_id::CoinTypeId,
@@ -97,17 +97,17 @@ fn is_consuming_utxos(tb: &impl TransactionBuilder) -> bool {
 
 pub fn add_base_change_if_needed(
     tb: &mut impl TransactionBuilder,
-    address: &Bech32Address,
-    base_asset_id: &AssetId,
+    address: Address,
+    base_asset_id: AssetId,
 ) {
     let is_base_change_present = tb.outputs().iter().any(|output| {
         matches!(output , Output::Change { asset_id , .. }
-                                        if asset_id == base_asset_id)
+                                        if *asset_id == base_asset_id)
     });
 
     if !is_base_change_present {
         tb.outputs_mut()
-            .push(Output::change(address.into(), 0, *base_asset_id));
+            .push(Output::change(address, 0, base_asset_id));
     }
 }
 

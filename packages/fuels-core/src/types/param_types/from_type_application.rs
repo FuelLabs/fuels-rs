@@ -17,7 +17,7 @@ impl ParamType {
     ///
     /// * `type_application`: The UnifiedTypeApplication you wish to convert into a ParamType
     /// * `type_lookup`: A HashMap of UnifiedTypeDeclarations mentioned in the
-    ///                  UnifiedTypeApplication where the type id is the key.
+    ///   UnifiedTypeApplication where the type id is the key.
     pub fn try_from_type_application(
         type_application: &UnifiedTypeApplication,
         type_lookup: &HashMap<usize, UnifiedTypeDeclaration>,
@@ -118,7 +118,7 @@ impl Type {
     /// * `type_application`: The type on which the generic parameters are defined.
     /// * `types`: All types used.
     /// * `parent_generic_params`: The generic parameters as inherited from the
-    ///                            enclosing type (a struct/enum/array etc.).
+    ///   enclosing type (a struct/enum/array etc.).
     fn determine_generics_for_type(
         type_application: &UnifiedTypeApplication,
         type_lookup: &HashMap<usize, UnifiedTypeDeclaration>,
@@ -365,6 +365,7 @@ mod tests {
                 name: "".to_string(),
                 type_id: 0,
                 type_arguments: None,
+                error_message: None,
             };
 
             let declarations = [UnifiedTypeDeclaration {
@@ -372,6 +373,7 @@ mod tests {
                 type_field: type_field.to_string(),
                 components: None,
                 type_parameters: None,
+                alias_of: None,
             }];
 
             let type_lookup = declarations
@@ -403,6 +405,8 @@ mod tests {
             name: "".to_string(),
             type_id: 0,
             type_arguments: None,
+
+            error_message: None,
         };
 
         let declarations = [
@@ -413,14 +417,17 @@ mod tests {
                     name: "__array_element".to_string(),
                     type_id: 1,
                     type_arguments: None,
+                    error_message: None,
                 }]),
                 type_parameters: None,
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 1,
                 type_field: "u8".to_string(),
                 components: None,
                 type_parameters: None,
+                alias_of: None,
             },
         ];
 
@@ -447,12 +454,14 @@ mod tests {
                 type_field: "generic T".to_string(),
                 components: None,
                 type_parameters: None,
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 2,
                 type_field: "raw untyped ptr".to_string(),
                 components: None,
                 type_parameters: None,
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 3,
@@ -462,14 +471,17 @@ mod tests {
                         name: "ptr".to_string(),
                         type_id: 2,
                         type_arguments: None,
+                        error_message: None,
                     },
                     UnifiedTypeApplication {
                         name: "cap".to_string(),
                         type_id: 5,
                         type_arguments: None,
+                        error_message: None,
                     },
                 ]),
                 type_parameters: Some(vec![1]),
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 4,
@@ -482,27 +494,33 @@ mod tests {
                             name: "".to_string(),
                             type_id: 1,
                             type_arguments: None,
+                            error_message: None,
                         }]),
+                        error_message: None,
                     },
                     UnifiedTypeApplication {
                         name: "len".to_string(),
                         type_id: 5,
                         type_arguments: None,
+                        error_message: None,
                     },
                 ]),
                 type_parameters: Some(vec![1]),
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 5,
                 type_field: "u64".to_string(),
                 components: None,
                 type_parameters: None,
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 6,
                 type_field: "u8".to_string(),
                 components: None,
                 type_parameters: None,
+                alias_of: None,
             },
         ];
 
@@ -513,7 +531,9 @@ mod tests {
                 name: "".to_string(),
                 type_id: 6,
                 type_arguments: None,
+                error_message: None,
             }]),
+            error_message: None,
         };
 
         let type_lookup = declarations
@@ -539,6 +559,7 @@ mod tests {
                 type_field: "generic T".to_string(),
                 components: None,
                 type_parameters: None,
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 2,
@@ -547,14 +568,17 @@ mod tests {
                     name: "field".to_string(),
                     type_id: 1,
                     type_arguments: None,
+                    error_message: None,
                 }]),
                 type_parameters: Some(vec![1]),
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 3,
                 type_field: "u8".to_string(),
                 components: None,
                 type_parameters: None,
+                alias_of: None,
             },
         ];
 
@@ -565,7 +589,9 @@ mod tests {
                 name: "".to_string(),
                 type_id: 3,
                 type_arguments: None,
+                error_message: None,
             }]),
+            error_message: None,
         };
 
         let type_lookup = declarations
@@ -598,6 +624,7 @@ mod tests {
                 type_field: "generic T".to_string(),
                 components: None,
                 type_parameters: None,
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 2,
@@ -606,14 +633,17 @@ mod tests {
                     name: "Variant".to_string(),
                     type_id: 1,
                     type_arguments: None,
+                    error_message: None,
                 }]),
                 type_parameters: Some(vec![1]),
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 3,
                 type_field: "u8".to_string(),
                 components: None,
                 type_parameters: None,
+                alias_of: None,
             },
         ];
 
@@ -624,7 +654,9 @@ mod tests {
                 name: "".to_string(),
                 type_id: 3,
                 type_arguments: None,
+                error_message: None,
             }]),
+            error_message: None,
         };
 
         let type_lookup = declarations
@@ -660,26 +692,31 @@ mod tests {
                         name: "__tuple_element".to_string(),
                         type_id: 3,
                         type_arguments: None,
+                        error_message: None,
                     },
                     UnifiedTypeApplication {
                         name: "__tuple_element".to_string(),
                         type_id: 2,
                         type_arguments: None,
+                        error_message: None,
                     },
                 ]),
                 type_parameters: None,
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 2,
                 type_field: "str[15]".to_string(),
                 components: None,
                 type_parameters: None,
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 3,
                 type_field: "u8".to_string(),
                 components: None,
                 type_parameters: None,
+                alias_of: None,
             },
         ];
 
@@ -687,6 +724,7 @@ mod tests {
             name: "arg".to_string(),
             type_id: 1,
             type_arguments: None,
+            error_message: None,
         };
         let type_lookup = declarations
             .into_iter()
@@ -717,14 +755,17 @@ mod tests {
                         name: "__tuple_element".to_string(),
                         type_id: 11,
                         type_arguments: None,
+                        error_message: None,
                     },
                     UnifiedTypeApplication {
                         name: "__tuple_element".to_string(),
                         type_id: 11,
                         type_arguments: None,
+                        error_message: None,
                     },
                 ]),
                 type_parameters: None,
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 2,
@@ -734,14 +775,17 @@ mod tests {
                         name: "__tuple_element".to_string(),
                         type_id: 4,
                         type_arguments: None,
+                        error_message: None,
                     },
                     UnifiedTypeApplication {
                         name: "__tuple_element".to_string(),
                         type_id: 24,
                         type_arguments: None,
+                        error_message: None,
                     },
                 ]),
                 type_parameters: None,
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 3,
@@ -751,14 +795,17 @@ mod tests {
                         name: "__tuple_element".to_string(),
                         type_id: 5,
                         type_arguments: None,
+                        error_message: None,
                     },
                     UnifiedTypeApplication {
                         name: "__tuple_element".to_string(),
                         type_id: 13,
                         type_arguments: None,
+                        error_message: None,
                     },
                 ]),
                 type_parameters: None,
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 4,
@@ -779,12 +826,18 @@ mod tests {
                                     name: "".to_string(),
                                     type_id: 13,
                                     type_arguments: None,
+                                    error_message: None,
                                 }]),
+                                error_message: None,
                             }]),
+                            error_message: None,
                         }]),
+                        error_message: None,
                     }]),
+                    error_message: None,
                 }]),
                 type_parameters: None,
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 5,
@@ -793,8 +846,10 @@ mod tests {
                     name: "__array_element".to_string(),
                     type_id: 14,
                     type_arguments: None,
+                    error_message: None,
                 }]),
                 type_parameters: None,
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 6,
@@ -803,14 +858,17 @@ mod tests {
                     name: "__array_element".to_string(),
                     type_id: 10,
                     type_arguments: None,
+                    error_message: None,
                 }]),
                 type_parameters: None,
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 7,
                 type_field: "b256".to_string(),
                 components: None,
                 type_parameters: None,
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 8,
@@ -820,62 +878,73 @@ mod tests {
                         name: "A".to_string(),
                         type_id: 25,
                         type_arguments: None,
+                        error_message: None,
                     },
                     UnifiedTypeApplication {
                         name: "B".to_string(),
                         type_id: 12,
                         type_arguments: None,
+                        error_message: None,
                     },
                 ]),
                 type_parameters: Some(vec![12]),
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 9,
                 type_field: "generic K".to_string(),
                 components: None,
                 type_parameters: None,
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 10,
                 type_field: "generic L".to_string(),
                 components: None,
                 type_parameters: None,
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 11,
                 type_field: "generic M".to_string(),
                 components: None,
                 type_parameters: None,
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 12,
                 type_field: "generic N".to_string(),
                 components: None,
                 type_parameters: None,
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 13,
                 type_field: "generic T".to_string(),
                 components: None,
                 type_parameters: None,
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 14,
                 type_field: "generic U".to_string(),
                 components: None,
                 type_parameters: None,
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 15,
                 type_field: "raw untyped ptr".to_string(),
                 components: None,
                 type_parameters: None,
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 16,
                 type_field: "str[2]".to_string(),
                 components: None,
                 type_parameters: None,
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 17,
@@ -885,6 +954,7 @@ mod tests {
                         name: "a".to_string(),
                         type_id: 3,
                         type_arguments: None,
+                        error_message: None,
                     },
                     UnifiedTypeApplication {
                         name: "b".to_string(),
@@ -893,10 +963,13 @@ mod tests {
                             name: "".to_string(),
                             type_id: 2,
                             type_arguments: None,
+                            error_message: None,
                         }]),
+                        error_message: None,
                     },
                 ]),
                 type_parameters: Some(vec![13, 14]),
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 18,
@@ -908,9 +981,12 @@ mod tests {
                         name: "".to_string(),
                         type_id: 9,
                         type_arguments: None,
+                        error_message: None,
                     }]),
+                    error_message: None,
                 }]),
                 type_parameters: Some(vec![9]),
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 19,
@@ -920,14 +996,17 @@ mod tests {
                         name: "ptr".to_string(),
                         type_id: 15,
                         type_arguments: None,
+                        error_message: None,
                     },
                     UnifiedTypeApplication {
                         name: "cap".to_string(),
                         type_id: 25,
                         type_arguments: None,
+                        error_message: None,
                     },
                 ]),
                 type_parameters: Some(vec![13]),
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 20,
@@ -936,8 +1015,10 @@ mod tests {
                     name: "single_generic_param".to_string(),
                     type_id: 13,
                     type_arguments: None,
+                    error_message: None,
                 }]),
                 type_parameters: Some(vec![13]),
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 21,
@@ -946,8 +1027,10 @@ mod tests {
                     name: "a".to_string(),
                     type_id: 6,
                     type_arguments: None,
+                    error_message: None,
                 }]),
                 type_parameters: Some(vec![10]),
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 22,
@@ -956,8 +1039,10 @@ mod tests {
                     name: "a".to_string(),
                     type_id: 1,
                     type_arguments: None,
+                    error_message: None,
                 }]),
                 type_parameters: Some(vec![11]),
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 23,
@@ -970,27 +1055,33 @@ mod tests {
                             name: "".to_string(),
                             type_id: 13,
                             type_arguments: None,
+                            error_message: None,
                         }]),
+                        error_message: None,
                     },
                     UnifiedTypeApplication {
                         name: "len".to_string(),
                         type_id: 25,
                         type_arguments: None,
+                        error_message: None,
                     },
                 ]),
                 type_parameters: Some(vec![13]),
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 24,
                 type_field: "u32".to_string(),
                 components: None,
                 type_parameters: None,
+                alias_of: None,
             },
             UnifiedTypeDeclaration {
                 type_id: 25,
                 type_field: "u64".to_string(),
                 components: None,
                 type_parameters: None,
+                alias_of: None,
             },
         ];
 
@@ -1007,13 +1098,16 @@ mod tests {
                     name: "".to_string(),
                     type_id: 16,
                     type_arguments: None,
+                    error_message: None,
                 },
                 UnifiedTypeApplication {
                     name: "".to_string(),
                     type_id: 7,
                     type_arguments: None,
+                    error_message: None,
                 },
             ]),
+            error_message: None,
         };
 
         // when
