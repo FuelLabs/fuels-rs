@@ -206,12 +206,12 @@ fn generate_method_enum_variants_and_impl(
     functions: &[FullABIFunction],
 ) -> Result<(TokenStream, TokenStream)> {
     let variants = functions.iter().map(|func| {
-        let variant_name = ident(&func.name());
+        let variant_name = ident(func.name());
         quote! { #variant_name }
     });
 
     let match_arms = functions.iter().map(|func| {
-        let variant_name = ident(&func.name());
+        let variant_name = ident(func.name());
         let fn_name = func.name();
         let fn_selector = quote! { ::fuels::core::codec::encode_fn_selector(#fn_name) };
         quote! { Self::#variant_name => #fn_selector }
