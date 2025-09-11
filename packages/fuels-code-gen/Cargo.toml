@@ -17,11 +17,10 @@ proc-macro2 = { workspace = true }
 quote = { workspace = true }
 regex = { workspace = true }
 serde_json = { workspace = true }
-strum = { version = "0.26", optional = true }
 syn = { workspace = true }
 
 [features]
-strum = ["dep:strum"]
+strum = [""]
 
 [dev-dependencies]
 pretty_assertions = { workspace = true, features = ["alloc"] }
