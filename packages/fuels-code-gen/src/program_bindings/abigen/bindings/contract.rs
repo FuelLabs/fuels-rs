@@ -222,7 +222,7 @@ fn generate_method_enum_variants_and_impl(
     };
 
     let implementation = quote! {
-        pub fn fn_selector(&self) -> Vec<u8> {
+        pub fn fn_selector(&self) -> ::std::vec::Vec<u8> {
             match self {
                 #(#match_arms),*
             }
