@@ -20,7 +20,7 @@ serde_json = { workspace = true }
 syn = { workspace = true }
 
 [features]
-strum = [""]
+strum = []
 
 [dev-dependencies]
 pretty_assertions = { workspace = true, features = ["alloc"] }
