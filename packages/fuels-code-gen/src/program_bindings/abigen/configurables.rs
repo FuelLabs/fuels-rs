@@ -50,7 +50,7 @@ fn generate_struct_decl(configurable_struct_name: &Ident) -> TokenStream {
     quote! {
         #[derive(Clone, Debug, Default)]
         pub struct #configurable_struct_name {
-            offsets_with_data: ::std::vec::Vec<(u64, ::std::vec::Vec<u8>)>,
+            offsets_with_data: ::std::vec::Vec<::fuels::core::Configurable>,
             encoder: ::fuels::core::codec::ABIEncoder,
         }
     }
@@ -89,7 +89,10 @@ fn generate_builder_methods(resolved_configurables: &[ResolvedConfigurable]) -> 
                 // Generate the `with_XXX` methods for setting the configurables
                 pub fn #name(mut self, value: #ttype) -> ::fuels::prelude::Result<Self> {
                     let encoded = #encoder_code?;
-                    self.offsets_with_data.push((#offset, encoded));
+                    self.offsets_with_data.push(::fuels::core::Configurable {
+                        offset: #offset,
+                        data: encoded,
+                    });
                     ::fuels::prelude::Result::Ok(self)
                 }
             }
@@ -114,6 +117,11 @@ fn generate_from_impl(configurable_struct_name: &Ident) -> TokenStream {
         impl From<#configurable_struct_name> for ::fuels::core::Configurables {
             fn from(config: #configurable_struct_name) -> Self {
                 ::fuels::core::Configurables::new(config.offsets_with_data)
+            }
+        }
+        impl From<#configurable_struct_name> for ::std::vec::Vec<::fuels::core::Configurable> {
+            fn from(config: #configurable_struct_name) -> ::std::vec::Vec<::fuels::core::Configurable> {
+                config.offsets_with_data
             }
         }
     }
