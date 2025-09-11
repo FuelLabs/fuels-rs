@@ -89,7 +89,8 @@ impl FuelService {
                 columns_policy: ColumnsPolicy::Lazy,
             },
             #[cfg(feature = "rocksdb")]
-            state_rewind_policy: fuel_core::database::StateRewindPolicy::RewindFullRange,
+            state_rewind_policy:
+                fuel_core::state::historical_rocksdb::StateRewindPolicy::RewindFullRange,
         };
 
         ServiceConfig {
