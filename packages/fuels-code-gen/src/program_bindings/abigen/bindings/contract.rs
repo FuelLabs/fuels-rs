@@ -35,11 +35,18 @@ pub(crate) fn contract_bindings(
     let methods_enum_name = ident(&format!("{name}MethodVariants"));
 
     let contract_functions = expand_functions(&abi.functions)?;
-    let method_enum_variants = generate_method_enum_variants(&abi.functions)?;
+    let (method_enum_variants, method_enum_impl) =
+        generate_method_enum_variants_and_impl(&abi.functions)?;
 
     let configuration_struct_name = ident(&format!("{name}Configurables"));
     let constant_configuration_code =
         generate_code_for_configurable_constants(&configuration_struct_name, &abi.configurables)?;
+
+    let enum_derives = if cfg!(feature = "strum") {
+        quote! { #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, ::strum::EnumString)] }
+    } else {
+        quote! { #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)] }
+    };
 
     let code = quote! {
         #[derive(Debug, Clone)]
@@ -129,17 +136,26 @@ pub(crate) fn contract_bindings(
 
         #constant_configuration_code
 
-        #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, ::strum::EnumString)]
+        #enum_derives
         pub enum #methods_enum_name {
             #method_enum_variants
+        }
+
+        impl #methods_enum_name {
+            #method_enum_impl
         }
     };
 
     // All publicly available types generated above should be listed here.
-    let type_paths = [name, &methods_name, &configuration_struct_name, &methods_enum_name]
-        .map(|type_name| TypePath::new(type_name).expect("We know the given types are not empty"))
-        .into_iter()
-        .collect();
+    let type_paths = [
+        name,
+        &methods_name,
+        &configuration_struct_name,
+        &methods_enum_name,
+    ]
+    .map(|type_name| TypePath::new(type_name).expect("We know the given types are not empty"))
+    .into_iter()
+    .collect();
 
     Ok(GeneratedCode::new(code, type_paths, no_std))
 }
@@ -186,15 +202,34 @@ pub(crate) fn expand_fn(abi_fun: &FullABIFunction) -> Result<TokenStream> {
     Ok(generator.generate())
 }
 
-fn generate_method_enum_variants(functions: &[FullABIFunction]) -> Result<TokenStream> {
+fn generate_method_enum_variants_and_impl(
+    functions: &[FullABIFunction],
+) -> Result<(TokenStream, TokenStream)> {
     let variants = functions.iter().map(|func| {
         let variant_name = ident(&func.name());
         quote! { #variant_name }
     });
 
-    Ok(quote! {
+    let match_arms = functions.iter().map(|func| {
+        let variant_name = ident(&func.name());
+        let fn_name = func.name();
+        let fn_selector = quote! { ::fuels::core::codec::encode_fn_selector(#fn_name) };
+        quote! { Self::#variant_name => #fn_selector }
+    });
+
+    let variants = quote! {
         #(#variants),*
-    })
+    };
+
+    let implementation = quote! {
+        pub fn fn_selector(&self) -> [u8; 8] {
+            match self {
+                #(#match_arms),*
+            }
+        }
+    };
+
+    Ok((variants, implementation))
 }
 
 #[cfg(test)]
