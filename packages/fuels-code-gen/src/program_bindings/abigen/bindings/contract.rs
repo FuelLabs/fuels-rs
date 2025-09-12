@@ -32,21 +32,15 @@ pub(crate) fn contract_bindings(
     let error_codes = quote! {::std::collections::HashMap::from([#(#error_codes),*])};
 
     let methods_name = ident(&format!("{name}Methods"));
-    let methods_enum_name = ident(&format!("{name}MethodVariants"));
+    let contract_methods_name = ident(&format!("{name}MethodVariants"));
 
     let contract_functions = expand_functions(&abi.functions)?;
-    let (method_enum_variants, method_enum_impl) =
-        generate_method_enum_variants_and_impl(&abi.functions)?;
+    let constant_methods_code =
+        generate_constant_methods_pattern(&abi.functions, &contract_methods_name)?;
 
     let configuration_struct_name = ident(&format!("{name}Configurables"));
     let constant_configuration_code =
         generate_code_for_configurable_constants(&configuration_struct_name, &abi.configurables)?;
-
-    let enum_derives = if cfg!(feature = "strum") {
-        quote! { #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, ::strum::EnumString)] }
-    } else {
-        quote! { #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)] }
-    };
 
     let code = quote! {
         #[derive(Debug, Clone)]
@@ -59,6 +53,8 @@ pub(crate) fn contract_bindings(
 
         impl<A> #name<A>
         {
+            pub const METHODS: #contract_methods_name = #contract_methods_name;
+
             pub fn new(
                 contract_id: ::fuels::types::ContractId,
                 account: A,
@@ -136,14 +132,7 @@ pub(crate) fn contract_bindings(
 
         #constant_configuration_code
 
-        #enum_derives
-        pub enum #methods_enum_name {
-            #method_enum_variants
-        }
-
-        impl #methods_enum_name {
-            #method_enum_impl
-        }
+        #constant_methods_code
     };
 
     // All publicly available types generated above should be listed here.
@@ -151,7 +140,7 @@ pub(crate) fn contract_bindings(
         name,
         &methods_name,
         &configuration_struct_name,
-        &methods_enum_name,
+        &contract_methods_name,
     ]
     .map(|type_name| TypePath::new(type_name).expect("We know the given types are not empty"))
     .into_iter()
@@ -202,34 +191,59 @@ pub(crate) fn expand_fn(abi_fun: &FullABIFunction) -> Result<TokenStream> {
     Ok(generator.generate())
 }
 
-fn generate_method_enum_variants_and_impl(
+fn generate_constant_methods_pattern(
     functions: &[FullABIFunction],
-) -> Result<(TokenStream, TokenStream)> {
-    let variants = functions.iter().map(|func| {
-        let variant_name = ident(func.name());
-        quote! { #variant_name }
-    });
-
-    let match_arms = functions.iter().map(|func| {
-        let variant_name = ident(func.name());
+    contract_methods_name: &Ident,
+) -> Result<TokenStream> {
+    let method_descriptors = functions.iter().map(|func| {
+        let method_name = ident(func.name());
         let fn_name = func.name();
-        let fn_selector = quote! { ::fuels::core::codec::encode_fn_selector(#fn_name) };
-        quote! { Self::#variant_name => #fn_selector }
+
+        quote! {
+            pub const fn #method_name(&self) -> MethodDescriptor {
+                MethodDescriptor {
+                    name: #fn_name,
+                }
+            }
+        }
     });
 
-    let variants = quote! {
-        #(#variants),*
-    };
+    let all_methods = functions.iter().map(|func| {
+        let method_name = ident(func.name());
+        quote! { Self.#method_name() }
+    });
 
-    let implementation = quote! {
-        pub fn fn_selector(&self) -> ::std::vec::Vec<u8> {
-            match self {
-                #(#match_arms),*
+    let method_count = functions.len();
+
+    let code = quote! {
+        #[derive(Debug, Clone, Copy)]
+        pub struct MethodDescriptor {
+            name: &'static str,
+        }
+
+        impl MethodDescriptor {
+            pub fn fn_selector(&self) -> ::std::vec::Vec<u8> {
+                ::fuels::core::codec::encode_fn_selector(self.name)
+            }
+
+            pub fn name(&self) -> &str {
+                self.name
+            }
+        }
+
+        #[derive(Debug, Clone, Copy)]
+        pub struct #contract_methods_name;
+
+        impl #contract_methods_name {
+            #(#method_descriptors)*
+
+            pub const fn iter(&self) -> [MethodDescriptor; #method_count] {
+                [#(#all_methods),*]
             }
         }
     };
 
-    Ok((variants, implementation))
+    Ok(code)
 }
 
 #[cfg(test)]

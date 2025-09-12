@@ -2839,3 +2839,46 @@ async fn multicall_tx_input_output() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_returned_method_descriptors_are_valid() -> Result<()> {
+    abigen!(Contract(
+        name = "MyContract",
+        abi = "e2e/sway/contracts/token_ops/out/release/token_ops-abi.json"
+    ));
+
+    let methods = MyContract::<()>::METHODS;
+
+    assert_eq!(
+        methods.burn_coins().fn_selector(),
+        encode_fn_selector("burn_coins")
+    );
+    assert_eq!(
+        methods.get_balance().fn_selector(),
+        encode_fn_selector("get_balance")
+    );
+    assert_eq!(
+        methods.get_msg_amount().fn_selector(),
+        encode_fn_selector("get_msg_amount")
+    );
+    assert_eq!(
+        methods.mint_coins().fn_selector(),
+        encode_fn_selector("mint_coins")
+    );
+    assert_eq!(
+        methods.mint_to_addresses().fn_selector(),
+        encode_fn_selector("mint_to_addresses")
+    );
+    assert_eq!(
+        methods.send_message().fn_selector(),
+        encode_fn_selector("send_message")
+    );
+    assert_eq!(
+        methods.transfer().fn_selector(),
+        encode_fn_selector("transfer")
+    );
+
+    assert_eq!(methods.iter().len(), 7);
+
+    Ok(())
+}
