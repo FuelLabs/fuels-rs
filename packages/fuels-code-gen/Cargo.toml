@@ -19,9 +19,6 @@ regex = { workspace = true }
 serde_json = { workspace = true }
 syn = { workspace = true }
 
-[features]
-strum = []
-
 [dev-dependencies]
 pretty_assertions = { workspace = true, features = ["alloc"] }
 
