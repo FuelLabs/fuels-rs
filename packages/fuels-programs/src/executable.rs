@@ -213,7 +213,7 @@ fn validate_loader_can_be_made_from_code(
 mod tests {
     use std::io::Write;
 
-    use fuels_core::Configurables;
+    use fuels_core::{Configurable, Configurables};
     use tempfile::NamedTempFile;
 
     use super::*;
@@ -272,7 +272,10 @@ mod tests {
         // Given: An Executable<Regular> and some configurables
         let code = vec![1u8, 2, 3, 4];
         let executable = Executable::<Regular>::from_bytes(code);
-        let configurables = Configurables::new(vec![(2, vec![1])]);
+        let configurables = Configurables::new(vec![Configurable {
+            offset: 2,
+            data: vec![1],
+        }]);
 
         // When: Setting new configurables
         let new_executable = executable.with_configurables(configurables.clone());
@@ -285,7 +288,10 @@ mod tests {
     fn test_executable_regular_code() {
         // Given: An Executable<Regular> with some code and configurables
         let code = vec![1u8, 2, 3, 4];
-        let configurables = Configurables::new(vec![(1, vec![1])]);
+        let configurables = Configurables::new(vec![Configurable {
+            offset: 1,
+            data: vec![1],
+        }]);
         let executable =
             Executable::<Regular>::from_bytes(code.clone()).with_configurables(configurables);
 

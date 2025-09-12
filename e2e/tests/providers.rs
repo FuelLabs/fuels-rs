@@ -355,7 +355,7 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<()> {
     );
 
     // The gas used by the script to call a contract and forward remaining gas limit.
-    let gas_used_by_script = 203;
+    let gas_used_by_script = 205;
     let gas_limit = 225_883;
     let response = contract_instance
         .methods()
@@ -1036,7 +1036,7 @@ async fn send_transaction_and_await_status() -> Result<()> {
     assert!(status.iter().enumerate().all(|(i, tx_status)| {
         matches!(
             (i, tx_status.clone().unwrap()),
-            (0, TxStatus::Submitted { .. })
+            (0, TxStatus::Submitted)
                 | (1, TxStatus::PreconfirmationSuccess { .. })
                 | (2, TxStatus::Success { .. })
         )
@@ -1080,7 +1080,7 @@ async fn send_transaction_and_subscribe_status() -> Result<()> {
     // Then
     assert!(matches!(
         statuses.next().await.unwrap()?,
-        TxStatus::Submitted { .. }
+        TxStatus::Submitted
     ));
     provider.produce_blocks(1, None).await?;
     assert!(matches!(

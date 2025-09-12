@@ -260,8 +260,15 @@ pub trait Account: ViewOnlyAccount {
             tx_policies,
         );
 
+        let consensus_parameters = provider.consensus_parameters().await?;
+        let used_base_amount = if asset_id == *consensus_parameters.base_asset_id() {
+            balance
+        } else {
+            0
+        };
+
         self.add_witnesses(&mut tb)?;
-        self.adjust_for_fee(&mut tb, balance.into())
+        self.adjust_for_fee(&mut tb, used_base_amount.into())
             .await
             .context("failed to adjust inputs to cover for missing base asset")?;
 

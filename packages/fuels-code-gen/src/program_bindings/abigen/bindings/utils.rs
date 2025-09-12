@@ -59,6 +59,7 @@ mod tests {
                     type_field: "".to_string(),
                     components: vec![],
                     type_parameters: vec![],
+                    alias_of: None,
                 },
                 type_arguments: vec![],
                 error_message: None,

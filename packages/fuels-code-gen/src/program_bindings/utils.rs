@@ -230,6 +230,7 @@ mod tests {
                 type_field: "u64".to_string(),
                 components: vec![],
                 type_parameters: vec![],
+                alias_of: None,
             },
             type_arguments: vec![],
             error_message: None,

@@ -1,10 +1,9 @@
-use std::net::SocketAddr;
-
 #[cfg(feature = "fuel-core-lib")]
 use fuel_core::service::{Config as ServiceConfig, FuelService as CoreFuelService};
 use fuel_core_chain_config::{ChainConfig, StateConfig};
 use fuel_core_services::State;
 use fuels_core::types::errors::{Result, error};
+use std::net::SocketAddr;
 
 use crate::NodeConfig;
 #[cfg(not(feature = "fuel-core-lib"))]
@@ -90,7 +89,8 @@ impl FuelService {
                 columns_policy: ColumnsPolicy::Lazy,
             },
             #[cfg(feature = "rocksdb")]
-            state_rewind_policy: Default::default(),
+            state_rewind_policy:
+                fuel_core::state::historical_rocksdb::StateRewindPolicy::RewindFullRange,
         };
 
         ServiceConfig {
@@ -105,6 +105,7 @@ impl FuelService {
                 required_fuel_block_height_tolerance: 10,
                 required_fuel_block_height_timeout: Duration::from_secs(30),
                 request_body_bytes_limit: 16 * 1024 * 1024,
+                block_subscriptions_queue: 100,
                 query_log_threshold_time: Duration::from_secs(2),
                 api_request_timeout: Duration::from_secs(60),
                 database_batch_size: 100,

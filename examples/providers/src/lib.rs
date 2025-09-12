@@ -28,7 +28,7 @@ mod tests {
         // ANCHOR_END: connect_to_testnet
 
         let provider = setup_test_provider(vec![], vec![], None, None).await?;
-        let port = provider.url().split(':').last().unwrap();
+        let port = provider.url().split(':').next_back().unwrap();
 
         // ANCHOR: local_node_address
         let _provider = Provider::connect(format!("127.0.0.1:{port}")).await?;

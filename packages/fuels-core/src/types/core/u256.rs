@@ -1,4 +1,5 @@
 #![allow(clippy::assign_op_pattern)]
+#![allow(clippy::manual_div_ceil)]
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 use uint::construct_uint;

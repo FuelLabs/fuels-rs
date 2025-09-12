@@ -67,12 +67,6 @@ struct MegaExample<T, U> {
     b: Vec<([EnumWGeneric<StructWTupleGeneric<StructWArrayGeneric<PassTheGenericOn<T>>>>; 1], u32)>,
 }
 
-impl Hash for str[3] {
-    fn hash(self, ref mut state: Hasher) {
-        state.write_str(from_str_array(self));
-    }
-}
-
 abi MyContract {
     fn unused_generic_args(
         arg_1: StructUnusedGeneric<u64, u32>,
