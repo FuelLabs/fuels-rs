@@ -2847,38 +2847,36 @@ async fn test_returned_method_descriptors_are_valid() -> Result<()> {
         abi = "e2e/sway/contracts/token_ops/out/release/token_ops-abi.json"
     ));
 
-    let methods = MyContract::<()>::METHODS;
-
     assert_eq!(
-        methods.burn_coins().fn_selector(),
+        MyContract::METHODS.burn_coins().fn_selector(),
         encode_fn_selector("burn_coins")
     );
     assert_eq!(
-        methods.get_balance().fn_selector(),
+        MyContract::METHODS.get_balance().fn_selector(),
         encode_fn_selector("get_balance")
     );
     assert_eq!(
-        methods.get_msg_amount().fn_selector(),
+        MyContract::METHODS.get_msg_amount().fn_selector(),
         encode_fn_selector("get_msg_amount")
     );
     assert_eq!(
-        methods.mint_coins().fn_selector(),
+        MyContract::METHODS.mint_coins().fn_selector(),
         encode_fn_selector("mint_coins")
     );
     assert_eq!(
-        methods.mint_to_addresses().fn_selector(),
+        MyContract::METHODS.mint_to_addresses().fn_selector(),
         encode_fn_selector("mint_to_addresses")
     );
     assert_eq!(
-        methods.send_message().fn_selector(),
+        MyContract::METHODS.send_message().fn_selector(),
         encode_fn_selector("send_message")
     );
     assert_eq!(
-        methods.transfer().fn_selector(),
+        MyContract::METHODS.transfer().fn_selector(),
         encode_fn_selector("transfer")
     );
 
-    assert_eq!(methods.iter().len(), 7);
+    assert_eq!(MyContract::METHODS.iter().len(), 7);
 
     Ok(())
 }

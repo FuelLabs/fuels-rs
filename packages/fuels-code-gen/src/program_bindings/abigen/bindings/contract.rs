@@ -44,17 +44,19 @@ pub(crate) fn contract_bindings(
 
     let code = quote! {
         #[derive(Debug, Clone)]
-        pub struct #name<A> {
+        pub struct #name<A = ()> {
             contract_id: ::fuels::types::ContractId,
             account: A,
             log_decoder: ::fuels::core::codec::LogDecoder,
             encoder_config: ::fuels::core::codec::EncoderConfig,
         }
 
+        impl #name {
+            pub const METHODS: #contract_methods_name = #contract_methods_name;
+        }
+
         impl<A> #name<A>
         {
-            pub const METHODS: #contract_methods_name = #contract_methods_name;
-
             pub fn new(
                 contract_id: ::fuels::types::ContractId,
                 account: A,
@@ -198,11 +200,14 @@ fn generate_constant_methods_pattern(
     let method_descriptors = functions.iter().map(|func| {
         let method_name = ident(func.name());
         let fn_name = func.name();
+        let fn_selector =
+            proc_macro2::Literal::byte_string(&crate::utils::encode_fn_selector(fn_name));
 
         quote! {
-            pub const fn #method_name(&self) -> MethodDescriptor {
-                MethodDescriptor {
+            pub const fn #method_name(&self) -> ::fuels::types::MethodDescriptor {
+                ::fuels::types::MethodDescriptor {
                     name: #fn_name,
+                    fn_selector: #fn_selector,
                 }
             }
         }
@@ -219,14 +224,15 @@ fn generate_constant_methods_pattern(
         #[derive(Debug, Clone, Copy)]
         pub struct MethodDescriptor {
             name: &'static str,
+            fn_selector: &'static [u8]
         }
 
         impl MethodDescriptor {
-            pub fn fn_selector(&self) -> ::std::vec::Vec<u8> {
-                ::fuels::core::codec::encode_fn_selector(self.name)
+            pub const fn fn_selector(&self) -> &'static [u8] {
+                self.fn_selector
             }
 
-            pub fn name(&self) -> &str {
+            pub const fn name(&self) -> &'static str {
                 self.name
             }
         }
@@ -237,7 +243,7 @@ fn generate_constant_methods_pattern(
         impl #contract_methods_name {
             #(#method_descriptors)*
 
-            pub const fn iter(&self) -> [MethodDescriptor; #method_count] {
+            pub const fn iter(&self) -> [::fuels::types::MethodDescriptor; #method_count] {
                 [#(#all_methods),*]
             }
         }
