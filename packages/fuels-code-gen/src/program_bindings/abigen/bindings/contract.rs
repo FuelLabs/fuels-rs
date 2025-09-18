@@ -222,22 +222,6 @@ fn generate_constant_methods_pattern(
 
     let code = quote! {
         #[derive(Debug, Clone, Copy)]
-        pub struct MethodDescriptor {
-            name: &'static str,
-            fn_selector: &'static [u8]
-        }
-
-        impl MethodDescriptor {
-            pub const fn fn_selector(&self) -> &'static [u8] {
-                self.fn_selector
-            }
-
-            pub const fn name(&self) -> &'static str {
-                self.name
-            }
-        }
-
-        #[derive(Debug, Clone, Copy)]
         pub struct #contract_methods_name;
 
         impl #contract_methods_name {
