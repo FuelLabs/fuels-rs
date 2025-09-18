@@ -1,3 +1,5 @@
+/// This type is used to specify the fn_selector and name
+/// of methods on contracts at compile time, exported by the abigen! macro
 #[derive(Debug, Clone, Copy)]
 pub struct MethodDescriptor {
     pub name: &'static str,
