@@ -14,6 +14,7 @@ async-trait = { workspace = true, default-features = false }
 chrono = { workspace = true }
 fuel-abi-types = { workspace = true }
 fuel-asm = { workspace = true }
+fuels-code-gen = { workspace = true }
 fuel-core-chain-config = { workspace = true }
 fuel-core-client = { workspace = true, optional = true }
 fuel-core-types = { workspace = true }
