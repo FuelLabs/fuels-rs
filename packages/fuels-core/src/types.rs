@@ -4,7 +4,7 @@ pub use fuel_types::{
     MessageId, Nonce, Salt, SubAssetId, Word,
 };
 
-pub use crate::types::{core::*, token::*, wrappers::*};
+pub use crate::types::{core::*, method_descriptor::*, token::*, wrappers::*};
 use crate::{error, types::errors::Result};
 
 mod core;
@@ -18,6 +18,7 @@ pub mod tx_status;
 mod wrappers;
 pub use dry_runner::*;
 pub mod checksum_address;
+pub mod method_descriptor;
 
 pub type ByteArray = [u8; 8];
 pub type Selector = Vec<u8>;

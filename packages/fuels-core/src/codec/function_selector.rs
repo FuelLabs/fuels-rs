@@ -1,9 +1,4 @@
-pub fn encode_fn_selector(name: &str) -> Vec<u8> {
-    let bytes = name.as_bytes().to_vec();
-    let len = bytes.len() as u64;
-
-    [len.to_be_bytes().to_vec(), bytes].concat()
-}
+pub use fuels_code_gen::utils::encode_fn_selector;
 
 /// This uses the default `EncoderConfig` configuration.
 #[macro_export]

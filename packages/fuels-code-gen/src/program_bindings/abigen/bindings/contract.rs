@@ -32,8 +32,11 @@ pub(crate) fn contract_bindings(
     let error_codes = quote! {::std::collections::HashMap::from([#(#error_codes),*])};
 
     let methods_name = ident(&format!("{name}Methods"));
+    let contract_methods_name = ident(&format!("{name}MethodVariants"));
 
     let contract_functions = expand_functions(&abi.functions)?;
+    let constant_methods_code =
+        generate_constant_methods_pattern(&abi.functions, &contract_methods_name)?;
 
     let configuration_struct_name = ident(&format!("{name}Configurables"));
     let constant_configuration_code =
@@ -41,11 +44,15 @@ pub(crate) fn contract_bindings(
 
     let code = quote! {
         #[derive(Debug, Clone)]
-        pub struct #name<A> {
+        pub struct #name<A = ()> {
             contract_id: ::fuels::types::ContractId,
             account: A,
             log_decoder: ::fuels::core::codec::LogDecoder,
             encoder_config: ::fuels::core::codec::EncoderConfig,
+        }
+
+        impl #name {
+            pub const METHODS: #contract_methods_name = #contract_methods_name;
         }
 
         impl<A> #name<A>
@@ -126,13 +133,20 @@ pub(crate) fn contract_bindings(
         }
 
         #constant_configuration_code
+
+        #constant_methods_code
     };
 
     // All publicly available types generated above should be listed here.
-    let type_paths = [name, &methods_name, &configuration_struct_name]
-        .map(|type_name| TypePath::new(type_name).expect("We know the given types are not empty"))
-        .into_iter()
-        .collect();
+    let type_paths = [
+        name,
+        &methods_name,
+        &configuration_struct_name,
+        &contract_methods_name,
+    ]
+    .map(|type_name| TypePath::new(type_name).expect("We know the given types are not empty"))
+    .into_iter()
+    .collect();
 
     Ok(GeneratedCode::new(code, type_paths, no_std))
 }
@@ -177,6 +191,49 @@ pub(crate) fn expand_fn(abi_fun: &FullABIFunction) -> Result<TokenStream> {
     generator.set_body(body);
 
     Ok(generator.generate())
+}
+
+fn generate_constant_methods_pattern(
+    functions: &[FullABIFunction],
+    contract_methods_name: &Ident,
+) -> Result<TokenStream> {
+    let method_descriptors = functions.iter().map(|func| {
+        let method_name = ident(func.name());
+        let fn_name = func.name();
+        let fn_selector =
+            proc_macro2::Literal::byte_string(&crate::utils::encode_fn_selector(fn_name));
+
+        quote! {
+            pub const fn #method_name(&self) -> ::fuels::types::MethodDescriptor {
+                ::fuels::types::MethodDescriptor {
+                    name: #fn_name,
+                    fn_selector: #fn_selector,
+                }
+            }
+        }
+    });
+
+    let all_methods = functions.iter().map(|func| {
+        let method_name = ident(func.name());
+        quote! { Self.#method_name() }
+    });
+
+    let method_count = functions.len();
+
+    let code = quote! {
+        #[derive(Debug, Clone, Copy)]
+        pub struct #contract_methods_name;
+
+        impl #contract_methods_name {
+            #(#method_descriptors)*
+
+            pub const fn iter(&self) -> [::fuels::types::MethodDescriptor; #method_count] {
+                [#(#all_methods),*]
+            }
+        }
+    };
+
+    Ok(code)
 }
 
 #[cfg(test)]
