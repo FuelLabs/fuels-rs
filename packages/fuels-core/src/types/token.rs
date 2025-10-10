@@ -24,15 +24,14 @@ impl StaticStringToken {
             return Err(error!(Codec, "string data can only have ascii values"));
         }
 
-        if let Some(expected_len) = self.expected_len {
-            if self.data.len() != expected_len {
+        if let Some(expected_len) = self.expected_len
+            && self.data.len() != expected_len {
                 return Err(error!(
                     Codec,
                     "string data has len {}, but the expected len is {}",
                     self.data.len(),
                     expected_len
                 ));
-            }
         }
 
         Ok(())
