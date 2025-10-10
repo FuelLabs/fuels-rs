@@ -25,13 +25,14 @@ impl StaticStringToken {
         }
 
         if let Some(expected_len) = self.expected_len
-            && self.data.len() != expected_len {
-                return Err(error!(
-                    Codec,
-                    "string data has len {}, but the expected len is {}",
-                    self.data.len(),
-                    expected_len
-                ));
+            && self.data.len() != expected_len
+        {
+            return Err(error!(
+                Codec,
+                "string data has len {}, but the expected len is {}",
+                self.data.len(),
+                expected_len
+            ));
         }
 
         Ok(())
