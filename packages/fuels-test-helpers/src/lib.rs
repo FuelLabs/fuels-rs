@@ -64,13 +64,12 @@ pub fn setup_multiple_assets_coins(
 
 /// Create a vector of UTXOs with the provided AssetIds, num_coins, and amount_per_coin
 pub fn setup_custom_assets_coins(owner: Address, assets: &[AssetConfig]) -> Vec<Coin> {
-    let coins = assets
+    assets
         .iter()
         .flat_map(|asset| {
             setup_single_asset_coins(owner, asset.id, asset.num_coins, asset.coin_amount)
         })
-        .collect::<Vec<Coin>>();
-    coins
+        .collect::<Vec<Coin>>()
 }
 
 /// Create a vector of `num_coins` UTXOs containing `amount_per_coin` amount of asset `asset_id`.
