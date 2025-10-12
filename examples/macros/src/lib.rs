@@ -34,11 +34,13 @@ mod tests {
         use fuels::macros::{Parameterize, Tokenizable};
 
         #[derive(Parameterize, Tokenizable)]
+        #[allow(dead_code)]
         struct MyStruct {
             field_a: u8,
         }
 
         #[derive(Parameterize, Tokenizable)]
+        #[allow(dead_code)]
         enum SomeEnum {
             A(MyStruct),
             B(Vec<u64>),
@@ -58,6 +60,7 @@ mod tests {
             #[derive(Parameterize, Tokenizable)]
             #[FuelsCorePath = "fuels_core_elsewhere"]
             #[FuelsTypesPath = "fuels_types_elsewhere"]
+            #[allow(dead_code)]
             pub struct SomeStruct {
                 field_a: u64,
             }
@@ -68,6 +71,7 @@ mod tests {
             use fuels::macros::{Parameterize, Tokenizable};
             #[derive(Parameterize, Tokenizable)]
             #[NoStd]
+            #[allow(dead_code)]
             pub struct SomeStruct {
                 field_a: u64,
             }
