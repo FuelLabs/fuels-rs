@@ -80,7 +80,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 ///
 /// # Examples
 /// ```
-/// use fuels_core::types:: errors::{Context, Error, Result};
+/// use fuels_core::types::errors::{Context, Error, Result};
 ///
 /// let res_with_context: Result<()> =
 /// Err(Error::Other("some error".to_owned())).context("some context");
