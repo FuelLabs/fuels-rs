@@ -109,7 +109,7 @@ pub struct TxPolicies {
     expiration: Option<u64>,
     max_fee: Option<u64>,
     script_gas_limit: Option<u64>,
-    owner: Option<u64>
+    owner: Option<u64>,
 }
 // ANCHOR_END: tx_policies_struct
 
