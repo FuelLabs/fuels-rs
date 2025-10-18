@@ -1203,6 +1203,7 @@ async fn tx_respects_policies() -> Result<()> {
     let expiration = 128;
     let max_fee = 10_000;
     let script_gas_limit = 3000;
+    let owner_index = 0;
     let tx_policies = TxPolicies::new(
         Some(tip),
         Some(witness_limit),
@@ -1210,6 +1211,7 @@ async fn tx_respects_policies() -> Result<()> {
         Some(expiration),
         Some(max_fee),
         Some(script_gas_limit),
+        Some(0),
     );
 
     // advance the block height to ensure the maturity is respected
@@ -1240,6 +1242,7 @@ async fn tx_respects_policies() -> Result<()> {
     assert_eq!(script.witness_limit().unwrap(), witness_limit);
     assert_eq!(script.max_fee().unwrap(), max_fee);
     assert_eq!(script.gas_limit(), script_gas_limit);
+    assert_eq!(script.owner().unwrap(), owner_index);
 
     Ok(())
 }
@@ -1444,6 +1447,214 @@ async fn is_account_query_test() -> Result<()> {
             .check(None)?;
         let is_account = provider.is_user_account(tx_id).await?;
         assert!(!is_account);
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn script_tx_get_owner_returns_owner_when_policy_set_multiple_inputs() -> Result<()> {
+    use fuel_asm::{GMArgs, GTFArgs, op};
+
+    let amount = 1000;
+    let num_coins = 50;
+    let mut wallets = launch_custom_provider_and_get_wallets(
+        WalletsConfig::new(Some(3), Some(num_coins), Some(amount)),
+        Some(NodeConfig::default()),
+        None,
+    )
+    .await?;
+    let wallet_1 = wallets.pop().unwrap();
+    let wallet_2 = wallets.pop().unwrap();
+    let wallet_3 = wallets.pop().unwrap();
+
+    let receiver = Wallet::random(&mut thread_rng(), provider.clone());
+
+    let consensus_parameters = provider.consensus_parameters().await?;
+    let inputs_1 = wallet_1
+        .get_asset_inputs_for_amount(*consensus_parameters.base_asset_id(), 10000, None)
+        .await?;
+    let outputs_1 = wallet_1.get_asset_outputs_for_amount(
+        receiver.address(),
+        *consensus_parameters.base_asset_id(),
+        1,
+    );
+    let inputs_2 = wallet_2
+        .get_asset_inputs_for_amount(*consensus_parameters.base_asset_id(), 10000, None)
+        .await?;
+    let outputs_2 = wallet_2.get_asset_outputs_for_amount(
+        receiver.address(),
+        *consensus_parameters.base_asset_id(),
+        1,
+    );
+    let inputs_3 = wallet_3
+        .get_asset_inputs_for_amount(*consensus_parameters.base_asset_id(), 10000, None)
+        .await?;
+    let outputs_3 = wallet_3.get_asset_outputs_for_amount(
+        receiver.address(),
+        *consensus_parameters.base_asset_id(),
+        1,
+    );
+
+    let tx_policies = TxPolicies::default().with_owner(1);
+    let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, tx_policies);
+    wallet_1.add_witnesses(&mut tb)?;
+    wallet_2.add_witnesses(&mut tb)?;
+    wallet_3.add_witnesses(&mut tb)?;
+
+    let script = vec![op::gm_args(0x20, GMArgs::GetOwner), op::ret(0x20)]
+        .into_iter()
+        .collect();
+
+    tb.script = script;
+
+    let expected_data = 1u64;
+
+    let tx = tb.build(provider).await?;
+
+    let status = provider.send_transaction_and_await_commit(tx).await?;
+
+    match status {
+        TxStatus::Success(Success { receipts, .. }) => {
+            let ret: u64 = receipts
+                .into_iter()
+                .find_map(|receipt| match receipt {
+                    Receipt::Return { val, .. } => Some(val),
+                    _ => None,
+                })
+                .expect("should have return value");
+
+            assert_eq!(ret, expected_data);
+        }
+        _ => panic!("expected success status"),
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn script_tx_get_owner_panics_when_policy_unset_multiple_inputs() -> Result<()> {
+    use fuel_asm::{GMArgs, GTFArgs, op};
+
+    let amount = 1000;
+    let num_coins = 50;
+    let mut wallets = launch_custom_provider_and_get_wallets(
+        WalletsConfig::new(Some(3), Some(num_coins), Some(amount)),
+        Some(NodeConfig::default()),
+        None,
+    )
+    .await?;
+    let wallet_1 = wallets.pop().unwrap();
+    let wallet_2 = wallets.pop().unwrap();
+    let wallet_3 = wallets.pop().unwrap();
+
+    let receiver = Wallet::random(&mut thread_rng(), provider.clone());
+
+    let consensus_parameters = provider.consensus_parameters().await?;
+    let mut inputs = vec![];
+    let mut outputs = vec![];
+    inputs.append(
+        wallet_1
+            .get_asset_inputs_for_amount(*consensus_parameters.base_asset_id(), 10000, None)
+            .await?,
+    );
+    outputs.append(wallet_1.get_asset_outputs_for_amount(
+        receiver.address(),
+        *consensus_parameters.base_asset_id(),
+        1,
+    ));
+    inputs.append(
+        wallet_2
+            .get_asset_inputs_for_amount(*consensus_parameters.base_asset_id(), 10000, None)
+            .await?,
+    );
+    outputs.append(wallet_2.get_asset_outputs_for_amount(
+        receiver.address(),
+        *consensus_parameters.base_asset_id(),
+        1,
+    ));
+    inputs.append(
+        wallet_3
+            .get_asset_inputs_for_amount(*consensus_parameters.base_asset_id(), 10000, None)
+            .await?,
+    );
+    outputs.append(wallet_3.get_asset_outputs_for_amount(
+        receiver.address(),
+        *consensus_parameters.base_asset_id(),
+        1,
+    ));
+
+    let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
+    wallet_1.add_witnesses(&mut tb)?;
+    wallet_2.add_witnesses(&mut tb)?;
+    wallet_3.add_witnesses(&mut tb)?;
+
+    let script = vec![op::gm_args(0x20, GMArgs::GetOwner), op::ret(0x20)]
+        .into_iter()
+        .collect();
+
+    tb.script = script;
+
+    let tx = tb.build(provider).await?;
+
+    let status = provider.send_transaction_and_await_commit(tx).await?;
+
+    match status {
+        TxStatus::Failure(Failure { .. }) => {}
+        _ => panic!("expected failure status"),
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn script_tx_get_owner_returns_owner_when_policy_unset_all_inputs_same_owner() -> Result<()> {
+    use fuel_asm::{GMArgs, GTFArgs, op};
+
+    let wallet = launch_provider_and_get_wallet().await?;
+    let provider = wallet.provider();
+
+    let receiver = Wallet::random(&mut thread_rng(), provider.clone());
+
+    let consensus_parameters = provider.consensus_parameters().await?;
+    let inputs = wallet
+        .get_asset_inputs_for_amount(*consensus_parameters.base_asset_id(), 10000, None)
+        .await?;
+    let outputs = wallet.get_asset_outputs_for_amount(
+        receiver.address(),
+        *consensus_parameters.base_asset_id(),
+        1,
+    );
+
+    let tx_policies = TxPolicies::default();
+    let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, tx_policies);
+    wallet.add_witnesses(&mut tb)?;
+
+    let script = vec![op::gm_args(0x20, GMArgs::GetOwner), op::ret(0x20)]
+        .into_iter()
+        .collect();
+
+    tb.script = script;
+
+    let expected_data = 0u64;
+
+    let tx = tb.build(provider).await?;
+
+    let status = provider.send_transaction_and_await_commit(tx).await?;
+
+    match status {
+        TxStatus::Success(Success { receipts, .. }) => {
+            let ret: u64 = receipts
+                .into_iter()
+                .find_map(|receipt| match receipt {
+                    Receipt::Return { val, .. } => Some(val),
+                    _ => None,
+                })
+                .expect("should have return value");
+
+            assert_eq!(ret, expected_data);
+        }
+        _ => panic!("expected success status"),
     }
 
     Ok(())
