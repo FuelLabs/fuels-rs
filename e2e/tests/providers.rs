@@ -1513,9 +1513,13 @@ async fn script_tx_get_owner_returns_owner_when_policy_set_multiple_inputs() -> 
     wallet_2.add_witnesses(&mut tb)?;
     wallet_3.add_witnesses(&mut tb)?;
 
-    let script = vec![op::gm_args(0x20, GMArgs::GetOwner), op::ret(0x20)]
-        .into_iter()
-        .collect();
+    let script = vec![
+        op::gm_args(0x20, GMArgs::GetOwner),
+        op::lw(0x20, 0x20, 0),
+        op::ret(0x20),
+    ]
+    .into_iter()
+    .collect();
 
     tb.script = script;
 
@@ -1603,9 +1607,13 @@ async fn script_tx_get_owner_panics_when_policy_unset_multiple_inputs() -> Resul
     wallet_2.add_witnesses(&mut tb)?;
     wallet_3.add_witnesses(&mut tb)?;
 
-    let script = vec![op::gm_args(0x20, GMArgs::GetOwner), op::ret(0x20)]
-        .into_iter()
-        .collect();
+    let script = vec![
+        op::gm_args(0x20, GMArgs::GetOwner),
+        op::lw(0x20, 0x20, 0),
+        op::ret(0x20),
+    ]
+    .into_iter()
+    .collect();
 
     tb.script = script;
 
@@ -1644,9 +1652,13 @@ async fn script_tx_get_owner_returns_owner_when_policy_unset_all_inputs_same_own
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, tx_policies);
     wallet.add_witnesses(&mut tb)?;
 
-    let script = vec![op::gm_args(0x20, GMArgs::GetOwner), op::ret(0x20)]
-        .into_iter()
-        .collect();
+    let script = vec![
+        op::gm_args(0x20, GMArgs::GetOwner),
+        op::lw(0x20, 0x20, 0),
+        op::ret(0x20),
+    ]
+    .into_iter()
+    .collect();
 
     tb.script = script;
 
