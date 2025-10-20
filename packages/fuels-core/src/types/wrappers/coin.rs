@@ -32,7 +32,7 @@ impl From<Coin> for CoinConfig {
         Self {
             tx_id: *coin.utxo_id.tx_id(),
             output_index: coin.utxo_id.output_index(),
-            owner: coin.owner,
+            owner: fuel_core_chain_config::Owner::Address(coin.owner),
             amount: coin.amount,
             asset_id: coin.asset_id,
             ..Default::default()

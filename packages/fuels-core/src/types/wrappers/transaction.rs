@@ -109,6 +109,7 @@ pub struct TxPolicies {
     expiration: Option<u64>,
     max_fee: Option<u64>,
     script_gas_limit: Option<u64>,
+    owner: Option<u64>,
 }
 // ANCHOR_END: tx_policies_struct
 
@@ -120,6 +121,7 @@ impl TxPolicies {
         expiration: Option<u64>,
         max_fee: Option<u64>,
         script_gas_limit: Option<u64>,
+        owner: Option<u64>,
     ) -> Self {
         Self {
             tip,
@@ -128,6 +130,7 @@ impl TxPolicies {
             expiration,
             max_fee,
             script_gas_limit,
+            owner,
         }
     }
 
@@ -183,6 +186,15 @@ impl TxPolicies {
 
     pub fn script_gas_limit(&self) -> Option<u64> {
         self.script_gas_limit
+    }
+
+    pub fn with_owner(mut self, owner: u64) -> Self {
+        self.owner = Some(owner);
+        self
+    }
+
+    pub fn owner(&self) -> Option<u64> {
+        self.owner
     }
 }
 
@@ -253,6 +265,8 @@ pub trait Transaction:
     fn maturity(&self) -> Option<u64>;
 
     fn expiration(&self) -> Option<u64>;
+
+    fn owner(&self) -> Option<u64>;
 
     fn metered_bytes_size(&self) -> usize;
 
@@ -432,6 +446,10 @@ macro_rules! impl_tx_wrapper {
 
             fn expiration(&self) -> Option<u64> {
                 self.tx.policies().get(PolicyType::Expiration)
+            }
+
+            fn owner(&self) -> Option<u64> {
+                self.tx.policies().get(PolicyType::Owner)
             }
 
             fn metered_bytes_size(&self) -> usize {

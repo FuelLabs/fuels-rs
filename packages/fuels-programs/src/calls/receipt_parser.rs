@@ -1,6 +1,7 @@
 use std::collections::VecDeque;
 
 use fuel_tx::Receipt;
+use fuel_types::bytes::Bytes;
 use fuels_core::{
     codec::{ABIDecoder, DecoderConfig},
     types::{
@@ -58,7 +59,7 @@ impl ReceiptParser {
         )
     }
 
-    pub fn extract_contract_call_data(&mut self, target_contract: ContractId) -> Option<Vec<u8>> {
+    pub fn extract_contract_call_data(&mut self, target_contract: ContractId) -> Option<Bytes> {
         // If the script contains nested calls, we need to extract the data of the top-level call
         let mut nested_calls_stack = vec![];
 
@@ -88,7 +89,7 @@ impl ReceiptParser {
         None
     }
 
-    fn extract_script_data(&self) -> Option<Vec<u8>> {
+    fn extract_script_data(&self) -> Option<Bytes> {
         self.receipts.iter().find_map(|receipt| match receipt {
             Receipt::ReturnData {
                 id,
@@ -120,7 +121,7 @@ mod tests {
             ptr: Default::default(),
             len: Default::default(),
             digest: Default::default(),
-            data: Some(data.to_vec()),
+            data: Some(data.to_vec().into()),
             pc: Default::default(),
             is: Default::default(),
         }

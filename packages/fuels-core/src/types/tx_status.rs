@@ -9,6 +9,11 @@ use fuel_core_types::services::executor::{TransactionExecutionResult, Transactio
 use fuel_tx::Receipt;
 #[cfg(feature = "std")]
 use fuel_vm::state::ProgramState;
+#[cfg(feature = "std")]
+use std::sync::Arc;
+
+#[cfg(not(feature = "std"))]
+use alloc::sync::Arc;
 
 use crate::{
     codec::LogDecoder,
@@ -17,7 +22,7 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub struct Success {
-    pub receipts: Vec<Receipt>,
+    pub receipts: Arc<Vec<Receipt>>,
     pub total_fee: u64,
     pub total_gas: u64,
 }
@@ -30,7 +35,7 @@ pub struct SqueezedOut {
 #[derive(Debug, Clone)]
 pub struct Failure {
     pub reason: String,
-    pub receipts: Vec<Receipt>,
+    pub receipts: Arc<Vec<Receipt>>,
     pub revert_id: Option<u64>,
     pub total_fee: u64,
     pub total_gas: u64,
@@ -113,7 +118,7 @@ impl TxStatus {
     }
 
     fn map_revert_error(
-        receipts: Vec<Receipt>,
+        receipts: Arc<Vec<Receipt>>,
         reason: &str,
         revert_id: Option<u64>,
         log_decoder: Option<&LogDecoder>,
@@ -187,16 +192,19 @@ impl TxStatus {
         })
     }
 
-    pub fn take_receipts_checked(self, log_decoder: Option<&LogDecoder>) -> Result<Vec<Receipt>> {
+    pub fn take_receipts_checked(
+        self,
+        log_decoder: Option<&LogDecoder>,
+    ) -> Result<Arc<Vec<Receipt>>> {
         self.check(log_decoder)?;
         Ok(self.take_receipts())
     }
 
-    pub fn take_receipts(self) -> Vec<Receipt> {
+    pub fn take_receipts(self) -> Arc<Vec<Receipt>> {
         match self {
             TxStatus::Success(Success { receipts, .. })
             | TxStatus::Failure(Failure { receipts, .. }) => receipts,
-            _ => vec![],
+            _ => Default::default(),
         }
     }
 
@@ -219,7 +227,7 @@ impl From<ClientTransactionStatus> for TxStatus {
                 total_fee,
                 ..
             } => TxStatus::Success(Success {
-                receipts,
+                receipts: receipts.into(),
                 total_gas,
                 total_fee,
             }),
@@ -229,7 +237,7 @@ impl From<ClientTransactionStatus> for TxStatus {
                 total_fee,
                 ..
             } => TxStatus::PreconfirmationSuccess(Success {
-                receipts: receipts.unwrap_or_default(),
+                receipts: receipts.unwrap_or_default().into(),
                 total_gas,
                 total_fee,
             }),
@@ -247,7 +255,7 @@ impl From<ClientTransactionStatus> for TxStatus {
                 });
 
                 TxStatus::Failure(Failure {
-                    receipts,
+                    receipts: receipts.into(),
                     reason,
                     revert_id,
                     total_gas,
@@ -261,7 +269,7 @@ impl From<ClientTransactionStatus> for TxStatus {
                 total_fee,
                 ..
             } => TxStatus::Failure(Failure {
-                receipts: receipts.unwrap_or_default(),
+                receipts: receipts.unwrap_or_default().into(),
                 reason,
                 revert_id: None,
                 total_gas,
