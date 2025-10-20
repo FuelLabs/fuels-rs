@@ -1458,40 +1458,40 @@ async fn script_tx_get_owner_returns_owner_when_policy_set_multiple_inputs() -> 
     use fuel_asm::{GMArgs, op};
 
     let amount = 1000;
-    let num_coins = 50;
+    let num_coins = 1;
     let mut wallets = launch_custom_provider_and_get_wallets(
         WalletsConfig::new(Some(3), Some(num_coins), Some(amount)),
         Some(NodeConfig::default()),
         None,
     )
     .await?;
+    let wallet_0 = wallets.pop().unwrap();
     let wallet_1 = wallets.pop().unwrap();
     let wallet_2 = wallets.pop().unwrap();
-    let wallet_3 = wallets.pop().unwrap();
-    let provider = wallet_1.provider().clone();
+    let provider = wallet_0.provider().clone();
 
     let consensus_parameters = provider.consensus_parameters().await?;
+    let inputs_0 = wallet_0
+        .get_asset_inputs_for_amount(*consensus_parameters.base_asset_id(), amount as u128, None)
+        .await?;
     let inputs_1 = wallet_1
-        .get_asset_inputs_for_amount(*consensus_parameters.base_asset_id(), 10000, None)
+        .get_asset_inputs_for_amount(*consensus_parameters.base_asset_id(), amount as u128, None)
         .await?;
     let inputs_2 = wallet_2
-        .get_asset_inputs_for_amount(*consensus_parameters.base_asset_id(), 10000, None)
-        .await?;
-    let inputs_3 = wallet_3
-        .get_asset_inputs_for_amount(*consensus_parameters.base_asset_id(), 10000, None)
+        .get_asset_inputs_for_amount(*consensus_parameters.base_asset_id(), amount as u128, None)
         .await?;
 
     let mut inputs = vec![];
+    inputs.extend(inputs_0);
     inputs.extend(inputs_1);
     inputs.extend(inputs_2);
-    inputs.extend(inputs_3);
 
     let tx_policies = TxPolicies::default().with_owner(1);
     let mut tb =
         ScriptTransactionBuilder::prepare_transfer(inputs, vec![], tx_policies).enable_burn(true);
+    wallet_0.add_witnesses(&mut tb)?;
     wallet_1.add_witnesses(&mut tb)?;
     wallet_2.add_witnesses(&mut tb)?;
-    wallet_3.add_witnesses(&mut tb)?;
 
     let script = vec![
         op::gm_args(0x20, GMArgs::GetOwner),
@@ -1535,39 +1535,39 @@ async fn script_tx_get_owner_panics_when_policy_unset_multiple_inputs() -> Resul
     use fuel_asm::{GMArgs, op};
 
     let amount = 1000;
-    let num_coins = 50;
+    let num_coins = 1;
     let mut wallets = launch_custom_provider_and_get_wallets(
         WalletsConfig::new(Some(3), Some(num_coins), Some(amount)),
         Some(NodeConfig::default()),
         None,
     )
     .await?;
+    let wallet_0 = wallets.pop().unwrap();
     let wallet_1 = wallets.pop().unwrap();
     let wallet_2 = wallets.pop().unwrap();
-    let wallet_3 = wallets.pop().unwrap();
-    let provider = wallet_1.provider().clone();
+    let provider = wallet_0.provider().clone();
 
     let consensus_parameters = provider.consensus_parameters().await?;
+    let inputs_0 = wallet_0
+        .get_asset_inputs_for_amount(*consensus_parameters.base_asset_id(), amount as u128, None)
+        .await?;
     let inputs_1 = wallet_1
-        .get_asset_inputs_for_amount(*consensus_parameters.base_asset_id(), 10000, None)
+        .get_asset_inputs_for_amount(*consensus_parameters.base_asset_id(), amount as u128, None)
         .await?;
     let inputs_2 = wallet_2
-        .get_asset_inputs_for_amount(*consensus_parameters.base_asset_id(), 10000, None)
-        .await?;
-    let inputs_3 = wallet_3
-        .get_asset_inputs_for_amount(*consensus_parameters.base_asset_id(), 10000, None)
+        .get_asset_inputs_for_amount(*consensus_parameters.base_asset_id(), amount as u128, None)
         .await?;
 
     let mut inputs = vec![];
+    inputs.extend(inputs_0);
     inputs.extend(inputs_1);
     inputs.extend(inputs_2);
-    inputs.extend(inputs_3);
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, vec![], TxPolicies::default())
         .enable_burn(true);
+    wallet_0.add_witnesses(&mut tb)?;
     wallet_1.add_witnesses(&mut tb)?;
     wallet_2.add_witnesses(&mut tb)?;
-    wallet_3.add_witnesses(&mut tb)?;
 
     let script = vec![
         op::gm_args(0x20, GMArgs::GetOwner),
@@ -1602,7 +1602,7 @@ async fn script_tx_get_owner_returns_owner_when_policy_unset_all_inputs_same_own
 
     let consensus_parameters = provider.consensus_parameters().await?;
     let inputs = wallet
-        .get_asset_inputs_for_amount(*consensus_parameters.base_asset_id(), 10000, None)
+        .get_asset_inputs_for_amount(*consensus_parameters.base_asset_id(), 1000, None)
         .await?;
     let outputs = wallet.get_asset_outputs_for_amount(
         receiver.address(),
