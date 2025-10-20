@@ -192,7 +192,10 @@ impl TxStatus {
         })
     }
 
-    pub fn take_receipts_checked(self, log_decoder: Option<&LogDecoder>) -> Result<Arc<Vec<Receipt>>> {
+    pub fn take_receipts_checked(
+        self,
+        log_decoder: Option<&LogDecoder>,
+    ) -> Result<Arc<Vec<Receipt>>> {
         self.check(log_decoder)?;
         Ok(self.take_receipts())
     }
