@@ -355,6 +355,7 @@ macro_rules! impl_tx_builder_trait {
                 policies.set(PolicyType::Maturity, self.tx_policies.maturity());
                 policies.set(PolicyType::Tip, self.tx_policies.tip());
                 policies.set(PolicyType::Expiration, self.tx_policies.expiration());
+                policies.set(PolicyType::Owner, self.tx_policies.owner());
 
                 Ok(policies)
             }
