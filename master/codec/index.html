@@ -153,11 +153,13 @@
 <pre><code class="language-rust ignore">        use fuels::macros::{Parameterize, Tokenizable};
 
         #[derive(Parameterize, Tokenizable)]
+        #[allow(dead_code)]
         struct MyStruct {
             field_a: u8,
         }
 
         #[derive(Parameterize, Tokenizable)]
+        #[allow(dead_code)]
         enum SomeEnum {
             A(MyStruct),
             B(Vec&lt;u64&gt;),
@@ -173,6 +175,7 @@ Deriving <a href="https://docs.rs/fuels/latest/fuels/core/traits/trait.Tokenizab
 <pre><code class="language-rust ignore">            #[derive(Parameterize, Tokenizable)]
             #[FuelsCorePath = &quot;fuels_core_elsewhere&quot;]
             #[FuelsTypesPath = &quot;fuels_types_elsewhere&quot;]
+            #[allow(dead_code)]
             pub struct SomeStruct {
                 field_a: u64,
             }
@@ -182,6 +185,7 @@ Deriving <a href="https://docs.rs/fuels/latest/fuels/core/traits/trait.Tokenizab
 <pre><code class="language-rust ignore">            use fuels::macros::{Parameterize, Tokenizable};
             #[derive(Parameterize, Tokenizable)]
             #[NoStd]
+            #[allow(dead_code)]
             pub struct SomeStruct {
                 field_a: u64,
             }
