@@ -1328,7 +1328,7 @@ async fn tx_with_witness_data() -> Result<()> {
         TxStatus::Success(Success { receipts, .. }) => {
             let ret: u64 = receipts
                 .as_ref()
-                .into_iter()
+                .iter()
                 .find_map(|receipt| match receipt {
                     Receipt::Return { val, .. } => Some(*val),
                     _ => None,
@@ -1529,7 +1529,7 @@ async fn script_tx_get_owner_returns_owner_when_policy_set_multiple_inputs() -> 
         TxStatus::Success(Success { receipts, .. }) => {
             let ret: u64 = receipts
                 .as_ref()
-                .into_iter()
+                .iter()
                 .find_map(|receipt| match receipt {
                     Receipt::Return { val, .. } => Some(*val),
                     _ => None,
@@ -1660,7 +1660,7 @@ async fn script_tx_get_owner_returns_owner_when_policy_unset_all_inputs_same_own
         TxStatus::Success(Success { receipts, .. }) => {
             let ret: u64 = receipts
                 .as_ref()
-                .into_iter()
+                .iter()
                 .find_map(|receipt| match receipt {
                     Receipt::Return { val, .. } => Some(*val),
                     _ => None,
