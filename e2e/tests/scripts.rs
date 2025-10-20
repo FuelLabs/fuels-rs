@@ -530,7 +530,7 @@ async fn high_level_blob_upload_sets_max_fee_tolerance() -> Result<()> {
     let max_fee_of_sent_blob_tx = provider
         .get_transactions(PaginationRequest {
             cursor: None,
-            results: 100,
+            results: 20,
             direction: PageDirection::Forward,
         })
         .await?

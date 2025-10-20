@@ -955,7 +955,7 @@ async fn can_fetch_mint_transactions() -> Result<()> {
     let transactions = provider
         .get_transactions(PaginationRequest {
             cursor: None,
-            results: 100,
+            results: 20,
             direction: PageDirection::Forward,
         })
         .await?
@@ -1211,7 +1211,7 @@ async fn tx_respects_policies() -> Result<()> {
         Some(expiration),
         Some(max_fee),
         Some(script_gas_limit),
-        Some(0),
+        Some(1),
     );
 
     // advance the block height to ensure the maturity is respected
