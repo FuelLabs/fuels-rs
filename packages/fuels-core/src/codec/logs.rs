@@ -5,6 +5,12 @@ use std::{
     iter::FilterMap,
 };
 
+/// Trait that represents a log with a unique identifier.
+pub trait Log {
+    /// Returns the unique identifier of the log.
+    fn log_id(&self) -> &'static str;
+}
+
 #[derive(Debug, Clone)]
 pub struct ErrorDetails {
     pub(crate) pkg: String,

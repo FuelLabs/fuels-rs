@@ -4,6 +4,9 @@ use fuel_abi_types::abi::full_program::{FullABIFunction, FullProgramABI};
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
+use crate::error::Error;
+use crate::program_bindings::custom_types::should_skip_codegen;
+use crate::program_bindings::utils::tokenize_generics;
 use crate::{
     error::Result,
     program_bindings::{
@@ -28,6 +31,36 @@ pub(crate) fn script_bindings(
 
     let main_function_abi = extract_main_fn(&abi.functions)?;
     let main_function = expand_fn(main_function_abi)?;
+
+    let logs_impls: Vec<_> = abi
+        .logged_types
+        .iter()
+        .filter(|ttype| !should_skip_codegen(&ttype.application.type_decl))
+        .map(|log| {
+            let struct_type_path = log.application.type_decl.custom_type_path()?;
+            let struct_ident = struct_type_path.ident().unwrap();
+
+            let generic_parameters =
+                crate::program_bindings::custom_types::utils::extract_generic_parameters(
+                    &log.application.type_decl,
+                );
+            let (generics_wo_bounds, generics_w_bounds) = tokenize_generics(&generic_parameters);
+
+            let log_id = &log.log_id;
+
+            let tokens = quote! {
+                impl #generics_w_bounds ::fuels::core::codec::Log for #struct_ident #generics_wo_bounds {
+                    fn log_id(&self) -> &'static str {
+                        #log_id
+                    }
+                }
+            };
+
+            Ok::<_, Error>(tokens)
+        })
+        .filter_map(Result::ok)
+        .collect();
+    let logs_impls = quote! { #(#logs_impls)* };
 
     let log_formatters = log_formatters_instantiation_code(
         quote! {::fuels::types::ContractId::zeroed()},
@@ -135,6 +168,8 @@ pub(crate) fn script_bindings(
         }
 
         #constant_configuration_code
+
+        #logs_impls
     };
 
     // All publicly available types generated above should be listed here.

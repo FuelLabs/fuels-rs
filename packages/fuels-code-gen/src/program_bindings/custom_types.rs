@@ -16,7 +16,7 @@ use crate::{
 
 mod enums;
 mod structs;
-mod utils;
+pub(crate) mod utils;
 
 /// Generates Rust code for each type inside `types` if:
 /// * the type is not present inside `shared_types`, and
@@ -84,7 +84,7 @@ fn reexport_the_shared_type(ttype: &FullTypeDeclaration, no_std: bool) -> Result
 // Others like 'std::vec::RawVec' are skipped because they are
 // implementation details of the contract's Vec type and are not directly
 // used in the SDK.
-fn should_skip_codegen(type_decl: &FullTypeDeclaration) -> bool {
+pub fn should_skip_codegen(type_decl: &FullTypeDeclaration) -> bool {
     if !type_decl.is_custom_type() {
         return true;
     }
