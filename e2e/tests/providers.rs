@@ -1515,15 +1515,15 @@ async fn script_tx_get_owner_returns_owner_when_policy_set_multiple_inputs() -> 
 
     let script = vec![
         op::gm_args(0x20, GMArgs::GetOwner),
-        op::lw(0x20, 0x20, 0),
-        op::ret(0x20),
+        op::movi(0x21, 32),
+        op::retd(0x20, 0x21),
     ]
     .into_iter()
     .collect();
 
     tb.script = script;
 
-    let expected_data = 1u64;
+    let expected_data = wallet_2.address();
 
     let tx = tb.build(&provider).await?;
 
@@ -1531,16 +1531,18 @@ async fn script_tx_get_owner_returns_owner_when_policy_set_multiple_inputs() -> 
 
     match status {
         TxStatus::Success(Success { receipts, .. }) => {
-            let ret: u64 = receipts
+            let ret = receipts
                 .as_ref()
                 .iter()
                 .find_map(|receipt| match receipt {
-                    Receipt::Return { val, .. } => Some(*val),
+                    Receipt::ReturnData { data, .. } if data.is_some() => {
+                        Some(data.clone().unwrap())
+                    }
                     _ => None,
                 })
                 .expect("should have return value");
 
-            assert_eq!(ret, expected_data);
+            assert_eq!(ret, expected_data.as_ref().to_vec().into());
         }
         _ => panic!("expected success status"),
     }
@@ -1609,8 +1611,8 @@ async fn script_tx_get_owner_panics_when_policy_unset_multiple_inputs() -> Resul
 
     let script = vec![
         op::gm_args(0x20, GMArgs::GetOwner),
-        op::lw(0x20, 0x20, 0),
-        op::ret(0x20),
+        op::movi(0x21, 32),
+        op::retd(0x20, 0x21),
     ]
     .into_iter()
     .collect();
@@ -1654,32 +1656,34 @@ async fn script_tx_get_owner_returns_owner_when_policy_unset_all_inputs_same_own
 
     let script = vec![
         op::gm_args(0x20, GMArgs::GetOwner),
-        op::lw(0x20, 0x20, 0),
-        op::ret(0x20),
+        op::movi(0x21, 32),
+        op::retd(0x20, 0x21),
     ]
     .into_iter()
     .collect();
 
     tb.script = script;
 
-    let expected_data = 0u64;
+    let expected_data = wallet.address();
 
-    let tx = tb.build(provider).await?;
+    let tx = tb.build(&provider).await?;
 
     let status = provider.send_transaction_and_await_commit(tx).await?;
 
     match status {
         TxStatus::Success(Success { receipts, .. }) => {
-            let ret: u64 = receipts
+            let ret = receipts
                 .as_ref()
                 .iter()
                 .find_map(|receipt| match receipt {
-                    Receipt::Return { val, .. } => Some(*val),
+                    Receipt::ReturnData { data, .. } if data.is_some() => {
+                        Some(data.clone().unwrap())
+                    }
                     _ => None,
                 })
                 .expect("should have return value");
 
-            assert_eq!(ret, expected_data);
+            assert_eq!(ret, expected_data.as_ref().to_vec().into());
         }
         _ => panic!("expected success status"),
     }
