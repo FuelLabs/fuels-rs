@@ -47,11 +47,20 @@ pub(crate) fn script_bindings(
             let (generics_wo_bounds, generics_w_bounds) = tokenize_generics(&generic_parameters);
 
             let log_id = &log.log_id;
+            let log_id_u64: u64 = log.log_id.parse::<u64>().map_err(|e| {
+                Error(
+                    format!("Failed to parse log id `{}` to u64: {}", log.log_id, e),
+                )
+            })?;
 
             let tokens = quote! {
                 impl #generics_w_bounds ::fuels::core::codec::Log for #struct_ident #generics_wo_bounds {
                     fn log_id() -> &'static str {
                         #log_id
+                    }
+
+                    fn log_id_u64() -> u64 {
+                        #log_id_u64
                     }
                 }
             };
