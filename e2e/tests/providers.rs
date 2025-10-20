@@ -1626,7 +1626,7 @@ async fn script_tx_get_owner_returns_owner_when_policy_unset_all_inputs_same_own
 
     let expected_data = wallet.address();
 
-    let tx = tb.build(&provider).await?;
+    let tx = tb.build(provider).await?;
 
     let status = provider.send_transaction_and_await_commit(tx).await?;
 
