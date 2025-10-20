@@ -1203,7 +1203,7 @@ async fn tx_respects_policies() -> Result<()> {
     let expiration = 128;
     let max_fee = 10_000;
     let script_gas_limit = 3000;
-    let owner_index = 0;
+    let owner_index = 1;
     let tx_policies = TxPolicies::new(
         Some(tip),
         Some(witness_limit),
@@ -1211,7 +1211,7 @@ async fn tx_respects_policies() -> Result<()> {
         Some(expiration),
         Some(max_fee),
         Some(script_gas_limit),
-        Some(1),
+        Some(owner_index),
     );
 
     // advance the block height to ensure the maturity is respected
