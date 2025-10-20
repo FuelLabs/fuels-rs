@@ -102,20 +102,20 @@ where
     async fn consensus_parameters(&self) -> Result<ConsensusParameters> {
         {
             let read_lock = self.cached_consensus_params.read().await;
-            if let Some(entry) = read_lock.as_ref() {
-                if !entry.is_stale(self.clock.now(), self.ttl_config.consensus_parameters) {
-                    return Ok(entry.value.clone());
-                }
+            if let Some(entry) = read_lock.as_ref()
+                && !entry.is_stale(self.clock.now(), self.ttl_config.consensus_parameters)
+            {
+                return Ok(entry.value.clone());
             }
         }
 
         let mut write_lock = self.cached_consensus_params.write().await;
 
         // because it could have been updated since we last checked
-        if let Some(entry) = write_lock.as_ref() {
-            if !entry.is_stale(self.clock.now(), self.ttl_config.consensus_parameters) {
-                return Ok(entry.value.clone());
-            }
+        if let Some(entry) = write_lock.as_ref()
+            && !entry.is_stale(self.clock.now(), self.ttl_config.consensus_parameters)
+        {
+            return Ok(entry.value.clone());
         }
 
         let fresh_parameters = self.client.consensus_parameters().await?;
@@ -132,20 +132,20 @@ where
         let ttl = self.ttl_config.consensus_parameters;
         {
             let read_lock = self.cached_node_info.read().await;
-            if let Some(entry) = read_lock.as_ref() {
-                if !entry.is_stale(self.clock.now(), ttl) {
-                    return Ok(entry.value.clone());
-                }
+            if let Some(entry) = read_lock.as_ref()
+                && !entry.is_stale(self.clock.now(), ttl)
+            {
+                return Ok(entry.value.clone());
             }
         }
 
         let mut write_lock = self.cached_node_info.write().await;
 
         // because it could have been updated since we last checked
-        if let Some(entry) = write_lock.as_ref() {
-            if !entry.is_stale(self.clock.now(), ttl) {
-                return Ok(entry.value.clone());
-            }
+        if let Some(entry) = write_lock.as_ref()
+            && !entry.is_stale(self.clock.now(), ttl)
+        {
+            return Ok(entry.value.clone());
         }
 
         let fresh_node_info = self.client.node_info().await?;
