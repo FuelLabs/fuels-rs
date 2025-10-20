@@ -15,7 +15,7 @@ use fuels::{
         coin_type::CoinType,
         message::Message,
         transaction_builders::{BuildableTransaction, ScriptTransactionBuilder},
-        tx_status::{Success, TxStatus},
+        tx_status::{Failure, Success, TxStatus},
     },
 };
 use futures::StreamExt;
@@ -1327,9 +1327,10 @@ async fn tx_with_witness_data() -> Result<()> {
     match status {
         TxStatus::Success(Success { receipts, .. }) => {
             let ret: u64 = receipts
+                .as_ref()
                 .into_iter()
                 .find_map(|receipt| match receipt {
-                    Receipt::Return { val, .. } => Some(val),
+                    Receipt::Return { val, .. } => Some(*val),
                     _ => None,
                 })
                 .expect("should have return value");
@@ -1454,7 +1455,7 @@ async fn is_account_query_test() -> Result<()> {
 
 #[tokio::test]
 async fn script_tx_get_owner_returns_owner_when_policy_set_multiple_inputs() -> Result<()> {
-    use fuel_asm::{GMArgs, GTFArgs, op};
+    use fuel_asm::{GMArgs, op};
 
     let amount = 1000;
     let num_coins = 50;
@@ -1467,6 +1468,7 @@ async fn script_tx_get_owner_returns_owner_when_policy_set_multiple_inputs() -> 
     let wallet_1 = wallets.pop().unwrap();
     let wallet_2 = wallets.pop().unwrap();
     let wallet_3 = wallets.pop().unwrap();
+    let provider = wallet_1.provider().clone();
 
     let receiver = Wallet::random(&mut thread_rng(), provider.clone());
 
@@ -1496,6 +1498,15 @@ async fn script_tx_get_owner_returns_owner_when_policy_set_multiple_inputs() -> 
         1,
     );
 
+    let mut inputs = vec![];
+    let mut outputs = vec![];
+    inputs.extend(inputs_1);
+    outputs.extend(outputs_1);
+    inputs.extend(inputs_2);
+    outputs.extend(outputs_2);
+    inputs.extend(inputs_3);
+    outputs.extend(outputs_3);
+
     let tx_policies = TxPolicies::default().with_owner(1);
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, tx_policies);
     wallet_1.add_witnesses(&mut tb)?;
@@ -1510,16 +1521,17 @@ async fn script_tx_get_owner_returns_owner_when_policy_set_multiple_inputs() -> 
 
     let expected_data = 1u64;
 
-    let tx = tb.build(provider).await?;
+    let tx = tb.build(&provider).await?;
 
     let status = provider.send_transaction_and_await_commit(tx).await?;
 
     match status {
         TxStatus::Success(Success { receipts, .. }) => {
             let ret: u64 = receipts
+                .as_ref()
                 .into_iter()
                 .find_map(|receipt| match receipt {
-                    Receipt::Return { val, .. } => Some(val),
+                    Receipt::Return { val, .. } => Some(*val),
                     _ => None,
                 })
                 .expect("should have return value");
@@ -1534,7 +1546,7 @@ async fn script_tx_get_owner_returns_owner_when_policy_set_multiple_inputs() -> 
 
 #[tokio::test]
 async fn script_tx_get_owner_panics_when_policy_unset_multiple_inputs() -> Result<()> {
-    use fuel_asm::{GMArgs, GTFArgs, op};
+    use fuel_asm::{GMArgs, op};
 
     let amount = 1000;
     let num_coins = 50;
@@ -1547,42 +1559,44 @@ async fn script_tx_get_owner_panics_when_policy_unset_multiple_inputs() -> Resul
     let wallet_1 = wallets.pop().unwrap();
     let wallet_2 = wallets.pop().unwrap();
     let wallet_3 = wallets.pop().unwrap();
+    let provider = wallet_1.provider().clone();
 
     let receiver = Wallet::random(&mut thread_rng(), provider.clone());
 
     let consensus_parameters = provider.consensus_parameters().await?;
+    let inputs_1 = wallet_1
+        .get_asset_inputs_for_amount(*consensus_parameters.base_asset_id(), 10000, None)
+        .await?;
+    let outputs_1 = wallet_1.get_asset_outputs_for_amount(
+        receiver.address(),
+        *consensus_parameters.base_asset_id(),
+        1,
+    );
+    let inputs_2 = wallet_2
+        .get_asset_inputs_for_amount(*consensus_parameters.base_asset_id(), 10000, None)
+        .await?;
+    let outputs_2 = wallet_2.get_asset_outputs_for_amount(
+        receiver.address(),
+        *consensus_parameters.base_asset_id(),
+        1,
+    );
+    let inputs_3 = wallet_3
+        .get_asset_inputs_for_amount(*consensus_parameters.base_asset_id(), 10000, None)
+        .await?;
+    let outputs_3 = wallet_3.get_asset_outputs_for_amount(
+        receiver.address(),
+        *consensus_parameters.base_asset_id(),
+        1,
+    );
+
     let mut inputs = vec![];
     let mut outputs = vec![];
-    inputs.append(
-        wallet_1
-            .get_asset_inputs_for_amount(*consensus_parameters.base_asset_id(), 10000, None)
-            .await?,
-    );
-    outputs.append(wallet_1.get_asset_outputs_for_amount(
-        receiver.address(),
-        *consensus_parameters.base_asset_id(),
-        1,
-    ));
-    inputs.append(
-        wallet_2
-            .get_asset_inputs_for_amount(*consensus_parameters.base_asset_id(), 10000, None)
-            .await?,
-    );
-    outputs.append(wallet_2.get_asset_outputs_for_amount(
-        receiver.address(),
-        *consensus_parameters.base_asset_id(),
-        1,
-    ));
-    inputs.append(
-        wallet_3
-            .get_asset_inputs_for_amount(*consensus_parameters.base_asset_id(), 10000, None)
-            .await?,
-    );
-    outputs.append(wallet_3.get_asset_outputs_for_amount(
-        receiver.address(),
-        *consensus_parameters.base_asset_id(),
-        1,
-    ));
+    inputs.extend(inputs_1);
+    outputs.extend(outputs_1);
+    inputs.extend(inputs_2);
+    outputs.extend(outputs_2);
+    inputs.extend(inputs_3);
+    outputs.extend(outputs_3);
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
     wallet_1.add_witnesses(&mut tb)?;
@@ -1595,7 +1609,7 @@ async fn script_tx_get_owner_panics_when_policy_unset_multiple_inputs() -> Resul
 
     tb.script = script;
 
-    let tx = tb.build(provider).await?;
+    let tx = tb.build(&provider).await?;
 
     let status = provider.send_transaction_and_await_commit(tx).await?;
 
@@ -1609,7 +1623,7 @@ async fn script_tx_get_owner_panics_when_policy_unset_multiple_inputs() -> Resul
 
 #[tokio::test]
 async fn script_tx_get_owner_returns_owner_when_policy_unset_all_inputs_same_owner() -> Result<()> {
-    use fuel_asm::{GMArgs, GTFArgs, op};
+    use fuel_asm::{GMArgs, op};
 
     let wallet = launch_provider_and_get_wallet().await?;
     let provider = wallet.provider();
@@ -1645,9 +1659,10 @@ async fn script_tx_get_owner_returns_owner_when_policy_unset_all_inputs_same_own
     match status {
         TxStatus::Success(Success { receipts, .. }) => {
             let ret: u64 = receipts
+                .as_ref()
                 .into_iter()
                 .find_map(|receipt| match receipt {
-                    Receipt::Return { val, .. } => Some(val),
+                    Receipt::Return { val, .. } => Some(*val),
                     _ => None,
                 })
                 .expect("should have return value");

@@ -280,7 +280,7 @@ impl<'a, I: Iterator<Item = &'a Receipt>> ExtractLogIdData for I {
                 data: Some(data),
                 id,
                 ..
-            } => Some((LogId(*id, (*rb).to_string()), data.clone())),
+            } => Some((LogId(*id, (*rb).to_string()), data.to_vec())),
             Receipt::Log { ra, rb, id, .. } => {
                 Some((LogId(*id, (*rb).to_string()), ra.to_be_bytes().to_vec()))
             }
