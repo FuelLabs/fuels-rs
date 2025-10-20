@@ -50,7 +50,7 @@ pub(crate) fn script_bindings(
 
             let tokens = quote! {
                 impl #generics_w_bounds ::fuels::core::codec::Log for #struct_ident #generics_wo_bounds {
-                    fn log_id(&self) -> &'static str {
+                    fn log_id() -> &'static str {
                         #log_id
                     }
                 }
