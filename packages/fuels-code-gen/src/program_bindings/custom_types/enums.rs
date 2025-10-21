@@ -87,13 +87,8 @@ fn enum_decl(
 
         quote! {
             impl #generics_w_bounds ::fuels::core::codec::Log for #enum_ident #generics_wo_bounds {
-                fn log_id() -> &'static str {
-                    #log_id
-                }
-
-                fn log_id_u64() -> u64 {
-                    #log_id_u64
-                }
+                const LOG_ID: &'static str = #log_id;
+                const LOG_ID_U64: u64 = #log_id_u64;
             }
         }
     });

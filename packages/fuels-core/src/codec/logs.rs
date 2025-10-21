@@ -8,10 +8,9 @@ use std::{
 /// Trait that represents a log with a unique identifier.
 pub trait Log {
     /// Returns the unique identifier of the log as a string.
-    fn log_id() -> &'static str;
-
+    const LOG_ID: &'static str;
     /// Returns the unique identifier of the log as a `u64`.
-    fn log_id_u64() -> u64;
+    const LOG_ID_U64: u64;
 }
 
 #[derive(Debug, Clone)]

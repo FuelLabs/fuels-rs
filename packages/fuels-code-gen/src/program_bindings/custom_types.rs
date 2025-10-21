@@ -431,13 +431,8 @@ mod tests {
             }
 
             impl ::fuels::core::codec::Log for EnumLevel3 {
-                fn log_id() -> &'static str {
-                    "42"
-                }
-
-                fn log_id_u64() -> u64 {
-                    42u64
-                }
+                const LOG_ID: &'static str = "42";
+                const LOG_ID_U64: u64 = 42u64;
             }
         };
 
@@ -652,13 +647,8 @@ mod tests {
             }
 
             impl ::fuels::core::codec::Log for Cocktail {
-                fn log_id() -> &'static str {
-                    "13"
-                }
-
-                fn log_id_u64() -> u64 {
-                    13u64
-                }
+                const LOG_ID: &'static str = "13";
+                const LOG_ID_U64: u64 = 13u64;
             }
         };
 
