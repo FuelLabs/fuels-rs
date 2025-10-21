@@ -20,6 +20,7 @@ use crate::{
 pub(crate) fn expand_custom_enum(
     type_decl: &FullTypeDeclaration,
     no_std: bool,
+    log_id: Option<&String>,
 ) -> Result<GeneratedCode> {
     let enum_type_path = type_decl.custom_type_path()?;
     let enum_ident = enum_type_path.ident().unwrap();
@@ -30,7 +31,7 @@ pub(crate) fn expand_custom_enum(
     }
     let generics = extract_generic_parameters(type_decl);
 
-    let code = enum_decl(enum_ident, &components, &generics, no_std);
+    let code = enum_decl(enum_ident, &components, &generics, no_std, log_id);
 
     let enum_code = GeneratedCode::new(code, HashSet::from([enum_ident.into()]), no_std);
 
@@ -70,13 +71,32 @@ fn enum_decl(
     components: &Components,
     generics: &[Ident],
     no_std: bool,
+    log_id: Option<&String>,
 ) -> TokenStream {
     let maybe_disable_std = no_std.then(|| quote! {#[NoStd]});
 
     let enum_variants = components.as_enum_variants();
     let unused_generics_variant = components.generate_variant_for_unused_generics(generics);
-    let (_, generics_w_bounds) = tokenize_generics(generics);
+    let (generics_wo_bounds, generics_w_bounds) = tokenize_generics(generics);
     let maybe_impl_error = maybe_impl_error(enum_ident, components);
+
+    let log_impl = log_id.map(|log_id| {
+        let log_id_u64: u64 = log_id
+            .parse::<u64>()
+            .expect("log id should be a valid u64 string");
+
+        quote! {
+            impl #generics_w_bounds ::fuels::core::codec::Log for #enum_ident #generics_wo_bounds {
+                fn log_id() -> &'static str {
+                    #log_id
+                }
+
+                fn log_id_u64() -> u64 {
+                    #log_id_u64
+                }
+            }
+        }
+    });
 
     quote! {
         #[allow(clippy::enum_variant_names)]
@@ -95,5 +115,6 @@ fn enum_decl(
             #unused_generics_variant
         }
         #maybe_impl_error
+        #log_impl
     }
 }

@@ -20,6 +20,7 @@ use crate::{
 pub(crate) fn expand_custom_struct(
     type_decl: &FullTypeDeclaration,
     no_std: bool,
+    log_id: Option<&String>,
 ) -> Result<GeneratedCode> {
     let struct_type_path = type_decl.custom_type_path()?;
     let struct_ident = struct_type_path.ident().unwrap();
@@ -27,7 +28,13 @@ pub(crate) fn expand_custom_struct(
     let components = Components::new(&type_decl.components, true, struct_type_path.parent())?;
     let generic_parameters = extract_generic_parameters(type_decl);
 
-    let code = struct_decl(struct_ident, &components, &generic_parameters, no_std);
+    let code = struct_decl(
+        struct_ident,
+        &components,
+        &generic_parameters,
+        no_std,
+        log_id,
+    );
 
     let struct_code = GeneratedCode::new(code, HashSet::from([struct_ident.into()]), no_std);
 
@@ -52,6 +59,7 @@ fn struct_decl(
     components: &Components,
     generics: &[Ident],
     no_std: bool,
+    log_id: Option<&String>,
 ) -> TokenStream {
     let derive_default = components
         .is_empty()
@@ -63,6 +71,22 @@ fn struct_decl(
     let (field_names, field_types): (Vec<_>, Vec<_>) = unzip_field_names_and_types(components);
     let (phantom_fields, phantom_types) =
         components.generate_parameters_for_unused_generics(generics);
+
+    let log_impl = log_id.map(|log_id| {
+        let log_id_u64: u64 = log_id.parse::<u64>().expect("log id should be a valid u64 string");
+
+        quote! {
+            impl #generics_w_bounds ::fuels::core::codec::Log for #struct_ident #generics_wo_bounds {
+                fn log_id() -> &'static str {
+                    #log_id
+                }
+
+                fn log_id_u64() -> u64 {
+                    #log_id_u64
+                }
+            }
+        }
+    });
 
     quote! {
         #[derive(
@@ -89,5 +113,7 @@ fn struct_decl(
                 }
             }
         }
+
+        #log_impl
     }
 }
