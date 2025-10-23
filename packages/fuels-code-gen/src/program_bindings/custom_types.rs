@@ -1,6 +1,6 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
-use fuel_abi_types::abi::full_program::FullTypeDeclaration;
+use fuel_abi_types::abi::full_program::{FullLoggedType, FullTypeDeclaration};
 use itertools::Itertools;
 use quote::quote;
 
@@ -16,7 +16,7 @@ use crate::{
 
 mod enums;
 mod structs;
-mod utils;
+pub(crate) mod utils;
 
 /// Generates Rust code for each type inside `types` if:
 /// * the type is not present inside `shared_types`, and
@@ -29,21 +29,28 @@ mod utils;
 /// * `types`: Types you wish to generate Rust code for.
 /// * `shared_types`: Types that are shared between multiple
 ///   contracts/scripts/predicates and thus generated elsewhere.
-pub(crate) fn generate_types<'a, T: IntoIterator<Item = &'a FullTypeDeclaration>>(
-    types: T,
+pub(crate) fn generate_types<'a>(
+    types: impl IntoIterator<Item = &'a FullTypeDeclaration>,
     shared_types: &HashSet<FullTypeDeclaration>,
+    logged_types: impl IntoIterator<Item = &'a FullLoggedType>,
     no_std: bool,
 ) -> Result<GeneratedCode> {
+    let log_ids: HashMap<_, _> = logged_types
+        .into_iter()
+        .map(|l| (l.application.type_decl.type_field.clone(), l.log_id.clone()))
+        .collect();
+
     types
         .into_iter()
         .filter(|ttype| !should_skip_codegen(ttype))
         .map(|ttype: &FullTypeDeclaration| {
+            let log_id = log_ids.get(&ttype.type_field);
             if shared_types.contains(ttype) {
                 reexport_the_shared_type(ttype, no_std)
             } else if ttype.is_struct_type() {
-                expand_custom_struct(ttype, no_std)
+                expand_custom_struct(ttype, no_std, log_id)
             } else {
-                expand_custom_enum(ttype, no_std)
+                expand_custom_enum(ttype, no_std, log_id)
             }
         })
         .fold_ok(GeneratedCode::default(), |acc, generated_code| {
@@ -84,7 +91,7 @@ fn reexport_the_shared_type(ttype: &FullTypeDeclaration, no_std: bool) -> Result
 // Others like 'std::vec::RawVec' are skipped because they are
 // implementation details of the contract's Vec type and are not directly
 // used in the SDK.
-fn should_skip_codegen(type_decl: &FullTypeDeclaration) -> bool {
+pub fn should_skip_codegen(type_decl: &FullTypeDeclaration) -> bool {
     if !type_decl.is_custom_type() {
         return true;
     }
@@ -165,7 +172,11 @@ mod tests {
         .into_iter()
         .collect::<HashMap<_, _>>();
 
-        let actual = expand_custom_enum(&FullTypeDeclaration::from_counterpart(&p, &types), false)?;
+        let actual = expand_custom_enum(
+            &FullTypeDeclaration::from_counterpart(&p, &types),
+            false,
+            None,
+        )?;
 
         let expected = quote! {
             #[allow(clippy::enum_variant_names)]
@@ -198,8 +209,12 @@ mod tests {
         };
         let types = [(0, p.clone())].into_iter().collect::<HashMap<_, _>>();
 
-        expand_custom_enum(&FullTypeDeclaration::from_counterpart(&p, &types), false)
-            .expect_err("Was able to construct an enum without variants");
+        expand_custom_enum(
+            &FullTypeDeclaration::from_counterpart(&p, &types),
+            false,
+            None,
+        )
+        .expect_err("Was able to construct an enum without variants");
 
         Ok(())
     }
@@ -249,7 +264,11 @@ mod tests {
         .into_iter()
         .collect::<HashMap<_, _>>();
 
-        let actual = expand_custom_enum(&FullTypeDeclaration::from_counterpart(&p, &types), false)?;
+        let actual = expand_custom_enum(
+            &FullTypeDeclaration::from_counterpart(&p, &types),
+            false,
+            None,
+        )?;
 
         let expected = quote! {
             #[allow(clippy::enum_variant_names)]
@@ -311,7 +330,11 @@ mod tests {
         .into_iter()
         .collect::<HashMap<_, _>>();
 
-        let actual = expand_custom_enum(&FullTypeDeclaration::from_counterpart(&p, &types), false)?;
+        let actual = expand_custom_enum(
+            &FullTypeDeclaration::from_counterpart(&p, &types),
+            false,
+            None,
+        )?;
 
         let expected = quote! {
             #[allow(clippy::enum_variant_names)]
@@ -385,7 +408,12 @@ mod tests {
         .into_iter()
         .collect::<HashMap<_, _>>();
 
-        let actual = expand_custom_enum(&FullTypeDeclaration::from_counterpart(&p, &types), false)?;
+        let log_id = "42".to_string();
+        let actual = expand_custom_enum(
+            &FullTypeDeclaration::from_counterpart(&p, &types),
+            false,
+            Some(&log_id),
+        )?;
 
         let expected = quote! {
             #[allow(clippy::enum_variant_names)]
@@ -400,6 +428,11 @@ mod tests {
             )]
             pub enum EnumLevel3 {
                 El2(self::EnumLevel2),
+            }
+
+            impl ::fuels::core::codec::Log for EnumLevel3 {
+                const LOG_ID: &'static str = "42";
+                const LOG_ID_U64: u64 = 42u64;
             }
         };
 
@@ -460,8 +493,11 @@ mod tests {
         .into_iter()
         .collect::<HashMap<_, _>>();
 
-        let actual =
-            expand_custom_struct(&FullTypeDeclaration::from_counterpart(&p, &types), false)?;
+        let actual = expand_custom_struct(
+            &FullTypeDeclaration::from_counterpart(&p, &types),
+            false,
+            None,
+        )?;
 
         let expected = quote! {
             #[derive(
@@ -508,8 +544,11 @@ mod tests {
         };
         let types = [(0, p.clone())].into_iter().collect::<HashMap<_, _>>();
 
-        let actual =
-            expand_custom_struct(&FullTypeDeclaration::from_counterpart(&p, &types), false)?;
+        let actual = expand_custom_struct(
+            &FullTypeDeclaration::from_counterpart(&p, &types),
+            false,
+            None,
+        )?;
 
         let expected = quote! {
             #[derive(
@@ -577,8 +616,12 @@ mod tests {
         .into_iter()
         .collect::<HashMap<_, _>>();
 
-        let actual =
-            expand_custom_struct(&FullTypeDeclaration::from_counterpart(&p, &types), false)?;
+        let log_id = "13".to_string();
+        let actual = expand_custom_struct(
+            &FullTypeDeclaration::from_counterpart(&p, &types),
+            false,
+            Some(&log_id),
+        )?;
 
         let expected = quote! {
             #[derive(
@@ -602,6 +645,11 @@ mod tests {
                     }
                 }
             }
+
+            impl ::fuels::core::codec::Log for Cocktail {
+                const LOG_ID: &'static str = "13";
+                const LOG_ID_U64: u64 = 13u64;
+            }
         };
 
         assert_eq!(actual.code().to_string(), expected.to_string());
@@ -620,7 +668,7 @@ mod tests {
         let shared_types = HashSet::from([type_decl.clone()]);
 
         // when
-        let generated_code = generate_types(&[type_decl], &shared_types, false).unwrap();
+        let generated_code = generate_types(&[type_decl], &shared_types, [], false).unwrap();
 
         // then
         let expected_code = quote! {

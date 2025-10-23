@@ -1,7 +1,7 @@
 use std::{collections::HashSet, path::PathBuf};
 
 pub use abigen_target::{Abi, AbigenTarget, ProgramType};
-use fuel_abi_types::abi::full_program::FullTypeDeclaration;
+use fuel_abi_types::abi::full_program::{FullLoggedType, FullTypeDeclaration};
 use inflector::Inflector;
 use itertools::Itertools;
 use proc_macro2::TokenStream;
@@ -69,8 +69,13 @@ impl Abigen {
         let custom_types = Self::filter_custom_types(&parsed_targets);
         let shared_types = Self::filter_shared_types(custom_types);
 
+        let logged_types = parsed_targets
+            .iter()
+            .flat_map(|abi| abi.source.abi.logged_types.clone())
+            .collect_vec();
         let bindings = Self::generate_all_bindings(parsed_targets, no_std, &shared_types)?;
-        let shared_types = Self::generate_shared_types(shared_types, no_std)?;
+
+        let shared_types = Self::generate_shared_types(shared_types, &logged_types, no_std)?;
 
         let mod_name = ident("abigen_bindings");
         Ok(shared_types.merge(bindings).wrap_in_mod(mod_name))
@@ -98,7 +103,12 @@ impl Abigen {
 
         let recompile_trigger =
             Self::generate_macro_recompile_trigger(target.source.path.as_ref(), no_std);
-        let types = generate_types(&target.source.abi.types, shared_types, no_std)?;
+        let types = generate_types(
+            &target.source.abi.types,
+            shared_types,
+            &target.source.abi.logged_types,
+            no_std,
+        )?;
         let bindings = generate_bindings(target, no_std)?;
         Ok(recompile_trigger
             .merge(types)
@@ -124,9 +134,10 @@ impl Abigen {
 
     fn generate_shared_types(
         shared_types: HashSet<FullTypeDeclaration>,
+        logged_types: &Vec<FullLoggedType>,
         no_std: bool,
     ) -> Result<GeneratedCode> {
-        let types = generate_types(&shared_types, &HashSet::default(), no_std)?;
+        let types = generate_types(&shared_types, &HashSet::default(), logged_types, no_std)?;
 
         if types.is_empty() {
             Ok(Default::default())

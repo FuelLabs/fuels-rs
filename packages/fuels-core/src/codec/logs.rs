@@ -5,6 +5,14 @@ use std::{
     iter::FilterMap,
 };
 
+/// Trait that represents a log with a unique identifier.
+pub trait Log {
+    /// Returns the unique identifier of the log as a string.
+    const LOG_ID: &'static str;
+    /// Returns the unique identifier of the log as a `u64`.
+    const LOG_ID_U64: u64;
+}
+
 #[derive(Debug, Clone)]
 pub struct ErrorDetails {
     pub(crate) pkg: String,
