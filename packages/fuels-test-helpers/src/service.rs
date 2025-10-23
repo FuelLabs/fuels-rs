@@ -124,6 +124,7 @@ impl FuelService {
                 starting_exec_gas_price: node_config.starting_gas_price,
                 ..GasPriceConfig::local_node()
             },
+            expensive_subscriptions: true,
             ..ServiceConfig::local_node()
         }
     }

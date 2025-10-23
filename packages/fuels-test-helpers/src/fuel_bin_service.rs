@@ -99,6 +99,7 @@ impl ExtendedConfig {
                     "--historical-execution",
                 ),
                 (self.node_config.debug, "--debug"),
+                (self.node_config.debug, "--expensive-subscriptions"),
             ]
             .into_iter()
             .filter(|(flag, _)| *flag)
