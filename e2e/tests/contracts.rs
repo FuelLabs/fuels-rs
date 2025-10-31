@@ -2880,3 +2880,45 @@ async fn test_returned_method_descriptors_are_valid() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_max_fee_estimation_tolerance() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Contract(
+            name = "TestContract",
+            project = "e2e/sway/contracts/contract_test"
+        )),
+        Deploy(
+            name = "contract_instance",
+            contract = "TestContract",
+            wallet = "wallet",
+            random_salt = false,
+        ),
+    );
+
+    // Test with default tolerance
+    let contract_methods = contract_instance.methods();
+    let response_default = contract_methods.get_single(5).call().await?;
+    assert_eq!(response_default.value, 5);
+
+    // Test with custom tolerance (lower than default)
+    let custom_tolerance = 0.1; // 10% tolerance
+    let response_custom = contract_methods
+        .get_single(5)
+        .with_max_fee_estimation_tolerance(custom_tolerance)
+        .call()
+        .await?;
+    assert_eq!(response_custom.value, 5);
+
+    // Test with custom tolerance (higher than default)
+    let high_tolerance = 1.0; // 100% tolerance
+    let response_high = contract_methods
+        .get_single(5)
+        .with_max_fee_estimation_tolerance(high_tolerance)
+        .call()
+        .await?;
+    assert_eq!(response_high.value, 5);
+
+    Ok(())
+}
