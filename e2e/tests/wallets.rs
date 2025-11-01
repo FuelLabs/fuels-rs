@@ -6,10 +6,10 @@ use fuels::{
 use rand::{Rng, thread_rng};
 
 async fn assert_address_balance(
-    address: &Bech32Address,
+    address: &Address,
     provider: &Provider,
-    asset_id: AssetId,
-    amount: u64,
+    asset_id: &AssetId,
+    amount: u128,
 ) {
     let balance = provider
         .get_asset_balance(address, asset_id)
@@ -37,8 +37,8 @@ async fn test_wallet_balance_api_multi_asset() -> Result<()> {
     assert_eq!(balances.len() as u64, number_of_assets);
 
     for asset_id in asset_ids {
-        let balance = wallet.get_asset_balance(&asset_id).await;
-        assert_eq!(balance?, coins_per_asset * amount_per_coin);
+        let balance = wallet.get_asset_balance(&asset_id).await?;
+        assert_eq!(balance, (coins_per_asset * amount_per_coin) as u128);
 
         let expected_key = asset_id.to_string();
         assert!(balances.contains_key(&expected_key));
@@ -66,8 +66,8 @@ async fn test_wallet_balance_api_single_asset() -> Result<()> {
     let wallet = Wallet::new(signer, provider.clone());
 
     for coin in coins {
-        let balance = wallet.get_asset_balance(&coin.asset_id).await;
-        assert_eq!(balance?, number_of_coins * amount_per_coin);
+        let balance = wallet.get_asset_balance(&coin.asset_id).await?;
+        assert_eq!(balance, (number_of_coins * amount_per_coin) as u128);
     }
 
     let balances = wallet.get_balances().await?;
@@ -112,11 +112,7 @@ async fn adjust_fee_empty_transaction() -> Result<()> {
         "amount should cover tx"
     );
 
-    let expected_outputs = vec![Output::change(
-        wallet.address().into(),
-        0,
-        AssetId::zeroed(),
-    )];
+    let expected_outputs = vec![Output::change(wallet.address(), 0, AssetId::zeroed())];
 
     assert_eq!(tx.outputs(), &expected_outputs);
 
@@ -129,7 +125,7 @@ async fn adjust_for_fee_with_message_data_input() -> Result<()> {
     let receiver_signer = PrivateKeySigner::random(&mut rand::thread_rng());
 
     let messages = setup_single_message(
-        &Bech32Address::default(),
+        Address::default(),
         wallet_signer.address(),
         100,
         0.into(),
@@ -183,7 +179,10 @@ async fn adjust_for_fee_with_message_data_input() -> Result<()> {
             .await
             .unwrap();
 
-        assert_eq!(receiver.get_asset_balance(&asset_id).await?, amount_to_send);
+        assert_eq!(
+            receiver.get_asset_balance(&asset_id).await?,
+            amount_to_send as u128
+        );
     }
 
     Ok(())
@@ -199,7 +198,7 @@ async fn adjust_fee_resources_to_transfer_with_base_asset() -> Result<()> {
         .get_asset_inputs_for_amount(base_asset_id, base_amount.into(), None)
         .await?;
     let outputs =
-        wallet.get_asset_outputs_for_amount(&Address::zeroed().into(), base_asset_id, base_amount);
+        wallet.get_asset_outputs_for_amount(Address::zeroed(), base_asset_id, base_amount);
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
 
@@ -213,7 +212,7 @@ async fn adjust_fee_resources_to_transfer_with_base_asset() -> Result<()> {
 
     let expected_outputs = vec![
         Output::coin(Address::zeroed(), base_amount, base_asset_id),
-        Output::change(wallet.address().into(), 0, base_asset_id),
+        Output::change(wallet.address(), 0, base_asset_id),
     ];
 
     assert_eq!(tx.outputs(), &expected_outputs);
@@ -252,7 +251,7 @@ async fn test_transfer() -> Result<()> {
     let wallet_2_coins = wallet_2.get_coins(base_asset_id).await.unwrap();
     let wallet_2_balance = wallet_2.get_asset_balance(&base_asset_id).await?;
     assert_eq!(wallet_2_coins.len(), 2);
-    assert_eq!(wallet_2_balance, amount + amount / 2);
+    assert_eq!(wallet_2_balance, (amount + amount / 2) as u128);
 
     Ok(())
 }
@@ -358,8 +357,8 @@ async fn transfer_coins_with_change() -> Result<()> {
 async fn test_wallet_get_coins() -> Result<()> {
     const AMOUNT: u64 = 1000;
     const NUM_COINS: u64 = 3;
-    let addr = Bech32Address::from(Address::zeroed());
-    let coins = setup_single_asset_coins(&addr, AssetId::zeroed(), NUM_COINS, AMOUNT);
+    let addr = Address::zeroed();
+    let coins = setup_single_asset_coins(addr, AssetId::zeroed(), NUM_COINS, AMOUNT);
 
     let provider = setup_test_provider(coins, vec![], None, None).await?;
     let wallet = Wallet::new_locked(addr, provider.clone());
@@ -440,7 +439,7 @@ async fn transfer_coins_of_non_base_asset() -> Result<()> {
         .await?;
 
     let wallet_1_balance = wallet_1.get_asset_balance(&asset_id).await?;
-    assert_eq!(wallet_1_balance, AMOUNT - SEND_AMOUNT);
+    assert_eq!(wallet_1_balance, (AMOUNT - SEND_AMOUNT) as u128);
 
     let wallet_2_final_coins = wallet_2.get_coins(asset_id).await?;
     assert_eq!(wallet_2_final_coins.len(), 1);
@@ -497,7 +496,7 @@ async fn test_transfer_with_multiple_signatures() -> Result<()> {
         receiver
             .get_asset_balance(consensus_parameters.base_asset_id())
             .await?,
-        amount_to_receive,
+        amount_to_receive as u128,
     );
 
     Ok(())
@@ -510,7 +509,7 @@ async fn wallet_transfer_respects_maturity_and_expiration() -> Result<()> {
     let wallet_balance = wallet.get_asset_balance(&asset_id).await?;
 
     let provider = wallet.provider();
-    let receiver = thread_rng().r#gen::<Bech32Address>();
+    let receiver: Address = thread_rng().r#gen();
 
     let maturity = 10;
     let expiration = 20;
@@ -521,7 +520,7 @@ async fn wallet_transfer_respects_maturity_and_expiration() -> Result<()> {
 
     {
         let err = wallet
-            .transfer(&receiver, amount_to_send, asset_id, tx_policies)
+            .transfer(receiver, amount_to_send, asset_id, tx_policies)
             .await
             .expect_err("maturity not reached");
 
@@ -530,7 +529,7 @@ async fn wallet_transfer_respects_maturity_and_expiration() -> Result<()> {
     let transaction_fee = {
         provider.produce_blocks(15, None).await?;
         wallet
-            .transfer(&receiver, amount_to_send, asset_id, tx_policies)
+            .transfer(receiver, amount_to_send, asset_id, tx_policies)
             .await
             .expect("should succeed. Block height between `maturity` and `expiration`")
             .tx_status
@@ -539,7 +538,7 @@ async fn wallet_transfer_respects_maturity_and_expiration() -> Result<()> {
     {
         provider.produce_blocks(15, None).await?;
         let err = wallet
-            .transfer(&receiver, amount_to_send, asset_id, tx_policies)
+            .transfer(receiver, amount_to_send, asset_id, tx_policies)
             .await
             .expect_err("expiration reached");
 
@@ -548,15 +547,15 @@ async fn wallet_transfer_respects_maturity_and_expiration() -> Result<()> {
 
     // Wallet has spent the funds
     assert_address_balance(
-        wallet.address(),
+        &wallet.address(),
         provider,
-        asset_id,
-        wallet_balance - amount_to_send - transaction_fee,
+        &asset_id,
+        wallet_balance - amount_to_send as u128 - transaction_fee as u128,
     )
     .await;
 
     // Funds were transferred
-    assert_address_balance(&receiver, provider, asset_id, amount_to_send).await;
+    assert_address_balance(&receiver, provider, &asset_id, amount_to_send as u128).await;
 
     Ok(())
 }

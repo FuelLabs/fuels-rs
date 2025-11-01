@@ -37,12 +37,14 @@ mod tests {
             type_field: "".to_string(),
             components: None,
             type_parameters: Some(vec![1, 2]),
+            alias_of: None,
         };
         let generic_1 = UnifiedTypeDeclaration {
             type_id: 1,
             type_field: "generic T".to_string(),
             components: None,
             type_parameters: None,
+            alias_of: None,
         };
 
         let generic_2 = UnifiedTypeDeclaration {
@@ -50,6 +52,7 @@ mod tests {
             type_field: "generic K".to_string(),
             components: None,
             type_parameters: None,
+            alias_of: None,
         };
 
         let types = [generic_1, generic_2]
@@ -81,6 +84,7 @@ mod tests {
             type_field: "struct SomeName".to_string(),
             components: None,
             type_parameters: None,
+            alias_of: None,
         };
 
         let struct_name = extract_custom_type_name(&declaration.type_field).unwrap();
@@ -95,6 +99,7 @@ mod tests {
             type_field: "enum SomeEnumName".to_string(),
             components: None,
             type_parameters: None,
+            alias_of: None,
         };
 
         let struct_name = extract_custom_type_name(&declaration.type_field).unwrap();

@@ -182,18 +182,6 @@ pub(crate) fn sdk_provided_custom_types_lookup() -> HashMap<TypePath, TypePath> 
     .collect()
 }
 
-pub(crate) fn get_equivalent_bech32_type(ttype: &ResolvedType) -> Option<TokenStream> {
-    let ResolvedType::StructOrEnum { path, .. } = ttype else {
-        return None;
-    };
-
-    match path.to_string().as_str() {
-        "::fuels::types::Address" => Some(quote! {::fuels::types::bech32::Bech32Address}),
-        "::fuels::types::ContractId" => Some(quote! {::fuels::types::bech32::Bech32ContractId}),
-        _ => None,
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use fuel_abi_types::abi::full_program::FullTypeDeclaration;
@@ -242,6 +230,7 @@ mod tests {
                 type_field: "u64".to_string(),
                 components: vec![],
                 type_parameters: vec![],
+                alias_of: None,
             },
             type_arguments: vec![],
             error_message: None,

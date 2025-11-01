@@ -55,7 +55,7 @@ fn compute_contract_id_and_state_root(
     let code_root = fuel_contract.root();
     let state_root = FuelContract::initial_state_root(storage_slots.iter());
 
-    let contract_id = fuel_contract.id(salt, &code_root, &state_root);
+    let contract_id = FuelContract::id(salt, &code_root, &state_root);
 
     (contract_id, code_root, state_root)
 }

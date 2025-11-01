@@ -28,7 +28,7 @@ mod tests {
         // ANCHOR_END: connect_to_testnet
 
         let provider = setup_test_provider(vec![], vec![], None, None).await?;
-        let port = provider.url().split(':').last().unwrap();
+        let port = provider.url().split(':').next_back().unwrap();
 
         // ANCHOR: local_node_address
         let _provider = Provider::connect(format!("127.0.0.1:{port}")).await?;
@@ -73,7 +73,7 @@ mod tests {
         let consensus_parameters = provider.consensus_parameters().await?;
         let coins = provider
             .get_coins(
-                wallet_signer.address(),
+                &wallet_signer.address(),
                 *consensus_parameters.base_asset_id(),
             )
             .await?;
@@ -82,7 +82,7 @@ mod tests {
 
         // ANCHOR: get_spendable_resources
         let filter = ResourceFilter {
-            from: wallet_signer.address().clone(),
+            from: wallet_signer.address(),
             amount: 1,
             ..Default::default()
         };
@@ -91,7 +91,7 @@ mod tests {
         // ANCHOR_END: get_spendable_resources
 
         // ANCHOR: get_balances
-        let _balances = provider.get_balances(wallet_signer.address()).await?;
+        let _balances = provider.get_balances(&wallet_signer.address()).await?;
         // ANCHOR_END: get_balances
 
         Ok(())

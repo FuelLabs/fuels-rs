@@ -1,12 +1,5 @@
 use fuels::prelude::*;
 
-pub fn null_contract_id() -> Bech32ContractId {
-    // bech32 contract address that decodes to [0u8;32]
-    "fuel1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqsx2mt2"
-        .parse()
-        .unwrap()
-}
-
 mod hygiene {
     #[tokio::test]
     async fn setup_program_test_is_hygienic() {
@@ -94,7 +87,7 @@ async fn compile_bindings_from_inline_contract() -> Result<()> {
 
     let wallet = launch_provider_and_get_wallet().await?;
 
-    let contract_instance = SimpleContract::new(null_contract_id(), wallet);
+    let contract_instance = SimpleContract::new(ContractId::zeroed(), wallet);
 
     let call_handler = contract_instance.methods().takes_u32_returns_bool(42_u32);
     let encoded_args = call_handler.call.encoded_args.unwrap();

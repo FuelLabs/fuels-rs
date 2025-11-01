@@ -4,10 +4,10 @@ use std::{
 };
 
 use fuel_types::AssetId;
-use fuels_core::types::{bech32::Bech32Address, coin_type_id::CoinTypeId};
+use fuels_core::types::{Address, coin_type_id::CoinTypeId};
 use tokio::time::{Duration, Instant};
 
-type CoinCacheKey = (Bech32Address, AssetId);
+type CoinCacheKey = (Address, AssetId);
 
 #[derive(Debug)]
 pub(crate) struct CoinsCache {
@@ -36,7 +36,7 @@ impl CoinsCache {
         for (key, ids) in coin_ids {
             let new_items = ids.into_iter().map(CoinCacheItem::new);
 
-            let items = self.items.entry(key.clone()).or_default();
+            let items = self.items.entry(key).or_default();
             items.extend(new_items);
         }
     }
@@ -129,7 +129,7 @@ mod tests {
 
         let key: CoinCacheKey = Default::default();
         let (item1, item2) = get_items();
-        let items = HashMap::from([(key.clone(), vec![item1.clone(), item2.clone()])]);
+        let items = HashMap::from([(key, vec![item1.clone(), item2.clone()])]);
 
         cache.insert_multiple(items);
 
@@ -146,7 +146,7 @@ mod tests {
 
         let key = CoinCacheKey::default();
         let (item1, _) = get_items();
-        let items = HashMap::from([(key.clone(), vec![item1.clone()])]);
+        let items = HashMap::from([(key, vec![item1.clone()])]);
 
         cache.insert_multiple(items);
 
@@ -155,7 +155,7 @@ mod tests {
         tokio::time::advance(Duration::from_secs(12)).await;
 
         let (_, item2) = get_items();
-        let items = HashMap::from([(key.clone(), vec![item2.clone()])]);
+        let items = HashMap::from([(key, vec![item2.clone()])]);
         cache.insert_multiple(items);
 
         let active_coins = cache.get_active(&key);
@@ -182,10 +182,10 @@ mod tests {
         let key: CoinCacheKey = Default::default();
         let (item1, item2) = get_items();
 
-        let items_to_insert = [(key.clone(), vec![item1.clone(), item2.clone()])];
+        let items_to_insert = [(key, vec![item1.clone(), item2.clone()])];
         cache.insert_multiple(items_to_insert.iter().cloned());
 
-        let items_to_remove = [(key.clone(), vec![item1.clone()])];
+        let items_to_remove = [(key, vec![item1.clone()])];
         cache.remove_items(items_to_remove.iter().cloned());
 
         let active_coins = cache.get_active(&key);

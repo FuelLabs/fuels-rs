@@ -1,3 +1,4 @@
+use fuel_tx::SubAssetId;
 use fuel_types::AssetId;
 use fuels_macros::{Parameterize, Tokenizable, TryFrom};
 
@@ -33,6 +34,12 @@ impl Bits256 {
 
 impl From<AssetId> for Bits256 {
     fn from(value: AssetId) -> Self {
+        Self(value.into())
+    }
+}
+
+impl From<SubAssetId> for Bits256 {
+    fn from(value: SubAssetId) -> Self {
         Self(value.into())
     }
 }

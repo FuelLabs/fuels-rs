@@ -9,9 +9,9 @@ mod tests {
         },
         prelude::Result,
         test_helpers::{setup_single_asset_coins, setup_test_provider},
+        tx::ContractIdExt,
         types::{
-            AssetId,
-            bech32::Bech32Address,
+            Address, AssetId, SubAssetId,
             transaction::TxPolicies,
             transaction_builders::{
                 BuildableTransaction, ScriptTransactionBuilder, TransactionBuilder,
@@ -26,7 +26,6 @@ mod tests {
         use fuels::{
             prelude::*,
             test_helpers::{AssetConfig, WalletsConfig},
-            types::Bits256,
         };
 
         // ANCHOR: liquidity_abigen
@@ -63,7 +62,7 @@ mod tests {
         .await?
         .contract_id;
 
-        let contract_methods = MyContract::new(contract_id.clone(), wallet.clone()).methods();
+        let contract_methods = MyContract::new(contract_id, wallet.clone()).methods();
         // ANCHOR_END: liquidity_deploy
 
         // ANCHOR: liquidity_deposit
@@ -81,11 +80,11 @@ mod tests {
         // ANCHOR_END: liquidity_deposit
 
         // ANCHOR: liquidity_withdraw
-        let lp_asset_id = contract_id.asset_id(&Bits256::zeroed());
+        let lp_asset_id = contract_id.asset_id(&SubAssetId::zeroed());
         let lp_token_balance = wallet.get_asset_balance(&lp_asset_id).await?;
 
         let call_params = CallParameters::default()
-            .with_amount(lp_token_balance)
+            .with_amount(lp_token_balance.try_into().unwrap())
             .with_asset_id(lp_asset_id);
 
         contract_methods
@@ -96,7 +95,7 @@ mod tests {
             .await?;
 
         let base_balance = wallet.get_asset_balance(&base_asset_id).await?;
-        assert_eq!(base_balance, deposit_amount);
+        assert_eq!(base_balance, deposit_amount as u128);
         // ANCHOR_END: liquidity_withdraw
         Ok(())
     }
@@ -269,9 +268,8 @@ mod tests {
         let ask_amount = 100;
         let locked_amount = 500;
         let bridged_asset_id = AssetId::from([1u8; 32]);
-        let receiver = Bech32Address::from_str(
-            "fuel1p8qt95dysmzrn2rmewntg6n6rg3l8ztueqafg5s6jmd9cgautrdslwdqdw",
-        )?;
+        let receiver =
+            Address::from_str("09c0b2d1a486c439a87bcba6b46a7a1a23f3897cc83a94521a96da5c23bc58db")?;
         // ANCHOR_END: custom_tx_receiver
 
         // ANCHOR: custom_tx
@@ -284,7 +282,7 @@ mod tests {
             .get_asset_inputs_for_amount(*consensus_parameters.base_asset_id(), ask_amount, None)
             .await?;
         let base_outputs = hot_wallet.get_asset_outputs_for_amount(
-            &receiver,
+            receiver,
             *consensus_parameters.base_asset_id(),
             ask_amount as u64,
         );
@@ -334,10 +332,7 @@ mod tests {
         let status = provider.tx_status(&tx_id).await?;
         assert!(matches!(status, TxStatus::Success { .. }));
 
-        let balance: u128 = cold_wallet
-            .get_asset_balance(&bridged_asset_id)
-            .await?
-            .into();
+        let balance: u128 = cold_wallet.get_asset_balance(&bridged_asset_id).await?;
         assert_eq!(balance, locked_amount);
         // ANCHOR_END: custom_tx_verify
 

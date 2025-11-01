@@ -1,4 +1,10 @@
 pub mod transaction {
+    #[cfg(feature = "std")]
+    use std::sync::Arc;
+
+    #[cfg(not(feature = "std"))]
+    use alloc::sync::Arc;
+
     #[derive(thiserror::Error, Debug, Clone)]
     pub enum Reason {
         #[error("builder: {0}")]
@@ -11,7 +17,7 @@ pub mod transaction {
         Failure {
             reason: String,
             revert_id: Option<u64>,
-            receipts: Vec<fuel_tx::Receipt>,
+            receipts: Arc<Vec<fuel_tx::Receipt>>,
         },
         #[error(": {0}")]
         Other(String),
@@ -164,7 +170,6 @@ macro_rules! impl_error_from {
 }
 
 impl_error_from!(Other, &'static str);
-impl_error_from!(Other, bech32::Error);
 impl_error_from!(Other, fuel_crypto::Error);
 impl_error_from!(Other, serde_json::Error);
 impl_error_from!(Other, hex::FromHexError);

@@ -24,8 +24,7 @@ use itertools::Itertools;
 use crate::{
     traits::Signer,
     types::{
-        DryRunner,
-        bech32::Bech32Address,
+        Address, DryRunner,
         errors::{Error, Result, error, error_transaction},
     },
     utils::{calculate_witnesses_size, sealed},
@@ -110,6 +109,7 @@ pub struct TxPolicies {
     expiration: Option<u64>,
     max_fee: Option<u64>,
     script_gas_limit: Option<u64>,
+    owner: Option<u64>,
 }
 // ANCHOR_END: tx_policies_struct
 
@@ -121,6 +121,7 @@ impl TxPolicies {
         expiration: Option<u64>,
         max_fee: Option<u64>,
         script_gas_limit: Option<u64>,
+        owner: Option<u64>,
     ) -> Self {
         Self {
             tip,
@@ -129,6 +130,7 @@ impl TxPolicies {
             expiration,
             max_fee,
             script_gas_limit,
+            owner,
         }
     }
 
@@ -184,6 +186,15 @@ impl TxPolicies {
 
     pub fn script_gas_limit(&self) -> Option<u64> {
         self.script_gas_limit
+    }
+
+    pub fn with_owner(mut self, owner: u64) -> Self {
+        self.owner = Some(owner);
+        self
+    }
+
+    pub fn owner(&self) -> Option<u64> {
+        self.owner
     }
 }
 
@@ -255,6 +266,8 @@ pub trait Transaction:
 
     fn expiration(&self) -> Option<u64>;
 
+    fn owner(&self) -> Option<u64>;
+
     fn metered_bytes_size(&self) -> usize;
 
     fn inputs(&self) -> &Vec<Input>;
@@ -280,10 +293,7 @@ pub trait Transaction:
     /// Append witness and return the corresponding witness index
     fn append_witness(&mut self, witness: Witness) -> Result<usize>;
 
-    fn used_coins(
-        &self,
-        base_asset_id: &AssetId,
-    ) -> HashMap<(Bech32Address, AssetId), Vec<CoinTypeId>>;
+    fn used_coins(&self, base_asset_id: &AssetId) -> HashMap<(Address, AssetId), Vec<CoinTypeId>>;
 
     async fn sign_with(
         &mut self,
@@ -317,18 +327,16 @@ fn extract_coin_type_id(input: &Input) -> Option<CoinTypeId> {
     None
 }
 
-pub fn extract_owner_or_recipient(input: &Input) -> Option<Bech32Address> {
-    let addr = match input {
+pub fn extract_owner_or_recipient(input: &Input) -> Option<Address> {
+    match input {
         Input::CoinSigned(CoinSigned { owner, .. })
-        | Input::CoinPredicate(CoinPredicate { owner, .. }) => Some(owner),
+        | Input::CoinPredicate(CoinPredicate { owner, .. }) => Some(*owner),
         Input::MessageCoinSigned(MessageCoinSigned { recipient, .. })
         | Input::MessageCoinPredicate(MessageCoinPredicate { recipient, .. })
         | Input::MessageDataSigned(MessageDataSigned { recipient, .. })
-        | Input::MessageDataPredicate(MessageDataPredicate { recipient, .. }) => Some(recipient),
+        | Input::MessageDataPredicate(MessageDataPredicate { recipient, .. }) => Some(*recipient),
         Input::Contract(_) => None,
-    };
-
-    addr.map(|addr| Bech32Address::from(*addr))
+    }
 }
 
 macro_rules! impl_tx_wrapper {
@@ -440,6 +448,10 @@ macro_rules! impl_tx_wrapper {
                 self.tx.policies().get(PolicyType::Expiration)
             }
 
+            fn owner(&self) -> Option<u64> {
+                self.tx.policies().get(PolicyType::Owner)
+            }
+
             fn metered_bytes_size(&self) -> usize {
                 self.tx.metered_bytes_size()
             }
@@ -506,7 +518,7 @@ macro_rules! impl_tx_wrapper {
             fn used_coins(
                 &self,
                 base_asset_id: &AssetId,
-            ) -> HashMap<(Bech32Address, AssetId), Vec<CoinTypeId>> {
+            ) -> HashMap<(Address, AssetId), Vec<CoinTypeId>> {
                 self.inputs()
                     .iter()
                     .filter_map(|input| match input {

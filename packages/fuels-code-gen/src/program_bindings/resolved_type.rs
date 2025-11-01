@@ -468,6 +468,7 @@ mod tests {
                         },
                     ]),
                     type_parameters: Some(vec![1]),
+                    alias_of: None,
                 },
                 UnifiedTypeDeclaration {
                     type_id: 1,
@@ -495,6 +496,7 @@ mod tests {
                         },
                     ]),
                     type_parameters: Some(vec![1]),
+                    alias_of: None,
                 },
                 UnifiedTypeDeclaration {
                     type_id: 4,
@@ -662,6 +664,7 @@ mod tests {
                         },
                     ]),
                     type_parameters: Some(vec![1]),
+                    alias_of: None,
                 },
                 UnifiedTypeDeclaration {
                     type_id: 1,
@@ -698,6 +701,7 @@ mod tests {
                         },
                     ]),
                     type_parameters: Some(vec![1]),
+                    alias_of: None,
                 },
                 UnifiedTypeDeclaration {
                     type_id: 1,
@@ -740,6 +744,7 @@ mod tests {
                         },
                     ]),
                     type_parameters: Some(vec![4]),
+                    alias_of: None,
                 },
                 UnifiedTypeDeclaration {
                     type_id: 1,
@@ -791,6 +796,7 @@ mod tests {
                 type_field: format!("struct {type_path}"),
                 components: vec![],
                 type_parameters: vec![],
+                alias_of: None,
             },
             type_arguments: vec![],
             error_message: None,

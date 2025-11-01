@@ -22,7 +22,7 @@ impl ResponseParser for ContractCall {
         decoder_config: DecoderConfig,
         param_type: &ParamType,
     ) -> Result<Token> {
-        ReceiptParser::new(receipts, decoder_config).parse_call(&self.contract_id, param_type)
+        ReceiptParser::new(receipts, decoder_config).parse_call(self.contract_id, param_type)
     }
 }
 
