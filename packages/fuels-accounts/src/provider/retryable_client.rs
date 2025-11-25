@@ -43,7 +43,6 @@ impl From<RequestError> for Error {
 #[derive(Debug, Clone)]
 pub(crate) struct RetryableClient {
     client: FuelClient,
-    url: String,
     retry_config: RetryConfig,
     prepend_warning: Option<String>,
 }
@@ -61,7 +60,6 @@ impl CacheableRpcs for RetryableClient {
 
 impl RetryableClient {
     pub(crate) async fn connect(url: impl AsRef<str>, retry_config: RetryConfig) -> Result<Self> {
-        let url = url.as_ref().to_string();
         let client = FuelClient::new(&url).map_err(|e| error!(Provider, "{e}"))?;
 
         let node_info = client.node_info().await?;
@@ -70,7 +68,24 @@ impl RetryableClient {
         Ok(Self {
             client,
             retry_config,
-            url,
+            prepend_warning: warning,
+        })
+    }
+
+    /// Creates a new `RetryableClient` with multiple URLs for failover support.
+    /// If the primary URL fails, the client will automatically try the next URL in the list.
+    pub(crate) async fn connect_with_urls(
+        urls: &[impl AsRef<str>],
+        retry_config: RetryConfig,
+    ) -> Result<Self> {
+        let client = FuelClient::with_urls(urls).map_err(|e| error!(Provider, "{e}"))?;
+
+        let node_info = client.node_info().await?;
+        let warning = Self::version_compatibility_warning(&node_info)?;
+
+        Ok(Self {
+            client,
+            retry_config,
             prepend_warning: warning,
         })
     }
@@ -100,7 +115,7 @@ impl RetryableClient {
     }
 
     pub(crate) fn url(&self) -> &str {
-        &self.url
+        &self.client.get_default_url().as_str()
     }
 
     pub fn client(&self) -> &FuelClient {
@@ -407,7 +422,7 @@ mod custom_queries {
         tx::TransactionIdFragment,
     };
 
-    #[derive(cynic::QueryVariables, Debug)]
+    #[derive(cynic::QueryVariables, Debug, Clone)]
     pub struct IsUserAccountVariables {
         pub blob_id: BlobId,
         pub contract_id: ContractId,
