@@ -72,24 +72,6 @@ impl RetryableClient {
         })
     }
 
-    /// Creates a new `RetryableClient` with multiple URLs for failover support.
-    /// If the primary URL fails, the client will automatically try the next URL in the list.
-    pub(crate) async fn connect_with_urls(
-        urls: &[impl AsRef<str>],
-        retry_config: RetryConfig,
-    ) -> Result<Self> {
-        let client = FuelClient::with_urls(urls).map_err(|e| error!(Provider, "{e}"))?;
-
-        let node_info = client.node_info().await?;
-        let warning = Self::version_compatibility_warning(&node_info)?;
-
-        Ok(Self {
-            client,
-            retry_config,
-            prepend_warning: warning,
-        })
-    }
-
     fn version_compatibility_warning(node_info: &NodeInfo) -> Result<Option<String>> {
         let node_version = node_info
             .node_version
