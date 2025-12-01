@@ -94,14 +94,14 @@ testcontainers = { version = "0.23", default-features = false }
 k256 = { version = "0.13", default-features = false }
 
 # Dependencies from the `fuel-core` repository:
-fuel-core = { git = "https://github.com/FuelLabs/fuel-core", branch = "master", default-features = false, features = [
+fuel-core = { git = "https://github.com/FuelLabs/fuel-core", rev = "49070f73af0d018a0193435e9a71e6c865e56080", default-features = false, features = [
   "wasm-executor",
 ] }
-fuel-core-chain-config = { git = "https://github.com/FuelLabs/fuel-core", branch = "master", default-features = false }
-fuel-core-client = { git = "https://github.com/FuelLabs/fuel-core", branch = "master", default-features = false }
-fuel-core-poa = { git = "https://github.com/FuelLabs/fuel-core", branch = "master", default-features = false }
-fuel-core-services = { git = "https://github.com/FuelLabs/fuel-core", branch = "master", default-features = false }
-fuel-core-types = { git = "https://github.com/FuelLabs/fuel-core", branch = "master", default-features = false }
+fuel-core-chain-config = { git = "https://github.com/FuelLabs/fuel-core", rev = "49070f73af0d018a0193435e9a71e6c865e56080", default-features = false }
+fuel-core-client = { git = "https://github.com/FuelLabs/fuel-core", rev = "49070f73af0d018a0193435e9a71e6c865e56080", default-features = false }
+fuel-core-poa = { git = "https://github.com/FuelLabs/fuel-core", rev = "49070f73af0d018a0193435e9a71e6c865e56080", default-features = false }
+fuel-core-services = { git = "https://github.com/FuelLabs/fuel-core", rev = "49070f73af0d018a0193435e9a71e6c865e56080", default-features = false }
+fuel-core-types = { git = "https://github.com/FuelLabs/fuel-core", rev = "49070f73af0d018a0193435e9a71e6c865e56080", default-features = false }
 
 # Dependencies from the `fuel-vm` repository:
 fuel-asm = { version = "0.65.0" }
