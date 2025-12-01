@@ -151,8 +151,12 @@ impl Provider {
 
     /// Connects to an existing node at the given address.
     pub async fn connect(url: impl AsRef<str>) -> Result<Provider> {
+        Self::connect_with_with_fallbacks(&[url]).await
+    }
+
+    pub async fn connect_with_with_fallbacks(urls: &[impl AsRef<str>]) -> Result<Provider> {
         let client = CachedClient::new(
-            RetryableClient::connect(&url, Default::default()).await?,
+            RetryableClient::connect_with_fallbacks(urls, Default::default()).await?,
             TtlConfig::default(),
             SystemClock,
         );

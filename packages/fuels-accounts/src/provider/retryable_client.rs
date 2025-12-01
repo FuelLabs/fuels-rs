@@ -59,8 +59,8 @@ impl CacheableRpcs for RetryableClient {
 }
 
 impl RetryableClient {
-    pub(crate) async fn connect(url: impl AsRef<str>, retry_config: RetryConfig) -> Result<Self> {
-        let client = FuelClient::new(&url).map_err(|e| error!(Provider, "{e}"))?;
+    pub(crate) async fn connect_with_fallbacks(urls: &[ impl AsRef<str>], retry_config: RetryConfig) -> Result<Self> {
+        let client = FuelClient::with_urls(&urls).map_err(|e| error!(Provider, "{e}"))?;
 
         let node_info = client.node_info().await?;
         let warning = Self::version_compatibility_warning(&node_info)?;
