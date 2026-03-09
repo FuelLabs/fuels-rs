@@ -211,6 +211,10 @@ jobs:
       - uses: buildjet/cache@v3
         continue-on-error: true
         with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
           key: "${{ matrix.cargo_command }} ${{ matrix.args }} ${{ matrix.package }}"
 
       - name: Download Fuel Core

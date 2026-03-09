@@ -910,7 +910,7 @@ impl DryRunner for Provider {
     async fn dry_run(&self, tx: FuelTransaction) -> Result<DryRun> {
         let [tx_execution_status] = self
             .uncached_client()
-            .dry_run_opt(&vec![tx], Some(false), Some(0), None)
+            .dry_run_opt(&[tx], Some(false), Some(0), None)
             .await?
             .try_into()
             .expect("should have only one element");
