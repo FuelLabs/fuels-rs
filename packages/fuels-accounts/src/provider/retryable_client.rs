@@ -407,7 +407,7 @@ mod custom_queries {
         tx::TransactionIdFragment,
     };
 
-    #[derive(cynic::QueryVariables, Debug)]
+    #[derive(cynic::QueryVariables, Debug, Clone)]
     pub struct IsUserAccountVariables {
         pub blob_id: BlobId,
         pub contract_id: ContractId,
