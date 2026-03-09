@@ -38,7 +38,7 @@ homepage = "https://fuel.network/"
 readme = "README.md"
 license = "Apache-2.0"
 repository = "https://github.com/FuelLabs/fuels-rs"
-rust-version = "1.90.0"
+rust-version = "1.93.0"
 version = "0.76.0"
 
 [workspace.dependencies]
@@ -48,7 +48,7 @@ dialoguer = { version = "0.11", default-features = false }
 async-trait = { version = "0.1.74", default-features = false }
 bytes = { version = "1.5.0", default-features = false }
 chrono = "0.4.31"
-cynic = { version = "3.1.0", default-features = false }
+cynic = { version = ">=3.1.0, <3.13.0", default-features = false }
 test-case = { version = "3.3", default-features = false }
 eth-keystore = "0.5.0"
 flate2 = { version = "1.0", default-features = false }
