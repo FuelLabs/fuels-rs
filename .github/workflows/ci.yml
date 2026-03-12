@@ -19,7 +19,7 @@ env:
   FUEL_CORE_VERSION: 0.47.1
   FUEL_CORE_PATCH_BRANCH: ""
   FUEL_CORE_PATCH_REVISION: ""
-  RUST_VERSION: 1.90.0
+  RUST_VERSION: 1.93.0
   FORC_VERSION: 0.69.1
   FORC_PATCH_BRANCH: ""
   FORC_PATCH_REVISION: ""
@@ -211,6 +211,10 @@ jobs:
       - uses: buildjet/cache@v3
         continue-on-error: true
         with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
           key: "${{ matrix.cargo_command }} ${{ matrix.args }} ${{ matrix.package }}"
 
       - name: Download Fuel Core
