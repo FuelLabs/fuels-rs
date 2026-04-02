@@ -22,3 +22,4 @@ e2e/sway/**/.gitignore
 .env
 
 output_changelog.md
+.idea/
