@@ -205,10 +205,6 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           cache-provider: "warpbuild"
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
           key: "${{ matrix.cargo_command }} ${{ matrix.args }} ${{ matrix.package }}"
         continue-on-error: true
 
