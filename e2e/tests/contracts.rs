@@ -294,11 +294,11 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
         ),
     );
 
-    let gas_limit = 800;
+    let gas_limit = 651;
     let tolerance = Some(0.2);
     let block_horizon = Some(1);
-    let expected_script_gas = 800;
-    let expected_total_gas = 8463;
+    let expected_script_gas = 651;
+    let expected_total_gas = 8284;
     let expected_metered_bytes_size = 824;
 
     let estimated_transaction_cost = contract_instance
