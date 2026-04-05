@@ -27,7 +27,7 @@ impl testcontainers::Image for AwsKmsImage {
     }
 
     fn tag(&self) -> &str {
-        "latest"
+        "4.14.0"
     }
 
     fn ready_conditions(&self) -> Vec<testcontainers::core::WaitFor> {
