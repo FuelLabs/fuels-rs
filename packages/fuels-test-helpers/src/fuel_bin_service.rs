@@ -208,6 +208,7 @@ async fn run_node(
         .args(args)
         .kill_on_drop(true)
         .env_clear()
+        .env("RUST_LOG", "info")
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
