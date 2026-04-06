@@ -95,10 +95,7 @@ impl FuelService {
 
         ServiceConfig {
             graphql_config: GraphQLConfig {
-                addr: std::net::SocketAddr::new(
-                    std::net::Ipv4Addr::new(127, 0, 0, 1).into(),
-                    0,
-                ),
+                addr: std::net::SocketAddr::new(std::net::Ipv4Addr::new(127, 0, 0, 1).into(), 0),
                 max_queries_depth: 16,
                 max_queries_complexity: 80000,
                 max_queries_recursive_depth: 16,

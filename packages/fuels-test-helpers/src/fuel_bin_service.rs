@@ -1,9 +1,4 @@
-use std::{
-    net::SocketAddr,
-    path::PathBuf,
-    process::Stdio,
-    time::Duration,
-};
+use std::{net::SocketAddr, path::PathBuf, process::Stdio, time::Duration};
 
 use fuel_core_chain_config::{ChainConfig, SnapshotWriter, StateConfig};
 use fuel_core_client::client::FuelClient;
@@ -181,9 +176,7 @@ async fn server_health_check(address: SocketAddr) -> FuelResult<()> {
     Ok(())
 }
 
-async fn run_node(
-    extended_config: ExtendedConfig,
-) -> FuelResult<(SocketAddr, JoinHandle<()>)> {
+async fn run_node(extended_config: ExtendedConfig) -> FuelResult<(SocketAddr, JoinHandle<()>)> {
     let args = extended_config.args_vec()?;
     let tempdir = extended_config.write_temp_snapshot_files()?;
 
@@ -230,10 +223,7 @@ async fn run_node(
                 .map(|i| &line[i + "Binding GraphQL provider to ".len()..])
             {
                 let bound_address: SocketAddr = addr_str.parse().map_err(|e| {
-                    error!(
-                        Other,
-                        "failed to parse bound address '{addr_str}': {e}"
-                    )
+                    error!(Other, "failed to parse bound address '{addr_str}': {e}")
                 })?;
                 return Ok(bound_address);
             }
