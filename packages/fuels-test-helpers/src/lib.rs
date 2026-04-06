@@ -306,7 +306,7 @@ mod tests {
             .await
             .expect("Failed to retrieve node info!");
 
-        assert_eq!(provider.url(), format!("http://127.0.0.1:4000"));
+        assert_eq!(provider.url(), format!("http://127.0.0.1:4000/v1/graphql"));
         assert_eq!(node_info.utxo_validation, config.utxo_validation);
 
         Ok(())
