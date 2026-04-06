@@ -63,7 +63,7 @@ impl RetryableClient {
         urls: &[impl AsRef<str>],
         retry_config: RetryConfig,
     ) -> Result<Self> {
-        let client = FuelClient::with_urls(&urls).map_err(|e| error!(Provider, "{e}"))?;
+        let client = FuelClient::with_urls(urls).map_err(|e| error!(Provider, "{e}"))?;
 
         let node_info = client.node_info().await?;
         let warning = Self::version_compatibility_warning(&node_info)?;
@@ -100,7 +100,7 @@ impl RetryableClient {
     }
 
     pub(crate) fn url(&self) -> &str {
-        &self.client.get_default_url().as_str()
+        self.client.get_default_url().as_str()
     }
 
     pub fn client(&self) -> &FuelClient {
