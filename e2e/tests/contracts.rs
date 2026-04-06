@@ -225,6 +225,44 @@ async fn test_multi_call_beginner() -> Result<()> {
 }
 
 #[tokio::test]
+async fn test_multi_call_simulate_vec() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Contract(
+            name = "TestContract",
+            project = "e2e/sway/contracts/contract_test"
+        )),
+        Deploy(
+            name = "contract_instance",
+            contract = "TestContract",
+            wallet = "wallet",
+            random_salt = false,
+        ),
+    );
+
+    let contract_methods = contract_instance.methods();
+    let call_handler_1 = contract_methods.get_single(7);
+    let call_handler_2 = contract_methods.get_single(42);
+    let call_handler_3 = contract_methods.get_single(1212);
+
+    let mut multi_call_handler = CallHandler::new_multi_call(wallet.clone())
+        .add_call(call_handler_1)
+        .add_call(call_handler_2)
+        .add_call(call_handler_3);
+
+    let values: Vec<u64> = multi_call_handler
+        .simulate_vec(Execution::state_read_only())
+        .await?
+        .value;
+
+    assert_eq!(values[0], 7);
+    assert_eq!(values[1], 42);
+    assert_eq!(values[2], 1212);
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn test_multi_call_pro() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),

@@ -43,7 +43,6 @@ impl From<RequestError> for Error {
 #[derive(Debug, Clone)]
 pub(crate) struct RetryableClient {
     client: FuelClient,
-    url: String,
     retry_config: RetryConfig,
     prepend_warning: Option<String>,
 }
@@ -60,9 +59,11 @@ impl CacheableRpcs for RetryableClient {
 }
 
 impl RetryableClient {
-    pub(crate) async fn connect(url: impl AsRef<str>, retry_config: RetryConfig) -> Result<Self> {
-        let url = url.as_ref().to_string();
-        let client = FuelClient::new(&url).map_err(|e| error!(Provider, "{e}"))?;
+    pub(crate) async fn connect_with_fallbacks(
+        urls: &[impl AsRef<str>],
+        retry_config: RetryConfig,
+    ) -> Result<Self> {
+        let client = FuelClient::with_urls(urls).map_err(|e| error!(Provider, "{e}"))?;
 
         let node_info = client.node_info().await?;
         let warning = Self::version_compatibility_warning(&node_info)?;
@@ -70,7 +71,6 @@ impl RetryableClient {
         Ok(Self {
             client,
             retry_config,
-            url,
             prepend_warning: warning,
         })
     }
@@ -100,7 +100,7 @@ impl RetryableClient {
     }
 
     pub(crate) fn url(&self) -> &str {
-        &self.url
+        self.client.get_default_url().as_str()
     }
 
     pub fn client(&self) -> &FuelClient {
