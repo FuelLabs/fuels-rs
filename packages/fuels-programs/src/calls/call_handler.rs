@@ -530,7 +530,6 @@ where
 
     /// Call contract methods on the node, in a simulated manner, meaning the state of the
     /// blockchain is *not* modified but simulated.
-    /// Returns a Vec of values where all calls must return the same type `T`.
     pub async fn simulate_vec<T: Tokenizable + Debug>(
         &mut self,
         Execution {
@@ -592,7 +591,6 @@ where
     }
 
     /// Create a [`CallResponse`] from `TxStatus` returning a Vec of values.
-    /// All calls must return the same type `T`.
     pub fn get_response_vec<T: Tokenizable + Debug>(
         &self,
         tx_status: TxStatus,
