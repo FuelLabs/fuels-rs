@@ -174,8 +174,6 @@ pub fn generate_random_salt() -> [u8; 32] {
 
 #[cfg(test)]
 mod tests {
-    use std::net::{Ipv4Addr, SocketAddr};
-
     use fuel_tx::{ConsensusParameters, ContractParameters, FeeParameters, TxParameters};
 
     use super::*;
@@ -294,11 +292,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_setup_test_provider_custom_config() -> Result<()> {
-        let socket = SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 4000);
-        let config = NodeConfig {
-            addr: socket,
-            ..NodeConfig::default()
-        };
+        let config = NodeConfig::default();
 
         let provider = setup_test_provider(vec![], vec![], Some(config.clone()), None).await?;
         let node_info = provider
@@ -306,7 +300,6 @@ mod tests {
             .await
             .expect("Failed to retrieve node info!");
 
-        assert_eq!(provider.url(), format!("http://127.0.0.1:4000/v1/graphql"));
         assert_eq!(node_info.utxo_validation, config.utxo_validation);
 
         Ok(())

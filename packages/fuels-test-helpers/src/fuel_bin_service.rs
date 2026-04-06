@@ -1,6 +1,7 @@
 use std::{
-    net::{IpAddr, SocketAddr},
+    net::SocketAddr,
     path::PathBuf,
+    process::Stdio,
     time::Duration,
 };
 
@@ -9,9 +10,14 @@ use fuel_core_client::client::FuelClient;
 use fuel_core_services::State;
 use fuel_core_types::blockchain::header::LATEST_STATE_TRANSITION_VERSION;
 use fuels_core::{error, types::errors::Result as FuelResult};
-use portpicker::{is_free, pick_unused_port};
 use tempfile::{TempDir, tempdir};
-use tokio::{process::Command, spawn, task::JoinHandle, time::sleep};
+use tokio::{
+    io::{AsyncBufReadExt, BufReader},
+    process::Command,
+    spawn,
+    task::JoinHandle,
+    time::sleep,
+};
 
 use crate::node_types::{DbType, NodeConfig, Trigger};
 
@@ -25,13 +31,12 @@ pub(crate) struct ExtendedConfig {
 
 impl ExtendedConfig {
     pub fn args_vec(&self) -> fuels_core::types::errors::Result<Vec<String>> {
-        let port = self.node_config.addr.port().to_string();
         let mut args = vec![
             "run".to_string(),
             "--ip".to_string(),
             "127.0.0.1".to_string(),
             "--port".to_string(),
-            port,
+            "0".to_string(),
             "--snapshot".to_string(),
             self.snapshot_dir
                 .path()
@@ -134,24 +139,6 @@ impl FuelService {
         chain_config: ChainConfig,
         state_config: StateConfig,
     ) -> FuelResult<Self> {
-        let requested_port = node_config.addr.port();
-
-        let bound_address = match requested_port {
-            0 => get_socket_address()?,
-            _ if is_free(requested_port) => node_config.addr,
-            _ => {
-                return Err(error!(
-                    IO,
-                    "could not find a free port to start a fuel node"
-                ));
-            }
-        };
-
-        let node_config = NodeConfig {
-            addr: bound_address,
-            ..node_config
-        };
-
         let extended_config = ExtendedConfig {
             node_config,
             state_config,
@@ -159,9 +146,8 @@ impl FuelService {
             snapshot_dir: tempdir()?,
         };
 
-        let addr = extended_config.node_config.addr;
-        let handle = run_node(extended_config).await?;
-        server_health_check(addr).await?;
+        let (bound_address, handle) = run_node(extended_config).await?;
+        server_health_check(bound_address).await?;
 
         Ok(FuelService {
             bound_address,
@@ -195,14 +181,9 @@ async fn server_health_check(address: SocketAddr) -> FuelResult<()> {
     Ok(())
 }
 
-fn get_socket_address() -> FuelResult<SocketAddr> {
-    let free_port = pick_unused_port().ok_or(error!(Other, "could not pick a free port"))?;
-    let address: IpAddr = "127.0.0.1".parse().expect("is valid ip");
-
-    Ok(SocketAddr::new(address, free_port))
-}
-
-async fn run_node(extended_config: ExtendedConfig) -> FuelResult<JoinHandle<()>> {
+async fn run_node(
+    extended_config: ExtendedConfig,
+) -> FuelResult<(SocketAddr, JoinHandle<()>)> {
     let args = extended_config.args_vec()?;
     let tempdir = extended_config.write_temp_snapshot_files()?;
 
@@ -223,21 +204,71 @@ async fn run_node(extended_config: ExtendedConfig) -> FuelResult<JoinHandle<()>>
         );
     }
 
-    let mut command = Command::new(path);
-    let running_node = command.args(args).kill_on_drop(true).env_clear().output();
+    let mut child = Command::new(path)
+        .args(args)
+        .kill_on_drop(true)
+        .env_clear()
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|e| error!(Other, "could not spawn `{binary_name}`: {e}"))?;
+
+    let stderr = child.stderr.take().expect("stderr is piped");
+    let mut stderr_reader = BufReader::new(stderr).lines();
+
+    let bound_address = tokio::time::timeout(Duration::from_secs(30), async {
+        while let Some(line) = stderr_reader
+            .next_line()
+            .await
+            .map_err(|e| error!(Other, "failed to read fuel-core stderr: {e}"))?
+        {
+            if let Some(addr_str) = line
+                .find("Binding GraphQL provider to ")
+                .map(|i| &line[i + "Binding GraphQL provider to ".len()..])
+            {
+                let bound_address: SocketAddr = addr_str.parse().map_err(|e| {
+                    error!(
+                        Other,
+                        "failed to parse bound address '{addr_str}': {e}"
+                    )
+                })?;
+                return Ok(bound_address);
+            }
+        }
+        Err(error!(
+            Other,
+            "fuel-core process exited before reporting its bound address"
+        ))
+    })
+    .await
+    .map_err(|_| {
+        error!(
+            Other,
+            "timed out waiting for fuel-core to report its bound address"
+        )
+    })??;
 
     let join_handle = spawn(async move {
         // ensure drop is not called on the tmp dir and it lives throughout the lifetime of the node
         let _unused = tempdir;
-        let result = running_node
+
+        // Buffer all stderr output and dump at once when the process exits
+        let mut logs = Vec::new();
+        while let Ok(Some(line)) = stderr_reader.next_line().await {
+            logs.push(line);
+        }
+
+        let status = child
+            .wait()
             .await
-            .expect("error: could not find `fuel-core` in PATH`");
-        let stdout = String::from_utf8_lossy(&result.stdout);
-        let stderr = String::from_utf8_lossy(&result.stderr);
-        eprintln!(
-            "the exit status from the fuel binary was: {result:?}, stdout: {stdout}, stderr: {stderr}"
-        );
+            .expect("error: could not wait for `fuel-core` process");
+
+        eprintln!("--- fuel-core logs (exit status: {status}) ---");
+        for line in &logs {
+            eprintln!("{line}");
+        }
+        eprintln!("--- end fuel-core logs ---");
     });
 
-    Ok(join_handle)
+    Ok((bound_address, join_handle))
 }
