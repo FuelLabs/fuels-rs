@@ -214,7 +214,9 @@ async fn run_node(
         .spawn()
         .map_err(|e| error!(Other, "could not spawn `{binary_name}`: {e}"))?;
 
+    let stdout = child.stdout.take().expect("stdout is piped");
     let stderr = child.stderr.take().expect("stderr is piped");
+    let mut stdout_reader = BufReader::new(stdout).lines();
     let mut stderr_reader = BufReader::new(stderr).lines();
 
     let bound_address = tokio::time::timeout(Duration::from_secs(30), async {
@@ -253,10 +255,14 @@ async fn run_node(
         // ensure drop is not called on the tmp dir and it lives throughout the lifetime of the node
         let _unused = tempdir;
 
-        // Buffer all stderr output and dump at once when the process exits
-        let mut logs = Vec::new();
+        // Buffer all output and dump at once when the process exits
+        let mut stderr_logs = Vec::new();
         while let Ok(Some(line)) = stderr_reader.next_line().await {
-            logs.push(line);
+            stderr_logs.push(line);
+        }
+        let mut stdout_logs = Vec::new();
+        while let Ok(Some(line)) = stdout_reader.next_line().await {
+            stdout_logs.push(line);
         }
 
         let status = child
@@ -265,8 +271,11 @@ async fn run_node(
             .expect("error: could not wait for `fuel-core` process");
 
         eprintln!("--- fuel-core logs (exit status: {status}) ---");
-        for line in &logs {
-            eprintln!("{line}");
+        for line in &stdout_logs {
+            eprintln!("[stdout] {line}");
+        }
+        for line in &stderr_logs {
+            eprintln!("[stderr] {line}");
         }
         eprintln!("--- end fuel-core logs ---");
     });
