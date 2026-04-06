@@ -528,6 +528,34 @@ where
         self.get_response(tx_status)
     }
 
+    /// Call contract methods on the node, in a simulated manner, meaning the state of the
+    /// blockchain is *not* modified but simulated.
+    pub async fn simulate_vec<T: Tokenizable + Debug>(
+        &mut self,
+        Execution {
+            execution_type,
+            at_height,
+        }: Execution,
+    ) -> Result<CallResponse<Vec<T>>> {
+        let provider = self.account.try_provider()?;
+
+        let tx_status = if let ExecutionType::StateReadOnly = execution_type {
+            let tx = self
+                .transaction_builder()
+                .await?
+                .with_build_strategy(ScriptBuildStrategy::StateReadOnly)
+                .build(provider)
+                .await?;
+
+            provider.dry_run_opt(tx, false, Some(0), at_height).await?
+        } else {
+            let tx = self.build_tx().await?;
+            provider.dry_run_opt(tx, true, None, at_height).await?
+        };
+
+        self.get_response_vec(tx_status)
+    }
+
     /// Simulates a call without needing to resolve the generic for the return type
     async fn simulate_without_decode(&self) -> Result<()> {
         let provider = self.account.try_provider()?;
@@ -556,6 +584,31 @@ where
 
         Ok(CallResponse {
             value: T::from_token(tokens_as_tuple)?,
+            log_decoder: self.log_decoder.clone(),
+            tx_id: self.cached_tx_id,
+            tx_status: success,
+        })
+    }
+
+    /// Create a [`CallResponse`] from `TxStatus` returning a Vec of values.
+    pub fn get_response_vec<T: Tokenizable + Debug>(
+        &self,
+        tx_status: TxStatus,
+    ) -> Result<CallResponse<Vec<T>>> {
+        let success = tx_status.take_success_checked(Some(&self.log_decoder))?;
+        let mut receipt_parser = ReceiptParser::new(&success.receipts, self.decoder_config);
+
+        let values = self
+            .call
+            .iter()
+            .map(|call| {
+                let token = receipt_parser.parse_call(call.contract_id, &call.output_param)?;
+                T::from_token(token)
+            })
+            .collect::<Result<Vec<_>>>()?;
+
+        Ok(CallResponse {
+            value: values,
             log_decoder: self.log_decoder.clone(),
             tx_id: self.cached_tx_id,
             tx_status: success,

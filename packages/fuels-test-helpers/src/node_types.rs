@@ -1,8 +1,4 @@
-use std::{
-    net::{Ipv4Addr, SocketAddr},
-    path::PathBuf,
-    time::Duration,
-};
+use std::{path::PathBuf, time::Duration};
 
 pub use fuel_core_chain_config::{ChainConfig, StateConfig};
 
@@ -44,7 +40,6 @@ impl From<DbType> for fuel_core::service::DbType {
 
 #[derive(Clone, Debug)]
 pub struct NodeConfig {
-    pub addr: SocketAddr,
     pub max_database_cache_size: Option<usize>,
     pub database_type: DbType,
     pub utxo_validation: bool,
@@ -60,7 +55,6 @@ pub struct NodeConfig {
 impl Default for NodeConfig {
     fn default() -> Self {
         Self {
-            addr: SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 0),
             max_database_cache_size: None,
             database_type: DbType::InMemory,
             utxo_validation: true,

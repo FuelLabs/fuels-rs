@@ -25,7 +25,6 @@ fuel-types = { workspace = true, features = ["random"] }
 fuels-accounts = { workspace = true, optional = true }
 fuels-core = { workspace = true }
 futures = { workspace = true }
-portpicker = { workspace = true }
 rand = { workspace = true, default-features = false }
 tempfile = { workspace = true, default-features = false }
 tokio = { workspace = true, default-features = false }
