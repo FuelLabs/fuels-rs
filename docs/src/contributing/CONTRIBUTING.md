@@ -2,7 +2,7 @@
 
 Thanks for your interest in contributing to the Fuel Rust SDK!
 
-This document outlines the process for installing dependencies, setting up for development, and conventions for contributing.`
+This document outlines the process for installing dependencies, setting up for development, and conventions for contributing.
 
 If you run into any difficulties getting started, you can always ask questions on our [Discourse](https://forum.fuel.network/).
 
