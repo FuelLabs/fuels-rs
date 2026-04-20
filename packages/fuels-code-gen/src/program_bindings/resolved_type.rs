@@ -1,8 +1,11 @@
-use std::fmt::{Display, Formatter};
+use std::{
+    fmt::{Display, Formatter},
+    rc::Rc,
+};
 
 use fuel_abi_types::{
     abi::full_program::FullTypeApplication,
-    utils::{self, extract_array_len, extract_generic_name, extract_str_len, has_tuple_format},
+    utils::{self, extract_array_len, extract_str_len, has_tuple_format},
 };
 use proc_macro2::{Ident, TokenStream};
 use quote::{ToTokens, quote};
@@ -44,6 +47,10 @@ pub enum ResolvedType {
     Array(Box<ResolvedType>, usize),
     Tuple(Vec<ResolvedType>),
     Generic(GenericType),
+    Alias {
+        path: TypePath,
+        target: Rc<ResolvedType>,
+    },
 }
 
 impl ResolvedType {
@@ -57,6 +64,7 @@ impl ResolvedType {
             }
             ResolvedType::Array(el, _) => el.generics(),
             ResolvedType::Generic(inner) => vec![inner.clone()],
+            ResolvedType::Alias { target, .. } => target.generics(),
             _ => vec![],
         }
     }
@@ -82,6 +90,10 @@ impl ToTokens for ResolvedType {
                 quote! { (#(#elements,)*) }
             }
             ResolvedType::Generic(generic_type) => generic_type.into_token_stream(),
+            ResolvedType::Alias { path, .. } => {
+                path.to_token_stream()
+                // target.as_ref().into_token_stream()
+            }
         };
 
         tokens.extend(tokenized)
@@ -122,6 +134,7 @@ impl TypeResolver {
             Self::try_as_tuple,
             Self::try_as_raw_slice,
             Self::try_as_custom_type,
+            Self::try_as_alias_type,
         ];
 
         for resolver in resolvers {
@@ -148,7 +161,9 @@ impl TypeResolver {
         &self,
         type_application: &FullTypeApplication,
     ) -> Result<Option<ResolvedType>> {
-        let Some(name) = extract_generic_name(&type_application.type_decl.type_field) else {
+        let type_decl = &type_application.type_decl;
+
+        let Some(name) = type_decl.generic_name() else {
             return Ok(None);
         };
 
@@ -301,6 +316,33 @@ impl TypeResolver {
             path: used_path,
             generics,
         }))
+    }
+
+    fn try_as_alias_type(
+        &self,
+        type_application: &FullTypeApplication,
+    ) -> Result<Option<ResolvedType>> {
+        let type_decl = &type_application.type_decl;
+
+        if !type_decl.is_alias_type() {
+            return Ok(None);
+        }
+
+        let Some(alias_of) = &type_decl.alias_of else {
+            return Ok(None);
+        };
+
+        let target = Rc::new(self.resolve(alias_of.as_ref())?);
+
+        let path = if let Ok(custom_type_path) = type_decl.custom_type_path() {
+            custom_type_path
+        } else {
+            type_decl.alias_type_path()?
+        };
+
+        let path = path.relative_path_from(&self.current_mod);
+
+        Ok(Some(ResolvedType::Alias { path, target }))
     }
 }
 
