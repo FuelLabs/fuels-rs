@@ -50,6 +50,45 @@ async fn test_multiple_args() -> Result<()> {
 }
 
 #[tokio::test]
+async fn contract_deployment_with_salt() {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Contract(
+            name = "TestContract",
+            project = "e2e/sway/contracts/contract_test"
+        )),
+        Deploy(
+            name = "contract_instance_1",
+            contract = "TestContract",
+            wallet = "wallet",
+            random_salt = false,
+        ),
+        Deploy(
+            name = "contract_instance_2",
+            contract = "TestContract",
+            wallet = "wallet",
+            random_salt = false,
+        ),
+        Deploy(
+            name = "contract_instance_3",
+            contract = "TestContract",
+            wallet = "wallet",
+            random_salt = true,
+        ),
+    );
+
+    assert_eq!(
+        contract_instance_1.contract_id(),
+        contract_instance_2.contract_id()
+    );
+
+    assert_ne!(
+        contract_instance_1.contract_id(),
+        contract_instance_3.contract_id()
+    );
+}
+
+#[tokio::test]
 async fn test_contract_calling_contract() -> Result<()> {
     // Tests a contract call that calls another contract (FooCaller calls FooContract underneath)
     setup_program_test!(
