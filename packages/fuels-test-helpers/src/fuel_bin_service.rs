@@ -212,7 +212,9 @@ async fn run_node(extended_config: ExtendedConfig) -> FuelResult<(SocketAddr, Jo
     let mut stdout_reader = BufReader::new(stdout).lines();
     let mut stderr_reader = BufReader::new(stderr).lines();
 
-    let bound_address = tokio::time::timeout(Duration::from_secs(30), async {
+    let mut startup_logs = Vec::new();
+
+    let scan_result = tokio::time::timeout(Duration::from_secs(30), async {
         while let Some(line) = stderr_reader
             .next_line()
             .await
@@ -227,19 +229,39 @@ async fn run_node(extended_config: ExtendedConfig) -> FuelResult<(SocketAddr, Jo
                 })?;
                 return Ok(bound_address);
             }
+            startup_logs.push(format!("[stderr] {line}"));
         }
+
+        // The process exited (or closed stderr) before reporting its bound
+        // address, so stdout is at EOF too — drain it for additional messages.
+        while let Ok(Some(line)) = stdout_reader.next_line().await {
+            startup_logs.push(format!("[stdout] {line}"));
+        }
+
         Err(error!(
             Other,
             "fuel-core process exited before reporting its bound address"
         ))
     })
-    .await
-    .map_err(|_| {
-        error!(
-            Other,
-            "timed out waiting for fuel-core to report its bound address"
-        )
-    })??;
+    .await;
+
+    let bound_address = match scan_result {
+        Ok(Ok(bound_address)) => bound_address,
+        Ok(Err(e)) => {
+            return Err(error!(
+                Other,
+                "{e}. captured output:\n{}",
+                startup_logs.join("\n")
+            ));
+        }
+        Err(_elapsed) => {
+            return Err(error!(
+                Other,
+                "timed out waiting for fuel-core to report its bound address. captured output:\n{}",
+                startup_logs.join("\n")
+            ));
+        }
+    };
 
     let join_handle = spawn(async move {
         // ensure drop is not called on the tmp dir and it lives throughout the lifetime of the node
