@@ -16,6 +16,7 @@ pub enum Input {
         resource: CoinType,
         code: Vec<u8>,
         data: Vec<u8>,
+        gas_used: u64,
     },
     Contract {
         utxo_id: UtxoId,
@@ -36,6 +37,21 @@ impl Input {
             resource,
             code,
             data,
+            gas_used: 0,
+        }
+    }
+
+    pub const fn resource_predicate_with_gas(
+        resource: CoinType,
+        code: Vec<u8>,
+        data: Vec<u8>,
+        gas_used: u64,
+    ) -> Self {
+        Self::ResourcePredicate {
+            resource,
+            code,
+            data,
+            gas_used,
         }
     }
 
