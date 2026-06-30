@@ -21,12 +21,14 @@ trait Clock {
 #[derive(Debug, Clone)]
 pub struct TtlConfig {
     pub consensus_parameters: Duration,
+    pub node_info: Duration,
 }
 
 impl Default for TtlConfig {
     fn default() -> Self {
         TtlConfig {
             consensus_parameters: Duration::from_secs(60),
+            node_info: Duration::from_secs(60),
         }
     }
 }
@@ -90,6 +92,7 @@ where
 {
     pub async fn clear(&self) {
         *self.cached_consensus_params.write().await = None;
+        *self.cached_node_info.write().await = None;
     }
 }
 
@@ -128,8 +131,7 @@ where
     }
 
     async fn node_info(&self) -> Result<NodeInfo> {
-        // must borrow from consensus_parameters to keep the change non-breaking
-        let ttl = self.ttl_config.consensus_parameters;
+        let ttl = self.ttl_config.node_info;
         {
             let read_lock = self.cached_node_info.read().await;
             if let Some(entry) = read_lock.as_ref()
@@ -214,6 +216,7 @@ mod tests {
             api,
             TtlConfig {
                 consensus_parameters: Duration::from_secs(10),
+                node_info: Duration::from_secs(10),
             },
             TestClock::default(),
         );
@@ -259,6 +262,7 @@ mod tests {
             api,
             TtlConfig {
                 consensus_parameters: Duration::from_secs(10),
+                node_info: Duration::from_secs(10),
             },
             clock.clone(),
         );
@@ -362,6 +366,7 @@ mod tests {
             api,
             TtlConfig {
                 consensus_parameters: Duration::from_secs(10),
+                node_info: Duration::from_secs(10),
             },
             TestClock::default(),
         );
@@ -405,6 +410,7 @@ mod tests {
             api,
             TtlConfig {
                 consensus_parameters: Duration::from_secs(10),
+                node_info: Duration::from_secs(10),
             },
             clock.clone(),
         );
