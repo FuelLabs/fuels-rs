@@ -6,12 +6,14 @@ mod tests {
 
     use fuels::{
         accounts::predicate::Predicate,
-        core::{codec::ABIEncoder, traits::Tokenizable},
+        core::{
+            codec::{ABIEncoder, ABIFormatter},
+            traits::Tokenizable,
+        },
         macros::wasm_abigen,
         programs::debug::ScriptType,
         types::{AssetId, bech32::Bech32Address, errors::Result},
     };
-    use fuels_core::codec::abi_formatter::ABIFormatter;
     use wasm_bindgen_test::wasm_bindgen_test;
 
     #[wasm_bindgen_test]
@@ -429,7 +431,7 @@ mod tests {
         assert_eq!(
             decoder.decode_fn_args(
                 &call_description.decode_fn_selector().unwrap(),
-                &call_description.encoded_args
+                call_description.encoded_args.as_slice()
             )?,
             vec!["AllStruct { some_struct: SomeStruct { field: 2, field_2: true } }"]
         );
@@ -448,7 +450,7 @@ mod tests {
         assert_eq!(
             decoder.decode_fn_args(
                 &call_description.decode_fn_selector().unwrap(),
-                &call_description.encoded_args
+                call_description.encoded_args.as_slice()
             )?,
             vec![
                 "AllStruct { some_struct: SomeStruct { field: 2, field_2: true } }",
