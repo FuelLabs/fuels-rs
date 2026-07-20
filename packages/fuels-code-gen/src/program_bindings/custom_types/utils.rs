@@ -1,6 +1,6 @@
 use fuel_abi_types::{
     abi::full_program::FullTypeDeclaration,
-    utils::{self, extract_generic_name},
+    utils::{self},
 };
 use proc_macro2::Ident;
 
@@ -11,7 +11,7 @@ pub(crate) fn extract_generic_parameters(type_decl: &FullTypeDeclaration) -> Vec
         .type_parameters
         .iter()
         .map(|decl| {
-            let name = extract_generic_name(&decl.type_field).unwrap_or_else(|| {
+            let name = decl.generic_name().unwrap_or_else(|| {
                 panic!("Type parameters should only contain ids of generic types!")
             });
             utils::ident(&name)

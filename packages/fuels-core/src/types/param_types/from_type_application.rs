@@ -2,7 +2,7 @@ use std::{collections::HashMap, iter::zip};
 
 use fuel_abi_types::{
     abi::unified_program::{UnifiedTypeApplication, UnifiedTypeDeclaration},
-    utils::{extract_array_len, extract_generic_name, extract_str_len, has_tuple_format},
+    utils::{extract_array_len, extract_str_len, has_tuple_format},
 };
 
 use crate::types::{
@@ -61,7 +61,7 @@ impl Type {
             )
         })?;
 
-        if extract_generic_name(&type_declaration.type_field).is_some() {
+        if type_declaration.generic_name().is_some() {
             let (_, generic_type) = parent_generic_params
                 .iter()
                 .find(|(id, _)| *id == type_application.type_id)
