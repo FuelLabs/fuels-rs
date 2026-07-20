@@ -49,6 +49,7 @@ pub struct CallHandler<A, C, T> {
     cached_tx_id: Option<Bytes32>,
     variable_output_policy: VariableOutputPolicy,
     unresolved_signers: Vec<Arc<dyn Signer + Send + Sync>>,
+    max_fee_estimation_tolerance: f32,
 }
 
 impl<A, C, T> CallHandler<A, C, T> {
@@ -83,6 +84,17 @@ impl<A, C, T> CallHandler<A, C, T> {
 
     pub fn add_signer(mut self, signer: impl Signer + Send + Sync + 'static) -> Self {
         self.unresolved_signers.push(Arc::new(signer));
+        self
+    }
+
+    /// Sets the max fee estimation tolerance for a given transaction.
+    /// This tolerance is used as a buffer when estimating the maximum fee.
+    /// Note that this is a builder method, i.e. use it as a chain:
+    /// ```ignore
+    /// my_contract_instance.my_method(...).with_max_fee_estimation_tolerance(0.25).call()
+    /// ```
+    pub fn with_max_fee_estimation_tolerance(mut self, max_fee_estimation_tolerance: f32) -> Self {
+        self.max_fee_estimation_tolerance = max_fee_estimation_tolerance;
         self
     }
 }
@@ -123,6 +135,7 @@ where
             consensus_parameters,
             asset_inputs,
             &self.account,
+            self.max_fee_estimation_tolerance,
         )?;
 
         tb.add_signers(&self.unresolved_signers)?;
@@ -317,6 +330,7 @@ where
             cached_tx_id: None,
             variable_output_policy: VariableOutputPolicy::default(),
             unresolved_signers: vec![],
+            max_fee_estimation_tolerance: crate::DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE,
         }
     }
 
@@ -405,6 +419,7 @@ where
             cached_tx_id: None,
             variable_output_policy: VariableOutputPolicy::default(),
             unresolved_signers: vec![],
+            max_fee_estimation_tolerance: crate::DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE,
         }
     }
 
@@ -438,6 +453,7 @@ where
             cached_tx_id: None,
             variable_output_policy: VariableOutputPolicy::default(),
             unresolved_signers: vec![],
+            max_fee_estimation_tolerance: crate::DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE,
         }
     }
 
