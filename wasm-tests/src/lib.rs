@@ -9,9 +9,9 @@ mod tests {
         core::{codec::ABIEncoder, traits::Tokenizable},
         macros::wasm_abigen,
         programs::debug::ScriptType,
-        types::{AssetId, bech32::Bech32Address, errors::Result},
+        types::{Address, AssetId, errors::Result},
     };
-    use fuels_core::codec::abi_formatter::ABIFormatter;
+    use fuels_core::codec::ABIFormatter;
     use wasm_bindgen_test::wasm_bindgen_test;
 
     #[wasm_bindgen_test]
@@ -206,11 +206,11 @@ mod tests {
 
         assert_eq!(*predicate.code(), expected_code);
 
-        let expected_address = Bech32Address::from_str(
-            "fuel1c7rzx6ljxdz8egkcfjswffe7w8u06rm4nfvyu4lelyjua7qlcmdss9jkjm",
+        let expected_address = Address::from_str(
+            "0xc786236bf233447ca2d84ca0e4a73e71f8fd0f759a584e57f9f925cef81fc6db",
         )?;
 
-        assert_eq!(*predicate.address(), expected_address);
+        assert_eq!(predicate.address(), expected_address);
 
         Ok(())
     }
@@ -429,7 +429,7 @@ mod tests {
         assert_eq!(
             decoder.decode_fn_args(
                 &call_description.decode_fn_selector().unwrap(),
-                &call_description.encoded_args
+                call_description.encoded_args.as_slice()
             )?,
             vec!["AllStruct { some_struct: SomeStruct { field: 2, field_2: true } }"]
         );
@@ -448,7 +448,7 @@ mod tests {
         assert_eq!(
             decoder.decode_fn_args(
                 &call_description.decode_fn_selector().unwrap(),
-                &call_description.encoded_args
+                call_description.encoded_args.as_slice()
             )?,
             vec![
                 "AllStruct { some_struct: SomeStruct { field: 2, field_2: true } }",
