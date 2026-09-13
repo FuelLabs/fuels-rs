@@ -21,7 +21,7 @@ async fn main_function_arguments() -> Result<()> {
     // The abigen is used for the same purpose as with contracts (Rust bindings)
     abigen!(Script(
         name = "MyScript",
-        abi = "e2e/sway/scripts/arguments/out/release/arguments-abi.json"
+        abi = "../sway/scripts/arguments/out/release/arguments-abi.json"
     ));
     let wallet = launch_provider_and_get_wallet().await?;
     let bin_path = "sway/scripts/arguments/out/release/arguments.bin";
@@ -336,7 +336,7 @@ async fn test_script_transaction_builder() -> Result<()> {
 async fn script_encoder_config_is_applied() {
     abigen!(Script(
         name = "MyScript",
-        abi = "e2e/sway/scripts/basic_script/out/release/basic_script-abi.json"
+        abi = "../sway/scripts/basic_script/out/release/basic_script-abi.json"
     ));
     let wallet = launch_provider_and_get_wallet().await.expect("");
     let bin_path = "sway/scripts/basic_script/out/release/basic_script.bin";
@@ -412,7 +412,7 @@ async fn simulations_can_be_made_without_coins() -> Result<()> {
 #[tokio::test]
 async fn can_be_run_in_blobs_builder() -> Result<()> {
     abigen!(Script(
-        abi = "e2e/sway/scripts/script_blobs/out/release/script_blobs-abi.json",
+        abi = "../sway/scripts/script_blobs/out/release/script_blobs-abi.json",
         name = "MyScript"
     ));
 
@@ -631,7 +631,7 @@ async fn loader_script_calling_loader_proxy() -> Result<()> {
 #[tokio::test]
 async fn loader_can_be_presented_as_a_normal_script_with_shifted_configurables() -> Result<()> {
     abigen!(Script(
-        abi = "e2e/sway/scripts/script_blobs/out/release/script_blobs-abi.json",
+        abi = "../sway/scripts/script_blobs/out/release/script_blobs-abi.json",
         name = "MyScript"
     ));
 
@@ -691,7 +691,7 @@ async fn loader_can_be_presented_as_a_normal_script_with_shifted_configurables()
 async fn script_call_respects_maturity_and_expiration() -> Result<()> {
     abigen!(Script(
         name = "MyScript",
-        abi = "e2e/sway/scripts/basic_script/out/release/basic_script-abi.json"
+        abi = "../sway/scripts/basic_script/out/release/basic_script-abi.json"
     ));
     let wallet = launch_provider_and_get_wallet().await.expect("");
     let provider = wallet.provider().clone();
@@ -747,7 +747,7 @@ async fn script_tx_input_output() -> Result<()> {
 
     abigen!(Script(
         name = "TxScript",
-        abi = "e2e/sway/scripts/script_tx_input_output/out/release/script_tx_input_output-abi.json"
+        abi = "../sway/scripts/script_tx_input_output/out/release/script_tx_input_output-abi.json"
     ));
     let script_binary =
         "sway/scripts/script_tx_input_output/out/release/script_tx_input_output.bin";

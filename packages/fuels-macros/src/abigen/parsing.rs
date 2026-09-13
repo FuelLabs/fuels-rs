@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use fuels_code_gen::{Abi, AbigenTarget, ProgramType};
 use syn::{
     LitStr, Result,
@@ -71,7 +73,22 @@ impl MacroAbigenTarget {
         if abi_str.starts_with('{') || abi_str.starts_with('[') || abi_str.starts_with('\n') {
             abi_str.parse()
         } else {
-            Abi::load_from(abi_str)
+            let path = Path::new(abi_str);
+            if path.is_absolute() {
+                Abi::load_from(path)
+            } else {
+                let source_file = abi_lit_str.span().unwrap().local_file().ok_or_else(|| {
+                    syn::Error::new(
+                        abi_lit_str.span(),
+                        "cannot resolve relative ABI path without a source file; use an absolute path",
+                    )
+                })?;
+                let source_dir = source_file.parent().ok_or_else(|| {
+                    syn::Error::new(abi_lit_str.span(), "ABI source file has no parent directory")
+                })?;
+
+                Abi::load_from(source_dir.join(path))
+            }
         }
         .map_err(|e| syn::Error::new(abi_lit_str.span(), e.to_string()))
     }

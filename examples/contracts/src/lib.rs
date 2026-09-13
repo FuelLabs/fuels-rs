@@ -96,7 +96,7 @@ mod tests {
 
         abigen!(Contract(
             name = "MyContract",
-            abi = "e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
+            abi = "../../../e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
         ));
 
         let wallet = launch_provider_and_get_wallet().await?;
@@ -187,7 +187,7 @@ mod tests {
         // ANCHOR: abigen_example
         abigen!(Contract(
             name = "MyContract",
-            abi = "e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
+            abi = "../../../e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
         ));
         // ANCHOR_END: abigen_example
 
@@ -233,7 +233,7 @@ mod tests {
 
         abigen!(Contract(
             name = "MyContract",
-            abi = "e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
+            abi = "../../../e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
         ));
 
         let wallets =
@@ -284,7 +284,7 @@ mod tests {
         use fuels::prelude::*;
         abigen!(Contract(
             name = "MyContract",
-            abi = "e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
+            abi = "../../../e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
         ));
 
         let wallet = launch_provider_and_get_wallet().await?;
@@ -355,7 +355,7 @@ mod tests {
         use fuels::{prelude::*, types::SubAssetId};
         abigen!(Contract(
             name = "MyContract",
-            abi = "e2e/sway/contracts/token_ops/out/release/token_ops-abi.json"
+            abi = "../../../e2e/sway/contracts/token_ops/out/release/token_ops-abi.json"
         ));
 
         let temp_dir = tempfile::tempdir().expect("failed to make tempdir");
@@ -449,7 +449,7 @@ mod tests {
         use fuels::prelude::*;
         abigen!(Contract(
             name = "MyContract",
-            abi = "e2e/sway/contracts/lib_contract_caller/out/release/lib_contract_caller-abi.json"
+            abi = "../../../e2e/sway/contracts/lib_contract_caller/out/release/lib_contract_caller-abi.json"
         ));
 
         let wallet = launch_provider_and_get_wallet().await?;
@@ -524,7 +524,7 @@ mod tests {
         abigen!(Contract(
             name = "MyContract",
             // Replace with your contract ABI.json path
-            abi = "e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
+            abi = "../../../e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
         ));
         let wallet_original = launch_provider_and_get_wallet().await?;
 
@@ -544,7 +544,7 @@ mod tests {
         use fuels::prelude::*;
         abigen!(Contract(
             name = "MyContract",
-            abi = "e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
+            abi = "../../../e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
         ));
 
         let wallet = launch_provider_and_get_wallet().await?;
@@ -583,7 +583,7 @@ mod tests {
 
         abigen!(Contract(
             name = "MyContract",
-            abi = "e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
+            abi = "../../../e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
         ));
 
         let wallet = launch_provider_and_get_wallet().await?;
@@ -643,7 +643,7 @@ mod tests {
 
         abigen!(Contract(
             name = "MyContract",
-            abi = "e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
+            abi = "../../../e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
         ));
 
         let wallet = launch_provider_and_get_wallet().await?;
@@ -688,7 +688,7 @@ mod tests {
         use fuels::prelude::*;
         abigen!(Contract(
             name = "MyContract",
-            abi = "e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
+            abi = "../../../e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
         ));
 
         let config = WalletsConfig::new(Some(2), Some(1), Some(DEFAULT_COIN_AMOUNT));
@@ -991,7 +991,7 @@ mod tests {
 
         abigen!(Contract(
             name = "MyContract",
-            abi = "e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
+            abi = "../../../e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
         ));
 
         // ANCHOR: utxo_validation_off

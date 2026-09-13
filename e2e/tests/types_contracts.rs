@@ -59,7 +59,7 @@ async fn call_with_structs() -> Result<()> {
     // ANCHOR: struct_generation
     abigen!(Contract(
         name = "MyContract",
-        abi = "e2e/sway/types/contracts/complex_types_contract/out/release/complex_types_contract-abi.json"
+        abi = "../sway/types/contracts/complex_types_contract/out/release/complex_types_contract-abi.json"
     ));
 
     // Here we can use `CounterConfig`, a struct originally
@@ -225,7 +225,7 @@ async fn calls_with_empty_struct() -> Result<()> {
 async fn can_use_try_into_to_construct_struct_from_bytes() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
-        abi = "e2e/sway/types/contracts/enum_inside_struct/out/release\
+        abi = "../sway/types/contracts/enum_inside_struct/out/release\
         /enum_inside_struct-abi.json"
     ));
     let cocktail_in_bytes: Vec<u8> = vec![
@@ -726,7 +726,7 @@ async fn enum_as_input() -> Result<()> {
 async fn can_use_try_into_to_construct_enum_from_bytes() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
-        abi = "e2e/sway/types/contracts/enum_inside_struct/out/release\
+        abi = "../sway/types/contracts/enum_inside_struct/out/release\
         /enum_inside_struct-abi.json"
     ));
     let shaker_in_bytes: Vec<u8> = vec![0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 2];

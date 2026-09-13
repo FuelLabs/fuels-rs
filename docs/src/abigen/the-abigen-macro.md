@@ -18,6 +18,25 @@ where:
 <!-- abigen:example:end -->
 
 ---
+Relative ABI paths are resolved from the directory of the Rust source file
+containing the string literal. For example, `project/tests/harness.rs` can load
+`project/my-contract-abi.json` with `abi = "../my-contract-abi.json"`. Moving the
+package into or out of a workspace does not change this path. Absolute paths and
+inline JSON are also supported.
+
+When wrapping `abigen!` in another macro, a literal written inside the wrapper is
+relative to the wrapper's definition file. A literal passed into the wrapper is
+relative to the file where that literal was written. This differs from
+`include_str!`, which resolves from the outer macro invocation's file.
+`wasm_abigen!` follows the same ABI path rules as `abigen!`.
+
+Previously, relative ABI paths were resolved from the compiler's working
+directory. When upgrading, update each file path to be relative to the file
+containing its literal. Check every relative path, even if the code still
+compiles: if a file also exists at the new location, it will be used instead.
+There is no fallback to the working directory. Paths passed to
+`setup_program_test!` are unaffected.
+
 So, an `abigen!` which generates bindings for two contracts and one script looks like this:
 
 ```rust,ignore

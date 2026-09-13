@@ -10,11 +10,8 @@ mod tests {
         {
             // ANCHOR: use_abigen
             use fuels::prelude::*;
-            // Replace with your own JSON abi path (relative to the root of your crate)
-            abigen!(Contract(
-                name = "MyContractName",
-                abi = "examples/rust_bindings/src/abi.json"
-            ));
+            // Replace with your own JSON ABI path, relative to this source file.
+            abigen!(Contract(name = "MyContractName", abi = "abi.json"));
             // ANCHOR_END: use_abigen
         }
 

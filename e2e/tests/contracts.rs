@@ -768,7 +768,7 @@ async fn setup_output_variable_estimation_test()
 async fn test_output_variable_estimation() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
-        abi = "e2e/sway/contracts/token_ops/out/release/token_ops-abi.json"
+        abi = "../sway/contracts/token_ops/out/release/token_ops-abi.json"
     ));
 
     let (wallets, addresses, mint_asset_id, contract_id) =
@@ -812,7 +812,7 @@ async fn test_output_variable_estimation() -> Result<()> {
 async fn test_output_variable_estimation_multicall() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
-        abi = "e2e/sway/contracts/token_ops/out/release/token_ops-abi.json"
+        abi = "../sway/contracts/token_ops/out/release/token_ops-abi.json"
     ));
 
     let (wallets, addresses, mint_asset_id, contract_id) =
@@ -1261,7 +1261,7 @@ async fn multi_call_from_calls_with_different_account_types() -> Result<()> {
 
     abigen!(Contract(
         name = "MyContract",
-        abi = "e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
+        abi = "../sway/contracts/contract_test/out/release/contract_test-abi.json"
     ));
 
     let wallet = launch_provider_and_get_wallet().await?;
@@ -2039,7 +2039,7 @@ async fn setup_node_with_high_price_historical_execution()
 async fn simulations_can_be_made_without_coins() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
-        abi = "e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
+        abi = "../sway/contracts/contract_test/out/release/contract_test-abi.json"
     ));
 
     let wallet = setup_node_with_high_price().await?.pop().unwrap();
@@ -2122,7 +2122,7 @@ async fn simulations_can_be_made_at_specific_block_height() -> Result<()> {
 async fn simulations_can_be_made_without_coins_multicall() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
-        abi = "e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
+        abi = "../sway/contracts/contract_test/out/release/contract_test-abi.json"
     ));
 
     let wallet = setup_node_with_high_price().await?.pop().unwrap();
@@ -2165,7 +2165,7 @@ async fn contract_call_with_non_zero_base_asset_id_and_tip() -> Result<()> {
 
     abigen!(Contract(
         name = "MyContract",
-        abi = "e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
+        abi = "../sway/contracts/contract_test/out/release/contract_test-abi.json"
     ));
 
     let asset_id = AssetId::new([1; 32]);
@@ -2339,7 +2339,7 @@ async fn max_fee_estimation_respects_tolerance() -> Result<()> {
 async fn blob_contract_deployment() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
-        abi = "e2e/sway/contracts/huge_contract/out/release/huge_contract-abi.json"
+        abi = "../sway/contracts/huge_contract/out/release/huge_contract-abi.json"
     ));
 
     let contract_binary = "sway/contracts/huge_contract/out/release/huge_contract.bin";
@@ -2523,11 +2523,11 @@ async fn loader_works_via_proxy() -> Result<()> {
     abigen!(
         Contract(
             name = "MyContract",
-            abi = "e2e/sway/contracts/huge_contract/out/release/huge_contract-abi.json"
+            abi = "../sway/contracts/huge_contract/out/release/huge_contract-abi.json"
         ),
         Contract(
             name = "MyProxy",
-            abi = "e2e/sway/contracts/proxy/out/release/proxy-abi.json"
+            abi = "../sway/contracts/proxy/out/release/proxy-abi.json"
         )
     );
 
@@ -2575,11 +2575,11 @@ async fn loader_storage_works_via_proxy() -> Result<()> {
     abigen!(
         Contract(
             name = "MyContract",
-            abi = "e2e/sway/contracts/huge_contract/out/release/huge_contract-abi.json"
+            abi = "../sway/contracts/huge_contract/out/release/huge_contract-abi.json"
         ),
         Contract(
             name = "MyProxy",
-            abi = "e2e/sway/contracts/proxy/out/release/proxy-abi.json"
+            abi = "../sway/contracts/proxy/out/release/proxy-abi.json"
         )
     );
 
@@ -2681,7 +2681,7 @@ async fn tx_input_output() -> Result<()> {
 
     abigen!(Contract(
         name = "TxContract",
-        abi = "e2e/sway/contracts/tx_input_output/out/release/tx_input_output-abi.json"
+        abi = "../sway/contracts/tx_input_output/out/release/tx_input_output-abi.json"
     ));
     let contract_binary = "sway/contracts/tx_input_output/out/release/tx_input_output.bin";
 
@@ -2765,7 +2765,7 @@ async fn multicall_tx_input_output() -> Result<()> {
 
     abigen!(Contract(
         name = "TxContract",
-        abi = "e2e/sway/contracts/tx_input_output/out/release/tx_input_output-abi.json"
+        abi = "../sway/contracts/tx_input_output/out/release/tx_input_output-abi.json"
     ));
     let contract_binary = "sway/contracts/tx_input_output/out/release/tx_input_output.bin";
 
@@ -2882,7 +2882,7 @@ async fn multicall_tx_input_output() -> Result<()> {
 async fn test_returned_method_descriptors_are_valid() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
-        abi = "e2e/sway/contracts/token_ops/out/release/token_ops-abi.json"
+        abi = "../sway/contracts/token_ops/out/release/token_ops-abi.json"
     ));
 
     assert_eq!(

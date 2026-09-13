@@ -4,7 +4,7 @@ use fuels::{core::traits::Tokenizable, prelude::*, types::Token};
 async fn create_struct_from_decoded_tokens() -> Result<()> {
     abigen!(Contract(
         name = "SimpleContract",
-        abi = "e2e/sway/types/contracts/nested_structs/out/release/nested_structs-abi.json"
+        abi = "../sway/types/contracts/nested_structs/out/release/nested_structs-abi.json"
     ));
 
     let u32_token = Token::U32(10);
@@ -21,7 +21,7 @@ async fn create_struct_from_decoded_tokens() -> Result<()> {
 async fn create_nested_struct_from_decoded_tokens() -> Result<()> {
     abigen!(Contract(
         name = "SimpleContract",
-        abi = "e2e/sway/types/contracts/nested_structs/out/release/nested_structs-abi.json"
+        abi = "../sway/types/contracts/nested_structs/out/release/nested_structs-abi.json"
     ));
 
     let u32_token = Token::U32(10);
