@@ -38,7 +38,30 @@ See [the `fuels-rs` book](https://fuellabs.github.io/fuels-rs/latest/)
 
 ### How can I run the SDK tests?
 
-First, build the test projects using `forc`:
+First, use the same `forc` as CI for your checkout. Check the `env` section and the `Install forc and forc-fmt` step in [`.github/workflows/ci.yml`](.github/workflows/ci.yml):
+
+- If `FORC_PATCH_BRANCH` is nonempty, install from that Sway branch (replace `BRANCH_FROM_CI` with its value):
+
+  ```shell
+  cargo install --locked forc forc-fmt --git https://github.com/FuelLabs/sway --branch BRANCH_FROM_CI
+  ```
+
+- Otherwise, if `FORC_PATCH_REVISION` is nonempty, install that exact Sway revision (replace `REVISION_FROM_CI` with its value):
+
+  ```shell
+  cargo install --locked forc forc-fmt --git https://github.com/FuelLabs/sway --rev REVISION_FROM_CI
+  ```
+
+- If both are empty, install the release specified by `FORC_VERSION`, including `forc-fmt`. Use the matching `v<FORC_VERSION>` tag in [Sway releases](https://github.com/FuelLabs/sway/releases), or select that version in a [custom Fuelup toolchain](https://github.com/FuelLabs/fuelup/blob/master/docs/src/concepts/toolchains.md#custom-toolchains).
+
+If you installed with Cargo, make sure Cargo's bin directory (usually `$HOME/.cargo/bin`) comes before other Forc installations, including Fuelup proxies, on your `PATH`. Check which compiler your shell uses:
+
+```shell
+command -v forc
+forc --version
+```
+
+Then, from the repository root, build the test projects using `forc`:
 
 ```shell
 forc build --release --path e2e
@@ -74,7 +97,7 @@ Navigate to `packages/wasm-tests` and run `wasm-pack test`.
 
 ### What to do if my tests are failing on `master`
 
-Before doing anything else, try all these commands:
+First, [check that your Forc installation matches CI](#how-can-i-run-the-sdk-tests). Then try all these commands:
 
 ```shell
 cargo clean
