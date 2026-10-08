@@ -28,7 +28,7 @@ pub(crate) fn contract_bindings(
     let log_formatters =
         log_formatters_instantiation_code(quote! {contract_id.clone().into()}, &abi.logged_types);
 
-    let error_codes = generate_id_error_codes_pairs(abi.error_codes);
+    let error_codes = generate_id_error_codes_pairs(abi.error_codes, &abi.spec_version);
     let error_codes = quote! {::std::collections::HashMap::from([#(#error_codes),*])};
 
     let methods_name = ident(&format!("{name}Methods"));

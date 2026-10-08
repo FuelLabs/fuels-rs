@@ -307,9 +307,10 @@ async fn spend_predicate_coins_messages_bytes_hash() -> Result<()> {
         "0x75a448b91bb82a255757e61ba3eb7afe282c09842485268d4d72a027ec0cffc80500000000",
     )?;
 
-    let bits256 = Bits256::from_hex_str(
-        "0x173d69ea3d0aa050d01ff7cc60ccd4579b567c465cd115c6876c2da4a332fb99",
-    )?;
+    // Forc's new hashing prefixes dynamic bytes with their u64 length.
+    let mut hash_input = (bytes.0.len() as u64).to_be_bytes().to_vec();
+    hash_input.extend_from_slice(&bytes.0);
+    let bits256 = Bits256(fuels::crypto::Hasher::hash(hash_input).into());
 
     let data = MyPredicateEncoder::default().encode_data(bytes, bits256)?;
 

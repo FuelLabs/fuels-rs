@@ -1,6 +1,6 @@
 contract;
 
-use std::storage::storage_api::{read, write};
+use std::storage::storage_api::{read_quads, write_quads};
 
 struct EmptyStruct {}
 
@@ -25,14 +25,14 @@ impl TestContract for Contract {
     #[storage(write)]
     fn initialize_counter(config: CounterConfig) -> u64 {
         let value = config.initial_value;
-        write(COUNTER_KEY, 0, value);
+        write_quads(COUNTER_KEY, 0, value);
         value
     }
 
     #[storage(read, write)]
     fn increment_counter(amount: u64) -> u64 {
-        let value = read::<u64>(COUNTER_KEY, 0).unwrap_or(0) + amount;
-        write(COUNTER_KEY, 0, value);
+        let value = read_quads::<u64>(COUNTER_KEY, 0).unwrap_or(0) + amount;
+        write_quads(COUNTER_KEY, 0, value);
         value
     }
 

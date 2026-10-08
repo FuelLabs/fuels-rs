@@ -68,8 +68,16 @@ fn generate_log_id_log_formatter_pairs(
 
 pub(crate) fn generate_id_error_codes_pairs(
     error_codes: impl IntoIterator<Item = (u64, fuel_abi_types::abi::program::ErrorDetails)>,
+    spec_version: &fuel_abi_types::abi::program::Version,
 ) -> impl Iterator<Item = TokenStream> {
-    error_codes.into_iter().map(|(id, ed)| {
+    let encoded_panic_codes = spec_version.is_v1_2();
+    error_codes.into_iter().map(move |(id, ed)| {
+        // ABI 1.2 stores the panic index, while the revert encodes it in bits 55..63.
+        let id = if encoded_panic_codes {
+            (1_u64 << 63) | (id << 55)
+        } else {
+            id
+        };
         let pkg = ed.pos.pkg;
         let file = ed.pos.file;
         let line = ed.pos.line;

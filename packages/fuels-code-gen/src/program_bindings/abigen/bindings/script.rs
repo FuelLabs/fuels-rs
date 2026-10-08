@@ -34,7 +34,7 @@ pub(crate) fn script_bindings(
         &abi.logged_types,
     );
 
-    let error_codes = generate_id_error_codes_pairs(abi.error_codes);
+    let error_codes = generate_id_error_codes_pairs(abi.error_codes, &abi.spec_version);
     let error_codes = quote! {vec![#(#error_codes),*].into_iter().collect()};
 
     let configuration_struct_name = ident(&format!("{name}Configurables"));

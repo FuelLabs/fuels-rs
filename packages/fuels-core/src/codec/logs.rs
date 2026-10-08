@@ -154,7 +154,15 @@ impl LogDecoder {
     }
 
     pub fn get_error_codes(&self, id: &u64) -> Option<&ErrorDetails> {
-        self.error_codes.get(id)
+        self.error_codes.get(id).or_else(|| {
+            if id & (1_u64 << 63) == 0 {
+                return None;
+            }
+            // ABI 1.2 appends up to five call-site IDs below the panic index.
+            // Generated bindings store the encoded index with those bits cleared.
+            let panic_code = id & (u64::MAX << 55);
+            self.error_codes.get(&panic_code)
+        })
     }
 
     pub fn set_decoder_config(&mut self, decoder_config: DecoderConfig) -> &mut Self {
@@ -350,4 +358,58 @@ pub fn log_formatters_lookup(
         .into_iter()
         .map(|(id, log_formatter)| (LogId(contract_id, id), log_formatter))
         .collect()
+}
+
+#[cfg(test)]
+mod panic_code_tests {
+    use super::*;
+
+    fn details(message: &str) -> ErrorDetails {
+        ErrorDetails::new(
+            "test".into(),
+            "main.sw".into(),
+            1,
+            1,
+            None,
+            Some(message.into()),
+        )
+    }
+
+    #[test]
+    fn legacy_panic_codes_still_resolve_exactly() {
+        let legacy_code = 0xffff_ffff_0000_0001;
+        let decoder = LogDecoder::new(
+            HashMap::new(),
+            HashMap::from([(legacy_code, details("legacy panic"))]),
+        );
+        assert_eq!(
+            decoder
+                .get_error_codes(&legacy_code)
+                .unwrap()
+                .msg
+                .as_deref(),
+            Some("legacy panic")
+        );
+        assert!(decoder.get_error_codes(&(legacy_code + 1)).is_none());
+    }
+
+    #[test]
+    fn abi_1_2_panic_codes_resolve_with_call_site_bits() {
+        let panic_code = (1_u64 << 63) | (42 << 55);
+        let decoder = LogDecoder::new(
+            HashMap::new(),
+            HashMap::from([(panic_code, details("nested panic"))]),
+        );
+        let revert_code = panic_code | (7 << 11) | 3;
+        assert_eq!(
+            decoder
+                .get_error_codes(&revert_code)
+                .unwrap()
+                .msg
+                .as_deref(),
+            Some("nested panic")
+        );
+        assert!(decoder.get_error_codes(&42).is_none());
+        assert!(decoder.get_error_codes(&(panic_code + (1 << 55))).is_none());
+    }
 }
