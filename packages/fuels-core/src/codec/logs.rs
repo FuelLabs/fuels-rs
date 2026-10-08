@@ -43,6 +43,7 @@ impl ErrorDetails {
     }
 }
 
+use fuel_abi_types::error_codes::ErrorSignal;
 use fuel_tx::{ContractId, Receipt};
 
 use crate::{
@@ -155,9 +156,11 @@ impl LogDecoder {
 
     pub fn get_error_codes(&self, id: &u64) -> Option<&ErrorDetails> {
         self.error_codes.get(id).or_else(|| {
-            if id & (1_u64 << 63) == 0 {
+            if id & (1_u64 << 63) == 0 || ErrorSignal::try_from_revert_code(*id).is_ok() {
                 return None;
             }
+            // Reserved std signals also have the panic bit set; masking them
+            // would incorrectly resolve them to ABI 1.2 panic index 255.
             // ABI 1.2 appends up to five call-site IDs below the panic index.
             // Generated bindings store the encoded index with those bits cleared.
             let panic_code = id & (u64::MAX << 55);
@@ -411,5 +414,39 @@ mod panic_code_tests {
         );
         assert!(decoder.get_error_codes(&42).is_none());
         assert!(decoder.get_error_codes(&(panic_code + (1 << 55))).is_none());
+    }
+
+    #[test]
+    fn reserved_signals_do_not_resolve_to_panic_index_255() {
+        let panic_code = (1_u64 << 63) | (255 << 55);
+        let decoder = LogDecoder::new(
+            HashMap::new(),
+            HashMap::from([(panic_code, details("last panic"))]),
+        );
+
+        for signal in [
+            ErrorSignal::Require,
+            ErrorSignal::TransferToAddress,
+            ErrorSignal::SendMessage,
+            ErrorSignal::AssertEq,
+            ErrorSignal::Assert,
+            ErrorSignal::AssertNe,
+            ErrorSignal::RevertWithLog,
+        ] {
+            let revert_code = signal.to_revert_code();
+            assert!(
+                decoder.get_error_codes(&revert_code).is_none(),
+                "reserved signal {revert_code:#x} resolved to a panic"
+            );
+        }
+
+        assert_eq!(
+            decoder
+                .get_error_codes(&(panic_code | (7 << 11) | 3))
+                .unwrap()
+                .msg
+                .as_deref(),
+            Some("last panic")
+        );
     }
 }
