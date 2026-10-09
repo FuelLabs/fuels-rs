@@ -1,3 +1,0 @@
-[resolver]
-# Keep fresh lockfiles compatible with the workspace's declared Rust minimum.
-incompatible-rust-versions = "fallback"
