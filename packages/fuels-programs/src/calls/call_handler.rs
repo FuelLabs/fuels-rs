@@ -49,6 +49,7 @@ pub struct CallHandler<A, C, T> {
     cached_tx_id: Option<Bytes32>,
     variable_output_policy: VariableOutputPolicy,
     unresolved_signers: Vec<Arc<dyn Signer + Send + Sync>>,
+    max_fee_estimation_tolerance: Option<f64>,
 }
 
 impl<A, C, T> CallHandler<A, C, T> {
@@ -83,6 +84,11 @@ impl<A, C, T> CallHandler<A, C, T> {
 
     pub fn add_signer(mut self, signer: impl Signer + Send + Sync + 'static) -> Self {
         self.unresolved_signers.push(Arc::new(signer));
+        self
+    }
+
+    pub fn with_max_fee_estimation_tolerance(mut self, tolerance: f64) -> Self {
+        self.max_fee_estimation_tolerance = Some(tolerance);
         self
     }
 }
@@ -126,6 +132,10 @@ where
         )?;
 
         tb.add_signers(&self.unresolved_signers)?;
+
+        if let Some(tolerance) = self.max_fee_estimation_tolerance {
+            tb = tb.with_max_fee_estimation_tolerance(tolerance);
+        }
 
         Ok(tb)
     }
@@ -317,6 +327,7 @@ where
             cached_tx_id: None,
             variable_output_policy: VariableOutputPolicy::default(),
             unresolved_signers: vec![],
+            max_fee_estimation_tolerance: None,
         }
     }
 
@@ -405,6 +416,7 @@ where
             cached_tx_id: None,
             variable_output_policy: VariableOutputPolicy::default(),
             unresolved_signers: vec![],
+            max_fee_estimation_tolerance: None,
         }
     }
 
@@ -438,6 +450,7 @@ where
             cached_tx_id: None,
             variable_output_policy: VariableOutputPolicy::default(),
             unresolved_signers: vec![],
+            max_fee_estimation_tolerance: None,
         }
     }
 
