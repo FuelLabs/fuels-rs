@@ -8,7 +8,7 @@ use fuels::{
 async fn test_storage_initialization() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
-        abi = "e2e/sway/contracts/storage/out/release/storage-abi.json"
+        abi = "../sway/contracts/storage/out/release/storage-abi.json"
     ));
 
     let wallet = launch_provider_and_get_wallet().await?;
@@ -44,7 +44,7 @@ async fn test_storage_initialization() -> Result<()> {
 async fn test_init_storage_automatically() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
-        abi = "e2e/sway/contracts/storage/out/release/storage-abi.json"
+        abi = "../sway/contracts/storage/out/release/storage-abi.json"
     ));
 
     let wallet = launch_provider_and_get_wallet().await?;

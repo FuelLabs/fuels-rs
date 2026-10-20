@@ -8,7 +8,7 @@ use fuels::{
 async fn contract_default_configurables() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
-        abi = "e2e/sway/contracts/configurables/out/release/configurables-abi.json"
+        abi = "../sway/contracts/configurables/out/release/configurables-abi.json"
     ));
 
     let wallet = launch_provider_and_get_wallet().await?;
@@ -100,7 +100,7 @@ async fn contract_configurables() -> Result<()> {
     // ANCHOR: contract_configurables
     abigen!(Contract(
         name = "MyContract",
-        abi = "e2e/sway/contracts/configurables/out/release/configurables-abi.json"
+        abi = "../sway/contracts/configurables/out/release/configurables-abi.json"
     ));
 
     let wallet = launch_provider_and_get_wallet().await?;
@@ -236,7 +236,7 @@ async fn script_configurables() -> Result<()> {
     // ANCHOR: script_configurables
     abigen!(Script(
         name = "MyScript",
-        abi = "e2e/sway/scripts/script_configurables/out/release/script_configurables-abi.json"
+        abi = "../sway/scripts/script_configurables/out/release/script_configurables-abi.json"
     ));
 
     let wallet = launch_provider_and_get_wallet().await?;
@@ -298,7 +298,7 @@ async fn script_configurables() -> Result<()> {
 async fn configurable_encoder_config_is_applied() {
     abigen!(Script(
         name = "MyScript",
-        abi = "e2e/sway/scripts/script_configurables/out/release/script_configurables-abi.json"
+        abi = "../sway/scripts/script_configurables/out/release/script_configurables-abi.json"
     ));
 
     let new_struct = StructWithGeneric {

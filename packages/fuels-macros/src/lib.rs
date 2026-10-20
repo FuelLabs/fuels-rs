@@ -23,11 +23,16 @@ mod setup_program_test;
 ///
 /// `ABI_SOURCE` is a string literal representing either a path to the JSON ABI
 /// file or the contents of the JSON ABI file itself.
+/// Relative paths are resolved from the directory of the source file containing
+/// the string literal. Absolute paths are used unchanged. In a macro wrapper,
+/// a literal written in the wrapper resolves from the wrapper's definition file;
+/// a forwarded literal resolves from the file where that literal was written.
+/// This differs from `include_str!`, which uses the outer invocation's file.
 ///
 ///```text
 /// abigen!(Contract(
 ///         name = "MyContract",
-///         abi = "packages/fuels/tests/contracts/token_ops/out/release/token_ops-abi.json"
+///         abi = "../my-contract-abi.json"
 ///     ));
 ///```
 ///
@@ -41,6 +46,8 @@ pub fn abigen(input: TokenStream) -> TokenStream {
         .into()
 }
 
+/// Generate bindings without the standard library, using the same ABI path
+/// resolution rules as [`abigen!`].
 #[proc_macro]
 pub fn wasm_abigen(input: TokenStream) -> TokenStream {
     let targets = parse_macro_input!(input as MacroAbigenTargets);

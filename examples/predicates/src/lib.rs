@@ -71,7 +71,7 @@ mod tests {
         // ANCHOR: predicate_load
         abigen!(Predicate(
             name = "MyPredicate",
-            abi = "e2e/sway/predicates/signatures/out/release/signatures-abi.json"
+            abi = "../../../e2e/sway/predicates/signatures/out/release/signatures-abi.json"
         ));
 
         let predicate_data = MyPredicateEncoder::default().encode_data(signatures)?;
@@ -139,7 +139,8 @@ mod tests {
 
         abigen!(Predicate(
             name = "MyPredicate",
-            abi = "e2e/sway/predicates/basic_predicate/out/release/basic_predicate-abi.json"
+            abi =
+                "../../../e2e/sway/predicates/basic_predicate/out/release/basic_predicate-abi.json"
         ));
         // ANCHOR_END: predicate_data_setup
 

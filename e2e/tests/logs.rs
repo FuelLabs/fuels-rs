@@ -656,7 +656,7 @@ async fn script_decode_logs() -> Result<()> {
     // ANCHOR: script_logs
     abigen!(Script(
         name = "LogScript",
-        abi = "e2e/sway/logs/script_logs/out/release/script_logs-abi.json"
+        abi = "../sway/logs/script_logs/out/release/script_logs-abi.json"
     ));
 
     let wallet = launch_provider_and_get_wallet().await?;

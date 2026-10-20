@@ -25,7 +25,7 @@ use rand::thread_rng;
 async fn test_provider_launch_and_connect() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
-        abi = "e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
+        abi = "../sway/contracts/contract_test/out/release/contract_test-abi.json"
     ));
 
     let signer = PrivateKeySigner::random(&mut thread_rng());
@@ -71,7 +71,7 @@ async fn test_provider_launch_and_connect() -> Result<()> {
 async fn test_network_error() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
-        abi = "e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
+        abi = "../sway/contracts/contract_test/out/release/contract_test-abi.json"
     ));
 
     let node_config = NodeConfig::default();
@@ -172,7 +172,7 @@ async fn test_input_message_pays_fee() -> Result<()> {
 
     abigen!(Contract(
         name = "MyContract",
-        abi = "e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
+        abi = "../sway/contracts/contract_test/out/release/contract_test-abi.json"
     ));
 
     let deploy_response = Contract::load_from(
@@ -289,7 +289,7 @@ async fn can_retrieve_latest_block_time() -> Result<()> {
 async fn contract_deployment_respects_maturity_and_expiration() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
-        abi = "e2e/sway/contracts/transaction_block_height/out/release/transaction_block_height-abi.json"
+        abi = "../sway/contracts/transaction_block_height/out/release/transaction_block_height-abi.json"
     ));
 
     let wallet = launch_provider_and_get_wallet().await?;
@@ -1362,7 +1362,7 @@ async fn contract_call_with_impersonation() -> Result<()> {
 
     abigen!(Contract(
         name = "MyContract",
-        abi = "e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
+        abi = "../sway/contracts/contract_test/out/release/contract_test-abi.json"
     ));
 
     let contract_id = Contract::load_from(

@@ -32,7 +32,7 @@ mod tests {
     fn decoded_debug_matches_rust_debug() -> Result<()> {
         abigen!(Contract(
             name = "MyContract",
-            abi = "e2e/sway/types/contracts/generics/out/release/generics-abi.json"
+            abi = "../../../e2e/sway/types/contracts/generics/out/release/generics-abi.json"
         ));
 
         let json_abi_file = "../../e2e/sway/types/contracts/generics/out/release/generics-abi.json";

@@ -31,7 +31,7 @@ mod tests {
         // ANCHOR: liquidity_abigen
         abigen!(Contract(
             name = "MyContract",
-            abi = "e2e/sway/contracts/liquidity_pool/out/release/liquidity_pool-abi.json"
+            abi = "../../../e2e/sway/contracts/liquidity_pool/out/release/liquidity_pool-abi.json"
         ));
         // ANCHOR_END: liquidity_abigen
 

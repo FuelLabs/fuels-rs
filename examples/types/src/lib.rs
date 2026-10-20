@@ -199,7 +199,7 @@ mod tests {
         use fuels::prelude::*;
         abigen!(Contract(
             name = "MyContract",
-            abi = "e2e/sway/types/contracts/generics/out/release/generics-abi.json"
+            abi = "../../../e2e/sway/types/contracts/generics/out/release/generics-abi.json"
         ));
 
         // ANCHOR: unused_generics_struct

@@ -152,7 +152,7 @@ async fn transfer_coins_and_messages_to_predicate() -> Result<()> {
 async fn spend_predicate_coins_messages_basic() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
-        abi = "e2e/sway/predicates/basic_predicate/out/release/basic_predicate-abi.json"
+        abi = "../sway/predicates/basic_predicate/out/release/basic_predicate-abi.json"
     ));
 
     let predicate_data = MyPredicateEncoder::default().encode_data(4097, 4097)?;
@@ -208,11 +208,11 @@ async fn pay_with_predicate() -> Result<()> {
     abigen!(
         Contract(
             name = "MyContract",
-            abi = "e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
+            abi = "../sway/contracts/contract_test/out/release/contract_test-abi.json"
         ),
         Predicate(
             name = "MyPredicate",
-            abi = "e2e/sway/types/predicates/u64/out/release/u64-abi.json"
+            abi = "../sway/types/predicates/u64/out/release/u64-abi.json"
         )
     );
 
@@ -270,12 +270,11 @@ async fn pay_with_predicate_vector_data() -> Result<()> {
     abigen!(
         Contract(
             name = "MyContract",
-            abi = "e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
+            abi = "../sway/contracts/contract_test/out/release/contract_test-abi.json"
         ),
         Predicate(
             name = "MyPredicate",
-            abi =
-                "e2e/sway/types/predicates/predicate_vector/out/release/predicate_vector-abi.json"
+            abi = "../sway/types/predicates/predicate_vector/out/release/predicate_vector-abi.json"
         )
     );
 
@@ -330,7 +329,7 @@ async fn pay_with_predicate_vector_data() -> Result<()> {
 async fn predicate_contract_transfer() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
-        abi = "e2e/sway/types/predicates/predicate_vector/out/release/predicate_vector-abi.json"
+        abi = "../sway/types/predicates/predicate_vector/out/release/predicate_vector-abi.json"
     ));
 
     let predicate_data = MyPredicateEncoder::default().encode_data(2, 40, vec![2, 4, 42])?;
@@ -387,7 +386,7 @@ async fn predicate_transfer_to_base_layer() -> Result<()> {
 
     abigen!(Predicate(
         name = "MyPredicate",
-        abi = "e2e/sway/types/predicates/predicate_vector/out/release/predicate_vector-abi.json"
+        abi = "../sway/types/predicates/predicate_vector/out/release/predicate_vector-abi.json"
     ));
 
     let predicate_data = MyPredicateEncoder::default().encode_data(22, 20, vec![2, 4, 42])?;
@@ -436,7 +435,7 @@ async fn predicate_transfer_to_base_layer() -> Result<()> {
 async fn predicate_transfer_with_signed_resources() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
-        abi = "e2e/sway/types/predicates/predicate_vector/out/release/predicate_vector-abi.json"
+        abi = "../sway/types/predicates/predicate_vector/out/release/predicate_vector-abi.json"
     ));
 
     let predicate_data = MyPredicateEncoder::default().encode_data(2, 40, vec![2, 4, 42])?;
@@ -515,12 +514,11 @@ async fn contract_tx_and_call_params_with_predicate() -> Result<()> {
     abigen!(
         Contract(
             name = "MyContract",
-            abi = "e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
+            abi = "../sway/contracts/contract_test/out/release/contract_test-abi.json"
         ),
         Predicate(
             name = "MyPredicate",
-            abi =
-                "e2e/sway/types/predicates/predicate_vector/out/release/predicate_vector-abi.json"
+            abi = "../sway/types/predicates/predicate_vector/out/release/predicate_vector-abi.json"
         )
     );
 
@@ -595,12 +593,11 @@ async fn diff_asset_predicate_payment() -> Result<()> {
     abigen!(
         Contract(
             name = "MyContract",
-            abi = "e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
+            abi = "../sway/contracts/contract_test/out/release/contract_test-abi.json"
         ),
         Predicate(
             name = "MyPredicate",
-            abi =
-                "e2e/sway/types/predicates/predicate_vector/out/release/predicate_vector-abi.json"
+            abi = "../sway/types/predicates/predicate_vector/out/release/predicate_vector-abi.json"
         )
     );
 
@@ -646,7 +643,7 @@ async fn diff_asset_predicate_payment() -> Result<()> {
 async fn predicate_default_configurables() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
-        abi = "e2e/sway/predicates/predicate_configurables/out/release/predicate_configurables-abi.json"
+        abi = "../sway/predicates/predicate_configurables/out/release/predicate_configurables-abi.json"
     ));
 
     let new_struct = StructWithGeneric {
@@ -707,7 +704,7 @@ async fn predicate_configurables() -> Result<()> {
     // ANCHOR: predicate_configurables
     abigen!(Predicate(
         name = "MyPredicate",
-        abi = "e2e/sway/predicates/predicate_configurables/out/release/predicate_configurables-abi.json"
+        abi = "../sway/predicates/predicate_configurables/out/release/predicate_configurables-abi.json"
     ));
 
     let new_tuple = (16, false);
@@ -774,7 +771,7 @@ async fn predicate_configurables() -> Result<()> {
 async fn predicate_adjust_fee_persists_message_w_data() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
-        abi = "e2e/sway/predicates/basic_predicate/out/release/basic_predicate-abi.json"
+        abi = "../sway/predicates/basic_predicate/out/release/basic_predicate-abi.json"
     ));
 
     let predicate_data = MyPredicateEncoder::default().encode_data(4097, 4097)?;
@@ -814,7 +811,7 @@ async fn predicate_adjust_fee_persists_message_w_data() -> Result<()> {
 async fn predicate_transfer_non_base_asset() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
-        abi = "e2e/sway/predicates/basic_predicate/out/release/basic_predicate-abi.json"
+        abi = "../sway/predicates/basic_predicate/out/release/basic_predicate-abi.json"
     ));
 
     let predicate_data = MyPredicateEncoder::default().encode_data(32, 32)?;
@@ -877,7 +874,7 @@ async fn predicate_transfer_non_base_asset() -> Result<()> {
 async fn predicate_can_access_manually_added_witnesses() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
-        abi = "e2e/sway/predicates/predicate_witnesses/out/release/predicate_witnesses-abi.json"
+        abi = "../sway/predicates/predicate_witnesses/out/release/predicate_witnesses-abi.json"
     ));
 
     let predicate_data = MyPredicateEncoder::default().encode_data(0, 1)?;
@@ -944,7 +941,7 @@ async fn predicate_can_access_manually_added_witnesses() -> Result<()> {
 async fn tx_id_not_changed_after_adding_witnesses() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
-        abi = "e2e/sway/predicates/predicate_witnesses/out/release/predicate_witnesses-abi.json"
+        abi = "../sway/predicates/predicate_witnesses/out/release/predicate_witnesses-abi.json"
     ));
 
     let predicate_data = MyPredicateEncoder::default().encode_data(0, 1)?;
@@ -1000,7 +997,7 @@ async fn tx_id_not_changed_after_adding_witnesses() -> Result<()> {
 async fn predicate_encoder_config_is_applied() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
-        abi = "e2e/sway/predicates/basic_predicate/out/release/basic_predicate-abi.json"
+        abi = "../sway/predicates/basic_predicate/out/release/basic_predicate-abi.json"
     ));
     {
         let _encoding_ok = MyPredicateEncoder::default()
@@ -1030,7 +1027,7 @@ async fn predicate_encoder_config_is_applied() -> Result<()> {
 async fn predicate_transfers_non_base_asset() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
-        abi = "e2e/sway/predicates/basic_predicate/out/release/basic_predicate-abi.json"
+        abi = "../sway/predicates/basic_predicate/out/release/basic_predicate-abi.json"
     ));
 
     let predicate_data = MyPredicateEncoder::default().encode_data(4097, 4097)?;
@@ -1070,7 +1067,7 @@ async fn predicate_transfers_non_base_asset() -> Result<()> {
 async fn predicate_with_invalid_data_fails() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
-        abi = "e2e/sway/predicates/basic_predicate/out/release/basic_predicate-abi.json"
+        abi = "../sway/predicates/basic_predicate/out/release/basic_predicate-abi.json"
     ));
 
     let predicate_data = MyPredicateEncoder::default().encode_data(0, 100)?;
@@ -1110,7 +1107,7 @@ async fn predicate_with_invalid_data_fails() -> Result<()> {
 async fn predicate_blobs() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
-        abi = "e2e/sway/predicates/predicate_blobs/out/release/predicate_blobs-abi.json"
+        abi = "../sway/predicates/predicate_blobs/out/release/predicate_blobs-abi.json"
     ));
 
     // ANCHOR: preparing_the_predicate
@@ -1177,7 +1174,7 @@ async fn predicate_blobs() -> Result<()> {
 async fn predicate_configurables_in_blobs() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
-        abi = "e2e/sway/predicates/predicate_configurables/out/release/predicate_configurables-abi.json"
+        abi = "../sway/predicates/predicate_configurables/out/release/predicate_configurables-abi.json"
     ));
 
     let new_tuple = (16, false);
@@ -1250,7 +1247,7 @@ async fn predicate_configurables_in_blobs() -> Result<()> {
 async fn predicate_transfer_respects_maturity_and_expiration() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
-        abi = "e2e/sway/predicates/basic_predicate/out/release/basic_predicate-abi.json"
+        abi = "../sway/predicates/basic_predicate/out/release/basic_predicate-abi.json"
     ));
 
     let predicate_data = MyPredicateEncoder::default().encode_data(4097, 4097)?;
