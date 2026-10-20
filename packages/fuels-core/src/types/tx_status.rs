@@ -133,7 +133,10 @@ impl TxStatus {
                         format!("failed to decode log from require revert: {err}")
                     })
             } else {
-                error_detail.msg.clone().expect("is there")
+                error_detail
+                    .msg
+                    .clone()
+                    .unwrap_or_else(|| reason.to_owned())
             };
 
             let reason = format!(
@@ -318,5 +321,38 @@ impl From<TransactionExecutionStatus> for TxStatus {
                 })
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+
+    use crate::codec::ErrorDetails;
+
+    use super::*;
+
+    #[test]
+    fn missing_error_details_message_falls_back_to_original_reason() {
+        let revert_id = 123;
+        let original_reason = "transaction reverted without error metadata";
+        let error_details =
+            ErrorDetails::new("test_package".into(), "test.sw".into(), 1, 1, None, None);
+        let log_decoder =
+            LogDecoder::new(HashMap::new(), HashMap::from([(revert_id, error_details)]));
+        let status = TxStatus::Failure(Failure {
+            reason: original_reason.into(),
+            receipts: Arc::new(vec![]),
+            revert_id: Some(revert_id),
+            total_fee: 0,
+            total_gas: 0,
+        });
+
+        let error = status.check(Some(&log_decoder)).unwrap_err();
+
+        let Error::Transaction(Reason::Failure { reason, .. }) = error else {
+            panic!("expected transaction failure")
+        };
+        assert!(reason.contains(original_reason));
     }
 }
