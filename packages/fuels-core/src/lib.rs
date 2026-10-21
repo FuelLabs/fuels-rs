@@ -1,3 +1,6 @@
+#[cfg(not(feature = "std"))]
+extern crate alloc;
+
 pub mod codec;
 pub mod traits;
 pub mod types;

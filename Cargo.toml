@@ -4,7 +4,13 @@
 # > If you are using a virtual workspace, you will still need to explicitly set the resolver field in the [workspace]
 #   definition if you want to opt-in to the new resolver.
 # https://doc.rust-lang.org/edition-guide/rust-2021/default-cargo-resolver.html#details
-resolver = "2"
+#
+# Resolver "3" is resolver "2" plus MSRV-aware version selection. `Cargo.lock` is not
+# committed (this is a library workspace), so CI resolves dependencies from scratch on
+# every run; without this, a dependency publishing a release that raises its `rust-version`
+# above our MSRV breaks every build until it is pinned by hand.
+# https://doc.rust-lang.org/cargo/reference/resolver.html#resolver-versions
+resolver = "3"
 members = [
   "e2e",
   "examples/codec",
