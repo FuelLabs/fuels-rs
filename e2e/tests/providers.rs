@@ -1248,20 +1248,22 @@ async fn tx_respects_policies() -> Result<()> {
 }
 
 #[tokio::test]
-#[ignore] // TODO: https://github.com/FuelLabs/fuels-rs/issues/1581
 async fn can_setup_static_gas_price() -> Result<()> {
     let expected_gas_price = 474;
     let node_config = NodeConfig {
         starting_gas_price: expected_gas_price,
+        gas_price_change_percent: 0,
         ..Default::default()
     };
     let provider = setup_test_provider(vec![], vec![], Some(node_config), None).await?;
 
     let gas_price = provider.estimate_gas_price(0).await?.gas_price;
-
     let da_cost = 1000;
     assert_eq!(gas_price, da_cost + expected_gas_price);
 
+    provider.produce_blocks(10, None).await?;
+    let gas_price_after_blocks = provider.estimate_gas_price(0).await?.gas_price;
+    assert_eq!(gas_price, gas_price_after_blocks);
     Ok(())
 }
 
