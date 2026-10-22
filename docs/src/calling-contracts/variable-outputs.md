@@ -22,4 +22,6 @@ When calling `transfer_coins_to_output` with the SDK, you can specify the number
 `with_variable_output_policy` sets the policy regarding variable outputs. You can either set the number of variable outputs yourself by providing `VariableOutputPolicy::Exactly(n)` or let the SDK estimate it for you with `VariableOutputPolicy::EstimateMinimum`. A variable output indicates that the amount and the owner may vary based on transaction execution.
 <!-- with_variable_output_policy:example:end -->
 
+> **Note:** `VariableOutputPolicy::EstimateMinimum` works by dry-running the transaction with additional variable outputs and counting how many are used. Avoid relying on automatic estimation when the script or contract logic changes based on the number of variable outputs available. In those cases, prefer `VariableOutputPolicy::Exactly(n)` with the number of outputs your call can use.
+
 > **Note:** that the Sway `lib-std` function `mint_to_address` calls `transfer_to_address` under the hood, so you need to call `with_variable_output_policy` in the Rust SDK tests like you would for `transfer_to_address`.
