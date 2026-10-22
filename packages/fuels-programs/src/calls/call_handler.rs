@@ -15,7 +15,7 @@ use fuels_core::{
     traits::{Parameterize, Signer, Tokenizable},
     types::{
         Address, AssetId, Bytes32, ContractId, Selector, Token,
-        errors::{Error, Result, error, transaction::Reason},
+        errors::{Context, Error, Result, error, transaction::Reason},
         input::Input,
         output::Output,
         transaction::{ScriptTransaction, Transaction, TxPolicies},
@@ -143,12 +143,16 @@ where
         tolerance: Option<f64>,
         block_horizon: Option<u32>,
     ) -> Result<TransactionCost> {
-        let tx = self.build_tx().await?;
+        let tx = self
+            .build_tx()
+            .await
+            .context("failed to build transaction")?;
         let provider = self.account.try_provider()?;
 
         let transaction_cost = provider
             .estimate_transaction_cost(tx, tolerance, block_horizon)
-            .await?;
+            .await
+            .context("failed to estimate transaction cost")?;
 
         Ok(transaction_cost)
     }
@@ -198,23 +202,35 @@ where
 
     /// Call a contract's method on the node, in a state-modifying manner.
     pub async fn call(mut self) -> Result<CallResponse<T>> {
-        let tx = self.build_tx().await?;
+        let tx = self
+            .build_tx()
+            .await
+            .context("failed to build transaction")?;
         let provider = self.account.try_provider()?;
 
         let consensus_parameters = provider.consensus_parameters().await?;
         let chain_id = consensus_parameters.chain_id();
         self.cached_tx_id = Some(tx.id(chain_id));
 
-        let tx_status = provider.send_transaction_and_await_commit(tx).await?;
+        let tx_status = provider
+            .send_transaction_and_await_commit(tx)
+            .await
+            .context("failed to submit contract call")?;
 
         self.get_response(tx_status)
     }
 
     pub async fn submit(mut self) -> Result<SubmitResponse<A, C, T>> {
-        let tx = self.build_tx().await?;
+        let tx = self
+            .build_tx()
+            .await
+            .context("failed to build transaction")?;
         let provider = self.account.try_provider()?;
 
-        let tx_id = provider.send_transaction(tx.clone()).await?;
+        let tx_id = provider
+            .send_transaction(tx.clone())
+            .await
+            .context("failed to submit contract call")?;
         self.cached_tx_id = Some(tx_id);
 
         Ok(SubmitResponse::<A, C, T>::new(tx_id, self))
@@ -234,15 +250,26 @@ where
         let tx_status = if let ExecutionType::StateReadOnly = execution_type {
             let tx = self
                 .transaction_builder()
-                .await?
+                .await
+                .context("failed to create transaction builder")?
                 .with_build_strategy(ScriptBuildStrategy::StateReadOnly)
                 .build(provider)
-                .await?;
+                .await
+                .context("failed to build transaction")?;
 
-            provider.dry_run_opt(tx, false, Some(0), at_height).await?
+            provider
+                .dry_run_opt(tx, false, Some(0), at_height)
+                .await
+                .context("failed to simulate contract call")?
         } else {
-            let tx = self.build_tx().await?;
-            provider.dry_run_opt(tx, true, None, at_height).await?
+            let tx = self
+                .build_tx()
+                .await
+                .context("failed to build transaction")?;
+            provider
+                .dry_run_opt(tx, true, None, at_height)
+                .await
+                .context("failed to simulate contract call")?
         };
 
         self.get_response(tx_status)
@@ -252,12 +279,13 @@ where
     pub fn get_response(&self, tx_status: TxStatus) -> Result<CallResponse<T>> {
         let success = tx_status.take_success_checked(Some(&self.log_decoder))?;
 
-        let token =
-            self.call
-                .parse_call(&success.receipts, self.decoder_config, &T::param_type())?;
+        let token = self
+            .call
+            .parse_call(&success.receipts, self.decoder_config, &T::param_type())
+            .context("failed to decode contract response")?;
 
         Ok(CallResponse {
-            value: T::from_token(token)?,
+            value: T::from_token(token).context("failed to decode contract response")?,
             log_decoder: self.log_decoder.clone(),
             tx_id: self.cached_tx_id,
             tx_status: success,
@@ -474,7 +502,10 @@ where
 
     /// Call contract methods on the node, in a state-modifying manner.
     pub async fn call<T: Tokenizable + Debug>(mut self) -> Result<CallResponse<T>> {
-        let tx = self.build_tx().await?;
+        let tx = self
+            .build_tx()
+            .await
+            .context("failed to build transaction")?;
 
         let provider = self.account.try_provider()?;
         let consensus_parameters = provider.consensus_parameters().await?;
@@ -482,16 +513,25 @@ where
 
         self.cached_tx_id = Some(tx.id(chain_id));
 
-        let tx_status = provider.send_transaction_and_await_commit(tx).await?;
+        let tx_status = provider
+            .send_transaction_and_await_commit(tx)
+            .await
+            .context("failed to submit contract call")?;
 
         self.get_response(tx_status)
     }
 
     pub async fn submit(mut self) -> Result<SubmitResponse<A, Vec<ContractCall>, ()>> {
-        let tx = self.build_tx().await?;
+        let tx = self
+            .build_tx()
+            .await
+            .context("failed to build transaction")?;
         let provider = self.account.try_provider()?;
 
-        let tx_id = provider.send_transaction(tx).await?;
+        let tx_id = provider
+            .send_transaction(tx)
+            .await
+            .context("failed to submit contract call")?;
         self.cached_tx_id = Some(tx_id);
 
         Ok(SubmitResponse::<A, Vec<ContractCall>, ()>::new(tx_id, self))
@@ -514,15 +554,26 @@ where
         let tx_status = if let ExecutionType::StateReadOnly = execution_type {
             let tx = self
                 .transaction_builder()
-                .await?
+                .await
+                .context("failed to create transaction builder")?
                 .with_build_strategy(ScriptBuildStrategy::StateReadOnly)
                 .build(provider)
-                .await?;
+                .await
+                .context("failed to build transaction")?;
 
-            provider.dry_run_opt(tx, false, Some(0), at_height).await?
+            provider
+                .dry_run_opt(tx, false, Some(0), at_height)
+                .await
+                .context("failed to simulate contract call")?
         } else {
-            let tx = self.build_tx().await?;
-            provider.dry_run_opt(tx, true, None, at_height).await?
+            let tx = self
+                .build_tx()
+                .await
+                .context("failed to build transaction")?;
+            provider
+                .dry_run_opt(tx, true, None, at_height)
+                .await
+                .context("failed to simulate contract call")?
         };
 
         self.get_response(tx_status)
@@ -542,15 +593,26 @@ where
         let tx_status = if let ExecutionType::StateReadOnly = execution_type {
             let tx = self
                 .transaction_builder()
-                .await?
+                .await
+                .context("failed to create transaction builder")?
                 .with_build_strategy(ScriptBuildStrategy::StateReadOnly)
                 .build(provider)
-                .await?;
+                .await
+                .context("failed to build transaction")?;
 
-            provider.dry_run_opt(tx, false, Some(0), at_height).await?
+            provider
+                .dry_run_opt(tx, false, Some(0), at_height)
+                .await
+                .context("failed to simulate contract call")?
         } else {
-            let tx = self.build_tx().await?;
-            provider.dry_run_opt(tx, true, None, at_height).await?
+            let tx = self
+                .build_tx()
+                .await
+                .context("failed to build transaction")?;
+            provider
+                .dry_run_opt(tx, true, None, at_height)
+                .await
+                .context("failed to simulate contract call")?
         };
 
         self.get_response_vec(tx_status)
@@ -559,9 +621,19 @@ where
     /// Simulates a call without needing to resolve the generic for the return type
     async fn simulate_without_decode(&self) -> Result<()> {
         let provider = self.account.try_provider()?;
-        let tx = self.build_tx().await?;
+        let tx = self
+            .build_tx()
+            .await
+            .context("failed to build transaction")?;
 
-        provider.dry_run(tx).await?.check(None)?;
+        let tx_status = provider
+            .dry_run(tx)
+            .await
+            .context("failed to simulate contract call")?;
+
+        tx_status
+            .check(None)
+            .context("contract simulation returned an error")?;
 
         Ok(())
     }
@@ -577,13 +649,17 @@ where
         let final_tokens = self
             .call
             .iter()
-            .map(|call| receipt_parser.parse_call(call.contract_id, &call.output_param))
+            .map(|call| {
+                receipt_parser
+                    .parse_call(call.contract_id, &call.output_param)
+                    .context("failed to decode contract response")
+            })
             .collect::<Result<Vec<_>>>()?;
 
         let tokens_as_tuple = Token::Tuple(final_tokens);
 
         Ok(CallResponse {
-            value: T::from_token(tokens_as_tuple)?,
+            value: T::from_token(tokens_as_tuple).context("failed to decode contract response")?,
             log_decoder: self.log_decoder.clone(),
             tx_id: self.cached_tx_id,
             tx_status: success,
@@ -602,8 +678,10 @@ where
             .call
             .iter()
             .map(|call| {
-                let token = receipt_parser.parse_call(call.contract_id, &call.output_param)?;
-                T::from_token(token)
+                let token = receipt_parser
+                    .parse_call(call.contract_id, &call.output_param)
+                    .context("failed to decode contract response")?;
+                T::from_token(token).context("failed to decode contract response")
             })
             .collect::<Result<Vec<_>>>()?;
 
