@@ -168,6 +168,16 @@ impl Executable<Loader> {
         &self,
         account: impl fuels_accounts::Account,
     ) -> Result<Option<TxResponse>> {
+        self.upload_blob_with_tolerance(account, DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE).await
+    }
+
+    /// If not previously uploaded, uploads a blob containing the original executable code minus the data section,
+    /// using the specified max fee estimation tolerance.
+    pub async fn upload_blob_with_tolerance(
+        &self,
+        account: impl fuels_accounts::Account,
+        max_fee_estimation_tolerance: f32,
+    ) -> Result<Option<TxResponse>> {
         let blob = self.blob();
         let provider = account.try_provider()?;
         let consensus_parameters = provider.consensus_parameters().await?;
@@ -178,7 +188,7 @@ impl Executable<Loader> {
 
         let mut tb = BlobTransactionBuilder::default()
             .with_blob(self.blob())
-            .with_max_fee_estimation_tolerance(DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE);
+            .with_max_fee_estimation_tolerance(max_fee_estimation_tolerance);
 
         account
             .adjust_for_fee(&mut tb, 0)

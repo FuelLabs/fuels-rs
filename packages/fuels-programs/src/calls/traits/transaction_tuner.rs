@@ -29,6 +29,7 @@ pub trait TransactionTuner: sealed::Sealed {
         consensus_parameters: &ConsensusParameters,
         asset_input: Vec<Input>,
         account: &T,
+        max_fee_estimation_tolerance: f32,
     ) -> Result<ScriptTransactionBuilder>;
 
     async fn build_tx<T: Account>(
@@ -51,6 +52,7 @@ impl TransactionTuner for ContractCall {
         consensus_parameters: &ConsensusParameters,
         asset_input: Vec<Input>,
         account: &T,
+        max_fee_estimation_tolerance: f32,
     ) -> Result<ScriptTransactionBuilder> {
         transaction_builder_from_contract_calls(
             std::slice::from_ref(self),
@@ -59,6 +61,7 @@ impl TransactionTuner for ContractCall {
             consensus_parameters,
             asset_input,
             account,
+            max_fee_estimation_tolerance,
         )
     }
 
@@ -84,6 +87,7 @@ impl TransactionTuner for ScriptCall {
         _: &ConsensusParameters,
         _: Vec<Input>,
         _account: &T,
+        max_fee_estimation_tolerance: f32,
     ) -> Result<ScriptTransactionBuilder> {
         let (inputs, outputs) = self.prepare_inputs_outputs()?;
 
@@ -95,7 +99,7 @@ impl TransactionTuner for ScriptCall {
             .with_inputs(inputs)
             .with_outputs(outputs)
             .with_gas_estimation_tolerance(DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE)
-            .with_max_fee_estimation_tolerance(DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE))
+            .with_max_fee_estimation_tolerance(max_fee_estimation_tolerance))
     }
 
     async fn build_tx<T: Account>(
@@ -128,6 +132,7 @@ impl TransactionTuner for Vec<ContractCall> {
         consensus_parameters: &ConsensusParameters,
         asset_input: Vec<Input>,
         account: &T,
+        max_fee_estimation_tolerance: f32,
     ) -> Result<ScriptTransactionBuilder> {
         validate_contract_calls(self)?;
 
@@ -138,6 +143,7 @@ impl TransactionTuner for Vec<ContractCall> {
             consensus_parameters,
             asset_input,
             account,
+            max_fee_estimation_tolerance,
         )
     }
 

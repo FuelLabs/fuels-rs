@@ -37,6 +37,7 @@ pub(crate) fn transaction_builder_from_contract_calls(
     consensus_parameters: &ConsensusParameters,
     asset_inputs: Vec<Input>,
     account: &impl Account,
+    max_fee_estimation_tolerance: f32,
 ) -> Result<ScriptTransactionBuilder> {
     let calls_instructions_len = compute_calls_instructions_len(calls);
     let data_offset = call_script_data_offset(consensus_parameters, calls_instructions_len)?;
@@ -63,7 +64,7 @@ pub(crate) fn transaction_builder_from_contract_calls(
         .with_inputs(inputs)
         .with_outputs(outputs)
         .with_gas_estimation_tolerance(DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE)
-        .with_max_fee_estimation_tolerance(DEFAULT_MAX_FEE_ESTIMATION_TOLERANCE))
+        .with_max_fee_estimation_tolerance(max_fee_estimation_tolerance))
 }
 
 /// Creates a [`ScriptTransaction`] from contract calls. The internal [Transaction] is
