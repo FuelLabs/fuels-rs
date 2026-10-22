@@ -8,6 +8,7 @@ resolver = "2"
 members = [
   "e2e",
   "examples/codec",
+  "examples/codegen",
   "examples/contracts",
   "examples/cookbook",
   "examples/debugging",
